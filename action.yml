@@ -1,0 +1,31 @@
+name: "Lore PR Report"
+description: "AI session tracking report for pull requests"
+author: "wasabeef"
+
+inputs:
+  base:
+    description: "Base branch to compare against (default: PR base)"
+    required: false
+    default: ""
+  comment:
+    description: "Post markdown report as PR comment"
+    required: false
+    default: "true"
+
+outputs:
+  overall_ai_ratio:
+    description: "PR-wide AI ratio (0-100)"
+  tracked_commits:
+    description: "Number of commits with lore data"
+  total_commits:
+    description: "Total commits in PR"
+  total_prompts:
+    description: "Total prompts across all commits"
+  json:
+    description: "Full structured report as JSON"
+  markdown:
+    description: "Rendered markdown report"
+
+runs:
+  using: "node22"
+  main: "packages/action/dist/index.js"

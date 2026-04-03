@@ -1,0 +1,8 @@
+node_modules/
+packages/cli/dist/
+
+# action dist is committed(GitHub Action requirement)
+# !packages/action/dist/
+
+docs/knowledge/PROBLEMS.md
+docs/knowledge/RESEARCH.md
