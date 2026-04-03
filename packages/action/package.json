@@ -1,0 +1,18 @@
+{
+  "name": "@wasabeef/lore-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub Action for lore PR reports",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.0",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.0",
+    "typescript": "^6.0.2"
+  }
+}
