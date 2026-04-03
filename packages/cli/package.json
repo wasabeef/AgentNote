@@ -1,0 +1,38 @@
+{
+  "name": "@wasabeef/lore",
+  "version": "0.1.0",
+  "description": "Remember why your code changed. Link Claude Code sessions to git commits.",
+  "type": "module",
+  "bin": {
+    "lore": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --banner:js='#!/usr/bin/env node'",
+    "dev": "tsx src/cli.ts",
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx/esm --test 'src/**/*.test.ts'",
+    "test:coverage": "node --import tsx/esm --test --experimental-test-coverage 'src/**/*.test.ts'",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "claude-code",
+    "git",
+    "session",
+    "lore",
+    "ai",
+    "traceability"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "esbuild": "^0.27.5",
+    "tsx": "^4.20.0",
+    "typescript": "^6.0.2"
+  }
+}
