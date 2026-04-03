@@ -1,0 +1,307 @@
+# Contributing to Lore
+
+Thank you for your interest in contributing to Lore! This document provides guidelines and information for contributors.
+
+## Table of Contents
+
+- [Code of Conduct](#code-of-conduct)
+- [How to Contribute](#how-to-contribute)
+- [Development Setup](#development-setup)
+- [Project Structure](#project-structure)
+- [Coding Standards](#coding-standards)
+- [Testing Guidelines](#testing-guidelines)
+- [Submitting Changes](#submitting-changes)
+
+## Code of Conduct
+
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+## How to Contribute
+
+### Types of Contributions
+
+We welcome various types of contributions:
+
+- **Bug Reports**: Help us identify and fix issues
+- **Feature Requests**: Suggest new features or improvements
+- **Code Contributions**: Bug fixes, new features, performance improvements
+- **Documentation**: Improve or expand documentation
+- **Testing**: Add or improve test coverage
+
+### Before You Start
+
+1. **Check existing issues**: Look for existing bug reports or feature requests
+2. **Create an issue**: For new features or significant changes, create an issue first to discuss
+3. **Fork the repository**: Create a personal fork to work on changes
+4. **Create a branch**: Use descriptive branch names like `feature/session-export` or `fix/trailer-parsing`
+
+## Development Setup
+
+### Prerequisites
+
+- **Node.js** >= 20
+- **Git**
+- **Claude Code** (for testing hooks integration)
+
+### Initial Setup
+
+```bash
+# Clone your fork
+git clone https://github.com/your-username/lore.git
+cd lore
+
+# Add upstream remote
+git remote add upstream https://github.com/wasabeef/lore.git
+
+# Install CLI dependencies
+cd packages/cli
+npm install
+
+# Build
+npm run build
+
+# Run tests
+npm test
+
+# Type check
+npm run lint
+```
+
+### Useful Commands
+
+All CLI commands run from `packages/cli/`:
+
+```bash
+cd packages/cli
+
+# Run a specific command during development
+npx tsx src/cli.ts help
+
+# Run tests with coverage
+npm run test:coverage
+
+# Type check without emitting
+npm run lint
+
+# Build the bundle
+npm run build
+
+# Test the built CLI
+node dist/cli.js version
+```
+
+## Project Structure
+
+This is a monorepo with two packages:
+
+```
+packages/
+├── cli/                           # @wasabeef/lore — npm package
+│   ├── src/
+│   │   ├── cli.ts                 # Entry point and command routing
+│   │   ├── git.ts                 # Git CLI wrapper (execFile-based, no libraries)
+│   │   ├── paths.ts               # Path resolution for .git/lore/ and .claude/
+│   │   ├── core/                  # Agent-agnostic logic
+│   │   │   ├── entry.ts           # Build entry JSON, calc ai_ratio
+│   │   │   ├── storage.ts         # Git notes read/write
+│   │   │   ├── jsonl.ts           # JSONL read/append helpers
+│   │   │   └── rotate.ts          # Log rotation after commit
+│   │   ├── agents/                # One file per agent
+│   │   │   ├── types.ts           # AgentAdapter interface
+│   │   │   └── claude-code.ts     # Claude Code adapter
+│   │   └── commands/              # User-facing, delegates to agents/ + core/
+│   │       ├── enable.ts
+│   │       ├── disable.ts
+│   │       ├── hook.ts
+│   │       ├── commit.ts
+│   │       ├── show.ts
+│   │       ├── log.ts
+│   │       ├── pr.ts
+│   │       └── status.ts
+│   ├── package.json
+│   └── tsconfig.json
+│
+└── action/                        # GitHub Action (Marketplace)
+    ├── action.yml
+    ├── src/index.ts
+    ├── dist/index.js              # ncc-bundled (committed)
+    └── package.json
+
+action.yml                         # Root pointer → packages/action/dist/index.js
+```
+
+### Key Design Decisions
+
+- **Zero runtime dependencies for CLI**: Only devDependencies for build and test tooling
+- **Git CLI only**: All git operations go through the `git` command, never through libraries
+- **Claude Code hooks**: All data collection happens via Claude Code's hook system, never touching git hooks
+- **Git notes for storage**: Entries stored as `refs/notes/lore`, not files. Pushable and shareable.
+- **JSONL for append-heavy files**: Prompts and changes use JSONL for crash-safe append
+- **Input validation**: Session IDs validated as UUID v4. Transcript paths restricted to `~/.claude/`.
+
+### Data Flow
+
+```
+Claude Code hooks → lore hook (stdin JSON) → .git/lore/sessions/
+git commit → PreToolUse injects --trailer → PostToolUse records entry to git notes
+lore show/log → reads git notes --ref=lore
+```
+
+## Coding Standards
+
+### General
+
+- All source code, comments, and documentation must be in **English**
+- Use `npm run lint` (`tsc --noEmit`) to catch type errors (run from `packages/cli/`)
+- Keep functions focused and short
+- No runtime dependencies allowed for the CLI package
+
+### TypeScript Style
+
+- Use strict mode (enforced by tsconfig)
+- Prefer `async/await` over raw promises
+- Use explicit return types for exported functions
+- Avoid `any` where possible; use it sparingly for JSON parsing
+
+### Error Handling
+
+- Never let lore errors break a git commit
+- Use try/catch at command boundaries
+- Return early for missing/invalid data instead of throwing
+
+```typescript
+// Good: graceful degradation
+if (!existsSync(entryFile)) {
+  console.log("entry: not found");
+  return;
+}
+
+// Good: commit must succeed even if lore fails
+try {
+  await writeNote(commitSha, entry);
+} catch (err: any) {
+  console.error(`lore: warning: ${err.message}`);
+}
+```
+
+### Commit Messages
+
+Use conventional commit format:
+
+```
+type(scope): description
+```
+
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
+
+Examples:
+
+```
+feat(hook): capture AI responses from transcript
+fix(commit): handle missing session file gracefully
+test(enable): add legacy hook migration test
+docs(readme): add example output section
+```
+
+## Testing Guidelines
+
+### Running Tests
+
+```bash
+cd packages/cli
+
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+```
+
+### Test Structure
+
+Tests live next to the source files they test:
+
+```
+packages/cli/src/
+├── git.ts
+├── git.test.ts               # Unit tests for git wrapper
+└── commands/
+    ├── enable.ts
+    ├── enable.test.ts         # Integration tests for lore enable
+    ├── hook.ts
+    └── hook.test.ts           # Tests for hook event handling
+```
+
+### Writing Tests
+
+- Use `node:test` (built-in test runner) with `node:assert/strict`
+- Each test creates its own temp git repo for isolation
+- Clean up temp directories in `after()` hooks
+- Test both success and failure paths
+- Use UUID format for session IDs in tests (e.g., `a1b2c3d4-0001-0001-0001-000000000001`)
+
+```typescript
+import { describe, it, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+
+describe("lore enable", () => {
+  let testDir: string;
+
+  before(() => {
+    testDir = mkdtempSync(join(tmpdir(), "lore-test-"));
+    execSync("git init", { cwd: testDir });
+  });
+
+  after(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it("registers hooks in settings.json", () => {
+    // test implementation
+  });
+});
+```
+
+### What to Test
+
+- **Commands**: Each command gets integration tests that run the built CLI
+- **Hook handling**: Test each event type with simulated JSON input
+- **Edge cases**: Missing files, empty sessions, invalid JSON, non-UUID session IDs
+- **Idempotency**: Running `enable` twice should not duplicate hooks
+- **Legacy support**: Upgrading from old hook format should work cleanly
+
+## Submitting Changes
+
+### Pull Request Process
+
+1. Update your fork from upstream
+2. Create a feature branch
+3. Make your changes
+4. Run the full check suite:
+   ```bash
+   cd packages/cli && npm run lint && npm run build && npm test
+   ```
+5. Push and create a pull request
+
+### PR Checklist
+
+- [ ] Code is in English (comments, docs, output)
+- [ ] `npm run lint` passes with no errors (in `packages/cli/`)
+- [ ] `npm test` passes with no failures (in `packages/cli/`)
+- [ ] Tests added for new functionality
+- [ ] No new runtime dependencies added to CLI
+- [ ] Commit messages follow conventional format
+
+### Review Process
+
+- **Initial response**: Within a few days
+- **Full review**: Within a week
+- Address feedback in additional commits
+- Once approved, maintainers will merge
+
+## Getting Help
+
+- **Issues**: For bug reports and feature requests
+- **Discussions**: For questions and ideas
+- **Pull Requests**: For code review discussions

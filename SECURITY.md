@@ -1,0 +1,47 @@
+# Security Policy
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability in Lore, please report it responsibly.
+
+**Do not open a public issue for security vulnerabilities.**
+
+Instead, please send a report via [GitHub Security Advisories](https://github.com/wasabeef/lore/security/advisories/new) or email the maintainer directly.
+
+### What to Include
+
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if you have one)
+
+### Response Timeline
+
+- **Acknowledgment**: Within 48 hours
+- **Initial assessment**: Within 1 week
+- **Fix and disclosure**: Coordinated with reporter
+
+## Security Design
+
+Lore is designed with a security-first approach:
+
+- **Local-first**: All session data stays in `.git/lore/` on your machine. Nothing is sent to external services.
+- **No telemetry**: Zero analytics, tracking, or usage data collection.
+- **No auth/accounts**: No login, no tokens, no external service dependencies.
+- **Read-only transcript access**: Lore reads Claude Code's transcript files but never writes to or deletes them.
+- **Git hooks only via Claude Code**: Lore never installs or modifies native git hooks (`.git/hooks/`). It only registers hooks in `.claude/settings.json`.
+
+## Scope
+
+Security issues that are in scope:
+
+- Data leakage from `.git/lore/` to unintended locations
+- Unintended modification or deletion of user files
+- Command injection via hook event data
+- Exposure of sensitive content from transcripts
+
+Issues that are out of scope:
+
+- Vulnerabilities in Claude Code itself
+- Issues requiring local machine access (lore's data is local by design)
+- Social engineering attacks
