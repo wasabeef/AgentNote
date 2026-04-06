@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { existsSync, globSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
@@ -176,12 +176,22 @@ export const claudeCode: AgentAdapter = {
   findTranscript(sessionId: string): string | null {
     if (!isValidSessionId(sessionId)) return null;
     const claudeDir = join(homedir(), ".claude", "projects");
-    const pattern = join(claudeDir, "**", "sessions", `${sessionId}.jsonl`);
-    const matches = globSync(pattern);
-    if (matches.length === 0) return null;
-    // Extra safety: verify the match is under ~/.claude/.
-    const match = matches[0];
-    return isValidTranscriptPath(match) ? match : null;
+    if (!existsSync(claudeDir)) return null;
+
+    // Walk project dirs to find the transcript (compatible with Node 18+).
+    try {
+      for (const project of readdirSync(claudeDir)) {
+        const sessionsDir = join(claudeDir, project, "sessions");
+        if (!existsSync(sessionsDir)) continue;
+        const candidate = join(sessionsDir, `${sessionId}.jsonl`);
+        if (existsSync(candidate) && isValidTranscriptPath(candidate)) {
+          return candidate;
+        }
+      }
+    } catch {
+      // Permission error or unreadable directory.
+    }
+    return null;
   },
 
   async extractInteractions(
