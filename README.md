@@ -8,16 +8,13 @@
 
 Agentnote records every prompt you give to AI, every response it returns, and which files it wrote — then attaches it all to your git commits. When someone asks "why was this written this way?", the answer is one command away.
 
-## 30-Second Setup
+## Setup
 
 ```bash
-npx @wasabeef/agentnote init     # hooks + workflow + notes config
-git add .claude/settings.json .github/workflows/agentnote.yml
-git commit -m "chore: enable agentnote"
-git push
+npx @wasabeef/agentnote init
 ```
 
-That's it. From now on, every `git commit` during a Claude Code session automatically captures the full conversation.
+That's it. Hooks, GitHub Action workflow, and notes auto-fetch are all configured. Commit the generated files to share with your team.
 
 ## What You Get
 

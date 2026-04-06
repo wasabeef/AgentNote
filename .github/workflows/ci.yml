@@ -10,8 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  cli:
-    name: CLI(Node ${{ matrix.node-version }})
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/cli/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: Test(Node ${{ matrix.node-version }})
+    needs: lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,43 +38,29 @@ jobs:
         node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: packages/cli/package-lock.json
-
       - run: npm ci
-
-      - name: Type check
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Test
-        run: npm test
-
+      - run: npm run build
+      - run: npm test
       - name: Smoke test
         run: |
           node dist/cli.js version
           node dist/cli.js help
 
   action:
-    name: Action(build check)
+    name: Action
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: packages/action
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - run: npm install
-
-      - name: Verify action entry point exists
-        run: test -f dist/index.js
+      - run: test -f dist/index.js
