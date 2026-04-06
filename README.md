@@ -22,7 +22,13 @@ Agent Note records every prompt, every AI response, and which files were AI-writ
 npx @wasabeef/agentnote init
 ```
 
-Hooks, GitHub Action workflow, and notes auto-fetch — all configured. Commit the generated files to share with your team.
+Or install as a dev dependency:
+
+```bash
+npm install --save-dev @wasabeef/agentnote
+```
+
+Hooks, GitHub Action workflow, and notes auto-fetch — all configured in one command. Commit the generated files to share with your team.
 
 ## What You Get
 
@@ -165,13 +171,6 @@ Auto-post AI session reports on every PR:
 ```
 
 </details>
-
-## Install
-
-```bash
-npx @wasabeef/agentnote init                  # zero install
-npm install --save-dev @wasabeef/agentnote     # or as dev dependency
-```
 
 ## Design
 
