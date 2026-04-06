@@ -41,6 +41,13 @@ describe("agentnote init", () => {
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     assert.ok(settings.hooks?.SessionStart, "SessionStart hook should exist");
 
+    // PreToolUse should use wildcard pattern to match compound commands
+    const raw = JSON.stringify(settings);
+    assert.ok(
+      raw.includes("Bash(*git commit*)"),
+      "PreToolUse if pattern should use wildcard to match compound commands",
+    );
+
     // Workflow
     const workflowPath = join(
       testDir,

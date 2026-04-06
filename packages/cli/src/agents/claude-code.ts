@@ -19,7 +19,7 @@ const HOOKS_CONFIG = {
   PreToolUse: [
     {
       matcher: "Bash",
-      hooks: [{ type: "command", if: "Bash(git commit *)", command: HOOK_COMMAND }],
+      hooks: [{ type: "command", if: "Bash(*git commit*)", command: HOOK_COMMAND }],
     },
   ],
   PostToolUse: [
