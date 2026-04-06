@@ -12,6 +12,8 @@ describe("git", () => {
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
     execSync("git init", { cwd: testDir });
+    execSync("git config user.email test@test.com", { cwd: testDir });
+    execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
   });
 
@@ -33,6 +35,8 @@ describe("gitSafe", () => {
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
     execSync("git init", { cwd: testDir });
+    execSync("git config user.email test@test.com", { cwd: testDir });
+    execSync("git config user.name Test", { cwd: testDir });
   });
 
   it("returns exitCode 0 on success", async () => {

@@ -12,6 +12,8 @@ describe("agentnote hook", () => {
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-hook-"));
     execSync("git init", { cwd: testDir });
+    execSync("git config user.email test@test.com", { cwd: testDir });
+    execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
   });
 
