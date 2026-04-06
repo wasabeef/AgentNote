@@ -192,12 +192,6 @@ npx @wasabeef/agentnote init
 npm install --save-dev @wasabeef/agentnote
 ```
 
-## Requirements
-
-- Node.js >= 20
-- Git
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (more agents coming)
-
 ## Design
 
 - **Zero runtime dependencies** — just git + node
