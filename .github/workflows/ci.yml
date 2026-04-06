@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   cli:
+    name: CLI(Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,5 +39,25 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Verify CLI runs
-        run: node dist/cli.js version
+      - name: Smoke test
+        run: |
+          node dist/cli.js version
+          node dist/cli.js help
+
+  action:
+    name: Action(build check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/action
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Verify action entry point exists
+        run: test -f dist/index.js
