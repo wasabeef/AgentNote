@@ -18,7 +18,10 @@ usage:
   agentnote commit [args]      git commit with session context attached
   agentnote show [commit]      show session details for a commit
   agentnote log [n]            list recent commits with session info
-  agentnote pr [base] [--json]  generate report for a PR (markdown or JSON)
+  agentnote pr [base] [options] generate report for a PR
+                                  --json              structured JSON
+                                  --format chat       chat-style transcript
+                                  --update <pr#>      insert into PR description
   agentnote status             show current tracking state
   agentnote version            print version
   agentnote help               show this help

@@ -1,5 +1,12 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { git, gitSafe } from "../git.js";
 import { readNote } from "../core/storage.js";
+
+const execFileAsync = promisify(execFile);
+
+const MARKER_BEGIN = "<!-- agentnote-begin -->";
+const MARKER_END = "<!-- agentnote-end -->";
 
 // ─── Data types (exported for action/external use) ──
 
@@ -173,11 +180,170 @@ function renderMarkdown(report: PrReport): string {
   return lines.join("\n");
 }
 
+// ─── Chat-style rendering ───────────────────────────
+
+function renderChat(report: PrReport): string {
+  const lines: string[] = [];
+
+  lines.push("## 🤖 Agentnote — Session Transcript");
+  lines.push("");
+  lines.push(
+    `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
+      `(${report.tracked_commits}/${report.total_commits} commits tracked, ${report.total_prompts} prompts)`,
+  );
+
+  for (const c of report.commits) {
+    lines.push("");
+
+    const ratioLabel =
+      c.ai_ratio === null
+        ? ""
+        : c.ai_ratio === 0
+          ? "👤 Human 100% ░░░░░"
+          : `AI ${c.ai_ratio}% ${renderBar(c.ai_ratio)}`;
+
+    const aiCount = c.files.filter((f) => f.by_ai).length;
+    const humanCount = c.files.length - aiCount;
+    const fileSummary = c.files.length > 0
+      ? ` · ${c.files.length} files (${aiCount} 🤖 ${humanCount} 👤)`
+      : "";
+
+    const summaryExtra = ratioLabel ? ` — ${ratioLabel}` : "";
+    const summaryFiles = fileSummary;
+
+    if (c.interactions.length === 0 && c.ai_ratio === null) {
+      lines.push(`<details>`);
+      lines.push(`<summary><code>${c.short}</code> ${c.message}</summary>`);
+      lines.push("");
+      lines.push("*No agentnote data for this commit.*");
+      lines.push("");
+      lines.push(`</details>`);
+      continue;
+    }
+
+    lines.push(`<details>`);
+    lines.push(`<summary><code>${c.short}</code> ${c.message}${summaryExtra}${summaryFiles}</summary>`);
+    lines.push("");
+
+    for (const { prompt, response } of c.interactions) {
+      lines.push(`> **🧑 Prompt**`);
+      lines.push(`> ${prompt.split("\n").join("\n> ")}`);
+      lines.push("");
+
+      if (response) {
+        lines.push(`**🤖 Response**`);
+        lines.push("");
+
+        const truncated =
+          response.length > 800 ? response.slice(0, 800) + "…" : response;
+        lines.push(truncated);
+        lines.push("");
+      }
+    }
+
+    if (c.interactions.length > 0 && c.ai_ratio === 0) {
+      lines.push("*AI provided guidance, but the code was written by a human.*");
+      lines.push("");
+    }
+
+    // File list at the end of each commit's details
+    if (c.files.length > 0) {
+      lines.push("**Files:**");
+      for (const f of c.files) {
+        lines.push(`- \`${f.path}\` ${f.by_ai ? "🤖" : "👤"}`);
+      }
+      lines.push("");
+    }
+
+    lines.push(`</details>`);
+  }
+
+  // Collapsible summary table
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("<details>");
+  lines.push(`<summary>📊 Summary</summary>`);
+  lines.push("");
+  lines.push(
+    `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
+      `(${report.tracked_commits}/${report.total_commits} commits, ${report.total_prompts} prompts)`,
+  );
+  lines.push("");
+  lines.push("| Commit | AI | Prompts | Files |");
+  lines.push("|---|---|---|---|");
+
+  for (const c of report.commits) {
+    if (c.ai_ratio === null) {
+      lines.push(`| \`${c.short}\` ${c.message} | — | — | — |`);
+      continue;
+    }
+    const fileList = c.files
+      .map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`)
+      .join(", ");
+    lines.push(
+      `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% ${renderBar(c.ai_ratio)} | ${c.prompts_count} | ${fileList} |`,
+    );
+  }
+
+  lines.push("");
+  lines.push("</details>");
+
+  return lines.join("\n");
+}
+
 // ─── CLI entry point ────────────────────────────────
+
+/** Wrap rendered content with HTML comment markers for safe insertion into PR descriptions. */
+function wrapWithMarkers(content: string): string {
+  return `${MARKER_BEGIN}\n${content}\n${MARKER_END}`;
+}
+
+/** Insert or replace the agentnote section in an existing PR description. */
+function upsertInDescription(existingBody: string, section: string): string {
+  const marked = wrapWithMarkers(section);
+
+  if (existingBody.includes(MARKER_BEGIN)) {
+    // Replace existing section.
+    const before = existingBody.slice(0, existingBody.indexOf(MARKER_BEGIN));
+    const after = existingBody.includes(MARKER_END)
+      ? existingBody.slice(existingBody.indexOf(MARKER_END) + MARKER_END.length)
+      : "";
+    return before.trimEnd() + "\n\n" + marked + after;
+  }
+
+  // Append to the end.
+  return existingBody.trimEnd() + "\n\n" + marked;
+}
+
+/** Update PR description using gh CLI. */
+async function updatePrDescription(prNumber: string, section: string): Promise<void> {
+  // Read current description.
+  const { stdout: bodyJson } = await execFileAsync("gh", [
+    "pr", "view", prNumber, "--json", "body",
+  ], { encoding: "utf-8" });
+  const currentBody = JSON.parse(bodyJson).body ?? "";
+
+  const newBody = upsertInDescription(currentBody, section);
+
+  // Write updated description.
+  await execFileAsync("gh", [
+    "pr", "edit", prNumber, "--body", newBody,
+  ], { encoding: "utf-8" });
+}
 
 export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
-  const positional = args.filter((a) => !a.startsWith("--"));
+  const formatIdx = args.indexOf("--format");
+  const format = formatIdx !== -1 ? args[formatIdx + 1] : "table";
+  const updateIdx = args.indexOf("--update");
+  const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
+  const positional = args.filter(
+    (a, i) =>
+      !a.startsWith("--") &&
+      (formatIdx === -1 || i !== formatIdx + 1) &&
+      (updateIdx === -1 || i !== updateIdx + 1),
+  );
   const base = positional[0] ?? (await detectBaseBranch());
 
   if (!base) {
@@ -198,10 +364,20 @@ export async function pr(args: string[]): Promise<void> {
     return;
   }
 
+  let output: string;
   if (isJson) {
-    console.log(JSON.stringify(report, null, 2));
+    output = JSON.stringify(report, null, 2);
+  } else if (format === "chat") {
+    output = renderChat(report);
   } else {
-    console.log(renderMarkdown(report));
+    output = renderMarkdown(report);
+  }
+
+  if (prNumber) {
+    await updatePrDescription(prNumber, output);
+    console.log(`agentnote: PR #${prNumber} description updated`);
+  } else {
+    console.log(output);
   }
 }
 
