@@ -110,8 +110,8 @@ packages/
 │   │   │   ├── types.ts           # AgentAdapter interface
 │   │   │   └── claude-code.ts     # Claude Code adapter
 │   │   └── commands/              # User-facing, delegates to agents/ + core/
-│   │       ├── enable.ts
-│   │       ├── disable.ts
+│   │       ├── init.ts
+│   │       ├── 
 │   │       ├── hook.ts
 │   │       ├── commit.ts
 │   │       ├── show.ts
@@ -199,7 +199,7 @@ Examples:
 ```
 feat(hook): capture AI responses from transcript
 fix(commit): handle missing session file gracefully
-test(enable): add legacy hook migration test
+test(init): add legacy hook migration test
 docs(readme): add example output section
 ```
 
@@ -226,8 +226,8 @@ packages/cli/src/
 ├── git.ts
 ├── git.test.ts               # Unit tests for git wrapper
 └── commands/
-    ├── enable.ts
-    ├── enable.test.ts         # Integration tests for agentnote enable
+    ├── init.ts
+    ├── init.test.ts         # Integration tests for agentnote init
     ├── hook.ts
     └── hook.test.ts           # Tests for hook event handling
 ```
@@ -245,7 +245,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 
-describe("agentnote enable", () => {
+describe("agentnote init", () => {
   let testDir: string;
 
   before(() => {
@@ -268,7 +268,7 @@ describe("agentnote enable", () => {
 - **Commands**: Each command gets integration tests that run the built CLI
 - **Hook handling**: Test each event type with simulated JSON input
 - **Edge cases**: Missing files, empty sessions, invalid JSON, non-UUID session IDs
-- **Idempotency**: Running `enable` twice should not duplicate hooks
+- **Idempotency**: Running `init` twice should not duplicate hooks
 - **Legacy support**: Upgrading from old hook format should work cleanly
 
 ## Submitting Changes

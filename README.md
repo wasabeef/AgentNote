@@ -11,8 +11,10 @@ Agentnote records every prompt you give to AI, every response it returns, and wh
 ## 30-Second Setup
 
 ```bash
-npx @wasabeef/agentnote enable    # adds hooks to .claude/settings.json
-git add .claude/settings.json     # commit to share with your team
+npx @wasabeef/agentnote init     # hooks + workflow + notes config
+git add .claude/settings.json .github/workflows/agentnote.yml
+git commit -m "chore: enable agentnote"
+git push
 ```
 
 That's it. From now on, every `git commit` during a Claude Code session automatically captures the full conversation.
@@ -94,8 +96,7 @@ No extra commands needed. Just use `git commit` normally.
 
 | Command | What it does |
 | --- | --- |
-| `agentnote enable` | Set up hooks (commit the config to share with team) |
-| `agentnote disable` | Remove hooks |
+| `agentnote init` | Set up hooks, workflow, and notes auto-fetch |
 | `agentnote show [commit]` | Show the AI conversation behind a commit |
 | `agentnote log [n]` | List recent commits with AI ratio |
 | `agentnote pr [options]` | Generate PR report (`--format chat`, `--json`, `--update <pr#>`) |
@@ -133,7 +134,7 @@ Automatically post AI session reports on every PR:
 
 ```bash
 # Zero install (recommended)
-npx @wasabeef/agentnote enable
+npx @wasabeef/agentnote init
 
 # Or as a dev dependency
 npm install --save-dev @wasabeef/agentnote

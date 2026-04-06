@@ -32,7 +32,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote enable`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
+1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
 2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by Claude Code hooks via stdin JSON. All data collection.
 
 ### Data flow
@@ -57,9 +57,9 @@ agentnote show/log → reads git notes --ref=agentnote
 
 **Layer 2 — Git notes** (`refs/notes/agentnote`): One JSON note per commit with `"v": 1` schema version. Permanent, pushable, shareable.
 
-### enable/disable vs hook
+### init vs hook
 
-- `enable`/`disable` modify `.claude/settings.json` — intended to be committed to git so the team shares the same hooks config.
+- `init` modifies `.claude/settings.json` — intended to be committed to git so the team shares the same hooks config.
 - `hook` is called by Claude Code at runtime. It never modifies settings.json.
 
 ## Constraints
