@@ -8,7 +8,7 @@ entire.io tried to do too much — shadow branches, condensation, state machines
 
 > **Link every git commit to the AI session that produced it.**
 
-AI agents already store transcripts locally. Agentnote captures the right metadata at the right time and attaches it to commits using Git's native mechanisms.
+AI agents already store transcripts locally. Agent Note captures the right metadata at the right time and attaches it to commits using Git's native mechanisms.
 
 ## Repository structure
 
@@ -79,7 +79,7 @@ GitHub resolves `uses: wasabeef/agentnote@v0` by looking for `action.yml` at the
 
 ```yaml
 # action.yml (root)
-name: "Agentnote PR Report"
+name: "Agent Note PR Report"
 description: "AI session tracking report for pull requests"
 runs:
   using: "node22"
@@ -336,7 +336,7 @@ git push origin refs/notes/agentnote
 
 ### Threat model
 
-Agentnote records prompts and AI responses. This data may contain sensitive information:
+Agent Note records prompts and AI responses. This data may contain sensitive information:
 
 - API keys, tokens, or credentials mentioned in prompts
 - Internal business logic or proprietary algorithms
@@ -419,7 +419,7 @@ A 1-line AI edit to a 10,000-line file counts the same as a fully AI-written 5-l
 
 ## Multi-agent extensibility
 
-Agentnote supports Claude Code today, but the `agents/` + `core/` split makes adding agents straightforward.
+Agent Note supports Claude Code today, but the `agents/` + `core/` split makes adding agents straightforward.
 
 ### What varies per agent
 

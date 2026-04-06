@@ -1,6 +1,6 @@
-# Contributing to Agentnote
+# Contributing to Agent Note
 
-Thank you for your interest in contributing to Agentnote! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Agent Note! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 

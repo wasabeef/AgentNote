@@ -1,7 +1,7 @@
-# Agentnote
+# Agent Note
 
 <p align="center">
-  <img src="docs/assets/hero.jpeg" alt="Agentnote — AI conversations saved to git" width="720">
+  <img src="docs/assets/hero.jpeg" alt="Agent Note — AI conversations saved to git" width="720">
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
-Agentnote records every prompt you give to AI, every response it returns, and which files it wrote — then attaches it all to your git commits. When someone asks "why was this written this way?", the answer is one command away.
+Agent Note records every prompt you give to AI, every response it returns, and which files it wrote — then attaches it all to your git commits. When someone asks "why was this written this way?", the answer is one command away.
 
 ## Setup
 

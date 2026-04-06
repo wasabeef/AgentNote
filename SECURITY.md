@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Agentnote, please report it responsibly.
+If you discover a security vulnerability in Agent Note, please report it responsibly.
 
 **Do not open a public issue for security vulnerabilities.**
 
@@ -23,13 +23,13 @@ Instead, please send a report via [GitHub Security Advisories](https://github.co
 
 ## Security Design
 
-Agentnote is designed with a security-first approach:
+Agent Note is designed with a security-first approach:
 
 - **Local-first**: All session data stays in `.git/agentnote/` on your machine. Nothing is sent to external services.
 - **No telemetry**: Zero analytics, tracking, or usage data collection.
 - **No auth/accounts**: No login, no tokens, no external service dependencies.
-- **Read-only transcript access**: Agentnote reads Claude Code's transcript files but never writes to or deletes them.
-- **Git hooks only via Claude Code**: Agentnote never installs or modifies native git hooks (`.git/hooks/`). It only registers hooks in `.claude/settings.json`.
+- **Read-only transcript access**: Agent Note reads Claude Code's transcript files but never writes to or deletes them.
+- **Git hooks only via Claude Code**: Agent Note never installs or modifies native git hooks (`.git/hooks/`). It only registers hooks in `.claude/settings.json`.
 
 ## Scope
 

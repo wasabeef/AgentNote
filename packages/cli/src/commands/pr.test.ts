@@ -64,7 +64,7 @@ describe("agentnote pr", () => {
       { cwd: testDir, encoding: "utf-8" },
     );
 
-    assert.ok(output.includes("Agentnote — AI Session Report"));
+    assert.ok(output.includes("Agent Note — AI Session Report"));
     assert.ok(output.includes("feat: add A"));
     assert.ok(output.includes("feat: add B"));
     assert.ok(output.includes("🤖"));

@@ -123,7 +123,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
 function renderMarkdown(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agentnote — AI Session Report");
+  lines.push("## 🤖 Agent Note — AI Session Report");
   lines.push("");
   lines.push(
     `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
@@ -185,7 +185,7 @@ function renderMarkdown(report: PrReport): string {
 function renderChat(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agentnote — Session Transcript");
+  lines.push("## 🤖 Agent Note — Session Transcript");
   lines.push("");
   lines.push(
     `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
