@@ -95,6 +95,55 @@ You (or Claude) run git commit
 
 No extra commands needed. Just use `git commit` normally.
 
+## What Gets Saved
+
+Each commit gets a JSON note attached via `refs/notes/agentnote`:
+
+```bash
+$ git notes --ref=agentnote show ce941f7
+```
+
+```json
+{
+  "v": 1,
+  "session_id": "a1b2c3d4-5678-90ab-cdef-111122223333",
+  "timestamp": "2026-04-02T10:30:00Z",
+  "ai_ratio": 60,
+  "interactions": [
+    {
+      "prompt": "Implement JWT auth middleware with refresh token rotation",
+      "response": "I'll create the middleware with token verification and automatic refresh..."
+    },
+    {
+      "prompt": "Add tests for expired token and invalid signature",
+      "response": "Here are the test cases covering the edge cases..."
+    }
+  ],
+  "files_in_commit": [
+    "src/middleware/auth.ts",
+    "src/types/token.ts",
+    "src/middleware/__tests__/auth.test.ts",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "files_by_ai": [
+    "src/middleware/auth.ts",
+    "src/types/token.ts",
+    "src/middleware/__tests__/auth.test.ts"
+  ]
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `v` | Schema version |
+| `ai_ratio` | % of files in the commit written by AI (file-count based) |
+| `interactions` | Every prompt you gave and every response AI returned |
+| `files_by_ai` | Files touched by AI via Edit/Write tools |
+| `files_in_commit` | All files in the commit (AI + human) |
+
+Notes are invisible to `git branch`, GitHub UI, and CI — but pushable and fetchable like any git ref.
+
 ## Commands
 
 | Command | What it does |
