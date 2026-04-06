@@ -1,6 +1,6 @@
 {
   "name": "@wasabeef/agentnote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Remember why your code changed. Link AI agent sessions to git commits.",
   "type": "module",
   "bin": {
