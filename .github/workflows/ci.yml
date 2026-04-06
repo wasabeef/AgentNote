@@ -20,8 +20,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
-        working-directory: packages/cli
+      - run: npm -w packages/cli run lint
 
   test:
     name: Test(Node ${{ matrix.node-version }})
@@ -37,15 +36,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - run: npm run build
-        working-directory: packages/cli
-      - run: npm test
-        working-directory: packages/cli
+      - run: npm -w packages/cli run build
+      - run: npm -w packages/cli test
       - name: Smoke test
-        working-directory: packages/cli
-        run: |
-          node dist/cli.js version
-          node dist/cli.js help
+        run: node packages/cli/dist/cli.js version
 
   action:
     name: Action

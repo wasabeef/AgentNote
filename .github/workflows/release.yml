@@ -14,19 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - run: npm ci
-      - run: npm run lint
-        working-directory: packages/cli
-      - run: npm run build
-        working-directory: packages/cli
-      - run: npm test
-        working-directory: packages/cli
+      - run: npm -w packages/cli run lint
+      - run: npm -w packages/cli run build
+      - run: npm -w packages/cli test
 
   release:
     name: Create release
@@ -66,19 +61,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
-
       - run: npm ci
-      - run: npm run build
-        working-directory: packages/cli
-
+      - run: npm -w packages/cli run build
       - name: Publish
-        run: npm publish --access public
-        working-directory: packages/cli
+        run: npm -w packages/cli publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
