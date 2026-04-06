@@ -33,8 +33,8 @@ wasabeef/agentnote/
 │   │   │   │   ├── types.ts        # AgentAdapter interface + NormalizedEvent
 │   │   │   │   └── claude-code.ts  # Claude Code adapter
 │   │   │   └── commands/           # user-facing, delegates to agents/ + core/
-│   │   │       ├── enable.ts
-│   │   │       ├── disable.ts
+│   │   │       ├── init.ts
+│   │   
 │   │   │       ├── hook.ts
 │   │   │       ├── commit.ts
 │   │   │       ├── show.ts
@@ -92,7 +92,7 @@ This gives users `uses: wasabeef/agentnote@v1` while code lives in `packages/act
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/`) — `agentnote enable`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
+1. **CLI** (`packages/cli/`) — `agentnote init`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
 2. **Hook handler** — `agentnote hook`, called by Claude Code via stdin JSON. All data collection.
 
 ### Data flow
@@ -201,8 +201,8 @@ Injected via `PreToolUse` hook (synchronous) by modifying the `git commit` comma
 ## CLI commands
 
 ```
-agentnote enable              add hooks to agent config (commit to share with team)
-agentnote disable             remove hooks from agent config
+agentnote init              add hooks to agent config (commit to share with team)
+
 agentnote commit [args]       git commit with session context (convenience wrapper)
 agentnote show [commit]       show session details for a commit
 agentnote log [n]             list recent commits with session info
@@ -211,9 +211,9 @@ agentnote status              show current tracking state
 agentnote hook                handle agent hook events (internal, via stdin)
 ```
 
-### enable/disable model
+### init model
 
-`agentnote enable` writes hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team. No per-developer setup after that.
+`agentnote init` writes hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team. No per-developer setup after that.
 
 ### PR report: data and presentation separated
 
@@ -298,7 +298,7 @@ Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a 
 ## Distribution
 
 ```
-CLI:    npx @wasabeef/agentnote enable          (or npm install --save-dev)
+CLI:    npx @wasabeef/agentnote init          (or npm install --save-dev)
 Action: uses: wasabeef/agentnote@v1             (Marketplace)
 ```
 
@@ -306,7 +306,7 @@ Action: uses: wasabeef/agentnote@v1             (Marketplace)
 
 ```bash
 # 1. Enable agentnote (one person, once)
-npx @wasabeef/agentnote enable
+npx @wasabeef/agentnote init
 git add .claude/settings.json
 git commit -m "chore: enable agentnote"
 git push
@@ -359,7 +359,7 @@ Agentnote records prompts and AI responses. This data may contain sensitive info
 
 - **Do not push `refs/notes/agentnote` to public repositories** unless you are comfortable with prompts being visible.
 - Use `agentnote pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared before pushing.
-- Consider `agentnote enable --no-responses` (future) to record prompts only, without AI responses.
+- Consider `agentnote init --no-responses` (future) to record prompts only, without AI responses.
 
 ## Known limitations
 
@@ -375,7 +375,7 @@ git config notes.rewrite.rebase true
 git config notes.rewrite.amend true
 ```
 
-`agentnote enable` should set these automatically (planned).
+`agentnote init` should set these automatically (planned).
 
 ### Squash merge
 
@@ -491,7 +491,7 @@ interface AgentAdapter {
 
 1. Create `packages/cli/src/agents/<agent-name>.ts` implementing `AgentAdapter`
 2. Register it in `agents/index.ts`
-3. `agentnote enable --agent <name>` calls `adapter.installHooks()`
+3. `agentnote init --agent <name>` calls `adapter.installHooks()`
 4. `agentnote hook` detects agent from event payload or `--agent` flag
 5. All core logic and the GitHub Action work unchanged
 
@@ -499,7 +499,7 @@ interface AgentAdapter {
 
 | Aspect | entire.io | agentnote |
 |---|---|---|
-| Setup | CLI install + `entire enable` + login | `npx agentnote enable` + commit settings |
+| Setup | CLI install + `entire enable` + login | `npx agentnote init` + commit settings |
 | Storage | Orphan branch `entire/checkpoints/v1` | **Git notes** `refs/notes/agentnote` |
 | Branch pollution | Shadow branches + checkpoint branch | **None** |
 | Transcript | Full copy per checkpoint (O(n²) bloat) | **Reference only** (pointer in note) |
