@@ -54,6 +54,13 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Update major version tag
+        run: |
+          VERSION=${{ github.ref_name }}
+          MAJOR=$(echo "$VERSION" | grep -oE '^v[0-9]+')
+          git tag -f "$MAJOR"
+          git push origin "$MAJOR" -f
+
   publish:
     name: Publish to npm
     needs: release
