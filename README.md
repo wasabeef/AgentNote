@@ -4,71 +4,26 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/@wasabeef/agentnote)](https://www.npmjs.com/package/@wasabeef/agentnote)
 
-Remember why your code changed. Link Claude Code sessions to git commits.
+**Know _why_ your code changed, not just _what_ changed.**
 
-## What It Does
+Agentnote records every prompt you give to AI, every response it returns, and which files it wrote — then attaches it all to your git commits. When someone asks "why was this written this way?", the answer is one command away.
 
-Every time you use Claude Code to write code, agentnote captures:
-
-- **Every prompt** you gave to Claude
-- **Every AI response** Claude returned
-- **Which files** were written by AI vs. human
-- **AI authorship ratio** per commit
-
-All of this is stored as [git notes](https://git-scm.com/docs/git-notes) and linked to your commits via a `Agentnote-Session` trailer, so you can always trace back to why a change was made.
-
-## Quick Start
+## 30-Second Setup
 
 ```bash
-# Enable agentnote for your repo (commit .claude/settings.json to share with team)
-npx @wasabeef/agentnote enable
-
-# Just use git commit as normal — agentnote hooks handle everything automatically
-git commit -m "feat: add auth middleware"
-
-# See what happened
-npx @wasabeef/agentnote show
+npx @wasabeef/agentnote enable    # adds hooks to .claude/settings.json
+git add .claude/settings.json     # commit to share with your team
 ```
 
-## Installation
+That's it. From now on, every `git commit` during a Claude Code session automatically captures the full conversation.
 
-### npx (zero install)
+## What You Get
 
-```bash
-npx @wasabeef/agentnote enable
-```
-
-### As a dev dependency (recommended for teams)
-
-```bash
-npm install --save-dev @wasabeef/agentnote
-```
-
-```jsonc
-// package.json
-{
-  "scripts": {
-    "agentnote": "agentnote"
-  }
-}
-```
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `agentnote enable` | Add hooks to `.claude/settings.json` (commit to share with team) |
-| `agentnote disable` | Remove hooks from `.claude/settings.json` |
-| `agentnote commit [args]` | git commit with session context (convenience, optional) |
-| `agentnote show [commit]` | Show session details for a commit |
-| `agentnote log [n]` | List recent commits with session info |
-| `agentnote status` | Show current tracking state |
-
-## Example Output
-
-### `agentnote show`
+### Every commit tells its story
 
 ```
+$ agentnote show
+
 commit:  ce941f7 feat: add JWT auth middleware
 session: a1b2c3d4-5678-90ab-cdef-111122223333
 
@@ -90,46 +45,115 @@ prompts: 2
      → Here are the test cases covering the edge cases...
 ```
 
-### `agentnote log`
+### Scan your history at a glance
 
 ```
+$ agentnote log
+
 ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 326a568 test: add auth tests          [a1b2c3d4… | 🤖100% | 1p]
 ba091be fix: update dependencies
 ```
 
-### `agentnote commit`
+### Generate PR reports for code review
 
 ```
-[main ce941f7] feat: add JWT auth middleware
- 5 files changed, 42 insertions(+)
-agentnote: 2 prompts, AI ratio 60%
+$ agentnote pr --format chat --update 42
+agentnote: PR #42 description updated
 ```
+
+Inserts a collapsible session transcript into the PR description — reviewers see every prompt and AI response right on the PR page:
+
+<details>
+<summary><code>dd4f971</code> feat: add Button component — AI 100% █████ · 1 files (1 🤖 0 👤)</summary>
+
+> **🧑 Prompt**
+> Create a shared Button component with variant support
+
+**🤖 Response**
+
+I'll create a Button component that accepts primary, secondary, and danger variants...
+
+</details>
 
 ## How It Works
 
-1. `agentnote enable` registers Claude Code [hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) in `.claude/settings.json` — commit this to share with your team
-2. As you work, hooks automatically record prompts, AI responses, and file changes
-3. When `git commit` runs (via Claude Code or `agentnote commit`), a `Agentnote-Session` trailer is injected and a structured entry is saved as a [git note](https://git-scm.com/docs/git-notes)
-4. `agentnote show` reads the git note and displays the full context behind a commit
+```
+You prompt Claude Code
+  → hooks capture the prompt
+Claude writes code
+  → hooks track which files were touched
+You (or Claude) run git commit
+  → Agentnote-Session trailer injected automatically
+  → prompt + response + file attribution saved as git note
+```
 
-Session data is stored as git notes (`refs/notes/agentnote`). Nothing is sent to external services. No telemetry.
+No extra commands needed. Just use `git commit` normally.
 
-### Team sharing
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `agentnote enable` | Set up hooks (commit the config to share with team) |
+| `agentnote disable` | Remove hooks |
+| `agentnote show [commit]` | Show the AI conversation behind a commit |
+| `agentnote log [n]` | List recent commits with AI ratio |
+| `agentnote pr [options]` | Generate PR report (`--format chat`, `--json`, `--update <pr#>`) |
+| `agentnote status` | Show tracking state |
+| `agentnote commit [args]` | Convenience wrapper for `git commit` (optional) |
+
+## Share with Your Team
+
+Session data is stored as [git notes](https://git-scm.com/docs/git-notes) — invisible to branch listings, GitHub UI, and CI.
 
 ```bash
-# Push session data to remote
+# Push session data
 git push origin refs/notes/agentnote
 
-# Fetch session data from team
+# Team members fetch it
 git fetch origin refs/notes/agentnote:refs/notes/agentnote
+```
+
+## GitHub Action
+
+Automatically post AI session reports on every PR:
+
+```yaml
+- uses: wasabeef/agentnote@v1
+  id: agentnote
+  with:
+    base: main
+
+# Use the data however you want
+- if: fromJSON(steps.agentnote.outputs.json).overall_ai_ratio > 90
+  run: echo "::warning::High AI ratio — consider extra review"
+```
+
+## Install
+
+```bash
+# Zero install (recommended)
+npx @wasabeef/agentnote enable
+
+# Or as a dev dependency
+npm install --save-dev @wasabeef/agentnote
 ```
 
 ## Requirements
 
 - Node.js >= 20
 - Git
-- Claude Code
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (more agents coming)
+
+## Design
+
+- **Zero runtime dependencies** — just git + node
+- **Git notes storage** — no branch pollution, no CI impact
+- **Never breaks git commit** — all recording in try/catch
+- **No telemetry** — data stays local unless you push it
+- **Agent-agnostic architecture** — Claude Code today, Cursor / Gemini next
+
+See [DESIGN.md](docs/knowledge/DESIGN.md) for architecture details.
 
 ## Contributing
 
@@ -137,4 +161,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT - see [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
