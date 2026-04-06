@@ -10,8 +10,8 @@
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --banner:js='#!/usr/bin/env node'",
     "dev": "tsx src/cli.ts",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx/esm --test 'src/**/*.test.ts'",
-    "test:coverage": "node --import tsx/esm --test --experimental-test-coverage 'src/**/*.test.ts'",
+    "test": "find src -name '*.test.ts' | xargs node --import tsx/esm --test",
+    "test:coverage": "find src -name '*.test.ts' | xargs node --import tsx/esm --test --experimental-test-coverage",
     "prepublishOnly": "npm run build"
   },
   "files": [
