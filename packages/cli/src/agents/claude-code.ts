@@ -4,9 +4,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
 
-// Resolution order: local node_modules binary → global PATH → npx fetch from registry.
-const HOOK_COMMAND =
-  "$(npm bin 2>/dev/null)/agentnote hook 2>/dev/null || agentnote hook 2>/dev/null || npx --yes @wasabeef/agentnote hook";
+const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
 
 const HOOKS_CONFIG = {
   SessionStart: [
