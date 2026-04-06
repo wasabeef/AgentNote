@@ -12,18 +12,10 @@ const HELP = `
 agentnote — remember why your code changed
 
 usage:
-  agentnote init [options]       set up hooks, workflow, and notes auto-fetch
-                                   --hooks         hooks only
-                                   --action        workflow only
-                                   --no-action     skip workflow
+  agentnote init                 set up hooks, workflow, and notes auto-fetch
   agentnote show [commit]        show session details for a commit
   agentnote log [n]              list recent commits with session info
-  agentnote pr [base] [options]  generate report for a PR
-                                   --json          structured JSON
-                                   --format chat   chat-style transcript
-                                   --update <pr#>  insert into PR description
   agentnote status               show current tracking state
-  agentnote commit [args]        git commit with session context (optional)
   agentnote version              print version
   agentnote help                 show this help
 `.trim();
