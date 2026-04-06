@@ -172,7 +172,7 @@ Note content per commit:
 ```
 
 - **`v`**: Schema version. Always `1` for the current format. Future changes increment this.
-- **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session.
+- **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session. File paths are normalized to repo-relative at recording time and matched by exact string comparison.
 - **`interactions[].response`**: Truncated to 2000 characters. Full responses are available in the local transcript file.
 
 ### Why git notes over alternatives

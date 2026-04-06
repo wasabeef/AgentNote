@@ -139,7 +139,7 @@ $ git notes --ref=agentnote show ce941f7
 | `v` | Schema version |
 | `ai_ratio` | % of files in the commit written by AI (file-count based) |
 | `interactions` | Every prompt you gave and every response AI returned |
-| `files_by_ai` | Files touched by AI via Edit/Write tools |
+| `files_by_ai` | Files touched by AI (repo-relative paths, exact match) |
 | `files_in_commit` | All files in the commit (AI + human) |
 
 Notes are invisible to `git branch`, GitHub UI, and CI — but pushable and fetchable like any git ref.
