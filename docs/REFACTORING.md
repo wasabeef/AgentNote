@@ -210,6 +210,127 @@ I'll create the middleware...
 
 Same as chat format but in the table view — each row expands to show prompt/response.
 
+## Priority 7: Claude Code harness hooks
+
+Add hooks to `.claude/settings.json` so Claude Code automatically runs lint, typecheck, and tests at the right moments. This enforces quality without requiring manual discipline.
+
+### PostToolUse: auto-lint on file changes
+
+Run Biome check after every Edit/Write to catch issues immediately:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx biome check --no-errors-on-unmatched $(git diff --name-only HEAD)",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### PreToolUse: typecheck before git commit
+
+Catch type errors before they reach the commit:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*git commit*)",
+            "command": "cd packages/cli && npx tsc --noEmit"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+If typecheck fails (exit code != 0), the commit is blocked with feedback to Claude.
+
+### Stop: run tests after each turn
+
+Run the test suite after Claude finishes responding. Non-blocking (async), but results feed into the next prompt:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd packages/cli && npm test 2>&1 | tail -5",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Combined settings.json
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }] },
+      { "hooks": [{ "type": "command", "command": "cd packages/cli && npm test 2>&1 | tail -5", "async": true }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }] }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "if": "Bash(*git commit*)", "command": "npx --yes @wasabeef/agentnote hook" },
+          { "type": "command", "if": "Bash(*git commit*)", "command": "cd packages/cli && npx tsc --noEmit" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }]
+      }
+    ]
+  }
+}
+```
+
+### Harness progression
+
+Start simple, add gates incrementally:
+
+| Phase | Hook | What | Blocking |
+|---|---|---|---|
+| 1 | Stop (async) | Run tests after each turn | No |
+| 2 | PreToolUse (sync) | Typecheck before commit | Yes — blocks commit if types fail |
+| 3 | PostToolUse (async) | Biome lint after edit | No — feedback only |
+| 4 | PreToolUse (sync) | Tests before commit | Yes — blocks commit if tests fail |
+
+Phase 1 alone gives fast feedback. Phase 2 prevents broken commits. Phase 3-4 add strictness as confidence grows.
+
 ## Not planned
 
 | Item | Reason |
