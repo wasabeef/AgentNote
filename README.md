@@ -12,7 +12,9 @@
 
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
-Agent Note records every prompt you give to AI, every response it returns, and which files it wrote — then attaches it all to your git commits. When someone asks "why was this written this way?", the answer is one command away.
+<p align="center">
+Agent Note records every prompt, every AI response, and which files were AI-written — then attaches it all to your git commits. Zero config. One command.
+</p>
 
 ## Setup
 
@@ -20,7 +22,7 @@ Agent Note records every prompt you give to AI, every response it returns, and w
 npx @wasabeef/agentnote init
 ```
 
-That's it. Hooks, GitHub Action workflow, and notes auto-fetch are all configured. Commit the generated files to share with your team.
+Hooks, GitHub Action workflow, and notes auto-fetch — all configured. Commit the generated files to share with your team.
 
 ## What You Get
 
@@ -60,14 +62,13 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### Generate PR reports for code review
+### PR reports for code review
 
 ```
 $ agentnote pr --format chat --update 42
-agentnote: PR #42 description updated
 ```
 
-Inserts a collapsible session transcript into the PR description — reviewers see every prompt and AI response right on the PR page:
+Inserts a collapsible session transcript into the PR description:
 
 <details>
 <summary><code>dd4f971</code> feat: add Button component — AI 100% █████ · 1 files (1 🤖 0 👤)</summary>
@@ -89,60 +90,11 @@ You prompt Claude Code
 Claude writes code
   → hooks track which files were touched
 You (or Claude) run git commit
-  → Agentnote-Session trailer injected automatically
+  → session trailer injected automatically
   → prompt + response + file attribution saved as git note
 ```
 
-No extra commands needed. Just use `git commit` normally.
-
-## What Gets Saved
-
-Each commit gets a JSON note attached via `refs/notes/agentnote`:
-
-```bash
-$ git notes --ref=agentnote show ce941f7
-```
-
-```json
-{
-  "v": 1,
-  "session_id": "a1b2c3d4-5678-90ab-cdef-111122223333",
-  "timestamp": "2026-04-02T10:30:00Z",
-  "ai_ratio": 60,
-  "interactions": [
-    {
-      "prompt": "Implement JWT auth middleware with refresh token rotation",
-      "response": "I'll create the middleware with token verification and automatic refresh..."
-    },
-    {
-      "prompt": "Add tests for expired token and invalid signature",
-      "response": "Here are the test cases covering the edge cases..."
-    }
-  ],
-  "files_in_commit": [
-    "src/middleware/auth.ts",
-    "src/types/token.ts",
-    "src/middleware/__tests__/auth.test.ts",
-    "CHANGELOG.md",
-    "README.md"
-  ],
-  "files_by_ai": [
-    "src/middleware/auth.ts",
-    "src/types/token.ts",
-    "src/middleware/__tests__/auth.test.ts"
-  ]
-}
-```
-
-| Field | Description |
-| --- | --- |
-| `v` | Schema version |
-| `ai_ratio` | % of files in the commit written by AI (file-count based) |
-| `interactions` | Every prompt you gave and every response AI returned |
-| `files_by_ai` | Files touched by AI (repo-relative paths, exact match) |
-| `files_in_commit` | All files in the commit (AI + human) |
-
-Notes are invisible to `git branch`, GitHub UI, and CI — but pushable and fetchable like any git ref.
+No extra commands. Just use `git commit` normally.
 
 ## Commands
 
@@ -151,25 +103,56 @@ Notes are invisible to `git branch`, GitHub UI, and CI — but pushable and fetc
 | `agentnote init` | Set up hooks, workflow, and notes auto-fetch |
 | `agentnote show [commit]` | Show the AI conversation behind a commit |
 | `agentnote log [n]` | List recent commits with AI ratio |
-| `agentnote pr [options]` | Generate PR report (`--format chat`, `--json`, `--update <pr#>`) |
 | `agentnote status` | Show tracking state |
-| `agentnote commit [args]` | Convenience wrapper for `git commit` (optional) |
 
-## Share with Your Team
+## Works with
 
-Session data is stored as [git notes](https://git-scm.com/docs/git-notes) — invisible to branch listings, GitHub UI, and CI.
+Claude Code — more agents coming (Cursor, Gemini CLI)
+
+## Team Sharing
+
+Session data is stored as [git notes](https://git-scm.com/docs/git-notes) — invisible to `git branch`, GitHub UI, and CI.
 
 ```bash
-# Push session data
-git push origin refs/notes/agentnote
-
-# Team members fetch it
-git fetch origin refs/notes/agentnote:refs/notes/agentnote
+git push origin refs/notes/agentnote          # share
+git fetch origin refs/notes/agentnote:refs/notes/agentnote  # fetch
 ```
+
+<details>
+<summary>What gets saved</summary>
+
+```bash
+$ git notes --ref=agentnote show ce941f7
+```
+
+```json
+{
+  "v": 1,
+  "session_id": "a1b2c3d4-...",
+  "ai_ratio": 60,
+  "interactions": [
+    {
+      "prompt": "Implement JWT auth middleware",
+      "response": "I'll create the middleware..."
+    }
+  ],
+  "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
+  "files_by_ai": ["src/auth.ts"]
+}
+```
+
+</details>
 
 ## GitHub Action
 
-Automatically post AI session reports on every PR:
+Auto-post AI session reports on every PR:
+
+```yaml
+- uses: wasabeef/agentnote@v0
+```
+
+<details>
+<summary>Full example with outputs</summary>
 
 ```yaml
 - uses: wasabeef/agentnote@v0
@@ -177,35 +160,29 @@ Automatically post AI session reports on every PR:
   with:
     base: main
 
-# Use the data however you want
 - if: fromJSON(steps.agentnote.outputs.json).overall_ai_ratio > 90
   run: echo "::warning::High AI ratio — consider extra review"
 ```
 
+</details>
+
 ## Install
 
 ```bash
-# Zero install (recommended)
-npx @wasabeef/agentnote init
-
-# Or as a dev dependency
-npm install --save-dev @wasabeef/agentnote
+npx @wasabeef/agentnote init                  # zero install
+npm install --save-dev @wasabeef/agentnote     # or as dev dependency
 ```
 
 ## Design
 
-- **Zero runtime dependencies** — just git + node
-- **Git notes storage** — no branch pollution, no CI impact
-- **Never breaks git commit** — all recording in try/catch
-- **No telemetry** — data stays local unless you push it
-- **Agent-agnostic architecture** — Claude Code today, Cursor / Gemini next
+Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
 
-See [DESIGN.md](docs/knowledge/DESIGN.md) for architecture details.
+[Architecture details →](docs/knowledge/DESIGN.md)
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+[Contributing guide →](CONTRIBUTING.md) · [Code of Conduct →](CODE_OF_CONDUCT.md)
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT — [LICENSE](LICENSE)
