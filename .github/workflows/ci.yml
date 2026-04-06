@@ -13,26 +13,20 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/cli
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: packages/cli/package-lock.json
       - run: npm ci
       - run: npm run lint
+        working-directory: packages/cli
 
   test:
     name: Test(Node ${{ matrix.node-version }})
     needs: lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/cli
     strategy:
       matrix:
         node-version: [20, 22]
@@ -42,11 +36,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-          cache-dependency-path: packages/cli/package-lock.json
       - run: npm ci
       - run: npm run build
+        working-directory: packages/cli
       - run: npm test
+        working-directory: packages/cli
       - name: Smoke test
+        working-directory: packages/cli
         run: |
           node dist/cli.js version
           node dist/cli.js help
@@ -54,13 +50,10 @@ jobs:
   action:
     name: Action
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/action
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: test -f dist/index.js
+      - run: npm ci
+      - run: test -f packages/action/dist/index.js
