@@ -116,7 +116,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
 function renderMarkdown(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Lore — AI Session Report");
+  lines.push("## 🤖 Agentnote — AI Session Report");
   lines.push("");
   lines.push(
     `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
@@ -182,7 +182,7 @@ export async function pr(args: string[]): Promise<void> {
 
   if (!base) {
     console.error(
-      "error: could not detect base branch. pass it as argument: lore pr <base>",
+      "error: could not detect base branch. pass it as argument: agentnote pr <base>",
     );
     process.exit(1);
   }

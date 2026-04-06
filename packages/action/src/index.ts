@@ -2,34 +2,34 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "node:child_process";
 
-const COMMENT_MARKER = "<!-- lore-pr-report -->";
+const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 
 async function run(): Promise<void> {
   try {
     const base = core.getInput("base") || `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
     const shouldComment = core.getInput("comment") !== "false";
 
-    // Fetch lore notes.
+    // Fetch agentnote notes.
     try {
-      execSync("git fetch origin refs/notes/lore:refs/notes/lore", { stdio: "pipe" });
+      execSync("git fetch origin refs/notes/agentnote:refs/notes/agentnote", { stdio: "pipe" });
     } catch {
-      core.info("No lore notes found on remote.");
+      core.info("No agentnote notes found on remote.");
     }
 
     // Generate JSON report.
     let json: string;
     try {
-      json = execSync(`npx --yes @wasabeef/lore pr "${base}" --json`, {
+      json = execSync(`npx --yes @wasabeef/agentnote pr "${base}" --json`, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
     } catch {
-      core.info("No lore data found for this PR.");
+      core.info("No agentnote data found for this PR.");
       return;
     }
 
     if (!json || json === "{}") {
-      core.info("No lore data found for this PR.");
+      core.info("No agentnote data found for this PR.");
       return;
     }
 
@@ -45,7 +45,7 @@ async function run(): Promise<void> {
     // Generate markdown report.
     let markdown = "";
     try {
-      markdown = execSync(`npx --yes @wasabeef/lore pr "${base}"`, {
+      markdown = execSync(`npx --yes @wasabeef/agentnote pr "${base}"`, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
@@ -92,7 +92,7 @@ async function run(): Promise<void> {
         });
       }
 
-      core.info("Lore report posted to PR.");
+      core.info("Agentnote report posted to PR.");
     }
   } catch (error) {
     if (error instanceof Error) {

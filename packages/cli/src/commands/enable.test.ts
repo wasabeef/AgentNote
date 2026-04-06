@@ -6,18 +6,16 @@ import {
   rmSync,
   existsSync,
   readFileSync,
-  writeFileSync,
-  mkdirSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-describe("lore enable", () => {
+describe("agentnote enable", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-enable-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-enable-"));
     execSync("git init", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
   });
@@ -44,8 +42,8 @@ describe("lore enable", () => {
 
     const raw = JSON.stringify(settings);
     assert.ok(
-      raw.includes("@wasabeef/lore hook"),
-      "hooks should reference @wasabeef/lore hook",
+      raw.includes("@wasabeef/agentnote hook"),
+      "hooks should reference @wasabeef/agentnote hook",
     );
   });
 
@@ -63,75 +61,9 @@ describe("lore enable", () => {
     );
   });
 
-  it("creates .git/lore directory", () => {
-    const loreDir = join(testDir, ".git", "lore");
-    assert.ok(existsSync(loreDir), ".git/lore should exist");
+  it("creates .git/agentnote directory", () => {
+    const agentnoteDir = join(testDir, ".git", "agentnote");
+    assert.ok(existsSync(agentnoteDir), ".git/agentnote should exist");
   });
 });
 
-describe("lore enable (legacy migration)", () => {
-  let testDir: string;
-  const cliPath = join(process.cwd(), "dist", "cli.js");
-
-  before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-migrate-"));
-    execSync("git init", { cwd: testDir });
-    execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
-
-    // plant legacy hooks in settings.json
-    const claudeDir = join(testDir, ".claude");
-    mkdirSync(claudeDir, { recursive: true });
-    writeFileSync(
-      join(claudeDir, "settings.json"),
-      JSON.stringify({
-        hooks: {
-          SessionStart: [
-            {
-              hooks: [
-                {
-                  type: "command",
-                  command: "bash .claude/hooks/lore-hook.sh",
-                  async: true,
-                },
-              ],
-            },
-          ],
-          Stop: [
-            {
-              hooks: [
-                {
-                  type: "command",
-                  command: "bash .claude/hooks/lore-hook.sh",
-                  async: true,
-                },
-              ],
-            },
-          ],
-        },
-      }),
-    );
-  });
-
-  after(() => {
-    rmSync(testDir, { recursive: true, force: true });
-  });
-
-  it("replaces legacy hooks with current format", () => {
-    execSync(`node ${cliPath} enable`, { cwd: testDir });
-
-    const settingsPath = join(testDir, ".claude", "settings.json");
-    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-    const raw = JSON.stringify(settings);
-
-    assert.ok(!raw.includes("lore-hook.sh"), "legacy hooks should be removed");
-    assert.ok(
-      raw.includes("@wasabeef/lore hook"),
-      "current hooks should be added",
-    );
-    assert.equal(
-      settings.hooks.SessionStart.length,
-      1,
-      "should not have duplicate SessionStart",
-    );
-  });
-});

@@ -7,7 +7,7 @@ import { claudeCode } from "../agents/claude-code.js";
 const VERSION = "0.1.0";
 
 export async function status(): Promise<void> {
-  console.log(`lore v${VERSION}`);
+  console.log(`agentnote v${VERSION}`);
   console.log();
 
   const repoRoot = await root();
@@ -17,7 +17,7 @@ export async function status(): Promise<void> {
   if (hooksActive) {
     console.log("hooks:   active");
   } else {
-    console.log("hooks:   not configured (run 'lore enable')");
+    console.log("hooks:   not configured (run 'agentnote enable')");
   }
 
   const sessionPath = await sessionFile();
@@ -31,7 +31,7 @@ export async function status(): Promise<void> {
   const { stdout } = await gitSafe([
     "log",
     "-20",
-    "--format=%(trailers:key=Lore-Session,valueonly)",
+    "--format=%(trailers:key=Agentnote-Session,valueonly)",
   ]);
 
   const linked = stdout

@@ -10,24 +10,24 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-describe("lore log", () => {
+describe("agentnote log", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-log-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-log-"));
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
 
-    // plain commit (no lore)
+    // plain commit (no agentnote)
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
 
-    // lore commit
+    // agentnote commit
     execSync(`node ${cliPath} enable`, { cwd: testDir });
     const sessionId = "a1b2c3d4-2222-2222-2222-222222222222";
-    writeFileSync(join(testDir, ".git", "lore", "session"), sessionId);
-    const sessionDir = join(testDir, ".git", "lore", "sessions", sessionId);
+    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
+    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
     mkdirSync(sessionDir, { recursive: true });
     writeFileSync(
       join(sessionDir, "prompts.jsonl"),
@@ -36,7 +36,7 @@ describe("lore log", () => {
 
     writeFileSync(join(testDir, "file1.ts"), "x");
     execSync("git add .", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: with lore"`, { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: with agentnote"`, { cwd: testDir });
   });
 
   after(() => {
@@ -49,7 +49,7 @@ describe("lore log", () => {
       encoding: "utf-8",
     });
 
-    assert.ok(output.includes("feat: with lore"), "should show lore commit");
+    assert.ok(output.includes("feat: with agentnote"), "should show agentnote commit");
     assert.ok(output.includes("init"), "should show plain commit");
     assert.ok(output.includes("🤖"), "should show AI ratio indicator");
   });

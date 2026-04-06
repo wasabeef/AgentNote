@@ -1,4 +1,4 @@
-# lore — Design Document
+# agentnote — Design Document
 
 > Remember why your code changed. Minimal tooling, maximum traceability.
 
@@ -8,18 +8,18 @@ entire.io tried to do too much — shadow branches, condensation, state machines
 
 > **Link every git commit to the AI session that produced it.**
 
-AI agents already store transcripts locally. Lore captures the right metadata at the right time and attaches it to commits using Git's native mechanisms.
+AI agents already store transcripts locally. Agentnote captures the right metadata at the right time and attaches it to commits using Git's native mechanisms.
 
 ## Repository structure
 
 The repository is a monorepo with two packages:
 
 ```
-wasabeef/lore/
-├── action.yml                      # root pointer → packages/action (for uses: wasabeef/lore@v1)
+wasabeef/agentnote/
+├── action.yml                      # root pointer → packages/action (for uses: wasabeef/agentnote@v1)
 │
 ├── packages/
-│   ├── cli/                        # @wasabeef/lore — npm package
+│   ├── cli/                        # @wasabeef/agentnote — npm package
 │   │   ├── src/
 │   │   │   ├── cli.ts              # entry point, command routing
 │   │   │   ├── git.ts              # git CLI wrapper
@@ -41,7 +41,7 @@ wasabeef/lore/
 │   │   │       ├── log.ts
 │   │   │       ├── pr.ts
 │   │   │       └── status.ts
-│   │   ├── package.json            # name: @wasabeef/lore
+│   │   ├── package.json            # name: @wasabeef/agentnote
 │   │   └── tsconfig.json
 │   │
 │   └── action/                     # GitHub Action (Marketplace)
@@ -50,7 +50,7 @@ wasabeef/lore/
 │       │   └── index.ts            # calls CLI, sets outputs, posts comment
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
-│       └── package.json            # name: @wasabeef/lore-action (private, not published)
+│       └── package.json            # name: @wasabeef/agentnote-action (private, not published)
 │
 ├── docs/
 │   └── knowledge/
@@ -67,7 +67,7 @@ wasabeef/lore/
 
 ### Why monorepo
 
-The action calls `lore pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
+The action calls `agentnote pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
 
 - A single PR can change CLI output + action parsing in lockstep
 - No cross-repo version coordination
@@ -75,25 +75,25 @@ The action calls `lore pr --json` — it's tightly coupled to the CLI's output f
 
 ### Root action.yml trick
 
-GitHub resolves `uses: wasabeef/lore@v1` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
+GitHub resolves `uses: wasabeef/agentnote@v1` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
 
 ```yaml
 # action.yml (root)
-name: "Lore PR Report"
+name: "Agentnote PR Report"
 description: "AI session tracking report for pull requests"
 runs:
   using: "node22"
   main: "packages/action/dist/index.js"
 ```
 
-This gives users `uses: wasabeef/lore@v1` while code lives in `packages/action/`.
+This gives users `uses: wasabeef/agentnote@v1` while code lives in `packages/action/`.
 
 ## Architecture
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/`) — `lore enable`, `lore show`, `lore log`, `lore pr`. Run by users and CI.
-2. **Hook handler** — `lore hook`, called by Claude Code via stdin JSON. All data collection.
+1. **CLI** (`packages/cli/`) — `agentnote enable`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
+2. **Hook handler** — `agentnote hook`, called by Claude Code via stdin JSON. All data collection.
 
 ### Data flow
 
@@ -106,7 +106,7 @@ This gives users `uses: wasabeef/lore@v1` while code lives in `packages/action/`
     Stop                                   PreToolUse
          │                 │                   │
          ▼                 ▼                   ▼
-    .git/lore/        prompts.jsonl       changes.jsonl
+    .git/agentnote/        prompts.jsonl       changes.jsonl
     session           (append-only)       (Edit/Write tracking)
                                           ┌────────────────────┐
                                           │ PreToolUse:        │
@@ -125,12 +125,12 @@ This gives users `uses: wasabeef/lore@v1` while code lives in `packages/action/`
 
 ### Storage: two layers
 
-**Layer 1 — Local temp (`.git/lore/sessions/`)**
+**Layer 1 — Local temp (`.git/agentnote/sessions/`)**
 
 Append-only JSONL files, accumulated during a session, rotated after each commit. Never pushed. Crash-safe — if the process dies, only the last line might be incomplete.
 
 ```
-.git/lore/
+.git/agentnote/
 ├── session                          # active session ID (single line)
 └── sessions/<session-id>/
     ├── prompts.jsonl                # one prompt per line
@@ -141,15 +141,15 @@ Append-only JSONL files, accumulated during a session, rotated after each commit
     └── ...
 ```
 
-**Layer 2 — Git notes (`refs/notes/lore`)**
+**Layer 2 — Git notes (`refs/notes/agentnote`)**
 
 The permanent record. One JSON note per commit, written at commit time. Pushable, fetchable, shareable with the team.
 
 ```bash
-git notes --ref=lore add -f -m '<json>' HEAD   # write
-git notes --ref=lore show <commit>              # read
-git push origin refs/notes/lore                 # share
-git fetch origin refs/notes/lore:refs/notes/lore  # fetch
+git notes --ref=agentnote add -f -m '<json>' HEAD   # write
+git notes --ref=agentnote show <commit>              # read
+git push origin refs/notes/agentnote                 # share
+git fetch origin refs/notes/agentnote:refs/notes/agentnote  # fetch
 ```
 
 Note content per commit:
@@ -179,10 +179,10 @@ Note content per commit:
 
 | Approach | Branch pollution | GitHub banner | CI impact | Push/share | Survives clone |
 |---|---|---|---|---|---|
-| `.git/lore/` files | None | None | None | **No** | **No** |
+| `.git/agentnote/` files | None | None | None | **No** | **No** |
 | Orphan branch | Shows in `git branch` | "Compare & PR" every push | Possible | Yes | Yes |
 | **Git notes** | **None** | **None** | **None** | **Yes** | Yes (explicit fetch) |
-| Repo files (`.lore/`) | None | None | None | Yes | Yes, but pollutes diff |
+| Repo files (`.agentnote/`) | None | None | None | Yes | Yes, but pollutes diff |
 
 Git notes are invisible to branch listings, GitHub UI, and CI — but still pushable and fetchable.
 
@@ -193,36 +193,36 @@ Every commit made during an AI session gets a trailer:
 ```
 feat: add auth middleware
 
-Lore-Session: a1b2c3d4-5678-90ab-cdef-111122223333
+Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
-Injected via `PreToolUse` hook (synchronous) by modifying the `git commit` command. Works with plain `git commit` — no need for `lore commit`.
+Injected via `PreToolUse` hook (synchronous) by modifying the `git commit` command. Works with plain `git commit` — no need for `agentnote commit`.
 
 ## CLI commands
 
 ```
-lore enable              add hooks to agent config (commit to share with team)
-lore disable             remove hooks from agent config
-lore commit [args]       git commit with session context (convenience wrapper)
-lore show [commit]       show session details for a commit
-lore log [n]             list recent commits with session info
-lore pr [base] [--json]  generate report for a PR (markdown or structured JSON)
-lore status              show current tracking state
-lore hook                handle agent hook events (internal, via stdin)
+agentnote enable              add hooks to agent config (commit to share with team)
+agentnote disable             remove hooks from agent config
+agentnote commit [args]       git commit with session context (convenience wrapper)
+agentnote show [commit]       show session details for a commit
+agentnote log [n]             list recent commits with session info
+agentnote pr [base] [--json]  generate report for a PR (markdown or structured JSON)
+agentnote status              show current tracking state
+agentnote hook                handle agent hook events (internal, via stdin)
 ```
 
 ### enable/disable model
 
-`lore enable` writes hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team. No per-developer setup after that.
+`agentnote enable` writes hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team. No per-developer setup after that.
 
 ### PR report: data and presentation separated
 
-`lore pr` produces two output formats:
+`agentnote pr` produces two output formats:
 
 ```bash
-lore pr                    # markdown (human-readable)
-lore pr --json             # structured JSON (for scripts/actions)
-lore pr origin/main --json # explicit base branch
+agentnote pr                    # markdown (human-readable)
+agentnote pr --json             # structured JSON (for scripts/actions)
+agentnote pr origin/main --json # explicit base branch
 ```
 
 JSON output structure:
@@ -252,14 +252,14 @@ JSON output structure:
 ### Usage
 
 ```yaml
-- uses: wasabeef/lore@v1
-  id: lore
+- uses: wasabeef/agentnote@v1
+  id: agentnote
   with:
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.lore.outputs.overall_ai_ratio }}%"
-- if: fromJSON(steps.lore.outputs.json).overall_ai_ratio > 90
+- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+- if: fromJSON(steps.agentnote.outputs.json).overall_ai_ratio > 90
   run: echo "::warning::High AI ratio — consider extra review"
 ```
 
@@ -275,7 +275,7 @@ JSON output structure:
 | Output | Type | Description |
 |---|---|---|
 | `overall_ai_ratio` | number | PR-wide AI ratio (0-100) |
-| `tracked_commits` | number | Commits with lore data |
+| `tracked_commits` | number | Commits with agentnote data |
 | `total_commits` | number | Total commits in PR |
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
@@ -287,38 +287,38 @@ Each commit's data is available inside the `json` output — per-commit AI ratio
 
 The action is a thin wrapper:
 
-1. `git fetch origin refs/notes/lore:refs/notes/lore`
-2. `npx @wasabeef/lore pr --json` → parse outputs
-3. `npx @wasabeef/lore pr` → markdown
+1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
+2. `npx @wasabeef/agentnote pr --json` → parse outputs
+3. `npx @wasabeef/agentnote pr` → markdown
 4. Set GitHub Actions outputs
-5. Optionally post markdown as PR comment (with `<!-- lore-pr-report -->` marker for idempotent updates)
+5. Optionally post markdown as PR comment (with `<!-- agentnote-pr-report -->` marker for idempotent updates)
 
 Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a single `dist/index.js` that is committed to the repo. No `npm install` needed at runtime.
 
 ## Distribution
 
 ```
-CLI:    npx @wasabeef/lore enable          (or npm install --save-dev)
-Action: uses: wasabeef/lore@v1             (Marketplace)
+CLI:    npx @wasabeef/agentnote enable          (or npm install --save-dev)
+Action: uses: wasabeef/agentnote@v1             (Marketplace)
 ```
 
 ### Team workflow
 
 ```bash
-# 1. Enable lore (one person, once)
-npx @wasabeef/lore enable
+# 1. Enable agentnote (one person, once)
+npx @wasabeef/agentnote enable
 git add .claude/settings.json
-git commit -m "chore: enable lore"
+git commit -m "chore: enable agentnote"
 git push
 
 # 2. Everyone works normally — hooks fire automatically
 
 # 3. Share session data
-git push origin refs/notes/lore
+git push origin refs/notes/agentnote
 
 # 4. Add the action to CI (one person, once)
-# Copy .github/workflows/lore-pr-report.yml to your repo
-# Or add `uses: wasabeef/lore@v1` to an existing workflow
+# Copy .github/workflows/agentnote-pr-report.yml to your repo
+# Or add `uses: wasabeef/agentnote@v1` to an existing workflow
 ```
 
 ## Constraints
@@ -328,7 +328,7 @@ git push origin refs/notes/lore
 - **Never break git commit.** All recording wrapped in try/catch. Errors are logged to stderr, never block the commit.
 - **All source in English.** Comments, output, tests.
 - **PreToolUse is synchronous.** Must write JSON to stdout, must not be `async: true`.
-- **No telemetry, no auth, no external services.** Data stays local unless explicitly pushed via `git push origin refs/notes/lore`.
+- **No telemetry, no auth, no external services.** Data stays local unless explicitly pushed via `git push origin refs/notes/agentnote`.
 - **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
 - **Response truncation.** AI responses stored in notes are truncated to 2000 characters to prevent git notes bloat.
 
@@ -336,7 +336,7 @@ git push origin refs/notes/lore
 
 ### Threat model
 
-Lore records prompts and AI responses. This data may contain sensitive information:
+Agentnote records prompts and AI responses. This data may contain sensitive information:
 
 - API keys, tokens, or credentials mentioned in prompts
 - Internal business logic or proprietary algorithms
@@ -352,14 +352,14 @@ Lore records prompts and AI responses. This data may contain sensitive informati
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
 | GitHub Action markdown injection | PR comment body must sanitize prompts that contain markdown/HTML. Image tags and links from untrusted prompts are escaped. |
-| `npx --yes` supply chain | Hook command tries local binary first (`$(npm bin)/lore`, then `lore` in PATH), falls back to `npx` only as last resort. Pin versions in production. |
+| `npx --yes` supply chain | Hook command tries local binary first (`$(npm bin)/agentnote`, then `agentnote` in PATH), falls back to `npx` only as last resort. Pin versions in production. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
 ### Recommendations for users
 
-- **Do not push `refs/notes/lore` to public repositories** unless you are comfortable with prompts being visible.
-- Use `lore pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared before pushing.
-- Consider `lore enable --no-responses` (future) to record prompts only, without AI responses.
+- **Do not push `refs/notes/agentnote` to public repositories** unless you are comfortable with prompts being visible.
+- Use `agentnote pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared before pushing.
+- Consider `agentnote enable --no-responses` (future) to record prompts only, without AI responses.
 
 ## Known limitations
 
@@ -370,12 +370,12 @@ When commits are rebased (interactive rebase, squash, fixup), their SHA changes.
 Mitigation: configure git to copy notes on rewrite:
 
 ```bash
-git config notes.rewriteRef refs/notes/lore
+git config notes.rewriteRef refs/notes/agentnote
 git config notes.rewrite.rebase true
 git config notes.rewrite.amend true
 ```
 
-`lore enable` should set these automatically (planned).
+`agentnote enable` should set these automatically (planned).
 
 ### Squash merge
 
@@ -388,13 +388,13 @@ Workaround: the GitHub Action posts the report as a PR comment before merge, pre
 `git clone` does not fetch notes by default. Team members must explicitly fetch:
 
 ```bash
-git fetch origin refs/notes/lore:refs/notes/lore
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
 ```
 
 Or configure automatic fetch:
 
 ```bash
-git config --add remote.origin.fetch '+refs/notes/lore:refs/notes/lore'
+git config --add remote.origin.fetch '+refs/notes/agentnote:refs/notes/agentnote'
 ```
 
 ### Push conflicts
@@ -402,16 +402,16 @@ git config --add remote.origin.fetch '+refs/notes/lore:refs/notes/lore'
 If multiple developers push notes simultaneously, non-fast-forward pushes are rejected. Resolve with:
 
 ```bash
-git fetch origin refs/notes/lore:refs/notes/lore
-git notes --ref=lore merge origin/notes/lore
-git push origin refs/notes/lore
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+git notes --ref=agentnote merge origin/notes/agentnote
+git push origin refs/notes/agentnote
 ```
 
 In practice, notes conflicts are rare because each developer writes to different commit SHAs.
 
 ### Concurrent sessions
 
-If multiple Claude Code sessions run in the same repo simultaneously, `.git/lore/session` (the active session pointer) may be overwritten by the last writer. Session-specific data in `.git/lore/sessions/<id>/` is isolated and safe. The trailer injection uses the event's session ID directly (not the file), so trailers are always correct.
+If multiple Claude Code sessions run in the same repo simultaneously, `.git/agentnote/session` (the active session pointer) may be overwritten by the last writer. Session-specific data in `.git/agentnote/sessions/<id>/` is isolated and safe. The trailer injection uses the event's session ID directly (not the file), so trailers are always correct.
 
 ### ai_ratio is file-count based
 
@@ -419,7 +419,7 @@ A 1-line AI edit to a 10,000-line file counts the same as a fully AI-written 5-l
 
 ## Multi-agent extensibility
 
-Lore supports Claude Code today, but the `agents/` + `core/` split makes adding agents straightforward.
+Agentnote supports Claude Code today, but the `agents/` + `core/` split makes adding agents straightforward.
 
 ### What varies per agent
 
@@ -433,11 +433,11 @@ Lore supports Claude Code today, but the `agents/` + `core/` split makes adding 
 
 ### What stays the same (`core/`)
 
-- Git notes storage (`refs/notes/lore`)
+- Git notes storage (`refs/notes/agentnote`)
 - Entry data structure (interactions, ai_ratio, files)
 - JSONL append and rotation
 - Display commands (show, log, pr, status)
-- Commit trailer (`Lore-Session`)
+- Commit trailer (`Agentnote-Session`)
 - GitHub Action (agent-agnostic — reads git notes)
 
 ### AgentAdapter interface
@@ -467,10 +467,10 @@ interface AgentAdapter {
   name: string;
   settingsRelPath: string;
 
-  /** Add lore hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
+  /** Add agentnote hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
   installHooks(repoRoot: string): Promise<void>;
 
-  /** Remove lore hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
+  /** Remove agentnote hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
   removeHooks(repoRoot: string): Promise<void>;
 
   /** Check if current-format hooks are installed. Returns false for legacy-only installs. */
@@ -491,16 +491,16 @@ interface AgentAdapter {
 
 1. Create `packages/cli/src/agents/<agent-name>.ts` implementing `AgentAdapter`
 2. Register it in `agents/index.ts`
-3. `lore enable --agent <name>` calls `adapter.installHooks()`
-4. `lore hook` detects agent from event payload or `--agent` flag
+3. `agentnote enable --agent <name>` calls `adapter.installHooks()`
+4. `agentnote hook` detects agent from event payload or `--agent` flag
 5. All core logic and the GitHub Action work unchanged
 
 ## entire.io comparison
 
-| Aspect | entire.io | lore |
+| Aspect | entire.io | agentnote |
 |---|---|---|
-| Setup | CLI install + `entire enable` + login | `npx lore enable` + commit settings |
-| Storage | Orphan branch `entire/checkpoints/v1` | **Git notes** `refs/notes/lore` |
+| Setup | CLI install + `entire enable` + login | `npx agentnote enable` + commit settings |
+| Storage | Orphan branch `entire/checkpoints/v1` | **Git notes** `refs/notes/agentnote` |
 | Branch pollution | Shadow branches + checkpoint branch | **None** |
 | Transcript | Full copy per checkpoint (O(n²) bloat) | **Reference only** (pointer in note) |
 | Git hooks | Overwrites `.git/hooks/` | **Agent hooks only** (e.g., `.claude/settings.json`) |
@@ -508,5 +508,5 @@ interface AgentAdapter {
 | GitHub UI | "Compare & PR" banner on every push | **None** (notes are invisible) |
 | Dependencies | go-git, gitleaks, PostHog, entire.io auth | **Zero** (CLI), ncc-bundled (action) |
 | Performance | Sync hooks, 2min 44s commit | **Async hooks** (except PreToolUse) |
-| Team sharing | Auto-push checkpoint branch | **Explicit** `git push origin refs/notes/lore` |
+| Team sharing | Auto-push checkpoint branch | **Explicit** `git push origin refs/notes/agentnote` |
 | PR integration | None built-in | **GitHub Action** with structured outputs |

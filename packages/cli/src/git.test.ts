@@ -10,7 +10,7 @@ describe("git", () => {
   let testDir: string;
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-test-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
     execSync("git init", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
   });
@@ -31,7 +31,7 @@ describe("gitSafe", () => {
   let testDir: string;
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-test-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
     execSync("git init", { cwd: testDir });
   });
 

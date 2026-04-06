@@ -1,6 +1,6 @@
-# Contributing to Lore
+# Contributing to Agentnote
 
-Thank you for your interest in contributing to Lore! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Agentnote! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -47,11 +47,11 @@ We welcome various types of contributions:
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/lore.git
-cd lore
+git clone https://github.com/your-username/agentnote.git
+cd agentnote
 
 # Add upstream remote
-git remote add upstream https://github.com/wasabeef/lore.git
+git remote add upstream https://github.com/wasabeef/agentnote.git
 
 # Install CLI dependencies
 cd packages/cli
@@ -96,11 +96,11 @@ This is a monorepo with two packages:
 
 ```
 packages/
-├── cli/                           # @wasabeef/lore — npm package
+├── cli/                           # @wasabeef/agentnote — npm package
 │   ├── src/
 │   │   ├── cli.ts                 # Entry point and command routing
 │   │   ├── git.ts                 # Git CLI wrapper (execFile-based, no libraries)
-│   │   ├── paths.ts               # Path resolution for .git/lore/ and .claude/
+│   │   ├── paths.ts               # Path resolution for .git/agentnote/ and .claude/
 │   │   ├── core/                  # Agent-agnostic logic
 │   │   │   ├── entry.ts           # Build entry JSON, calc ai_ratio
 │   │   │   ├── storage.ts         # Git notes read/write
@@ -135,16 +135,16 @@ action.yml                         # Root pointer → packages/action/dist/index
 - **Zero runtime dependencies for CLI**: Only devDependencies for build and test tooling
 - **Git CLI only**: All git operations go through the `git` command, never through libraries
 - **Claude Code hooks**: All data collection happens via Claude Code's hook system, never touching git hooks
-- **Git notes for storage**: Entries stored as `refs/notes/lore`, not files. Pushable and shareable.
+- **Git notes for storage**: Entries stored as `refs/notes/agentnote`, not files. Pushable and shareable.
 - **JSONL for append-heavy files**: Prompts and changes use JSONL for crash-safe append
 - **Input validation**: Session IDs validated as UUID v4. Transcript paths restricted to `~/.claude/`.
 
 ### Data Flow
 
 ```
-Claude Code hooks → lore hook (stdin JSON) → .git/lore/sessions/
+Claude Code hooks → agentnote hook (stdin JSON) → .git/agentnote/sessions/
 git commit → PreToolUse injects --trailer → PostToolUse records entry to git notes
-lore show/log → reads git notes --ref=lore
+agentnote show/log → reads git notes --ref=agentnote
 ```
 
 ## Coding Standards
@@ -165,7 +165,7 @@ lore show/log → reads git notes --ref=lore
 
 ### Error Handling
 
-- Never let lore errors break a git commit
+- Never let agentnote errors break a git commit
 - Use try/catch at command boundaries
 - Return early for missing/invalid data instead of throwing
 
@@ -176,11 +176,11 @@ if (!existsSync(entryFile)) {
   return;
 }
 
-// Good: commit must succeed even if lore fails
+// Good: commit must succeed even if agentnote fails
 try {
   await writeNote(commitSha, entry);
 } catch (err: any) {
-  console.error(`lore: warning: ${err.message}`);
+  console.error(`agentnote: warning: ${err.message}`);
 }
 ```
 
@@ -227,7 +227,7 @@ packages/cli/src/
 ├── git.test.ts               # Unit tests for git wrapper
 └── commands/
     ├── enable.ts
-    ├── enable.test.ts         # Integration tests for lore enable
+    ├── enable.test.ts         # Integration tests for agentnote enable
     ├── hook.ts
     └── hook.test.ts           # Tests for hook event handling
 ```
@@ -245,11 +245,11 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 
-describe("lore enable", () => {
+describe("agentnote enable", () => {
   let testDir: string;
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-test-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
     execSync("git init", { cwd: testDir });
   });
 

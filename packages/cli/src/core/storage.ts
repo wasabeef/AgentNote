@@ -1,8 +1,8 @@
 import { gitSafe } from "../git.js";
 
-const NOTES_REF = "lore";
+const NOTES_REF = "agentnote";
 
-/** Write a lore entry as a git note on a commit. */
+/** Write a agentnote entry as a git note on a commit. */
 export async function writeNote(
   commitSha: string,
   data: Record<string, unknown>,
@@ -11,7 +11,7 @@ export async function writeNote(
   await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
 }
 
-/** Read a lore entry from a git note. Returns null if no note exists. */
+/** Read a agentnote entry from a git note. Returns null if no note exists. */
 export async function readNote(
   commitSha: string,
 ): Promise<Record<string, unknown> | null> {

@@ -2,7 +2,7 @@ import { stat } from "node:fs/promises";
 import { git } from "../git.js";
 import { readNote } from "../core/storage.js";
 import { claudeCode } from "../agents/claude-code.js";
-import type { LoreEntry } from "../core/entry.js";
+import type { AgentnoteEntry } from "../core/entry.js";
 
 interface Interaction {
   prompt: string;
@@ -19,7 +19,7 @@ export async function show(commitRef?: string): Promise<void> {
     await git([
       "log",
       "-1",
-      "--format=%(trailers:key=Lore-Session,valueonly)",
+      "--format=%(trailers:key=Agentnote-Session,valueonly)",
       ref,
     ])
   ).trim();
@@ -27,14 +27,14 @@ export async function show(commitRef?: string): Promise<void> {
   console.log(`commit:  ${commitInfo}`);
 
   if (!sessionId) {
-    console.log("session: none (no lore data)");
+    console.log("session: none (no agentnote data)");
     return;
   }
 
   console.log(`session: ${sessionId}`);
 
   const raw = await readNote(commitSha);
-  const entry = raw as unknown as LoreEntry | null;
+  const entry = raw as unknown as AgentnoteEntry | null;
 
   if (entry) {
     console.log();
@@ -75,7 +75,7 @@ export async function show(commitRef?: string): Promise<void> {
       }
     }
   } else {
-    console.log("entry:   no lore note found for this commit");
+    console.log("entry:   no agentnote note found for this commit");
   }
 
   // Show transcript location if available locally.

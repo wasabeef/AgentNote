@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { loreDir } from "../paths.js";
+import { agentnoteDir } from "../paths.js";
 import { git } from "../git.js";
 import { claudeCode } from "../agents/claude-code.js";
 import type { HookInput, NormalizedEvent } from "../agents/types.js";
@@ -36,13 +36,13 @@ export async function hook(): Promise<void> {
   const event = adapter.parseEvent(input);
   if (!event) return;
 
-  const loreDirPath = await loreDir();
-  const sessionDir = join(loreDirPath, "sessions", event.sessionId);
+  const agentnoteDirPath = await agentnoteDir();
+  const sessionDir = join(agentnoteDirPath, "sessions", event.sessionId);
   await mkdir(sessionDir, { recursive: true });
 
   switch (event.kind) {
     case "session_start": {
-      await writeFile(join(loreDirPath, "session"), event.sessionId);
+      await writeFile(join(agentnoteDirPath, "session"), event.sessionId);
       if (event.transcriptPath) {
         await writeFile(join(sessionDir, "transcript_path"), event.transcriptPath);
       }
@@ -56,7 +56,7 @@ export async function hook(): Promise<void> {
     }
 
     case "stop": {
-      await writeFile(join(loreDirPath, "session"), event.sessionId);
+      await writeFile(join(agentnoteDirPath, "session"), event.sessionId);
       if (event.transcriptPath) {
         await writeFile(join(sessionDir, "transcript_path"), event.transcriptPath);
       }
@@ -89,16 +89,16 @@ export async function hook(): Promise<void> {
     }
 
     case "pre_commit": {
-      // Inject Lore-Session trailer using the session ID from the event directly,
+      // Inject Agentnote-Session trailer using the session ID from the event directly,
       // not from the file — avoids race with async SessionStart/Stop writes.
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes("Lore-Session") && event.sessionId) {
+      if (!cmd.includes("Agentnote-Session") && event.sessionId) {
         process.stdout.write(
           JSON.stringify({
             hookSpecificOutput: {
               hookEventName: "PreToolUse",
               updatedInput: {
-                command: `${cmd} --trailer 'Lore-Session: ${event.sessionId}'`,
+                command: `${cmd} --trailer 'Agentnote-Session: ${event.sessionId}'`,
               },
             },
           }),
@@ -109,7 +109,7 @@ export async function hook(): Promise<void> {
 
     case "post_commit": {
       try {
-        await recordEntry(loreDirPath, event.sessionId, event.transcriptPath);
+        await recordEntry(agentnoteDirPath, event.sessionId, event.transcriptPath);
       } catch {
         // Never break the workflow if entry recording fails.
       }
@@ -118,13 +118,13 @@ export async function hook(): Promise<void> {
   }
 }
 
-/** Record a lore entry as a git note after a successful commit. */
+/** Record a agentnote entry as a git note after a successful commit. */
 async function recordEntry(
-  loreDirPath: string,
+  agentnoteDirPath: string,
   sessionId: string,
   eventTranscriptPath?: string,
 ): Promise<void> {
-  const sessionDir = join(loreDirPath, "sessions", sessionId);
+  const sessionDir = join(agentnoteDirPath, "sessions", sessionId);
   const commitSha = await git(["rev-parse", "HEAD"]);
 
   let commitFiles: string[] = [];

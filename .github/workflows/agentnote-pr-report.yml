@@ -1,4 +1,4 @@
-## Lore PR Report
+## Agentnote PR Report
 ##
 ## Posts an AI session report as a PR comment and exposes structured data as outputs.
 ##
@@ -6,7 +6,7 @@
 ##
 ## Outputs (from the 'report' step):
 ##   overall_ai_ratio  - PR-wide AI ratio (0-100)
-##   tracked_commits   - number of commits with lore data
+##   tracked_commits   - number of commits with agentnote data
 ##   total_commits     - total commits in the PR
 ##   total_prompts     - total prompts across all commits
 ##   json              - full JSON report (use with fromJSON())
@@ -18,7 +18,7 @@
 ##     if: fromJSON(steps.report.outputs.json).overall_ai_ratio > 90
 ##     run: echo "High AI ratio — extra review recommended"
 
-name: Lore PR Report
+name: Agentnote PR Report
 
 on:
   pull_request:
@@ -29,7 +29,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  lore-report:
+  agentnote-report:
     runs-on: ubuntu-latest
     outputs:
       overall_ai_ratio: ${{ steps.report.outputs.overall_ai_ratio }}
@@ -44,8 +44,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch lore notes
-        run: git fetch origin refs/notes/lore:refs/notes/lore 2>/dev/null || true
+      - name: Fetch agentnote notes
+        run: git fetch origin refs/notes/agentnote:refs/notes/agentnote 2>/dev/null || true
 
       - uses: actions/setup-node@v4
         with:
@@ -57,7 +57,7 @@ jobs:
           BASE="origin/${{ github.event.pull_request.base.ref }}"
 
           # JSON report
-          JSON=$(npx --yes @wasabeef/lore pr "${BASE}" --json 2>/dev/null || echo '{}')
+          JSON=$(npx --yes @wasabeef/agentnote pr "${BASE}" --json 2>/dev/null || echo '{}')
 
           if [ "$JSON" = '{}' ] || echo "$JSON" | jq -e '.error' > /dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -74,7 +74,7 @@ jobs:
           echo "json=$(echo "$JSON" | jq -c .)" >> "$GITHUB_OUTPUT"
 
           # Markdown report
-          MARKDOWN=$(npx --yes @wasabeef/lore pr "${BASE}" 2>/dev/null || echo "")
+          MARKDOWN=$(npx --yes @wasabeef/agentnote pr "${BASE}" 2>/dev/null || echo "")
           {
             echo "markdown<<LORE_EOF"
             echo "$MARKDOWN"
@@ -88,7 +88,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const marker = '<!-- lore-pr-report -->';
+            const marker = '<!-- agentnote-pr-report -->';
             const body = `${marker}\n${process.env.MARKDOWN}`;
 
             const { data: comments } = await github.rest.issues.listComments({

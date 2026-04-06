@@ -14,6 +14,6 @@ export async function disable(): Promise<void> {
     await rm(sf);
   }
 
-  console.log("lore: disabled. hooks removed from .claude/settings.json");
-  console.log("lore: commit this change to disable for your team");
+  console.log("agentnote: disabled. hooks removed from .claude/settings.json");
+  console.log("agentnote: commit this change to disable for your team");
 }

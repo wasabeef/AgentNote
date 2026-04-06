@@ -31,10 +31,10 @@ export interface AgentAdapter {
   /** Config file path relative to repo root (e.g., ".claude/settings.json"). */
   settingsRelPath: string;
 
-  /** Add lore hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
+  /** Add agentnote hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
   installHooks(repoRoot: string): Promise<void>;
 
-  /** Remove lore hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
+  /** Remove agentnote hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
   removeHooks(repoRoot: string): Promise<void>;
 
   /** Check if current-format hooks are installed. Returns false for legacy-only installs. */

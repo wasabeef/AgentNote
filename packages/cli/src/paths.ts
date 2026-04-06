@@ -15,14 +15,14 @@ async function root(): Promise<string> {
   return _root;
 }
 
-/** Path to .git/lore/ where all tracking data lives. */
-export async function loreDir(): Promise<string> {
-  return join(await root(), ".git", "lore");
+/** Path to .git/agentnote/ where all tracking data lives. */
+export async function agentnoteDir(): Promise<string> {
+  return join(await root(), ".git", "agentnote");
 }
 
 /** Path to the active session ID file. */
 export async function sessionFile(): Promise<string> {
-  return join(await loreDir(), "session");
+  return join(await agentnoteDir(), "session");
 }
 
 /** .claude/settings.json */

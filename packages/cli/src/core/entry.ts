@@ -6,7 +6,7 @@ interface Interaction {
   response: string | null;
 }
 
-export interface LoreEntry {
+export interface AgentnoteEntry {
   v: number;
   session_id: string;
   timestamp: string;
@@ -35,13 +35,13 @@ function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen) + "…";
 }
 
-/** Build a lore entry from collected data. */
+/** Build a agentnote entry from collected data. */
 export function buildEntry(opts: {
   sessionId: string;
   interactions: Interaction[];
   commitFiles: string[];
   aiFiles: string[];
-}): LoreEntry {
+}): AgentnoteEntry {
   return {
     v: SCHEMA_VERSION,
     session_id: opts.sessionId,

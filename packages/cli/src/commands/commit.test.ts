@@ -12,12 +12,12 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-describe("lore commit", () => {
+describe("agentnote commit", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-commit-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-commit-"));
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
@@ -29,9 +29,9 @@ describe("lore commit", () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it("adds Lore-Session trailer to commit", () => {
+  it("adds Agentnote-Session trailer to commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    writeFileSync(join(testDir, ".git", "lore", "session"), sessionId);
+    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
 
     writeFileSync(join(testDir, "hello.txt"), "hello");
     execSync("git add hello.txt", { cwd: testDir });
@@ -43,14 +43,14 @@ describe("lore commit", () => {
       encoding: "utf-8",
     });
     assert.ok(
-      msg.includes(`Lore-Session: ${sessionId}`),
-      "commit should have Lore-Session trailer",
+      msg.includes(`Agentnote-Session: ${sessionId}`),
+      "commit should have Agentnote-Session trailer",
     );
   });
 
   it("records entry as git note with prompts and AI ratio", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    const sessionDir = join(testDir, ".git", "lore", "sessions", sessionId);
+    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
     mkdirSync(sessionDir, { recursive: true });
 
     // simulate prompts
@@ -73,7 +73,7 @@ describe("lore commit", () => {
     execSync(`node ${cliPath} commit -m "mixed commit"`, { cwd: testDir });
 
     // verify git note exists
-    const note = execSync("git notes --ref=lore show HEAD", {
+    const note = execSync("git notes --ref=agentnote show HEAD", {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -87,7 +87,7 @@ describe("lore commit", () => {
 
   it("works without active session (plain git commit)", () => {
     // remove session file
-    const sessionFile = join(testDir, ".git", "lore", "session");
+    const sessionFile = join(testDir, ".git", "agentnote", "session");
     if (existsSync(sessionFile)) rmSync(sessionFile);
 
     writeFileSync(join(testDir, "plain.txt"), "no session");
@@ -99,14 +99,14 @@ describe("lore commit", () => {
       encoding: "utf-8",
     });
     assert.ok(
-      !msg.includes("Lore-Session"),
+      !msg.includes("Agentnote-Session"),
       "should not have trailer without session",
     );
   });
 
   it("rotates prompts and changes after commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    const sessionDir = join(testDir, ".git", "lore", "sessions", sessionId);
+    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
 
     // prompts.jsonl should have been rotated after the previous commit
     const promptsFile = join(sessionDir, "prompts.jsonl");

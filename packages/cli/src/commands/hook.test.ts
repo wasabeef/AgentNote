@@ -5,12 +5,12 @@ import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-describe("lore hook", () => {
+describe("agentnote hook", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-hook-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-hook-"));
     execSync("git init", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
   });
@@ -28,7 +28,7 @@ describe("lore hook", () => {
 
     execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
 
-    const sessionFile = join(testDir, ".git", "lore", "session");
+    const sessionFile = join(testDir, ".git", "agentnote", "session");
     assert.ok(existsSync(sessionFile), "session file should exist");
     assert.equal(
       readFileSync(sessionFile, "utf-8"),
@@ -38,7 +38,7 @@ describe("lore hook", () => {
     const eventsFile = join(
       testDir,
       ".git",
-      "lore",
+      "agentnote",
       "sessions",
       "a1b2c3d4-0001-0001-0001-000000000001",
       "events.jsonl",
@@ -61,7 +61,7 @@ describe("lore hook", () => {
     const promptsFile = join(
       testDir,
       ".git",
-      "lore",
+      "agentnote",
       "sessions",
       "a1b2c3d4-0001-0001-0001-000000000001",
       "prompts.jsonl",
@@ -84,7 +84,7 @@ describe("lore hook", () => {
     const changesFile = join(
       testDir,
       ".git",
-      "lore",
+      "agentnote",
       "sessions",
       "a1b2c3d4-0001-0001-0001-000000000001",
       "changes.jsonl",
@@ -108,7 +108,7 @@ describe("lore hook", () => {
     const changesFile = join(
       testDir,
       ".git",
-      "lore",
+      "agentnote",
       "sessions",
       "a1b2c3d4-0002-0002-0002-000000000002",
       "changes.jsonl",

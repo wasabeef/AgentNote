@@ -10,18 +10,18 @@ import { pr } from "./commands/pr.js";
 const VERSION = "0.1.0";
 
 const HELP = `
-lore — remember why your code changed
+agentnote — remember why your code changed
 
 usage:
-  lore enable             add hooks to .claude/settings.json (commit to share)
-  lore disable            remove hooks from .claude/settings.json
-  lore commit [args]      git commit with session context attached
-  lore show [commit]      show session details for a commit
-  lore log [n]            list recent commits with session info
-  lore pr [base] [--json]  generate report for a PR (markdown or JSON)
-  lore status             show current tracking state
-  lore version            print version
-  lore help               show this help
+  agentnote enable             add hooks to .claude/settings.json (commit to share)
+  agentnote disable            remove hooks from .claude/settings.json
+  agentnote commit [args]      git commit with session context attached
+  agentnote show [commit]      show session details for a commit
+  agentnote log [n]            list recent commits with session info
+  agentnote pr [base] [--json]  generate report for a PR (markdown or JSON)
+  agentnote status             show current tracking state
+  agentnote version            print version
+  agentnote help               show this help
 `.trim();
 
 const command = process.argv[2];
@@ -55,7 +55,7 @@ switch (command) {
   case "version":
   case "--version":
   case "-v":
-    console.log(`lore v${VERSION}`);
+    console.log(`agentnote v${VERSION}`);
     break;
   case "help":
   case "--help":

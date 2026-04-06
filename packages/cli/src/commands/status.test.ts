@@ -5,12 +5,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-describe("lore status", () => {
+describe("agentnote status", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "lore-status-"));
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-status-"));
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
@@ -44,7 +44,7 @@ describe("lore status", () => {
 
   it("shows session ID when session is active", () => {
     writeFileSync(
-      join(testDir, ".git", "lore", "session"),
+      join(testDir, ".git", "agentnote", "session"),
       "a1b2c3d4-3333-3333-3333-333333333333",
     );
 

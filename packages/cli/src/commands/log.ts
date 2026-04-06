@@ -5,7 +5,7 @@ export async function log(count: number = 10): Promise<void> {
   const raw = await git([
     "log",
     `-${count}`,
-    "--format=%H\t%h %s\t%(trailers:key=Lore-Session,valueonly)",
+    "--format=%H\t%h %s\t%(trailers:key=Agentnote-Session,valueonly)",
   ]);
 
   if (!raw) {

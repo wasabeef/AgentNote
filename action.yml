@@ -1,5 +1,5 @@
-name: "Lore PR Report"
-description: "AI session tracking report for pull requests"
+name: "Agentnote PR Report"
+description: "AI agent session tracking report for pull requests"
 author: "wasabeef"
 
 inputs:
@@ -16,7 +16,7 @@ outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
   tracked_commits:
-    description: "Number of commits with lore data"
+    description: "Number of commits with agentnote data"
   total_commits:
     description: "Total commits in PR"
   total_prompts:

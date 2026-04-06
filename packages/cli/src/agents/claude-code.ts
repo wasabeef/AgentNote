@@ -6,7 +6,7 @@ import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
 
 // Resolution order: local node_modules binary → global PATH → npx fetch from registry.
 const HOOK_COMMAND =
-  "$(npm bin 2>/dev/null)/lore hook 2>/dev/null || lore hook 2>/dev/null || npx --yes @wasabeef/lore hook";
+  "$(npm bin 2>/dev/null)/agentnote hook 2>/dev/null || agentnote hook 2>/dev/null || npx --yes @wasabeef/agentnote hook";
 
 const HOOKS_CONFIG = {
   SessionStart: [
@@ -85,17 +85,7 @@ export const claudeCode: AgentAdapter = {
     const hooks = settings.hooks ?? {};
     const raw = JSON.stringify(hooks);
 
-    if (raw.includes("@wasabeef/lore")) return;
-
-    // Remove legacy hooks if present.
-    if (raw.includes("lore-hook")) {
-      for (const [event, entries] of Object.entries(hooks)) {
-        hooks[event] = (entries as any[]).filter(
-          (e) => !JSON.stringify(e).includes("lore-hook"),
-        );
-        if (hooks[event].length === 0) delete hooks[event];
-      }
-    }
+    if (raw.includes("@wasabeef/agentnote")) return;
 
     for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
       hooks[event] = [...(hooks[event] ?? []), ...entries];
@@ -115,7 +105,7 @@ export const claudeCode: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as any[]).filter((e) => {
           const text = JSON.stringify(e);
-          return !text.includes("@wasabeef/lore") && !text.includes("lore-hook");
+          return !text.includes("@wasabeef/agentnote");
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -131,7 +121,7 @@ export const claudeCode: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      return content.includes("@wasabeef/lore");
+      return content.includes("@wasabeef/agentnote");
     } catch {
       return false;
     }

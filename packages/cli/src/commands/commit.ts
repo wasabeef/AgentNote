@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { sessionFile, loreDir } from "../paths.js";
+import { sessionFile, agentnoteDir } from "../paths.js";
 import { git } from "../git.js";
 import { readJsonlField } from "../core/jsonl.js";
 import { writeNote } from "../core/storage.js";
@@ -19,7 +19,7 @@ export async function commit(args: string[]): Promise<void> {
 
   const gitArgs = ["commit"];
   if (sessionId) {
-    gitArgs.push("--trailer", `Lore-Session: ${sessionId}`);
+    gitArgs.push("--trailer", `Agentnote-Session: ${sessionId}`);
   }
   gitArgs.push(...args);
 
@@ -36,11 +36,11 @@ export async function commit(args: string[]): Promise<void> {
     process.exit(exitCode);
   }
 
-  // After a successful commit, record the lore entry as a git note.
+  // After a successful commit, record the agentnote entry as a git note.
   if (sessionId) {
     try {
-      const loreDirPath = await loreDir();
-      const sessionDir = join(loreDirPath, "sessions", sessionId);
+      const agentnoteDirPath = await agentnoteDir();
+      const sessionDir = join(agentnoteDirPath, "sessions", sessionId);
       const commitSha = await git(["rev-parse", "HEAD"]);
 
       let commitFiles: string[] = [];
@@ -82,11 +82,11 @@ export async function commit(args: string[]): Promise<void> {
       await rotateLogs(sessionDir, commitSha);
 
       console.log(
-        `lore: ${interactions.length} prompts, AI ratio ${entry.ai_ratio}%`,
+        `agentnote: ${interactions.length} prompts, AI ratio ${entry.ai_ratio}%`,
       );
     } catch (err: any) {
-      // Never let lore recording break a commit.
-      console.error(`lore: warning: ${err.message}`);
+      // Never let agentnote recording break a commit.
+      console.error(`agentnote: warning: ${err.message}`);
     }
   }
 }
