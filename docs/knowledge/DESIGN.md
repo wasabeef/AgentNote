@@ -198,6 +198,17 @@ Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 Injected via `PreToolUse` hook (synchronous) by modifying the `git commit` command. Works with plain `git commit` — no need for `agentnote commit`.
 
+### Why both PreToolUse and PostToolUse match Bash
+
+Both hooks fire on `Bash` tool use, but they serve different purposes and do not conflict:
+
+| Hook | When | What it does | Sync |
+|---|---|---|---|
+| `PreToolUse` (Bash, `*git commit*`) | Before `git commit` runs | Injects `--trailer` into the command | Synchronous (writes to stdout) |
+| `PostToolUse` (Bash, `*git commit*`) | After `git commit` succeeds | Records the entry as a git note | Async |
+
+PreToolUse modifies the command. PostToolUse records the result. They are sequential, not redundant. PostToolUse also fires on `Edit|Write|NotebookEdit` for file change tracking, which PreToolUse does not.
+
 ## CLI commands
 
 ```

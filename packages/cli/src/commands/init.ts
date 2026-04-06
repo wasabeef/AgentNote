@@ -5,16 +5,20 @@ import { root, agentnoteDir } from "../paths.js";
 import { claudeCode } from "../agents/claude-code.js";
 import { gitSafe } from "../git.js";
 
-const WORKFLOW_TEMPLATE = `name: Agentnote
+const WORKFLOW_TEMPLATE = `name: Agent Note
 on:
   pull_request:
     types: [opened, synchronize]
+concurrency:
+  group: agentnote-\${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 permissions:
   contents: read
   pull-requests: write
 jobs:
   report:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
