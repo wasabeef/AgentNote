@@ -162,7 +162,7 @@ Note content per commit:
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "response": "I'll create the middleware with... (truncated at 2000 chars)"
+      "response": "I'll create the middleware with... "
     }
   ],
   "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
@@ -173,7 +173,7 @@ Note content per commit:
 
 - **`v`**: Schema version. Always `1` for the current format. Future changes increment this.
 - **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session. File paths are normalized to repo-relative at recording time and matched by exact string comparison.
-- **`interactions[].response`**: Truncated to 2000 characters. Full responses are available in the local transcript file.
+- **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Why git notes over alternatives
 
@@ -341,7 +341,7 @@ git push origin refs/notes/agentnote
 - **PreToolUse is synchronous.** Must write JSON to stdout, must not be `async: true`.
 - **No telemetry, no auth, no external services.** Data stays local unless explicitly pushed via `git push origin refs/notes/agentnote`.
 - **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
-- **Response truncation.** AI responses stored in notes are truncated to 2000 characters to prevent git notes bloat.
+- **Full response storage.** AI responses are stored in full. Git notes blobs are compressed and well within GitHub limits.
 
 ## Security
 
