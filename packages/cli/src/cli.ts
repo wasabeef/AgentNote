@@ -1,5 +1,4 @@
-import { enable } from "./commands/enable.js";
-import { disable } from "./commands/disable.js";
+import { init } from "./commands/init.js";
 import { commit } from "./commands/commit.js";
 import { show } from "./commands/show.js";
 import { log } from "./commands/log.js";
@@ -13,29 +12,28 @@ const HELP = `
 agentnote — remember why your code changed
 
 usage:
-  agentnote enable             add hooks to .claude/settings.json (commit to share)
-  agentnote disable            remove hooks from .claude/settings.json
-  agentnote commit [args]      git commit with session context attached
-  agentnote show [commit]      show session details for a commit
-  agentnote log [n]            list recent commits with session info
-  agentnote pr [base] [options] generate report for a PR
-                                  --json              structured JSON
-                                  --format chat       chat-style transcript
-                                  --update <pr#>      insert into PR description
-  agentnote status             show current tracking state
-  agentnote version            print version
-  agentnote help               show this help
+  agentnote init [options]       set up hooks, workflow, and notes auto-fetch
+                                   --hooks         hooks only
+                                   --action        workflow only
+                                   --no-action     skip workflow
+  agentnote show [commit]        show session details for a commit
+  agentnote log [n]              list recent commits with session info
+  agentnote pr [base] [options]  generate report for a PR
+                                   --json          structured JSON
+                                   --format chat   chat-style transcript
+                                   --update <pr#>  insert into PR description
+  agentnote status               show current tracking state
+  agentnote commit [args]        git commit with session context (optional)
+  agentnote version              print version
+  agentnote help                 show this help
 `.trim();
 
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
 switch (command) {
-  case "enable":
-    await enable();
-    break;
-  case "disable":
-    await disable();
+  case "init":
+    await init(args);
     break;
   case "commit":
     await commit(args);

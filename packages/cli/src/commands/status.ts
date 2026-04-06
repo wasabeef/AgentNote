@@ -17,7 +17,7 @@ export async function status(): Promise<void> {
   if (hooksActive) {
     console.log("hooks:   active");
   } else {
-    console.log("hooks:   not configured (run 'agentnote enable')");
+    console.log("hooks:   not configured (run 'agentnote init')");
   }
 
   const sessionPath = await sessionFile();

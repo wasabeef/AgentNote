@@ -19,7 +19,7 @@ describe("agentnote show", () => {
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
-    execSync(`node ${cliPath} enable`, { cwd: testDir });
+    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
 
     // simulate a session
     const sessionId = "a1b2c3d4-1111-1111-1111-111111111111";
