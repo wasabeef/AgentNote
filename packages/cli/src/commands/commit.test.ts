@@ -10,7 +10,7 @@ import {
   mkdirSync,
 } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, homedir } from "node:os";
 
 describe("agentnote commit", () => {
   let testDir: string;
@@ -114,5 +114,59 @@ describe("agentnote commit", () => {
       !existsSync(promptsFile),
       "prompts.jsonl should be rotated after commit",
     );
+  });
+
+  it("extracts responses from transcript when available", () => {
+    const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
+    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+
+    // Create a transcript file under ~/.claude/ (valid path)
+    const transcriptDir = join(
+      homedir(),
+      ".claude",
+      "projects",
+      "commit-test",
+      "sessions",
+    );
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, `${sessionId}.jsonl`);
+    writeFileSync(
+      transcriptPath,
+      '{"type":"user","message":{"content":[{"type":"text","text":"implement auth"}]}}\n' +
+        '{"type":"assistant","message":{"content":[{"type":"text","text":"I will create the auth module."}]}}\n',
+    );
+
+    // Point session to transcript
+    writeFileSync(join(sessionDir, "transcript_path"), transcriptPath);
+
+    // Add prompt
+    writeFileSync(
+      join(sessionDir, "prompts.jsonl"),
+      '{"event":"prompt","timestamp":"2026-04-06T00:00:00Z","prompt":"implement auth"}\n',
+    );
+
+    writeFileSync(join(testDir, "auth.ts"), "export {}");
+    execSync("git add auth.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: auth with transcript"`, {
+      cwd: testDir,
+    });
+
+    // Verify response is in the note
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.interactions[0].prompt, "implement auth");
+    assert.equal(
+      entry.interactions[0].response,
+      "I will create the auth module.",
+    );
+
+    // Clean up transcript
+    rmSync(transcriptPath);
+    rmSync(join(transcriptDir), { recursive: true, force: true });
   });
 });

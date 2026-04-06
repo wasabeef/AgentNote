@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { sessionFile, agentnoteDir } from "../paths.js";
 import { git } from "../git.js";
+import { claudeCode } from "../agents/claude-code.js";
 import { readJsonlField } from "../core/jsonl.js";
 import { writeNote } from "../core/storage.js";
 import { buildEntry } from "../core/entry.js";
@@ -66,10 +67,22 @@ export async function commit(args: string[]): Promise<void> {
         "prompt",
       );
 
-      const interactions = prompts.map((p) => ({
-        prompt: p,
-        response: null as string | null,
-      }));
+      // Read transcript for accurate prompt-response pairing.
+      let interactions: Array<{ prompt: string; response: string | null }>;
+      const transcriptPathFile = join(sessionDir, "transcript_path");
+      if (existsSync(transcriptPathFile)) {
+        const transcriptPath = (await readFile(transcriptPathFile, "utf-8")).trim();
+        if (transcriptPath) {
+          const allInteractions = await claudeCode.extractInteractions(transcriptPath);
+          interactions = prompts.length > 0 && allInteractions.length > 0
+            ? allInteractions.slice(-prompts.length)
+            : prompts.map((p) => ({ prompt: p, response: null }));
+        } else {
+          interactions = prompts.map((p) => ({ prompt: p, response: null }));
+        }
+      } else {
+        interactions = prompts.map((p) => ({ prompt: p, response: null }));
+      }
 
       const entry = buildEntry({
         sessionId,
