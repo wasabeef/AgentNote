@@ -139,17 +139,57 @@ done
 
 This is O(n) over all commits. For better performance, maintain a session index in a separate note or in `.git/agentnote/sessions/<id>/commits.json`.
 
-## Priority 5: Lint and formatting
+## Priority 5: Tooling and DX
 
-Current lint is `tsc --noEmit` only. Options:
+### Biome (lint + format)
 
-| Tool | Pros | Cons |
-|---|---|---|
-| Biome | Fast, single binary, lint + format | New devDependency |
-| ESLint + Prettier | Industry standard | Multiple deps, slow |
-| `tsc --noEmit` only (current) | Zero deps | No style enforcement, no unused import detection |
+Replace `tsc --noEmit` as the sole lint with Biome. Single binary, ~5ms startup, covers lint + format.
 
-Recommendation: Add Biome as a single devDependency. It replaces both ESLint and Prettier with one tool and ~5ms startup.
+```bash
+npm install --save-dev --save-exact @biomejs/biome
+npx biome init
+```
+
+Add to CI:
+
+```json
+{
+  "scripts": {
+    "lint": "biome check src/",
+    "format": "biome format --write src/",
+    "typecheck": "tsc --noEmit"
+  }
+}
+```
+
+### .editorconfig
+
+```ini
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+```
+
+Zero cost. Ensures consistent formatting across any editor.
+
+### Renovate
+
+Auto-update devDependencies. Add `renovate.json` to repo root:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"]
+}
+```
+
+Enable the Renovate GitHub App on the repo. PRs are created automatically for dependency updates.
 
 ## Priority 6: PR output improvements
 
@@ -174,6 +214,9 @@ Same as chat format but in the table view — each row expands to show prompt/re
 
 | Item | Reason |
 |---|---|
+| ESLint | Biome replaces it. Fewer deps, faster, single config |
+| Prettier | Biome replaces it |
+| Jest | `node:test` works. 32 tests pass. No migration benefit |
 | Rewind / Resume | Git + Claude Code handle this natively |
 | Secret redaction | Only needed for public repo notes push |
 | Token usage tracking | Useful but low demand |
