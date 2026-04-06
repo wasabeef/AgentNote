@@ -58,7 +58,7 @@ describe("agentnote init", () => {
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
     assert.ok(
-      workflow.includes("wasabeef/agentnote@v1"),
+      workflow.includes("wasabeef/agentnote@v0"),
       "workflow should reference the action",
     );
 

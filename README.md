@@ -172,7 +172,7 @@ git fetch origin refs/notes/agentnote:refs/notes/agentnote
 Automatically post AI session reports on every PR:
 
 ```yaml
-- uses: wasabeef/agentnote@v1
+- uses: wasabeef/agentnote@v0
   id: agentnote
   with:
     base: main

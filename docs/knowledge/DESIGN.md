@@ -16,7 +16,7 @@ The repository is a monorepo with two packages:
 
 ```
 wasabeef/agentnote/
-├── action.yml                      # root pointer → packages/action (for uses: wasabeef/agentnote@v1)
+├── action.yml                      # root pointer → packages/action (for uses: wasabeef/agentnote@v0)
 │
 ├── packages/
 │   ├── cli/                        # @wasabeef/agentnote — npm package
@@ -75,7 +75,7 @@ The action calls `agentnote pr --json` — it's tightly coupled to the CLI's out
 
 ### Root action.yml trick
 
-GitHub resolves `uses: wasabeef/agentnote@v1` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
+GitHub resolves `uses: wasabeef/agentnote@v0` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
 
 ```yaml
 # action.yml (root)
@@ -86,7 +86,7 @@ runs:
   main: "packages/action/dist/index.js"
 ```
 
-This gives users `uses: wasabeef/agentnote@v1` while code lives in `packages/action/`.
+This gives users `uses: wasabeef/agentnote@v0` while code lives in `packages/action/`.
 
 ## Architecture
 
@@ -252,7 +252,7 @@ JSON output structure:
 ### Usage
 
 ```yaml
-- uses: wasabeef/agentnote@v1
+- uses: wasabeef/agentnote@v0
   id: agentnote
   with:
     base: main
@@ -299,7 +299,7 @@ Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a 
 
 ```
 CLI:    npx @wasabeef/agentnote init          (or npm install --save-dev)
-Action: uses: wasabeef/agentnote@v1             (Marketplace)
+Action: uses: wasabeef/agentnote@v0             (Marketplace)
 ```
 
 ### Team workflow
@@ -318,7 +318,7 @@ git push origin refs/notes/agentnote
 
 # 4. Add the action to CI (one person, once)
 # Copy .github/workflows/agentnote-pr-report.yml to your repo
-# Or add `uses: wasabeef/agentnote@v1` to an existing workflow
+# Or add `uses: wasabeef/agentnote@v0` to an existing workflow
 ```
 
 ## Constraints
