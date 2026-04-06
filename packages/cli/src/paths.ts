@@ -1,7 +1,8 @@
 import { join } from "node:path";
-import { repoRoot } from "./git.js";
+import { repoRoot, git } from "./git.js";
 
 let _root: string | null = null;
+let _gitDir: string | null = null;
 
 async function root(): Promise<string> {
   if (!_root) {
@@ -15,9 +16,21 @@ async function root(): Promise<string> {
   return _root;
 }
 
-/** Path to .git/agentnote/ where all tracking data lives. */
+/** Resolve the actual .git directory (supports worktrees where .git is a file). */
+async function gitDir(): Promise<string> {
+  if (!_gitDir) {
+    _gitDir = await git(["rev-parse", "--git-dir"]);
+    // Make absolute if relative.
+    if (!_gitDir.startsWith("/")) {
+      _gitDir = join(await root(), _gitDir);
+    }
+  }
+  return _gitDir;
+}
+
+/** Path to the agentnote data directory inside the git dir. */
 export async function agentnoteDir(): Promise<string> {
-  return join(await root(), ".git", "agentnote");
+  return join(await gitDir(), "agentnote");
 }
 
 /** Path to the active session ID file. */
