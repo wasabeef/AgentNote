@@ -71,12 +71,14 @@ describe("agentnote hook", () => {
     assert.equal(line.prompt, "implement auth middleware");
   });
 
-  it("records file change on PostToolUse Edit event", () => {
+  it("records file change on PostToolUse Edit event with normalized path", () => {
+    // Use absolute path — hook should normalize to repo-relative.
+    const absPath = join(testDir, "src", "auth.ts");
     const event = JSON.stringify({
       hook_event_name: "PostToolUse",
       session_id: "a1b2c3d4-0001-0001-0001-000000000001",
       tool_name: "Edit",
-      tool_input: { file_path: "/path/to/auth.ts" },
+      tool_input: { file_path: absPath },
     });
 
     execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
@@ -92,7 +94,7 @@ describe("agentnote hook", () => {
     assert.ok(existsSync(changesFile), "changes.jsonl should exist");
     const line = JSON.parse(readFileSync(changesFile, "utf-8").trim());
     assert.equal(line.tool, "Edit");
-    assert.equal(line.file, "/path/to/auth.ts");
+    assert.equal(line.file, "src/auth.ts", "should be repo-relative path");
   });
 
   it("ignores PostToolUse for non-file tools (e.g. Bash)", () => {

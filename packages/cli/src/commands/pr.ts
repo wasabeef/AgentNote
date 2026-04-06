@@ -95,7 +95,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
       files_ai: filesByAi.length,
       files: filesInCommit.map((f: string) => ({
         path: f,
-        by_ai: filesByAi.some((af: string) => af.endsWith(f)),
+        by_ai: filesByAi.includes(f),
       })),
       interactions,
     });

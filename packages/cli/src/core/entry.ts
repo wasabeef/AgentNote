@@ -22,10 +22,8 @@ export function calcAiRatio(
   aiFiles: string[],
 ): number {
   if (commitFiles.length === 0) return 0;
-  const aiSet = new Set(aiFiles.map((f) => f.replace(/^\/.*\//, "")));
-  const matched = commitFiles.filter(
-    (f) => aiSet.has(f) || [...aiSet].some((af) => af.endsWith(f)),
-  );
+  const aiSet = new Set(aiFiles);
+  const matched = commitFiles.filter((f) => aiSet.has(f));
   return Math.round((matched.length / commitFiles.length) * 100);
 }
 

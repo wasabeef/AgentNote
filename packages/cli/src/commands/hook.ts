@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, realpath } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { agentnoteDir } from "../paths.js";
+import { join, relative, isAbsolute } from "node:path";
+import { agentnoteDir, root } from "../paths.js";
 import { git } from "../git.js";
 import { claudeCode } from "../agents/claude-code.js";
 import type { HookInput, NormalizedEvent } from "../agents/types.js";
@@ -78,11 +78,31 @@ export async function hook(): Promise<void> {
     }
 
     case "file_change": {
+      // Normalize absolute paths to repo-relative for consistent matching.
+      // Use git directly instead of cached root() since hook runs in different cwd contexts.
+      let filePath = event.file ?? "";
+      if (isAbsolute(filePath)) {
+        try {
+          const rawRoot = (await git(["rev-parse", "--show-toplevel"])).trim();
+          // Resolve symlinks on the repo root (macOS /var → /private/var).
+          const repoRoot = await realpath(rawRoot);
+          // Normalize file path to match — add /private if root has it and file doesn't.
+          let normalizedFile = filePath;
+          if (repoRoot.startsWith("/private") && !normalizedFile.startsWith("/private")) {
+            normalizedFile = "/private" + normalizedFile;
+          } else if (!repoRoot.startsWith("/private") && normalizedFile.startsWith("/private")) {
+            normalizedFile = normalizedFile.replace(/^\/private/, "");
+          }
+          filePath = relative(repoRoot, normalizedFile);
+        } catch {
+          // Fallback: keep as-is.
+        }
+      }
       await appendJsonl(join(sessionDir, "changes.jsonl"), {
         event: "file_change",
         timestamp: event.timestamp,
         tool: event.tool,
-        file: event.file,
+        file: filePath,
         session_id: event.sessionId,
       });
       break;

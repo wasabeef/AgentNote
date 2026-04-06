@@ -47,7 +47,7 @@ export async function show(commitRef?: string): Promise<void> {
     if (entry.files_in_commit.length > 0) {
       console.log();
       for (const file of entry.files_in_commit) {
-        const isAi = entry.files_by_ai.some((af) => af.endsWith(file));
+        const isAi = entry.files_by_ai.includes(file);
         const marker = isAi ? "  🤖" : "  👤";
         console.log(`  ${file}${marker}`);
       }
