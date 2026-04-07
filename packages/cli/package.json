@@ -9,10 +9,13 @@
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --banner:js='#!/usr/bin/env node'",
     "dev": "tsx src/cli.ts",
-    "lint": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/",
+    "typecheck": "tsc --noEmit",
     "test": "find src -name '*.test.ts' | xargs node --import tsx/esm --test",
     "test:coverage": "find src -name '*.test.ts' | xargs node --import tsx/esm --test --experimental-test-coverage",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npx publint"
   },
   "files": [
     "dist"
@@ -30,8 +33,10 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.10",
     "@types/node": "^25.5.0",
     "esbuild": "^0.27.5",
+    "publint": "^0.3.18",
     "tsx": "^4.20.0",
     "typescript": "^6.0.2"
   }
