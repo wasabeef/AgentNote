@@ -48,12 +48,8 @@ interface ClaudeEvent {
 }
 
 function isGitCommit(cmd: string): boolean {
-  const trimmed = cmd.trim();
-  return (
-    (trimmed.startsWith("git commit") || trimmed.startsWith("git -c ")) &&
-    trimmed.includes("commit") &&
-    !trimmed.includes("--amend")
-  );
+  // Support chained commands like "git add ... && git commit ..."
+  return cmd.includes("git commit") && !cmd.includes("--amend");
 }
 
 export const claudeCode: AgentAdapter = {
