@@ -3,14 +3,14 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
         ]
       },
       {
@@ -26,7 +26,7 @@
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
         ]
       }
     ],
@@ -37,7 +37,7 @@
           {
             "type": "command",
             "if": "Bash(*git commit*)",
-            "command": "npx --yes @wasabeef/agentnote hook"
+            "command": "node packages/cli/dist/cli.js hook"
           },
           {
             "type": "command",
@@ -51,7 +51,7 @@
       {
         "matcher": "Edit|Write|NotebookEdit|Bash",
         "hooks": [
-          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
         ]
       },
       {
