@@ -1,0 +1,11 @@
+{
+  "v": 2,
+  "session_id": "b6d0d27f-2478-4866-8218-e06bbef50325",
+  "timestamp": "2026-04-07T03:16:51.820Z",
+  "interactions": [],
+  "files_in_commit": [
+    "packages/cli/src/agents/claude-code.ts"
+  ],
+  "files_by_ai": [],
+  "ai_ratio": 0
+}
