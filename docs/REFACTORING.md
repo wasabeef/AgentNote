@@ -1,6 +1,71 @@
 # Refactoring Plan
 
-Status as of v0.1.5 — 17 source files, 8 test files, 2,534 LOC.
+Status as of v0.2.0 — 19 source files, 10 test files, ~2,800 LOC.
+
+All phases (A–D) implemented. See execution log below for details.
+
+## Execution order
+
+Each step is an independent commit. Structure-only changes (formatting, config) are separated from behavior changes.
+
+### Phase A: Foundation (no behavior change)
+
+| Step | Source | What | Commit type | Depends on |
+|---|---|---|---|---|
+| A-1 | P1 | tsconfig → ES2023 / NodeNext | `chore: modernize tsconfig to ES2023/NodeNext` | — |
+| A-2 | P1 | Add `packages/action/tsconfig.json` | `chore: add action tsconfig` | — |
+| A-3 | P1 | Root `package.json` (engines, packageManager, workspaces) | `chore: add root package.json metadata` | — |
+| A-4 | P5 | Add `.editorconfig` | `chore: add editorconfig` | — |
+
+A-1 through A-4 are independent — can be done in any order or combined.
+
+### Phase B: Tooling (no behavior change)
+
+| Step | Source | What | Commit type | Depends on |
+|---|---|---|---|---|
+| B-1 | P5 | Install Biome, add `biome.json` | `chore: add biome configuration` | — |
+| B-2 | P5 | `biome check --write src/` — auto-fix formatting | `style: apply biome formatting` | B-1 |
+| B-3 | P5 | Manual fixes for remaining Biome diagnostics | `style: fix biome lint warnings` | B-2 |
+| B-4 | P5 | Update `package.json` scripts (lint → biome, typecheck → tsc) | `chore: split lint and typecheck scripts` | B-2 |
+| B-5 | P5 | Update CI workflow to run both lint + typecheck | `ci: add biome check to CI pipeline` | B-4 |
+| B-6 | P5 | Install knip, add `knip.json`, verify no false positives | `chore: add knip for unused code detection` | — |
+| B-7 | P5 | Install publint, add to `prepublishOnly` | `chore: add publint to prepublish validation` | — |
+| B-8 | P5 | Add `renovate.json` | `chore: add renovate configuration` | — |
+
+B-1 → B-5 are sequential (Biome pipeline). B-6, B-7, B-8 are independent of each other.
+
+### Phase C: Code quality (behavior change)
+
+| Step | Source | What | Commit type | Depends on |
+|---|---|---|---|---|
+| C-1 | P2 | Extract `core/record.ts` from hook.ts + commit.ts | `refactor: extract shared recordEntry to core/record` | — |
+| C-2 | P2 | Update hook.ts → call `core/record.ts` | (included in C-1) | C-1 |
+| C-3 | P2 | Update commit.ts → call `core/record.ts` | (included in C-1) | C-1 |
+| C-4 | P7 | Harness Phase 1: Stop hook → run tests (async) | `chore: add test-on-stop harness hook` | — |
+| C-5 | P7 | Harness Phase 2: PreToolUse → typecheck before commit (sync) | `chore: add typecheck-before-commit hook` | B-4 |
+| C-6 | P7 | Harness Phase 3: PostToolUse → biome lint (async) | `chore: add biome-on-edit harness hook` | B-1 |
+
+C-1 is the only behavior change — test thoroughly. C-4/C-5/C-6 are config-only (`.claude/settings.json`).
+
+### Phase D: Feature work (future)
+
+| Step | Source | What | Depends on |
+|---|---|---|---|
+| D-1 | P3 | Design causal turn ID scheme | — |
+| D-2 | P3 | Implement turn ID in hook event capture | D-1 |
+| D-3 | P3 | Schema v2 with `files_touched` per interaction | D-2 |
+| D-4 | P4 | Session aggregation command + cache | — |
+| D-5 | P6 | PR output: per-prompt file attribution | D-3 |
+| D-6 | P6 | PR output: collapsible per-commit details | D-3 |
+
+D-1 requires design decision on turn ID source. D-4 is independent.
+
+### Validation gates
+
+- After Phase A: `npm run build && npm test` must pass (no behavior change)
+- After Phase B: `npm run lint && npm run typecheck && npm test` must all pass
+- After Phase C: `npm test` must pass, `agentnote show` output unchanged for existing notes
+- After each step: `git diff --stat` to confirm scope matches the commit description
 
 ## Priority 1: Config modernization
 
@@ -161,24 +226,142 @@ Design:
 
 ### Biome (lint + format)
 
-Replace `tsc --noEmit` as the sole lint with Biome. Single binary, ~5ms startup, covers lint + format.
+Replace `tsc --noEmit` as the sole lint with [Biome](https://biomejs.dev/). Single Rust binary, ~5ms startup, covers lint + format. No plugin ecosystem needed for this project's scope.
+
+**Why Biome over ESLint + Prettier**: 10-50x faster, single config file, single binary, zero JS deps. ESLint v9 flat config migration + Prettier coordination is unnecessary overhead for 24 source files.
+
+**Why not oxlint**: Still experimental (v0.x), no formatter, fewer rules. Biome is stable and covers both lint + format.
 
 ```bash
+cd packages/cli
 npm install --save-dev --save-exact @biomejs/biome
 npx biome init
 ```
 
-Add to CI:
+#### biome.json
+
+```json
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "organizeImports": { "enabled": true },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": { "recommended": true },
+      "suspicious": { "recommended": true },
+      "performance": { "recommended": true },
+      "nursery": { "all": false }
+    }
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "files": {
+    "ignore": ["dist/", "node_modules/", "*.json"]
+  }
+}
+```
+
+`nursery` rules are unstable — disable all to avoid false positives and CI churn.
+
+#### package.json scripts
 
 ```json
 {
   "scripts": {
     "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",
     "typecheck": "tsc --noEmit"
   }
 }
 ```
+
+`tsc --noEmit` remains as `typecheck` — Biome does not type-check.
+
+#### CI integration
+
+Update `.github/workflows/ci.yml` lint job:
+
+```yaml
+- run: npm -w packages/cli run lint      # biome check
+- run: npm -w packages/cli run typecheck # tsc --noEmit
+```
+
+Both must pass. Biome catches style/correctness issues. tsc catches type errors.
+
+#### Migration checklist
+
+1. Install Biome, run `biome check src/` — fix all auto-fixable issues with `--write`
+2. Review remaining diagnostics manually (expect ~5-15 issues on 2500 LOC)
+3. Commit formatting changes as a **structure-only** commit (no behavior change)
+4. Update CI to run both `lint` and `typecheck`
+5. Remove `lint: tsc --noEmit` — rename to `typecheck`
+
+### knip (unused code detection)
+
+[knip](https://knip.dev/) detects unused exports, dependencies, and files. Useful for a monorepo where `packages/cli` and `packages/action` have separate dependency boundaries.
+
+```bash
+npm install --save-dev knip
+```
+
+Add `knip.json` to repo root:
+
+```json
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    "packages/cli": {
+      "entry": ["src/cli.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/action": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}
+```
+
+Run in CI as non-blocking initially:
+
+```json
+{
+  "scripts": {
+    "knip": "knip"
+  }
+}
+```
+
+### publint (package publishing validation)
+
+[publint](https://publint.dev/) validates `package.json` exports, types, and main fields before publish. Catches broken package configurations that consumers would hit.
+
+```bash
+npm install --save-dev publint
+```
+
+Add to `prepublishOnly`:
+
+```json
+{
+  "scripts": {
+    "prepublishOnly": "npm run build && publint"
+  }
+}
+```
+
+Zero config. Fails if the package would break for consumers.
 
 ### .editorconfig
 
@@ -194,7 +377,7 @@ trim_trailing_whitespace = true
 insert_final_newline = true
 ```
 
-Zero cost. Ensures consistent formatting across any editor.
+Zero cost. Ensures consistent formatting across any editor without Biome.
 
 ### Renovate
 
@@ -245,7 +428,7 @@ Run Biome check after every Edit/Write to catch issues immediately:
         "hooks": [
           {
             "type": "command",
-            "command": "git diff --name-only -z HEAD | xargs -0 npx biome check --no-errors-on-unmatched",
+            "command": "cd packages/cli && npx biome check src/",
             "async": true
           }
         ]
@@ -254,6 +437,8 @@ Run Biome check after every Edit/Write to catch issues immediately:
   }
 }
 ```
+
+**Note**: Checking all of `src/` is simpler and safer than trying to pass individual changed files via `xargs`. On a 2500 LOC codebase, Biome completes in ~5ms regardless — file-level targeting adds shell complexity (null delimiter handling, empty input edge cases) for no measurable gain.
 
 ### PreToolUse: typecheck before git commit
 
@@ -355,7 +540,11 @@ Phase 1 alone gives fast feedback. Phase 2 prevents broken commits. Phase 3-4 ad
 |---|---|
 | ESLint | Biome replaces it. Fewer deps, faster, single config |
 | Prettier | Biome replaces it |
+| oxlint | Experimental (v0.x), no formatter. Biome covers both lint + format |
 | Jest | `node:test` works. 32 tests pass. No migration benefit |
+| tsdown / unbuild | esbuild is stable and fast. tsdown is v0.x, re-evaluate at 1.0 |
+| lefthook / husky | Claude Code hooks already run lint/test. Git hooks would duplicate |
+| Bun | `node:test` + tsx works. Bun adds runtime divergence risk for no gain |
 | Rewind / Resume | Git + Claude Code handle this natively |
 | Secret redaction | Only needed for public repo notes push |
 | Token usage tracking | Useful but low demand |
