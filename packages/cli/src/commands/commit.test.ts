@@ -94,13 +94,14 @@ describe("agentnote commit", () => {
     assert.ok(!msg.includes("Agentnote-Session"), "should not have trailer without session");
   });
 
-  it("rotates prompts and changes after commit", () => {
+  it("preserves logs after commit for split-commit support", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
 
-    // prompts.jsonl should have been rotated after the previous commit
+    // prompts.jsonl should NOT be rotated after commit (rotation happens at next prompt).
+    // This allows split commits to each read the same session data.
     const promptsFile = join(sessionDir, "prompts.jsonl");
-    assert.ok(!existsSync(promptsFile), "prompts.jsonl should be rotated after commit");
+    assert.ok(existsSync(promptsFile), "prompts.jsonl should be preserved after commit");
   });
 
   it("extracts responses from transcript when available", () => {

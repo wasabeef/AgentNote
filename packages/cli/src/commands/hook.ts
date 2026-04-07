@@ -5,6 +5,7 @@ import { claudeCode } from "../agents/claude-code.js";
 import type { HookInput } from "../agents/types.js";
 import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
+import { rotateLogs } from "../core/rotate.js";
 import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
@@ -67,6 +68,12 @@ export async function hook(): Promise<void> {
     }
 
     case "prompt": {
+      // Rotate logs from previous prompt batch before starting fresh.
+      // This ensures split commits each get scoped notes, while the next
+      // prompt starts with clean JSONL files.
+      const rotateId = Date.now().toString(36);
+      await rotateLogs(sessionDir, rotateId);
+
       // Increment turn counter for causal file attribution.
       const turnFile = join(sessionDir, "turn");
       let turn = 0;
