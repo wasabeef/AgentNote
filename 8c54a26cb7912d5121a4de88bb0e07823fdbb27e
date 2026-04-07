@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-07T07:46:38.599Z",
+  "interactions": [
+    {
+      "prompt": "[Request interrupted by user]",
+      "response": "未 push。ローカルのみ。\n\n```\ngit push origin v0.1.6\n```\n\n実行しますか？",
+      "files_touched": [
+        ".github/workflows/release.yml"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    ".github/workflows/release.yml"
+  ],
+  "files_by_ai": [
+    ".github/workflows/release.yml"
+  ],
+  "ai_ratio": 100
+}
