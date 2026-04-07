@@ -7,10 +7,11 @@ import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
 
-const VERSION = "0.1.0";
+declare const __VERSION__: string;
+const VERSION = __VERSION__;
 
 const HELP = `
-agentnote — remember why your code changed
+agentnote v${VERSION} — remember why your code changed
 
 usage:
   agentnote init                 set up hooks, workflow, and notes auto-fetch
