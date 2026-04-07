@@ -117,6 +117,81 @@ describe("agentnote hook", () => {
     assert.ok(!existsSync(changesFile), "should not record Bash tool use");
   });
 
+  it("injects trailer on PreToolUse git commit", () => {
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: "a1b2c3d4-0001-0001-0001-000000000001",
+      tool_name: "Bash",
+      tool_input: { command: "git commit -m 'test'" },
+    });
+
+    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const result = JSON.parse(out);
+    assert.ok(
+      result.hookSpecificOutput.updatedInput.command.includes("--trailer"),
+      "should inject trailer flag",
+    );
+    assert.ok(
+      result.hookSpecificOutput.updatedInput.command.includes("Agentnote-Session"),
+      "should inject session trailer",
+    );
+  });
+
+  it("injects trailer on PreToolUse chained git add && git commit", () => {
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: "a1b2c3d4-0001-0001-0001-000000000001",
+      tool_name: "Bash",
+      tool_input: { command: "git add file.ts && git commit -m 'chained'" },
+    });
+
+    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const result = JSON.parse(out);
+    const updatedCmd = result.hookSpecificOutput.updatedInput.command;
+    assert.ok(updatedCmd.includes("--trailer"), "should inject trailer for chained command");
+    assert.ok(updatedCmd.includes("git add file.ts"), "should preserve git add prefix");
+  });
+
+  it("does not inject trailer on PreToolUse for non-commit Bash", () => {
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: "a1b2c3d4-0001-0001-0001-000000000001",
+      tool_name: "Bash",
+      tool_input: { command: "npm test" },
+    });
+
+    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.equal(out.trim(), "", "should produce no output for non-commit command");
+  });
+
+  it("does not inject trailer on PreToolUse for git commit --amend", () => {
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: "a1b2c3d4-0001-0001-0001-000000000001",
+      tool_name: "Bash",
+      tool_input: { command: "git commit --amend -m 'amend'" },
+    });
+
+    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.equal(out.trim(), "", "should not inject trailer for amend");
+  });
+
   it("handles invalid JSON gracefully", () => {
     // should not throw
     execSync(`echo 'not json' | node ${cliPath} hook`, { cwd: testDir });
