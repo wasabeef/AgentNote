@@ -57,7 +57,7 @@ agentnote show/log/session → reads git notes --ref=agentnote
 ### Core modules
 
 - **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Includes turn-based file attribution.
-- **`core/entry.ts`**: Schema v2 `buildEntry()` and `calcAiRatio()`. Interactions include optional `files_touched` per prompt.
+- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Interactions include optional `files_touched` per prompt.
 - **`core/jsonl.ts`**: `readJsonlField()` (deduplicated single field), `readJsonlEntries()` (full objects), `appendJsonl()`.
 - **`core/storage.ts`**: `writeNote()` and `readNote()` using `refs/notes/agentnote`.
 - **`core/rotate.ts`**: Rename JSONL files with commit SHA prefix after each commit.
@@ -66,7 +66,7 @@ agentnote show/log/session → reads git notes --ref=agentnote
 
 **Layer 1 — Local temp** (`.git/agentnote/sessions/`): Append-only JSONL files accumulated during a session. Rotated after each commit. Never pushed.
 
-**Layer 2 — Git notes** (`refs/notes/agentnote`): One JSON note per commit with `"v": 2` schema. Permanent, pushable, shareable. Readers must handle both v1 (no `files_touched`) and v2.
+**Layer 2 — Git notes** (`refs/notes/agentnote`): One JSON note per commit with `"v": 1` schema. Permanent, pushable, shareable.
 
 ### Causal turn ID
 

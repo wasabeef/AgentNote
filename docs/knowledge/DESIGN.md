@@ -26,17 +26,18 @@ wasabeef/agentnote/
 │   │   │   ├── paths.ts            # path resolution
 │   │   │   ├── core/               # agent-agnostic logic
 │   │   │   │   ├── entry.ts        # build entry JSON, calc ai_ratio
-│   │   │   │   ├── storage.ts      # git notes read/write
 │   │   │   │   ├── jsonl.ts        # JSONL read/append helpers
-│   │   │   │   └── rotate.ts       # log rotation after commit
+│   │   │   │   ├── record.ts       # shared recordCommitEntry()
+│   │   │   │   ├── rotate.ts       # log rotation after commit
+│   │   │   │   └── storage.ts      # git notes read/write
 │   │   │   ├── agents/             # one file per agent
 │   │   │   │   ├── types.ts        # AgentAdapter interface + NormalizedEvent
 │   │   │   │   └── claude-code.ts  # Claude Code adapter
 │   │   │   └── commands/           # user-facing, delegates to agents/ + core/
 │   │   │       ├── init.ts
-│   │   
 │   │   │       ├── hook.ts
 │   │   │       ├── commit.ts
+│   │   │       ├── session.ts
 │   │   │       ├── show.ts
 │   │   │       ├── log.ts
 │   │   │       ├── pr.ts
@@ -98,30 +99,19 @@ This gives users `uses: wasabeef/agentnote@v0` while code lives in `packages/act
 ### Data flow
 
 ```
-                     AI Agent hooks
-                           │
-         ┌─────────────────┼──────────────────┐
-         │                 │                   │
-    SessionStart     UserPromptSubmit      PostToolUse
-    Stop                                   PreToolUse
-         │                 │                   │
-         ▼                 ▼                   ▼
-    .git/agentnote/        prompts.jsonl       changes.jsonl
-    session           (append-only)       (Edit/Write tracking)
-                                          ┌────────────────────┐
-                                          │ PreToolUse:        │
-                                          │ git commit →       │
-                                          │ inject --trailer   │
-                                          │ (synchronous)      │
-                                          └────────────────────┘
-                                          ┌────────────────────┐
-                                          │ PostToolUse:       │
-                                          │ git commit →       │
-                                          │ record entry to    │
-                                          │ git notes          │
-                                          │ (async)            │
-                                          └────────────────────┘
+         AI Agent hooks                          Git hooks
+               │                                     │
+   ┌───────────┼───────────┐             ┌───────────┼───────────┐
+   │           │           │             │                       │
+SessionStart  User     PostToolUse   prepare-commit-msg     post-commit
+Stop        Prompt    (Edit/Write)        │                       │
+   │        Submit        │               ▼                       ▼
+   ▼           ▼          ▼         inject --trailer       record entry
+.git/agentnote/ prompts  changes    (reads session file)   to git notes
+session       .jsonl     .jsonl
 ```
+
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle). Git hooks handle commit **integration** (trailer injection, note recording). This separation means commit tracking works regardless of how `git commit` is invoked — chained commands, aliases, or scripts.
 
 ### Storage: two layers
 
@@ -162,7 +152,8 @@ Note content per commit:
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "response": "I'll create the middleware with... "
+      "response": "I'll create the middleware with... ",
+      "files_touched": ["src/auth.ts"]
     }
   ],
   "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
@@ -171,7 +162,7 @@ Note content per commit:
 }
 ```
 
-- **`v`**: Schema version. Always `1` for the current format. Future changes increment this.
+- **`v`**: Schema version. Currently `1`. Includes `files_touched` per interaction for turn-based file attribution.
 - **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session. File paths are normalized to repo-relative at recording time and matched by exact string comparison.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
@@ -196,18 +187,31 @@ feat: add auth middleware
 Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
-Injected via `PreToolUse` hook (synchronous) by modifying the `git commit` command. Works with plain `git commit` — no need for `agentnote commit`.
+Injected via the `prepare-commit-msg` git hook, which reads the active session ID from `.git/agentnote/session` and appends the trailer to the commit message file. This fires for every `git commit` regardless of how it's invoked — no command pattern matching needed.
 
-### Why both PreToolUse and PostToolUse match Bash
+### Git hooks for commit integration
 
-Both hooks fire on `Bash` tool use, but they serve different purposes and do not conflict:
+Two git hooks handle all commit-related operations:
 
-| Hook | When | What it does | Sync |
-|---|---|---|---|
-| `PreToolUse` (Bash, `*git commit*`) | Before `git commit` runs | Injects `--trailer` into the command | Synchronous (writes to stdout) |
-| `PostToolUse` (Bash, `*git commit*`) | After `git commit` succeeds | Records the entry as a git note | Async |
+| Git hook | When | What it does |
+|---|---|---|
+| `prepare-commit-msg` | Before commit message editor opens | Reads `.git/agentnote/session`, appends `Agentnote-Session` trailer to message file |
+| `post-commit` | After commit succeeds | Calls `recordCommitEntry()` to write session data as a git note on HEAD |
 
-PreToolUse modifies the command. PostToolUse records the result. They are sequential, not redundant. PostToolUse also fires on `Edit|Write|NotebookEdit` for file change tracking, which PreToolUse does not.
+These replaced the previous approach of using AI agent PreToolUse/PostToolUse hooks to detect `git commit` commands via pattern matching, which was fragile with chained commands (`git add && git commit`).
+
+### Git hook installation
+
+`agentnote init` installs git hooks respecting the repository's hook directory:
+
+```bash
+# Determine hook directory
+HOOK_DIR=$(git config get core.hooksPath || echo ".git/hooks")
+```
+
+If `core.hooksPath` is set (e.g., by husky, lefthook, or custom configuration), hooks are installed there instead of `.git/hooks/`. This ensures compatibility with any hook manager.
+
+When an existing hook file is found, agentnote chains to it — the original hook runs first, then agentnote's logic runs. This avoids overwriting user or tool-managed hooks.
 
 ## CLI commands
 
@@ -224,7 +228,10 @@ agentnote hook                handle agent hook events (internal, via stdin)
 
 ### init model
 
-`agentnote init` writes hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team. No per-developer setup after that.
+`agentnote init` does two things:
+
+1. **Agent config** — writes data collection hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team.
+2. **Git hooks** — installs `prepare-commit-msg` and `post-commit` hooks in the repository's hook directory (respects `core.hooksPath`). These are local to `.git/` and must be installed per clone via `agentnote init`.
 
 ### PR report: data and presentation separated
 
@@ -322,12 +329,16 @@ git add .claude/settings.json
 git commit -m "chore: enable agentnote"
 git push
 
-# 2. Everyone works normally — hooks fire automatically
+# 2. New clone setup — install git hooks (per developer, per clone)
+git clone <repo> && cd <repo>
+npx @wasabeef/agentnote init   # installs git hooks + agent config
 
-# 3. Share session data
+# 3. Everyone works normally — hooks fire automatically
+
+# 4. Share session data
 git push origin refs/notes/agentnote
 
-# 4. Add the action to CI (one person, once)
+# 5. Add the action to CI (one person, once)
 # Copy .github/workflows/agentnote-pr-report.yml to your repo
 # Or add `uses: wasabeef/agentnote@v0` to an existing workflow
 ```
@@ -338,7 +349,7 @@ git push origin refs/notes/agentnote
 - **Git CLI only.** All git operations via `execFile("git", ...)`. No git libraries.
 - **Never break git commit.** All recording wrapped in try/catch. Errors are logged to stderr, never block the commit.
 - **All source in English.** Comments, output, tests.
-- **PreToolUse is synchronous.** Must write JSON to stdout, must not be `async: true`.
+- **Git hooks for commit ops.** Trailer injection (`prepare-commit-msg`) and note recording (`post-commit`) use git hooks, not agent hooks. Respects `core.hooksPath` and chains with existing hooks.
 - **No telemetry, no auth, no external services.** Data stays local unless explicitly pushed via `git push origin refs/notes/agentnote`.
 - **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
 - **Full response storage.** AI responses are stored in full. Git notes blobs are compressed and well within GitHub limits.
@@ -422,7 +433,7 @@ In practice, notes conflicts are rare because each developer writes to different
 
 ### Concurrent sessions
 
-If multiple Claude Code sessions run in the same repo simultaneously, `.git/agentnote/session` (the active session pointer) may be overwritten by the last writer. Session-specific data in `.git/agentnote/sessions/<id>/` is isolated and safe. The trailer injection uses the event's session ID directly (not the file), so trailers are always correct.
+If multiple Claude Code sessions run in the same repo simultaneously, `.git/agentnote/session` (the active session pointer) may be overwritten by the last writer. Session-specific data in `.git/agentnote/sessions/<id>/` is isolated and safe. Since `prepare-commit-msg` reads the session ID from the file, a concurrent overwrite could attach the wrong session ID to a trailer. In practice this is rare — concurrent commits from the same repo are uncommon.
 
 ### ai_ratio is file-count based
 
@@ -437,19 +448,22 @@ Agent Note supports Claude Code today, but the `agents/` + `core/` split makes a
 | Concern | Claude Code | Cursor | Gemini CLI |
 |---|---|---|---|
 | Config file | `.claude/settings.json` | `.cursor/hooks.json` | `.gemini/settings.json` |
-| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `sessionStart`, `sessionEnd`, `beforeSubmitPrompt`, `stop` | TBD |
+| Hook events | `SessionStart`, `Stop`, `PostToolUse`, `UserPromptSubmit` | `sessionStart`, `sessionEnd`, `beforeSubmitPrompt`, `stop` | TBD |
 | Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.cursor/sessions/` | `~/.gemini/sessions/` |
-| Commit detection | `PreToolUse` + `Bash(git commit *)` | `beforeSubmitPrompt` | TBD |
+| Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) |
 | Response format | `{type:"assistant", message:{content:[{type:"text"}]}}` | Different | Different |
 
-### What stays the same (`core/`)
+### What stays the same (`core/` + git hooks)
 
 - Git notes storage (`refs/notes/agentnote`)
 - Entry data structure (interactions, ai_ratio, files)
 - JSONL append and rotation
 - Display commands (show, log, pr, status)
-- Commit trailer (`Agentnote-Session`)
+- Commit trailer (`Agentnote-Session`) — injected by `prepare-commit-msg` git hook
+- Note recording — handled by `post-commit` git hook
 - GitHub Action (agent-agnostic — reads git notes)
+
+Commit integration is fully agent-agnostic. Adding a new agent only requires implementing data collection hooks — git hooks handle the rest.
 
 ### AgentAdapter interface
 
@@ -462,17 +476,18 @@ interface HookInput {
 }
 
 interface NormalizedEvent {
-  kind: "session_start" | "stop" | "prompt" | "file_change" | "pre_commit" | "post_commit";
+  kind: "session_start" | "stop" | "prompt" | "file_change";
   sessionId: string;
   timestamp: string;
   prompt?: string;
   response?: string;
   file?: string;
   tool?: string;
-  commitCommand?: string;
   transcriptPath?: string;
   model?: string;
 }
+// Note: "pre_commit" and "post_commit" are handled by git hooks,
+// not by agent adapters. This keeps commit integration agent-agnostic.
 
 interface AgentAdapter {
   name: string;
@@ -514,10 +529,10 @@ interface AgentAdapter {
 | Storage | Orphan branch `entire/checkpoints/v1` | **Git notes** `refs/notes/agentnote` |
 | Branch pollution | Shadow branches + checkpoint branch | **None** |
 | Transcript | Full copy per checkpoint (O(n²) bloat) | **Reference only** (pointer in note) |
-| Git hooks | Overwrites `.git/hooks/` | **Agent hooks only** (e.g., `.claude/settings.json`) |
+| Git hooks | Overwrites `.git/hooks/` | **Git hooks + agent hooks** (git hooks for commit ops, agent hooks for data collection; respects `core.hooksPath`, chains with existing hooks) |
 | CI impact | `entire@local` author breaks Vercel | **None** |
 | GitHub UI | "Compare & PR" banner on every push | **None** (notes are invisible) |
 | Dependencies | go-git, gitleaks, PostHog, entire.io auth | **Zero** (CLI), ncc-bundled (action) |
-| Performance | Sync hooks, 2min 44s commit | **Async hooks** (except PreToolUse) |
+| Performance | Sync hooks, 2min 44s commit | **Async agent hooks** + lightweight git hooks |
 | Team sharing | Auto-push checkpoint branch | **Explicit** `git push origin refs/notes/agentnote` |
 | PR integration | None built-in | **GitHub Action** with structured outputs |
