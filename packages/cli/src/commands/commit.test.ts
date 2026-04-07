@@ -157,4 +157,47 @@ describe("agentnote commit", () => {
     rmSync(transcriptPath);
     rmSync(join(transcriptDir), { recursive: true, force: true });
   });
+
+  it("records prompts and changes from rotated (archived) files when commit is in a later turn", () => {
+    // Simulate the cross-turn scenario:
+    //   turn N  — file edits recorded, then rotated (archived) before the commit
+    //   turn N+1 — user sends a message (e.g. "y"), rotation fires → changes.jsonl cleared
+    //              commit happens here → recordCommitEntry must read the archived files
+    const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+
+    // Simulate already-rotated data (previous turn — archived with an arbitrary prefix).
+    // File path must be repo-relative, matching what the hook normalizes to.
+    const rotatedChanges = join(sessionDir, "changes-prevturn.jsonl");
+    writeFileSync(rotatedChanges, '{"event":"file_change","tool":"Write","file":"cross-turn.ts","turn":1}\n');
+
+    const rotatedPrompts = join(sessionDir, "prompts-prevturn.jsonl");
+    writeFileSync(rotatedPrompts, '{"event":"prompt","timestamp":"2026-04-07T00:00:00Z","prompt":"cross-turn prompt","turn":1}\n');
+
+    // Current turn (e.g. turn 2, "y") — no new changes, prompts.jsonl has only the confirm message.
+    writeFileSync(join(sessionDir, PROMPTS_FILE), '{"event":"prompt","timestamp":"2026-04-07T00:01:00Z","prompt":"y","turn":2}\n');
+    // changes.jsonl does not exist (no edits this turn).
+
+    writeFileSync(join(testDir, "cross-turn.ts"), "export const crossTurn = true;");
+    execSync("git add cross-turn.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: cross-turn commit"`, { cwd: testDir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+
+    assert.ok(entry.ai_ratio > 0, "ai_ratio should be > 0 — cross-turn.ts was AI-written");
+    assert.ok(
+      entry.interactions.some((i: { prompt: string }) => i.prompt === "cross-turn prompt"),
+      "should include prompt from rotated file",
+    );
+
+    // Rotated files should have been deleted after recording.
+    assert.ok(!existsSync(rotatedChanges), "rotated changes file should be deleted after commit");
+    assert.ok(!existsSync(rotatedPrompts), "rotated prompts file should be deleted after commit");
+  });
 });
