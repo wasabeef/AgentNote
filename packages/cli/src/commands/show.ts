@@ -1,12 +1,13 @@
 import { stat } from "node:fs/promises";
-import { git } from "../git.js";
-import { readNote } from "../core/storage.js";
 import { claudeCode } from "../agents/claude-code.js";
 import type { AgentnoteEntry } from "../core/entry.js";
+import { readNote } from "../core/storage.js";
+import { git } from "../git.js";
 
 interface Interaction {
   prompt: string;
   response: string | null;
+  files_touched?: string[];
 }
 
 export async function show(commitRef?: string): Promise<void> {
@@ -16,12 +17,7 @@ export async function show(commitRef?: string): Promise<void> {
   const commitSha = await git(["log", "-1", "--format=%H", ref]);
 
   const sessionId = (
-    await git([
-      "log",
-      "-1",
-      "--format=%(trailers:key=Agentnote-Session,valueonly)",
-      ref,
-    ])
+    await git(["log", "-1", "--format=%(trailers:key=Agentnote-Session,valueonly)", ref])
   ).trim();
 
   console.log(`commit:  ${commitInfo}`);
@@ -54,9 +50,10 @@ export async function show(commitRef?: string): Promise<void> {
     }
 
     // Support both current (interactions) and legacy (prompts) formats.
+    const legacy = entry as unknown as { prompts?: string[] };
     const interactions: Interaction[] =
       entry.interactions ??
-      ((entry as any).prompts ?? []).map((p: string) => ({
+      (legacy.prompts ?? []).map((p: string) => ({
         prompt: p,
         response: null,
       }));
@@ -66,11 +63,16 @@ export async function show(commitRef?: string): Promise<void> {
       console.log(`prompts: ${interactions.length}`);
 
       for (let i = 0; i < interactions.length; i++) {
-        const { prompt, response } = interactions[i];
+        const interaction = interactions[i];
         console.log();
-        console.log(`  ${i + 1}. ${truncateLines(prompt, 120)}`);
-        if (response) {
-          console.log(`     → ${truncateLines(response, 200)}`);
+        console.log(`  ${i + 1}. ${truncateLines(interaction.prompt, 120)}`);
+        if (interaction.response) {
+          console.log(`     → ${truncateLines(interaction.response, 200)}`);
+        }
+        if (interaction.files_touched && interaction.files_touched.length > 0) {
+          for (const file of interaction.files_touched) {
+            console.log(`     📄 ${file}`);
+          }
         }
       }
     }
@@ -101,5 +103,5 @@ function renderRatioBar(ratio: number): string {
 function truncateLines(text: string, maxLen: number): string {
   const firstLine = text.split("\n")[0];
   if (firstLine.length <= maxLen) return firstLine;
-  return firstLine.slice(0, maxLen) + "…";
+  return `${firstLine.slice(0, maxLen)}…`;
 }

@@ -1,16 +1,9 @@
-import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import {
-  mkdtempSync,
-  rmSync,
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { tmpdir, homedir } from "node:os";
+import { after, before, describe, it } from "node:test";
 
 describe("agentnote commit", () => {
   let testDir: string;
@@ -78,7 +71,7 @@ describe("agentnote commit", () => {
       encoding: "utf-8",
     });
     const entry = JSON.parse(note);
-    assert.equal(entry.v, 1, "should have schema version 1");
+    assert.equal(entry.v, 2, "should have schema version 2");
     assert.equal(entry.interactions.length, 2, "should have 2 interactions");
     assert.ok(entry.ai_ratio >= 0 && entry.ai_ratio <= 100, "ratio 0-100");
     assert.equal(entry.session_id, sessionId);
@@ -98,10 +91,7 @@ describe("agentnote commit", () => {
       cwd: testDir,
       encoding: "utf-8",
     });
-    assert.ok(
-      !msg.includes("Agentnote-Session"),
-      "should not have trailer without session",
-    );
+    assert.ok(!msg.includes("Agentnote-Session"), "should not have trailer without session");
   });
 
   it("rotates prompts and changes after commit", () => {
@@ -110,10 +100,7 @@ describe("agentnote commit", () => {
 
     // prompts.jsonl should have been rotated after the previous commit
     const promptsFile = join(sessionDir, "prompts.jsonl");
-    assert.ok(
-      !existsSync(promptsFile),
-      "prompts.jsonl should be rotated after commit",
-    );
+    assert.ok(!existsSync(promptsFile), "prompts.jsonl should be rotated after commit");
   });
 
   it("extracts responses from transcript when available", () => {
@@ -123,13 +110,7 @@ describe("agentnote commit", () => {
     mkdirSync(sessionDir, { recursive: true });
 
     // Create a transcript file under ~/.claude/ (valid path)
-    const transcriptDir = join(
-      homedir(),
-      ".claude",
-      "projects",
-      "commit-test",
-      "sessions",
-    );
+    const transcriptDir = join(homedir(), ".claude", "projects", "commit-test", "sessions");
     mkdirSync(transcriptDir, { recursive: true });
     const transcriptPath = join(transcriptDir, `${sessionId}.jsonl`);
     writeFileSync(
@@ -160,10 +141,7 @@ describe("agentnote commit", () => {
     });
     const entry = JSON.parse(note);
     assert.equal(entry.interactions[0].prompt, "implement auth");
-    assert.equal(
-      entry.interactions[0].response,
-      "I will create the auth module.",
-    );
+    assert.equal(entry.interactions[0].response, "I will create the auth module.");
 
     // Clean up transcript
     rmSync(transcriptPath);
