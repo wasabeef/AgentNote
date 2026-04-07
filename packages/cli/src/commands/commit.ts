@@ -1,14 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { join } from "node:path";
-import { sessionFile, agentnoteDir } from "../paths.js";
-import { git } from "../git.js";
-import { claudeCode } from "../agents/claude-code.js";
-import { readJsonlField } from "../core/jsonl.js";
-import { writeNote } from "../core/storage.js";
-import { buildEntry } from "../core/entry.js";
-import { rotateLogs } from "../core/rotate.js";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { recordCommitEntry } from "../core/record.js";
+import { agentnoteDir, sessionFile } from "../paths.js";
 
 export async function commit(args: string[]): Promise<void> {
   const sf = await sessionFile();
@@ -41,65 +35,11 @@ export async function commit(args: string[]): Promise<void> {
   if (sessionId) {
     try {
       const agentnoteDirPath = await agentnoteDir();
-      const sessionDir = join(agentnoteDirPath, "sessions", sessionId);
-      const commitSha = await git(["rev-parse", "HEAD"]);
-
-      let commitFiles: string[] = [];
-      try {
-        const raw = await git([
-          "diff-tree",
-          "--no-commit-id",
-          "--name-only",
-          "-r",
-          "HEAD",
-        ]);
-        commitFiles = raw.split("\n").filter(Boolean);
-      } catch {
-        // empty
-      }
-
-      const aiFiles = await readJsonlField(
-        join(sessionDir, "changes.jsonl"),
-        "file",
-      );
-      const prompts = await readJsonlField(
-        join(sessionDir, "prompts.jsonl"),
-        "prompt",
-      );
-
-      // Read transcript for accurate prompt-response pairing.
-      let interactions: Array<{ prompt: string; response: string | null }>;
-      const transcriptPathFile = join(sessionDir, "transcript_path");
-      if (existsSync(transcriptPathFile)) {
-        const transcriptPath = (await readFile(transcriptPathFile, "utf-8")).trim();
-        if (transcriptPath) {
-          const allInteractions = await claudeCode.extractInteractions(transcriptPath);
-          interactions = prompts.length > 0 && allInteractions.length > 0
-            ? allInteractions.slice(-prompts.length)
-            : prompts.map((p) => ({ prompt: p, response: null }));
-        } else {
-          interactions = prompts.map((p) => ({ prompt: p, response: null }));
-        }
-      } else {
-        interactions = prompts.map((p) => ({ prompt: p, response: null }));
-      }
-
-      const entry = buildEntry({
-        sessionId,
-        interactions,
-        commitFiles,
-        aiFiles,
-      });
-
-      await writeNote(commitSha, entry as unknown as Record<string, unknown>);
-      await rotateLogs(sessionDir, commitSha);
-
-      console.log(
-        `agentnote: ${interactions.length} prompts, AI ratio ${entry.ai_ratio}%`,
-      );
-    } catch (err: any) {
+      const result = await recordCommitEntry({ agentnoteDirPath, sessionId });
+      console.log(`agentnote: ${result.promptCount} prompts, AI ratio ${result.aiRatio}%`);
+    } catch (err: unknown) {
       // Never let agentnote recording break a commit.
-      console.error(`agentnote: warning: ${err.message}`);
+      console.error(`agentnote: warning: ${(err as Error).message}`);
     }
   }
 }

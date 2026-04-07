@@ -1,14 +1,12 @@
-import { mkdir, readFile, writeFile, realpath } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join, relative, isAbsolute } from "node:path";
-import { agentnoteDir, root } from "../paths.js";
-import { git } from "../git.js";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
-import type { HookInput, NormalizedEvent } from "../agents/types.js";
-import { readJsonlField, appendJsonl } from "../core/jsonl.js";
-import { writeNote } from "../core/storage.js";
-import { buildEntry } from "../core/entry.js";
-import { rotateLogs } from "../core/rotate.js";
+import type { HookInput } from "../agents/types.js";
+import { appendJsonl } from "../core/jsonl.js";
+import { recordCommitEntry } from "../core/record.js";
+import { git } from "../git.js";
+import { agentnoteDir } from "../paths.js";
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -69,10 +67,21 @@ export async function hook(): Promise<void> {
     }
 
     case "prompt": {
+      // Increment turn counter for causal file attribution.
+      const turnFile = join(sessionDir, "turn");
+      let turn = 0;
+      if (existsSync(turnFile)) {
+        const raw = (await readFile(turnFile, "utf-8")).trim();
+        turn = Number.parseInt(raw, 10) || 0;
+      }
+      turn += 1;
+      await writeFile(turnFile, String(turn));
+
       await appendJsonl(join(sessionDir, "prompts.jsonl"), {
         event: "prompt",
         timestamp: event.timestamp,
         prompt: event.prompt,
+        turn,
       });
       break;
     }
@@ -89,7 +98,7 @@ export async function hook(): Promise<void> {
           // Normalize file path to match — add /private if root has it and file doesn't.
           let normalizedFile = filePath;
           if (repoRoot.startsWith("/private") && !normalizedFile.startsWith("/private")) {
-            normalizedFile = "/private" + normalizedFile;
+            normalizedFile = `/private${normalizedFile}`;
           } else if (!repoRoot.startsWith("/private") && normalizedFile.startsWith("/private")) {
             normalizedFile = normalizedFile.replace(/^\/private/, "");
           }
@@ -98,12 +107,21 @@ export async function hook(): Promise<void> {
           // Fallback: keep as-is.
         }
       }
+      // Read current turn for causal attribution.
+      let turn = 0;
+      const turnFile = join(sessionDir, "turn");
+      if (existsSync(turnFile)) {
+        const raw = (await readFile(turnFile, "utf-8")).trim();
+        turn = Number.parseInt(raw, 10) || 0;
+      }
+
       await appendJsonl(join(sessionDir, "changes.jsonl"), {
         event: "file_change",
         timestamp: event.timestamp,
         tool: event.tool,
         file: filePath,
         session_id: event.sessionId,
+        turn,
       });
       break;
     }
@@ -129,65 +147,15 @@ export async function hook(): Promise<void> {
 
     case "post_commit": {
       try {
-        await recordEntry(agentnoteDirPath, event.sessionId, event.transcriptPath);
+        await recordCommitEntry({
+          agentnoteDirPath,
+          sessionId: event.sessionId,
+          transcriptPath: event.transcriptPath,
+        });
       } catch {
         // Never break the workflow if entry recording fails.
       }
       break;
     }
   }
-}
-
-/** Record a agentnote entry as a git note after a successful commit. */
-async function recordEntry(
-  agentnoteDirPath: string,
-  sessionId: string,
-  eventTranscriptPath?: string,
-): Promise<void> {
-  const sessionDir = join(agentnoteDirPath, "sessions", sessionId);
-  const commitSha = await git(["rev-parse", "HEAD"]);
-
-  let commitFiles: string[] = [];
-  try {
-    const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
-    commitFiles = raw.split("\n").filter(Boolean);
-  } catch {
-    // empty
-  }
-
-  const aiFiles = await readJsonlField(join(sessionDir, "changes.jsonl"), "file");
-  const prompts = await readJsonlField(join(sessionDir, "prompts.jsonl"), "prompt");
-
-  // Resolve transcript path from event or saved file.
-  const transcriptPath = eventTranscriptPath ?? await readSavedTranscriptPath(sessionDir);
-
-  // Build interactions from transcript for accurate prompt-response pairing.
-  const adapter = claudeCode;
-  let interactions: Array<{ prompt: string; response: string | null }>;
-
-  if (transcriptPath) {
-    const allInteractions = await adapter.extractInteractions(transcriptPath);
-    interactions = prompts.length > 0 && allInteractions.length > 0
-      ? allInteractions.slice(-prompts.length)
-      : prompts.map((p) => ({ prompt: p, response: null }));
-  } else {
-    interactions = prompts.map((p) => ({ prompt: p, response: null }));
-  }
-
-  const entry = buildEntry({
-    sessionId,
-    interactions,
-    commitFiles,
-    aiFiles,
-  });
-
-  await writeNote(commitSha, entry as unknown as Record<string, unknown>);
-  await rotateLogs(sessionDir, commitSha);
-}
-
-async function readSavedTranscriptPath(sessionDir: string): Promise<string | null> {
-  const saved = join(sessionDir, "transcript_path");
-  if (!existsSync(saved)) return null;
-  const p = (await readFile(saved, "utf-8")).trim();
-  return p || null;
 }
