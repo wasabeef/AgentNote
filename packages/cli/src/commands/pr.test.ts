@@ -1,14 +1,9 @@
-import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import {
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-  mkdirSync,
-} from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, describe, it } from "node:test";
 
 describe("agentnote pr", () => {
   let testDir: string;
@@ -59,10 +54,7 @@ describe("agentnote pr", () => {
   });
 
   it("outputs markdown table by default", () => {
-    const output = execSync(
-      `node ${cliPath} pr HEAD~2`,
-      { cwd: testDir, encoding: "utf-8" },
-    );
+    const output = execSync(`node ${cliPath} pr HEAD~2`, { cwd: testDir, encoding: "utf-8" });
 
     assert.ok(output.includes("Agent Note — AI Session Report"));
     assert.ok(output.includes("feat: add A"));
@@ -71,10 +63,10 @@ describe("agentnote pr", () => {
   });
 
   it("outputs chat format with --format chat", () => {
-    const output = execSync(
-      `node ${cliPath} pr HEAD~2 --format chat`,
-      { cwd: testDir, encoding: "utf-8" },
-    );
+    const output = execSync(`node ${cliPath} pr HEAD~2 --format chat`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
 
     assert.ok(output.includes("Session Transcript"));
     assert.ok(output.includes("🧑 Prompt"));
@@ -84,10 +76,10 @@ describe("agentnote pr", () => {
   });
 
   it("outputs JSON with --json", () => {
-    const output = execSync(
-      `node ${cliPath} pr HEAD~2 --json`,
-      { cwd: testDir, encoding: "utf-8" },
-    );
+    const output = execSync(`node ${cliPath} pr HEAD~2 --json`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
 
     const report = JSON.parse(output);
     assert.equal(report.total_commits, 2);
@@ -99,17 +91,14 @@ describe("agentnote pr", () => {
   });
 
   it("includes per-commit AI ratio in JSON", () => {
-    const output = execSync(
-      `node ${cliPath} pr HEAD~2 --json`,
-      { cwd: testDir, encoding: "utf-8" },
-    );
+    const output = execSync(`node ${cliPath} pr HEAD~2 --json`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
 
     const report = JSON.parse(output);
     for (const commit of report.commits) {
-      assert.ok(
-        commit.ai_ratio !== null,
-        "tracked commit should have ai_ratio",
-      );
+      assert.ok(commit.ai_ratio !== null, "tracked commit should have ai_ratio");
     }
   });
 });
@@ -133,10 +122,7 @@ describe("agentnote pr (no data)", () => {
   });
 
   it("shows commits without agentnote data", () => {
-    const output = execSync(
-      `node ${cliPath} pr HEAD~1`,
-      { cwd: testDir, encoding: "utf-8" },
-    );
+    const output = execSync(`node ${cliPath} pr HEAD~1`, { cwd: testDir, encoding: "utf-8" });
 
     assert.ok(output.includes("plain commit"));
     assert.ok(output.includes("—")); // no data marker

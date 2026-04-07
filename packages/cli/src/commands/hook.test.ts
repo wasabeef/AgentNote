@@ -1,9 +1,9 @@
-import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, describe, it } from "node:test";
 
 describe("agentnote hook", () => {
   let testDir: string;
@@ -32,10 +32,7 @@ describe("agentnote hook", () => {
 
     const sessionFile = join(testDir, ".git", "agentnote", "session");
     assert.ok(existsSync(sessionFile), "session file should exist");
-    assert.equal(
-      readFileSync(sessionFile, "utf-8"),
-      "a1b2c3d4-0001-0001-0001-000000000001",
-    );
+    assert.equal(readFileSync(sessionFile, "utf-8"), "a1b2c3d4-0001-0001-0001-000000000001");
 
     const eventsFile = join(
       testDir,

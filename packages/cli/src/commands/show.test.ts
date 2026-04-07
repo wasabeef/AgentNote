@@ -1,14 +1,9 @@
-import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import {
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-  mkdirSync,
-} from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, describe, it } from "node:test";
 
 describe("agentnote show", () => {
   let testDir: string;
@@ -56,10 +51,7 @@ describe("agentnote show", () => {
     assert.ok(output.includes("ai:"), "should show AI ratio");
     assert.ok(output.includes("files:"), "should show files count");
     assert.ok(output.includes("prompts:"), "should show prompts count");
-    assert.ok(
-      output.includes("implement feature X"),
-      "should show prompt text",
-    );
+    assert.ok(output.includes("implement feature X"), "should show prompt text");
   });
 
   it("shows 'none' for commit without session", () => {

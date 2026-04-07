@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { sessionFile, root } from "../paths.js";
-import { gitSafe } from "../git.js";
+import { readFile } from "node:fs/promises";
 import { claudeCode } from "../agents/claude-code.js";
+import { gitSafe } from "../git.js";
+import { root, sessionFile } from "../paths.js";
 
 const VERSION = "0.1.0";
 
@@ -34,8 +34,6 @@ export async function status(): Promise<void> {
     "--format=%(trailers:key=Agentnote-Session,valueonly)",
   ]);
 
-  const linked = stdout
-    .split("\n")
-    .filter((line) => line.trim().length > 0).length;
+  const linked = stdout.split("\n").filter((line) => line.trim().length > 0).length;
   console.log(`linked:  ${linked}/20 recent commits`);
 }

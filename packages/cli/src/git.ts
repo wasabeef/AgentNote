@@ -4,10 +4,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 /** Run a git command and return its stdout. */
-export async function git(
-  args: string[],
-  options?: { cwd?: string },
-): Promise<string> {
+export async function git(args: string[], options?: { cwd?: string }): Promise<string> {
   const { stdout } = await execFileAsync("git", args, {
     cwd: options?.cwd,
     encoding: "utf-8",
@@ -23,8 +20,12 @@ export async function gitSafe(
   try {
     const stdout = await git(args, options);
     return { stdout, exitCode: 0 };
-  } catch (err: any) {
-    return { stdout: err.stdout?.trim() ?? "", exitCode: err.code ?? 1 };
+  } catch (err: unknown) {
+    const e = err as Record<string, unknown>;
+    return {
+      stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+      exitCode: typeof e.code === "number" ? e.code : 1,
+    };
   }
 }
 

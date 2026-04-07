@@ -1,21 +1,15 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { join } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
 
 const HOOKS_CONFIG = {
-  SessionStart: [
-    { hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] },
-  ],
-  Stop: [
-    { hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] },
-  ],
-  UserPromptSubmit: [
-    { hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] },
-  ],
+  SessionStart: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
+  Stop: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
+  UserPromptSubmit: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
   PreToolUse: [
     {
       matcher: "Bash",
@@ -71,7 +65,7 @@ export const claudeCode: AgentAdapter = {
     const { dirname } = await import("node:path");
     await mkdir(dirname(settingsPath), { recursive: true });
 
-    let settings: any = {};
+    let settings: Record<string, unknown> = {};
     if (existsSync(settingsPath)) {
       try {
         settings = JSON.parse(await readFile(settingsPath, "utf-8"));
@@ -80,7 +74,7 @@ export const claudeCode: AgentAdapter = {
       }
     }
 
-    const hooks = settings.hooks ?? {};
+    const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
     const raw = JSON.stringify(hooks);
 
     if (raw.includes("@wasabeef/agentnote")) return;
@@ -89,7 +83,7 @@ export const claudeCode: AgentAdapter = {
       hooks[event] = [...(hooks[event] ?? []), ...entries];
     }
     settings.hooks = hooks;
-    await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+    await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
   },
 
   async removeHooks(repoRoot: string): Promise<void> {
@@ -101,14 +95,14 @@ export const claudeCode: AgentAdapter = {
       if (!settings.hooks) return;
 
       for (const [event, entries] of Object.entries(settings.hooks)) {
-        settings.hooks[event] = (entries as any[]).filter((e) => {
+        settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
           return !text.includes("@wasabeef/agentnote");
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
       if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-      await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+      await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
     } catch {
       // corrupted settings.json — leave it alone
     }
@@ -138,17 +132,24 @@ export const claudeCode: AgentAdapter = {
     if (!sid || !isValidSessionId(sid)) return null;
 
     // Validate transcript path if present.
-    const tp = e.transcript_path && isValidTranscriptPath(e.transcript_path)
-      ? e.transcript_path
-      : undefined;
+    const tp =
+      e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : undefined;
 
     switch (e.hook_event_name) {
       case "SessionStart":
-        return { kind: "session_start", sessionId: sid, timestamp: ts, model: e.model, transcriptPath: tp };
+        return {
+          kind: "session_start",
+          sessionId: sid,
+          timestamp: ts,
+          model: e.model,
+          transcriptPath: tp,
+        };
       case "Stop":
         return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
       case "UserPromptSubmit":
-        return e.prompt ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt } : null;
+        return e.prompt
+          ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt }
+          : null;
       case "PreToolUse": {
         const cmd = e.tool_input?.command ?? "";
         if (e.tool_name === "Bash" && isGitCommit(cmd)) {
@@ -158,8 +159,17 @@ export const claudeCode: AgentAdapter = {
       }
       case "PostToolUse": {
         const tool = e.tool_name;
-        if ((tool === "Edit" || tool === "Write" || tool === "NotebookEdit") && e.tool_input?.file_path) {
-          return { kind: "file_change", sessionId: sid, timestamp: ts, tool, file: e.tool_input.file_path };
+        if (
+          (tool === "Edit" || tool === "Write" || tool === "NotebookEdit") &&
+          e.tool_input?.file_path
+        ) {
+          return {
+            kind: "file_change",
+            sessionId: sid,
+            timestamp: ts,
+            tool,
+            file: e.tool_input.file_path,
+          };
         }
         if (tool === "Bash" && isGitCommit(e.tool_input?.command ?? "")) {
           return { kind: "post_commit", sessionId: sid, timestamp: ts, transcriptPath: tp };

@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { root, agentnoteDir } from "../paths.js";
 import { claudeCode } from "../agents/claude-code.js";
 import { gitSafe } from "../git.js";
+import { agentnoteDir, root } from "../paths.js";
 
 const WORKFLOW_TEMPLATE = `name: Agent Note
 on:
@@ -66,11 +66,7 @@ export async function init(args: string[]): Promise<void> {
 
   // Auto-fetch notes on git pull
   if (!skipNotes && !hooksOnly && !actionOnly) {
-    const { stdout } = await gitSafe([
-      "config",
-      "--get-all",
-      "remote.origin.fetch",
-    ]);
+    const { stdout } = await gitSafe(["config", "--get-all", "remote.origin.fetch"]);
 
     if (stdout.includes("refs/notes/agentnote")) {
       results.push("  · git already configured to fetch notes");

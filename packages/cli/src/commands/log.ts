@@ -1,5 +1,5 @@
-import { git } from "../git.js";
 import { readNote } from "../core/storage.js";
+import { git } from "../git.js";
 
 export async function log(count: number = 10): Promise<void> {
   const raw = await git([
@@ -31,15 +31,17 @@ export async function log(count: number = 10): Promise<void> {
     let promptCount = "";
     const note = await readNote(fullSha);
     if (note) {
-      const entry = note as any;
+      const entry = note as unknown as {
+        ai_ratio?: number;
+        interactions?: unknown[];
+        prompts?: unknown[];
+      };
       ratioStr = `${entry.ai_ratio}%`;
       promptCount = `${entry.interactions?.length ?? entry.prompts?.length ?? 0}p`;
     }
 
     if (ratioStr) {
-      console.log(
-        `${commitPart}  [${sid.slice(0, 8)}… | 🤖${ratioStr} | ${promptCount}]`,
-      );
+      console.log(`${commitPart}  [${sid.slice(0, 8)}… | 🤖${ratioStr} | ${promptCount}]`);
     } else {
       console.log(`${commitPart}  [${sid.slice(0, 8)}…]`);
     }

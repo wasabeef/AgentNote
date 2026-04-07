@@ -1,10 +1,10 @@
-import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { git, gitSafe, repoRoot } from "./git.js";
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { before, describe, it } from "node:test";
+import { git, gitSafe, repoRoot } from "./git.js";
 
 describe("git", () => {
   let testDir: string;

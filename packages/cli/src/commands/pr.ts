@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { git, gitSafe } from "../git.js";
 import { readNote } from "../core/storage.js";
+import { git, gitSafe } from "../git.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -44,12 +44,7 @@ interface PrReport {
 
 async function collectReport(base: string): Promise<PrReport | null> {
   const head = await git(["rev-parse", "--short", "HEAD"]);
-  const raw = await git([
-    "log",
-    "--reverse",
-    "--format=%H\t%h\t%s",
-    `${base}..HEAD`,
-  ]);
+  const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..HEAD`]);
 
   if (!raw.trim()) return null;
 
@@ -76,7 +71,14 @@ async function collectReport(base: string): Promise<PrReport | null> {
       continue;
     }
 
-    const entry = note as any;
+    const entry = note as unknown as {
+      session_id?: string;
+      ai_ratio?: number;
+      interactions?: Interaction[];
+      prompts?: string[];
+      files_in_commit?: string[];
+      files_by_ai?: string[];
+    };
     const interactions: Interaction[] =
       entry.interactions ??
       (entry.prompts ?? []).map((p: string) => ({ prompt: p, response: null }));
@@ -141,9 +143,7 @@ function renderMarkdown(report: PrReport): string {
     }
 
     const bar = renderBar(c.ai_ratio);
-    const fileList = c.files
-      .map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`)
-      .join(", ");
+    const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
 
     lines.push(
       `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% ${bar} | ${c.prompts_count} | ${fileList} |`,
@@ -165,8 +165,7 @@ function renderMarkdown(report: PrReport): string {
       for (const { prompt, response } of c.interactions) {
         lines.push(`> **Prompt:** ${prompt}`);
         if (response) {
-          const truncated =
-            response.length > 500 ? response.slice(0, 500) + "…" : response;
+          const truncated = response.length > 500 ? `${response.slice(0, 500)}…` : response;
           lines.push(">");
           lines.push(`> **Response:** ${truncated.split("\n").join("\n> ")}`);
         }
@@ -204,9 +203,8 @@ function renderChat(report: PrReport): string {
 
     const aiCount = c.files.filter((f) => f.by_ai).length;
     const humanCount = c.files.length - aiCount;
-    const fileSummary = c.files.length > 0
-      ? ` · ${c.files.length} files (${aiCount} 🤖 ${humanCount} 👤)`
-      : "";
+    const fileSummary =
+      c.files.length > 0 ? ` · ${c.files.length} files (${aiCount} 🤖 ${humanCount} 👤)` : "";
 
     const summaryExtra = ratioLabel ? ` — ${ratioLabel}` : "";
     const summaryFiles = fileSummary;
@@ -222,7 +220,9 @@ function renderChat(report: PrReport): string {
     }
 
     lines.push(`<details>`);
-    lines.push(`<summary><code>${c.short}</code> ${c.message}${summaryExtra}${summaryFiles}</summary>`);
+    lines.push(
+      `<summary><code>${c.short}</code> ${c.message}${summaryExtra}${summaryFiles}</summary>`,
+    );
     lines.push("");
 
     for (const { prompt, response } of c.interactions) {
@@ -234,8 +234,7 @@ function renderChat(report: PrReport): string {
         lines.push(`**🤖 Response**`);
         lines.push("");
 
-        const truncated =
-          response.length > 800 ? response.slice(0, 800) + "…" : response;
+        const truncated = response.length > 800 ? `${response.slice(0, 800)}…` : response;
         lines.push(truncated);
         lines.push("");
       }
@@ -278,9 +277,7 @@ function renderChat(report: PrReport): string {
       lines.push(`| \`${c.short}\` ${c.message} | — | — | — |`);
       continue;
     }
-    const fileList = c.files
-      .map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`)
-      .join(", ");
+    const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
     lines.push(
       `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% ${renderBar(c.ai_ratio)} | ${c.prompts_count} | ${fileList} |`,
     );
@@ -309,27 +306,27 @@ function upsertInDescription(existingBody: string, section: string): string {
     const after = existingBody.includes(MARKER_END)
       ? existingBody.slice(existingBody.indexOf(MARKER_END) + MARKER_END.length)
       : "";
-    return before.trimEnd() + "\n\n" + marked + after;
+    return `${before.trimEnd()}\n\n${marked}${after}`;
   }
 
   // Append to the end.
-  return existingBody.trimEnd() + "\n\n" + marked;
+  return `${existingBody.trimEnd()}\n\n${marked}`;
 }
 
 /** Update PR description using gh CLI. */
 async function updatePrDescription(prNumber: string, section: string): Promise<void> {
   // Read current description.
-  const { stdout: bodyJson } = await execFileAsync("gh", [
-    "pr", "view", prNumber, "--json", "body",
-  ], { encoding: "utf-8" });
+  const { stdout: bodyJson } = await execFileAsync(
+    "gh",
+    ["pr", "view", prNumber, "--json", "body"],
+    { encoding: "utf-8" },
+  );
   const currentBody = JSON.parse(bodyJson).body ?? "";
 
   const newBody = upsertInDescription(currentBody, section);
 
   // Write updated description.
-  await execFileAsync("gh", [
-    "pr", "edit", prNumber, "--body", newBody,
-  ], { encoding: "utf-8" });
+  await execFileAsync("gh", ["pr", "edit", prNumber, "--body", newBody], { encoding: "utf-8" });
 }
 
 export async function pr(args: string[]): Promise<void> {
@@ -347,9 +344,7 @@ export async function pr(args: string[]): Promise<void> {
   const base = positional[0] ?? (await detectBaseBranch());
 
   if (!base) {
-    console.error(
-      "error: could not detect base branch. pass it as argument: agentnote pr <base>",
-    );
+    console.error("error: could not detect base branch. pass it as argument: agentnote pr <base>");
     process.exit(1);
   }
 
@@ -359,7 +354,7 @@ export async function pr(args: string[]): Promise<void> {
     if (isJson) {
       console.log(JSON.stringify({ error: "no commits found" }));
     } else {
-      console.log("no commits found between HEAD and " + base);
+      console.log(`no commits found between HEAD and ${base}`);
     }
     return;
   }
@@ -395,11 +390,7 @@ function basename(path: string): string {
 
 async function detectBaseBranch(): Promise<string | null> {
   for (const name of ["main", "master", "develop"]) {
-    const { exitCode } = await gitSafe([
-      "rev-parse",
-      "--verify",
-      `origin/${name}`,
-    ]);
+    const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
     if (exitCode === 0) return `origin/${name}`;
   }
   return null;

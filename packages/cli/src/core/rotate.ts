@@ -1,5 +1,5 @@
-import { rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { rename } from "node:fs/promises";
 import { join } from "node:path";
 
 /** Rotate JSONL log files after a commit by renaming with the commit SHA prefix. */
@@ -12,10 +12,7 @@ export async function rotateLogs(
     const src = join(sessionDir, name);
     if (existsSync(src)) {
       const base = name.replace(".jsonl", "");
-      await rename(
-        src,
-        join(sessionDir, `${base}-${commitSha.slice(0, 8)}.jsonl`),
-      );
+      await rename(src, join(sessionDir, `${base}-${commitSha.slice(0, 8)}.jsonl`));
     }
   }
 }

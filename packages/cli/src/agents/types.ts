@@ -6,13 +6,7 @@ export interface HookInput {
 }
 
 export interface NormalizedEvent {
-  kind:
-    | "session_start"
-    | "stop"
-    | "prompt"
-    | "file_change"
-    | "pre_commit"
-    | "post_commit";
+  kind: "session_start" | "stop" | "prompt" | "file_change" | "pre_commit" | "post_commit";
   sessionId: string;
   timestamp: string;
   prompt?: string;

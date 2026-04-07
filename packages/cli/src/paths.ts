@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { repoRoot, git } from "./git.js";
+import { git, repoRoot } from "./git.js";
 
 let _root: string | null = null;
 let _gitDir: string | null = null;
