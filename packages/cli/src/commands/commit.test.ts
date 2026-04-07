@@ -71,7 +71,7 @@ describe("agentnote commit", () => {
       encoding: "utf-8",
     });
     const entry = JSON.parse(note);
-    assert.equal(entry.v, 2, "should have schema version 2");
+    assert.equal(entry.v, 1, "should have schema version 1");
     assert.equal(entry.interactions.length, 2, "should have 2 interactions");
     assert.ok(entry.ai_ratio >= 0 && entry.ai_ratio <= 100, "ratio 0-100");
     assert.equal(entry.session_id, sessionId);

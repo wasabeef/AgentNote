@@ -32,7 +32,7 @@ export async function recordCommitEntry(opts: {
   const changeEntries = await readJsonlEntries(join(sessionDir, "changes.jsonl"));
   const promptEntries = await readJsonlEntries(join(sessionDir, "prompts.jsonl"));
 
-  // Check if turn tracking is available (v2 data has turn fields).
+  // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
 
   let aiFiles: string[];
