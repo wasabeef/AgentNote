@@ -80,16 +80,14 @@ export async function show(commitRef?: string): Promise<void> {
     console.log("entry:   no agentnote note found for this commit");
   }
 
-  // Show transcript location if available locally.
-  console.log();
+  // Show transcript location only if available locally.
   const adapter = claudeCode;
   const transcriptPath = adapter.findTranscript(sessionId);
   if (transcriptPath) {
+    console.log();
     const stats = await stat(transcriptPath);
     const sizeKb = (stats.size / 1024).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
-  } else {
-    console.log("transcript: not found locally");
   }
 }
 
