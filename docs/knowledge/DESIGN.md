@@ -123,12 +123,13 @@ Append-only JSONL files, accumulated during a session, rotated after each commit
 .git/agentnote/
 ├── session                          # active session ID (single line)
 └── sessions/<session-id>/
-    ├── prompts.jsonl                # one prompt per line
-    ├── changes.jsonl                # files touched by AI (Edit/Write)
+    ├── prompts.jsonl                # one prompt per line (current turn)
+    ├── changes.jsonl                # files touched by AI (current turn)
     ├── events.jsonl                 # session lifecycle
     ├── transcript_path              # path to agent's transcript file
-    ├── prompts-<sha>.jsonl          # archived after commit
-    └── ...
+    ├── turn                         # monotonic turn counter (incremented on UserPromptSubmit)
+    ├── prompts-<sha>.jsonl          # archived after commit (purged at next turn boundary)
+    └── changes-<sha>.jsonl          # archived after commit (purged at next turn boundary)
 ```
 
 **Layer 2 — Git notes (`refs/notes/agentnote`)**
@@ -165,6 +166,28 @@ Note content per commit:
 - **`v`**: Schema version. Currently `1`. Includes `files_touched` per interaction for turn-based file attribution.
 - **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session. File paths are normalized to repo-relative at recording time and matched by exact string comparison.
 - **`interactions[].response`**: Full AI response text. No truncation.
+
+### Causal turn ID
+
+Each `UserPromptSubmit` event increments a monotonic turn counter stored in `.git/agentnote/sessions/<id>/turn`. Every file change recorded via `PostToolUse` (Edit/Write) inherits the current turn number.
+
+At commit time, `recordCommitEntry()` uses turn numbers to scope attribution:
+
+1. Find all turns that touched files in this specific commit (`commitFileSet`).
+2. Filter prompts to only those turns.
+3. Attach `files_touched` per interaction using the same turn grouping.
+
+This avoids timestamp-based attribution, which is unreliable when hooks fire asynchronously.
+
+Fallback: if no turn data is present (entries recorded before turn tracking was introduced), all prompts and changes are used without filtering (v1 compat).
+
+### Cross-turn commits and split commit support
+
+**Cross-turn scenario**: AI edits files in turn N, then the user confirms ("y") in turn N+1, triggering the commit. By turn N+1, `UserPromptSubmit` has already rotated `changes.jsonl` → `changes-<sha>.jsonl`. `recordCommitEntry()` reads both the current file and all `stem-*.jsonl` archives so nothing is lost.
+
+**Split commit scenario**: Multiple `git commit` calls in the same turn (e.g. `/commit` splitting into several semantic commits). Rotated archives are **not** deleted at commit time — they remain available for each commit in the turn. Each commit scopes its own data via `commitFileSet` to avoid double-counting.
+
+Archives are purged at the **start of the next `UserPromptSubmit`** (turn boundary) by `rotateLogs()`, which calls `purgeRotatedArchives()` before renaming the current files.
 
 ### Why git notes over alternatives
 
