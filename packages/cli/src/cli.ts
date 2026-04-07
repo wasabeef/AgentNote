@@ -1,10 +1,11 @@
-import { init } from "./commands/init.js";
 import { commit } from "./commands/commit.js";
-import { show } from "./commands/show.js";
-import { log } from "./commands/log.js";
-import { status } from "./commands/status.js";
 import { hook } from "./commands/hook.js";
+import { init } from "./commands/init.js";
+import { log } from "./commands/log.js";
 import { pr } from "./commands/pr.js";
+import { session } from "./commands/session.js";
+import { show } from "./commands/show.js";
+import { status } from "./commands/status.js";
 
 const VERSION = "0.1.0";
 
@@ -41,6 +42,9 @@ switch (command) {
     break;
   case "status":
     await status();
+    break;
+  case "session":
+    await session(args[0]);
     break;
   case "hook":
     await hook();

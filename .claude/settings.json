@@ -1,1 +1,69 @@
-{}
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd packages/cli && npm test 2>&1 | tail -5",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*git commit*)",
+            "command": "npx --yes @wasabeef/agentnote hook"
+          },
+          {
+            "type": "command",
+            "if": "Bash(*git commit*)",
+            "command": "cd packages/cli && npx tsc --noEmit"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash",
+        "hooks": [
+          { "type": "command", "command": "npx --yes @wasabeef/agentnote hook", "async": true }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd packages/cli && npx biome check src/",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
