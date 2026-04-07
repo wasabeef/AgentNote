@@ -121,7 +121,18 @@ Current data model links interactions and files to the commit but not to each ot
 
 ### Implementation
 
-Track timestamps in `prompts.jsonl` and `changes.jsonl`. At commit time, assign each file change to the most recent preceding prompt based on timestamp ordering.
+**Do NOT use timestamp-based attribution.** Async hooks generate local timestamps at parse time, not at the time Claude actually produced the event. Under delayed execution or concurrent edits, timestamp order diverges from actual causality, producing permanently wrong `files_touched` data.
+
+Instead, use a **causal turn ID**:
+
+1. Each `UserPromptSubmit` event generates or receives a turn identifier
+2. Subsequent `PostToolUse` (Edit/Write) events inherit the current turn ID
+3. At commit time, group file changes by turn ID and attach to the corresponding interaction
+
+The turn ID can come from:
+- Claude Code's `transcript_path` entries (each user message has a `uuid`)
+- A counter incremented on each `UserPromptSubmit` hook
+- The agent's native turn/request ID if available in the event payload
 
 Schema version bump: `v: 2`. Readers must handle both v1 and v2.
 
@@ -137,7 +148,14 @@ git log --format="%H" | while read sha; do
 done
 ```
 
-This is O(n) over all commits. For better performance, maintain a session index in a separate note or in `.git/agentnote/sessions/<id>/commits.json`.
+This is O(n) over all commits. For better performance, a session index can be maintained as a cache.
+
+**Important**: Any session index must be treated as a **rebuildable cache**, not source of truth. Git notes are SHA-keyed, and amend/rebase/squash rewrites SHAs. An append-only index will accumulate stale references to commits that no longer exist in the visible history.
+
+Design:
+- Derive session membership from commit trailers/notes at read time
+- Cache opportunistically in `.git/agentnote/cache/sessions.json`
+- Invalidate on `git reflog` changes or rebuild on demand (`agentnote session --rebuild`)
 
 ## Priority 5: Tooling and DX
 
@@ -227,7 +245,7 @@ Run Biome check after every Edit/Write to catch issues immediately:
         "hooks": [
           {
             "type": "command",
-            "command": "npx biome check --no-errors-on-unmatched $(git diff --name-only HEAD)",
+            "command": "git diff --name-only -z HEAD | xargs -0 npx biome check --no-errors-on-unmatched",
             "async": true
           }
         ]
