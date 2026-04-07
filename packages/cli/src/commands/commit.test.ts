@@ -208,7 +208,13 @@ describe("agentnote commit", () => {
     // Rotated files are kept after commit so that subsequent split commits in the
     // same turn can also read them. They are purged at the next rotateLogs call
     // (i.e. on the next UserPromptSubmit).
-    assert.ok(existsSync(rotatedChanges), "rotated changes file should still exist for split-commit support");
-    assert.ok(existsSync(rotatedPrompts), "rotated prompts file should still exist for split-commit support");
+    assert.ok(
+      existsSync(rotatedChanges),
+      "rotated changes file should still exist for split-commit support",
+    );
+    assert.ok(
+      existsSync(rotatedPrompts),
+      "rotated prompts file should still exist for split-commit support",
+    );
   });
 });
