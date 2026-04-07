@@ -4,7 +4,8 @@ import { claudeCode } from "../agents/claude-code.js";
 import { gitSafe } from "../git.js";
 import { root, sessionFile } from "../paths.js";
 
-const VERSION = "0.1.0";
+declare const __VERSION__: string;
+const VERSION = __VERSION__;
 
 export async function status(): Promise<void> {
   console.log(`agentnote v${VERSION}`);

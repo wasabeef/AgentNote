@@ -77,7 +77,12 @@ export const claudeCode: AgentAdapter = {
     const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
     const raw = JSON.stringify(hooks);
 
-    if (raw.includes("@wasabeef/agentnote")) return;
+    if (
+      raw.includes("@wasabeef/agentnote") ||
+      raw.includes("agentnote hook") ||
+      raw.includes("cli.js hook")
+    )
+      return;
 
     for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
       hooks[event] = [...(hooks[event] ?? []), ...entries];
@@ -97,7 +102,11 @@ export const claudeCode: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return !text.includes("@wasabeef/agentnote");
+          return (
+            !text.includes("@wasabeef/agentnote") &&
+            !text.includes("agentnote hook") &&
+            !text.includes("cli.js hook")
+          );
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -113,7 +122,11 @@ export const claudeCode: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      return content.includes("@wasabeef/agentnote");
+      return (
+        content.includes("@wasabeef/agentnote") ||
+        content.includes("agentnote hook") ||
+        content.includes("cli.js hook")
+      );
     } catch {
       return false;
     }
