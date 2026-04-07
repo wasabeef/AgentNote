@@ -1,12 +1,12 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
 import { git } from "../git.js";
 import { CHANGES_FILE, PROMPTS_FILE, TRANSCRIPT_PATH_FILE } from "./constants.js";
 import type { Interaction } from "./entry.js";
 import { buildEntry } from "./entry.js";
-import { readJsonlEntries, readJsonlField } from "./jsonl.js";
+import { readJsonlEntries } from "./jsonl.js";
 import { writeNote } from "./storage.js";
 
 /** Record an agentnote entry as a git note after a successful commit. */
@@ -29,9 +29,10 @@ export async function recordCommitEntry(opts: {
 
   const commitFileSet = new Set(commitFiles);
 
-  // Read all change and prompt entries from the session.
-  const changeEntries = await readJsonlEntries(join(sessionDir, CHANGES_FILE));
-  const promptEntries = await readJsonlEntries(join(sessionDir, PROMPTS_FILE));
+  // Read all change and prompt entries: current files + any rotated (archived) files
+  // from previous turns that have not yet been attributed to a commit.
+  const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
+  const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
 
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -65,7 +66,7 @@ export async function recordCommitEntry(opts: {
     prompts = relevantPromptEntries.map((e) => e.prompt as string);
   } else {
     // Fallback: no turn data — use all prompts and changes (v1 compat).
-    aiFiles = await readJsonlField(join(sessionDir, CHANGES_FILE), "file");
+    aiFiles = changeEntries.map((e) => e.file as string).filter(Boolean);
     prompts = promptEntries.map((e) => e.prompt as string);
     relevantPromptEntries = promptEntries;
   }
@@ -100,8 +101,11 @@ export async function recordCommitEntry(opts: {
 
   await writeNote(commitSha, entry as unknown as Record<string, unknown>);
 
-  // Do NOT rotate logs here — rotation happens at the next UserPromptSubmit.
-  // This allows split commits to each get their own scoped note.
+  // Delete rotated (archived) files that have now been consumed by this commit.
+  // The current changes.jsonl / prompts.jsonl are intentionally kept so that
+  // split commits in the same turn can each read the same active session data.
+  await deleteRotatedJsonl(sessionDir, CHANGES_FILE);
+  await deleteRotatedJsonl(sessionDir, PROMPTS_FILE);
 
   return { promptCount: interactions.length, aiRatio: entry.ai_ratio };
 }
@@ -132,6 +136,40 @@ function attachFilesTouched(
       interactions[i].files_touched = [...files];
     }
   }
+}
+
+/**
+ * Read entries from the current JSONL file and all rotated archives (stem-*.jsonl).
+ * Rotated files are those renamed by the rotation mechanism on UserPromptSubmit.
+ */
+async function readAllSessionJsonl(
+  sessionDir: string,
+  baseFile: string,
+): Promise<Record<string, unknown>[]> {
+  const stem = baseFile.slice(0, baseFile.lastIndexOf(".jsonl"));
+  const files = await readdir(sessionDir).catch(() => [] as string[]);
+  const matching = files
+    .filter((f) => f === baseFile || (f.startsWith(`${stem}-`) && f.endsWith(".jsonl")))
+    .sort()
+    .map((f) => join(sessionDir, f));
+
+  const all: Record<string, unknown>[] = [];
+  for (const file of matching) {
+    const entries = await readJsonlEntries(file);
+    all.push(...entries);
+  }
+  return all;
+}
+
+/**
+ * Delete rotated archive files (stem-*.jsonl) after they have been consumed by a commit.
+ * The current active file (baseFile) is intentionally preserved for split-commit support.
+ */
+async function deleteRotatedJsonl(sessionDir: string, baseFile: string): Promise<void> {
+  const stem = baseFile.slice(0, baseFile.lastIndexOf(".jsonl"));
+  const files = await readdir(sessionDir).catch(() => [] as string[]);
+  const rotated = files.filter((f) => f.startsWith(`${stem}-`) && f.endsWith(".jsonl"));
+  await Promise.all(rotated.map((f) => unlink(join(sessionDir, f)).catch(() => {})));
 }
 
 async function readSavedTranscriptPath(sessionDir: string): Promise<string | null> {
