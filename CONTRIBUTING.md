@@ -63,8 +63,11 @@ npm run build
 # Run tests
 npm test
 
-# Type check
+# Lint (Biome)
 npm run lint
+
+# Type check
+npm run typecheck
 ```
 
 ### Useful Commands
@@ -80,8 +83,11 @@ npx tsx src/cli.ts help
 # Run tests with coverage
 npm run test:coverage
 
-# Type check without emitting
+# Lint (Biome)
 npm run lint
+
+# Type check without emitting
+npm run typecheck
 
 # Build the bundle
 npm run build
@@ -103,17 +109,18 @@ packages/
 │   │   ├── paths.ts               # Path resolution for .git/agentnote/ and .claude/
 │   │   ├── core/                  # Agent-agnostic logic
 │   │   │   ├── entry.ts           # Build entry JSON, calc ai_ratio
-│   │   │   ├── storage.ts         # Git notes read/write
 │   │   │   ├── jsonl.ts           # JSONL read/append helpers
-│   │   │   └── rotate.ts          # Log rotation after commit
+│   │   │   ├── record.ts          # Shared recordCommitEntry() for hook + commit
+│   │   │   ├── rotate.ts          # Log rotation after commit
+│   │   │   └── storage.ts         # Git notes read/write
 │   │   ├── agents/                # One file per agent
 │   │   │   ├── types.ts           # AgentAdapter interface
 │   │   │   └── claude-code.ts     # Claude Code adapter
 │   │   └── commands/              # User-facing, delegates to agents/ + core/
 │   │       ├── init.ts
-│   │       ├── 
 │   │       ├── hook.ts
 │   │       ├── commit.ts
+│   │       ├── session.ts
 │   │       ├── show.ts
 │   │       ├── log.ts
 │   │       ├── pr.ts
@@ -152,7 +159,8 @@ agentnote show/log → reads git notes --ref=agentnote
 ### General
 
 - All source code, comments, and documentation must be in **English**
-- Use `npm run lint` (`tsc --noEmit`) to catch type errors (run from `packages/cli/`)
+- Use `npm run lint` (`biome check`) for code style and formatting (run from `packages/cli/`)
+- Use `npm run typecheck` (`tsc --noEmit`) to catch type errors (run from `packages/cli/`)
 - Keep functions focused and short
 - No runtime dependencies allowed for the CLI package
 
@@ -280,7 +288,7 @@ describe("agentnote init", () => {
 3. Make your changes
 4. Run the full check suite:
    ```bash
-   cd packages/cli && npm run lint && npm run build && npm test
+   cd packages/cli && npm run lint && npm run typecheck && npm run build && npm test
    ```
 5. Push and create a pull request
 
@@ -288,6 +296,7 @@ describe("agentnote init", () => {
 
 - [ ] Code is in English (comments, docs, output)
 - [ ] `npm run lint` passes with no errors (in `packages/cli/`)
+- [ ] `npm run typecheck` passes with no errors (in `packages/cli/`)
 - [ ] `npm test` passes with no failures (in `packages/cli/`)
 - [ ] Tests added for new functionality
 - [ ] No new runtime dependencies added to CLI
