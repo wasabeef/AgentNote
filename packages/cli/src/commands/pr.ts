@@ -1,5 +1,10 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import {
+  BAR_WIDTH_COMPACT,
+  TRUNCATE_RESPONSE_CHAT,
+  TRUNCATE_RESPONSE_PR,
+} from "../core/constants.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
 
@@ -165,7 +170,10 @@ function renderMarkdown(report: PrReport): string {
       for (const { prompt, response } of c.interactions) {
         lines.push(`> **Prompt:** ${prompt}`);
         if (response) {
-          const truncated = response.length > 500 ? `${response.slice(0, 500)}…` : response;
+          const truncated =
+            response.length > TRUNCATE_RESPONSE_PR
+              ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+              : response;
           lines.push(">");
           lines.push(`> **Response:** ${truncated.split("\n").join("\n> ")}`);
         }
@@ -234,7 +242,10 @@ function renderChat(report: PrReport): string {
         lines.push(`**🤖 Response**`);
         lines.push("");
 
-        const truncated = response.length > 800 ? `${response.slice(0, 800)}…` : response;
+        const truncated =
+          response.length > TRUNCATE_RESPONSE_CHAT
+            ? `${response.slice(0, TRUNCATE_RESPONSE_CHAT)}…`
+            : response;
         lines.push(truncated);
         lines.push("");
       }
@@ -379,7 +390,7 @@ export async function pr(args: string[]): Promise<void> {
 // ─── Helpers ────────────────────────────────────────
 
 function renderBar(ratio: number): string {
-  const width = 5;
+  const width = BAR_WIDTH_COMPACT;
   const filled = Math.round((ratio / 100) * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }

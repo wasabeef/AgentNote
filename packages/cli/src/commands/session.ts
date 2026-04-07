@@ -1,8 +1,7 @@
+import { MAX_COMMITS, TRAILER_KEY } from "../core/constants.js";
 import type { AgentnoteEntry } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
-
-const MAX_COMMITS = 500;
 
 interface SessionCommit {
   sha: string;
@@ -22,7 +21,7 @@ export async function session(sessionId: string): Promise<void> {
     "log",
     "--all",
     `--max-count=${MAX_COMMITS}`,
-    "--format=%H\t%h %s\t%(trailers:key=Agentnote-Session,valueonly)",
+    `--format=%H\t%h %s\t%(trailers:key=${TRAILER_KEY},valueonly)`,
   ]);
 
   if (!raw) {

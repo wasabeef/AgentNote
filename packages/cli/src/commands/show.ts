@@ -1,5 +1,11 @@
 import { stat } from "node:fs/promises";
 import { claudeCode } from "../agents/claude-code.js";
+import {
+  BAR_WIDTH_FULL,
+  TRAILER_KEY,
+  TRUNCATE_PROMPT,
+  TRUNCATE_RESPONSE_SHOW,
+} from "../core/constants.js";
 import type { AgentnoteEntry } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
@@ -17,7 +23,7 @@ export async function show(commitRef?: string): Promise<void> {
   const commitSha = await git(["log", "-1", "--format=%H", ref]);
 
   const sessionId = (
-    await git(["log", "-1", "--format=%(trailers:key=Agentnote-Session,valueonly)", ref])
+    await git(["log", "-1", `--format=%(trailers:key=${TRAILER_KEY},valueonly)`, ref])
   ).trim();
 
   console.log(`commit:  ${commitInfo}`);
@@ -65,9 +71,9 @@ export async function show(commitRef?: string): Promise<void> {
       for (let i = 0; i < interactions.length; i++) {
         const interaction = interactions[i];
         console.log();
-        console.log(`  ${i + 1}. ${truncateLines(interaction.prompt, 120)}`);
+        console.log(`  ${i + 1}. ${truncateLines(interaction.prompt, TRUNCATE_PROMPT)}`);
         if (interaction.response) {
-          console.log(`     → ${truncateLines(interaction.response, 200)}`);
+          console.log(`     → ${truncateLines(interaction.response, TRUNCATE_RESPONSE_SHOW)}`);
         }
         if (interaction.files_touched && interaction.files_touched.length > 0) {
           for (const file of interaction.files_touched) {
@@ -92,7 +98,7 @@ export async function show(commitRef?: string): Promise<void> {
 }
 
 function renderRatioBar(ratio: number): string {
-  const width = 20;
+  const width = BAR_WIDTH_FULL;
   const filled = Math.round((ratio / 100) * width);
   const empty = width - filled;
   return `[${"█".repeat(filled)}${"░".repeat(empty)}]`;

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { TRAILER_KEY } from "../core/constants.js";
 import { recordCommitEntry } from "../core/record.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 
@@ -14,7 +15,7 @@ export async function commit(args: string[]): Promise<void> {
 
   const gitArgs = ["commit"];
   if (sessionId) {
-    gitArgs.push("--trailer", `Agentnote-Session: ${sessionId}`);
+    gitArgs.push("--trailer", `${TRAILER_KEY}: ${sessionId}`);
   }
   gitArgs.push(...args);
 

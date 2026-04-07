@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
+import { NOTES_FETCH_REFSPEC, NOTES_REF_FULL } from "../core/constants.js";
 import { gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
 
@@ -68,15 +69,10 @@ export async function init(args: string[]): Promise<void> {
   if (!skipNotes && !hooksOnly && !actionOnly) {
     const { stdout } = await gitSafe(["config", "--get-all", "remote.origin.fetch"]);
 
-    if (stdout.includes("refs/notes/agentnote")) {
+    if (stdout.includes(NOTES_REF_FULL)) {
       results.push("  · git already configured to fetch notes");
     } else {
-      await gitSafe([
-        "config",
-        "--add",
-        "remote.origin.fetch",
-        "+refs/notes/agentnote:refs/notes/agentnote",
-      ]);
+      await gitSafe(["config", "--add", "remote.origin.fetch", NOTES_FETCH_REFSPEC]);
       results.push("  ✓ git configured to auto-fetch notes on pull");
     }
   }

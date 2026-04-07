@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { claudeCode } from "../agents/claude-code.js";
+import { TRAILER_KEY } from "../core/constants.js";
 import { gitSafe } from "../git.js";
 import { root, sessionFile } from "../paths.js";
 
@@ -32,7 +33,7 @@ export async function status(): Promise<void> {
   const { stdout } = await gitSafe([
     "log",
     "-20",
-    "--format=%(trailers:key=Agentnote-Session,valueonly)",
+    `--format=%(trailers:key=${TRAILER_KEY},valueonly)`,
   ]);
 
   const linked = stdout.split("\n").filter((line) => line.trim().length > 0).length;

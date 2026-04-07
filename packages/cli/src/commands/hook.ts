@@ -3,6 +3,16 @@ import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
 import type { HookInput } from "../agents/types.js";
+import {
+  CHANGES_FILE,
+  EVENTS_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+  TRAILER_KEY,
+  TRANSCRIPT_PATH_FILE,
+  TURN_FILE,
+} from "../core/constants.js";
 import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
@@ -36,16 +46,16 @@ export async function hook(): Promise<void> {
   if (!event) return;
 
   const agentnoteDirPath = await agentnoteDir();
-  const sessionDir = join(agentnoteDirPath, "sessions", event.sessionId);
+  const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir(sessionDir, { recursive: true });
 
   switch (event.kind) {
     case "session_start": {
-      await writeFile(join(agentnoteDirPath, "session"), event.sessionId);
+      await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
       if (event.transcriptPath) {
-        await writeFile(join(sessionDir, "transcript_path"), event.transcriptPath);
+        await writeFile(join(sessionDir, TRANSCRIPT_PATH_FILE), event.transcriptPath);
       }
-      await appendJsonl(join(sessionDir, "events.jsonl"), {
+      await appendJsonl(join(sessionDir, EVENTS_FILE), {
         event: "session_start",
         session_id: event.sessionId,
         timestamp: event.timestamp,
@@ -55,11 +65,11 @@ export async function hook(): Promise<void> {
     }
 
     case "stop": {
-      await writeFile(join(agentnoteDirPath, "session"), event.sessionId);
+      await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
       if (event.transcriptPath) {
-        await writeFile(join(sessionDir, "transcript_path"), event.transcriptPath);
+        await writeFile(join(sessionDir, TRANSCRIPT_PATH_FILE), event.transcriptPath);
       }
-      await appendJsonl(join(sessionDir, "events.jsonl"), {
+      await appendJsonl(join(sessionDir, EVENTS_FILE), {
         event: "stop",
         session_id: event.sessionId,
         timestamp: event.timestamp,
@@ -75,16 +85,16 @@ export async function hook(): Promise<void> {
       await rotateLogs(sessionDir, rotateId);
 
       // Increment turn counter for causal file attribution.
-      const turnFile = join(sessionDir, "turn");
+      const turnPath = join(sessionDir, TURN_FILE);
       let turn = 0;
-      if (existsSync(turnFile)) {
-        const raw = (await readFile(turnFile, "utf-8")).trim();
+      if (existsSync(turnPath)) {
+        const raw = (await readFile(turnPath, "utf-8")).trim();
         turn = Number.parseInt(raw, 10) || 0;
       }
       turn += 1;
-      await writeFile(turnFile, String(turn));
+      await writeFile(turnPath, String(turn));
 
-      await appendJsonl(join(sessionDir, "prompts.jsonl"), {
+      await appendJsonl(join(sessionDir, PROMPTS_FILE), {
         event: "prompt",
         timestamp: event.timestamp,
         prompt: event.prompt,
@@ -116,13 +126,13 @@ export async function hook(): Promise<void> {
       }
       // Read current turn for causal attribution.
       let turn = 0;
-      const turnFile = join(sessionDir, "turn");
-      if (existsSync(turnFile)) {
-        const raw = (await readFile(turnFile, "utf-8")).trim();
+      const turnPath = join(sessionDir, TURN_FILE);
+      if (existsSync(turnPath)) {
+        const raw = (await readFile(turnPath, "utf-8")).trim();
         turn = Number.parseInt(raw, 10) || 0;
       }
 
-      await appendJsonl(join(sessionDir, "changes.jsonl"), {
+      await appendJsonl(join(sessionDir, CHANGES_FILE), {
         event: "file_change",
         timestamp: event.timestamp,
         tool: event.tool,
@@ -137,13 +147,13 @@ export async function hook(): Promise<void> {
       // Inject Agentnote-Session trailer using the session ID from the event directly,
       // not from the file — avoids race with async SessionStart/Stop writes.
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes("Agentnote-Session") && event.sessionId) {
+      if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
         process.stdout.write(
           JSON.stringify({
             hookSpecificOutput: {
               hookEventName: "PreToolUse",
               updatedInput: {
-                command: `${cmd} --trailer 'Agentnote-Session: ${event.sessionId}'`,
+                command: `${cmd} --trailer '${TRAILER_KEY}: ${event.sessionId}'`,
               },
             },
           }),

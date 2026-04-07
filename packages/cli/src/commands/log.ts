@@ -1,3 +1,4 @@
+import { TRAILER_KEY } from "../core/constants.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 
@@ -5,7 +6,7 @@ export async function log(count: number = 10): Promise<void> {
   const raw = await git([
     "log",
     `-${count}`,
-    "--format=%H\t%h %s\t%(trailers:key=Agentnote-Session,valueonly)",
+    `--format=%H\t%h %s\t%(trailers:key=${TRAILER_KEY},valueonly)`,
   ]);
 
   if (!raw) {
