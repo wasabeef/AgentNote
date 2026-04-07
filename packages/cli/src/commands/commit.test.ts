@@ -171,13 +171,22 @@ describe("agentnote commit", () => {
     // Simulate already-rotated data (previous turn — archived with an arbitrary prefix).
     // File path must be repo-relative, matching what the hook normalizes to.
     const rotatedChanges = join(sessionDir, "changes-prevturn.jsonl");
-    writeFileSync(rotatedChanges, '{"event":"file_change","tool":"Write","file":"cross-turn.ts","turn":1}\n');
+    writeFileSync(
+      rotatedChanges,
+      '{"event":"file_change","tool":"Write","file":"cross-turn.ts","turn":1}\n',
+    );
 
     const rotatedPrompts = join(sessionDir, "prompts-prevturn.jsonl");
-    writeFileSync(rotatedPrompts, '{"event":"prompt","timestamp":"2026-04-07T00:00:00Z","prompt":"cross-turn prompt","turn":1}\n');
+    writeFileSync(
+      rotatedPrompts,
+      '{"event":"prompt","timestamp":"2026-04-07T00:00:00Z","prompt":"cross-turn prompt","turn":1}\n',
+    );
 
     // Current turn (e.g. turn 2, "y") — no new changes, prompts.jsonl has only the confirm message.
-    writeFileSync(join(sessionDir, PROMPTS_FILE), '{"event":"prompt","timestamp":"2026-04-07T00:01:00Z","prompt":"y","turn":2}\n');
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-07T00:01:00Z","prompt":"y","turn":2}\n',
+    );
     // changes.jsonl does not exist (no edits this turn).
 
     writeFileSync(join(testDir, "cross-turn.ts"), "export const crossTurn = true;");
@@ -196,8 +205,10 @@ describe("agentnote commit", () => {
       "should include prompt from rotated file",
     );
 
-    // Rotated files should have been deleted after recording.
-    assert.ok(!existsSync(rotatedChanges), "rotated changes file should be deleted after commit");
-    assert.ok(!existsSync(rotatedPrompts), "rotated prompts file should be deleted after commit");
+    // Rotated files are kept after commit so that subsequent split commits in the
+    // same turn can also read them. They are purged at the next rotateLogs call
+    // (i.e. on the next UserPromptSubmit).
+    assert.ok(existsSync(rotatedChanges), "rotated changes file should still exist for split-commit support");
+    assert.ok(existsSync(rotatedPrompts), "rotated prompts file should still exist for split-commit support");
   });
 });

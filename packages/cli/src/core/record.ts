@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile, unlink } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
 import { git } from "../git.js";
@@ -101,11 +101,9 @@ export async function recordCommitEntry(opts: {
 
   await writeNote(commitSha, entry as unknown as Record<string, unknown>);
 
-  // Delete rotated (archived) files that have now been consumed by this commit.
-  // The current changes.jsonl / prompts.jsonl are intentionally kept so that
-  // split commits in the same turn can each read the same active session data.
-  await deleteRotatedJsonl(sessionDir, CHANGES_FILE);
-  await deleteRotatedJsonl(sessionDir, PROMPTS_FILE);
+  // Do NOT delete rotated archives here. They are kept available for subsequent
+  // split commits in the same turn (each commit scopes its own files via
+  // commitFileSet). Archives are purged at the start of the next turn by rotateLogs.
 
   return { promptCount: interactions.length, aiRatio: entry.ai_ratio };
 }
@@ -159,17 +157,6 @@ async function readAllSessionJsonl(
     all.push(...entries);
   }
   return all;
-}
-
-/**
- * Delete rotated archive files (stem-*.jsonl) after they have been consumed by a commit.
- * The current active file (baseFile) is intentionally preserved for split-commit support.
- */
-async function deleteRotatedJsonl(sessionDir: string, baseFile: string): Promise<void> {
-  const stem = baseFile.slice(0, baseFile.lastIndexOf(".jsonl"));
-  const files = await readdir(sessionDir).catch(() => [] as string[]);
-  const rotated = files.filter((f) => f.startsWith(`${stem}-`) && f.endsWith(".jsonl"));
-  await Promise.all(rotated.map((f) => unlink(join(sessionDir, f)).catch(() => {})));
 }
 
 async function readSavedTranscriptPath(sessionDir: string): Promise<string | null> {
