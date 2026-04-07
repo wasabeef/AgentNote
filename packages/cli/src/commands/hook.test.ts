@@ -4,6 +4,15 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import {
+  AGENTNOTE_DIR,
+  CHANGES_FILE,
+  EVENTS_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+  TRAILER_KEY,
+} from "../core/constants.js";
 
 describe("agentnote hook", () => {
   let testDir: string;
@@ -30,17 +39,17 @@ describe("agentnote hook", () => {
 
     execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
 
-    const sessionFile = join(testDir, ".git", "agentnote", "session");
+    const sessionFile = join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE);
     assert.ok(existsSync(sessionFile), "session file should exist");
     assert.equal(readFileSync(sessionFile, "utf-8"), "a1b2c3d4-0001-0001-0001-000000000001");
 
     const eventsFile = join(
       testDir,
       ".git",
-      "agentnote",
-      "sessions",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
       "a1b2c3d4-0001-0001-0001-000000000001",
-      "events.jsonl",
+      EVENTS_FILE,
     );
     assert.ok(existsSync(eventsFile), "events.jsonl should exist");
     const line = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
@@ -60,10 +69,10 @@ describe("agentnote hook", () => {
     const promptsFile = join(
       testDir,
       ".git",
-      "agentnote",
-      "sessions",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
       "a1b2c3d4-0001-0001-0001-000000000001",
-      "prompts.jsonl",
+      PROMPTS_FILE,
     );
     assert.ok(existsSync(promptsFile), "prompts.jsonl should exist");
     const line = JSON.parse(readFileSync(promptsFile, "utf-8").trim());
@@ -85,10 +94,10 @@ describe("agentnote hook", () => {
     const changesFile = join(
       testDir,
       ".git",
-      "agentnote",
-      "sessions",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
       "a1b2c3d4-0001-0001-0001-000000000001",
-      "changes.jsonl",
+      CHANGES_FILE,
     );
     assert.ok(existsSync(changesFile), "changes.jsonl should exist");
     const line = JSON.parse(readFileSync(changesFile, "utf-8").trim());
@@ -109,10 +118,10 @@ describe("agentnote hook", () => {
     const changesFile = join(
       testDir,
       ".git",
-      "agentnote",
-      "sessions",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
       "a1b2c3d4-0002-0002-0002-000000000002",
-      "changes.jsonl",
+      CHANGES_FILE,
     );
     assert.ok(!existsSync(changesFile), "should not record Bash tool use");
   });
@@ -136,7 +145,7 @@ describe("agentnote hook", () => {
       "should inject trailer flag",
     );
     assert.ok(
-      result.hookSpecificOutput.updatedInput.command.includes("Agentnote-Session"),
+      result.hookSpecificOutput.updatedInput.command.includes(TRAILER_KEY),
       "should inject session trailer",
     );
   });

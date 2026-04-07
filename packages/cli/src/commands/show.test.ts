@@ -4,6 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import {
+  AGENTNOTE_DIR,
+  CHANGES_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+} from "../core/constants.js";
 
 describe("agentnote show", () => {
   let testDir: string;
@@ -18,16 +25,16 @@ describe("agentnote show", () => {
 
     // simulate a session
     const sessionId = "a1b2c3d4-1111-1111-1111-111111111111";
-    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
-    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     mkdirSync(sessionDir, { recursive: true });
 
     writeFileSync(
-      join(sessionDir, "prompts.jsonl"),
+      join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"implement feature X"}\n',
     );
     writeFileSync(
-      join(sessionDir, "changes.jsonl"),
+      join(sessionDir, CHANGES_FILE),
       `{"event":"file_change","tool":"Write","file":"${join(testDir, "feature.ts")}"}\n`,
     );
 

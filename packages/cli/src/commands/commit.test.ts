@@ -4,6 +4,15 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import {
+  AGENTNOTE_DIR,
+  CHANGES_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+  TRAILER_KEY,
+  TRANSCRIPT_PATH_FILE,
+} from "../core/constants.js";
 
 describe("agentnote commit", () => {
   let testDir: string;
@@ -24,7 +33,7 @@ describe("agentnote commit", () => {
 
   it("adds Agentnote-Session trailer to commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
 
     writeFileSync(join(testDir, "hello.txt"), "hello");
     execSync("git add hello.txt", { cwd: testDir });
@@ -36,19 +45,19 @@ describe("agentnote commit", () => {
       encoding: "utf-8",
     });
     assert.ok(
-      msg.includes(`Agentnote-Session: ${sessionId}`),
+      msg.includes(`${TRAILER_KEY}: ${sessionId}`),
       "commit should have Agentnote-Session trailer",
     );
   });
 
   it("records entry as git note with prompts and AI ratio", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     mkdirSync(sessionDir, { recursive: true });
 
     // simulate prompts
     writeFileSync(
-      join(sessionDir, "prompts.jsonl"),
+      join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add feature"}\n' +
         '{"event":"prompt","timestamp":"2026-04-02T10:05:00Z","prompt":"fix bug"}\n',
     );
@@ -56,7 +65,7 @@ describe("agentnote commit", () => {
     // simulate AI file changes
     const absPath = join(testDir, "ai-file.ts");
     writeFileSync(
-      join(sessionDir, "changes.jsonl"),
+      join(sessionDir, CHANGES_FILE),
       `{"event":"file_change","tool":"Write","file":"${absPath}"}\n`,
     );
 
@@ -80,7 +89,7 @@ describe("agentnote commit", () => {
 
   it("works without active session (plain git commit)", () => {
     // remove session file
-    const sessionFile = join(testDir, ".git", "agentnote", "session");
+    const sessionFile = join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE);
     if (existsSync(sessionFile)) rmSync(sessionFile);
 
     writeFileSync(join(testDir, "plain.txt"), "no session");
@@ -91,23 +100,23 @@ describe("agentnote commit", () => {
       cwd: testDir,
       encoding: "utf-8",
     });
-    assert.ok(!msg.includes("Agentnote-Session"), "should not have trailer without session");
+    assert.ok(!msg.includes(TRAILER_KEY), "should not have trailer without session");
   });
 
   it("preserves logs after commit for split-commit support", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
 
     // prompts.jsonl should NOT be rotated after commit (rotation happens at next prompt).
     // This allows split commits to each read the same session data.
-    const promptsFile = join(sessionDir, "prompts.jsonl");
+    const promptsFile = join(sessionDir, PROMPTS_FILE);
     assert.ok(existsSync(promptsFile), "prompts.jsonl should be preserved after commit");
   });
 
   it("extracts responses from transcript when available", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
-    const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
-    writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     mkdirSync(sessionDir, { recursive: true });
 
     // Create a transcript file under ~/.claude/ (valid path)
@@ -121,11 +130,11 @@ describe("agentnote commit", () => {
     );
 
     // Point session to transcript
-    writeFileSync(join(sessionDir, "transcript_path"), transcriptPath);
+    writeFileSync(join(sessionDir, TRANSCRIPT_PATH_FILE), transcriptPath);
 
     // Add prompt
     writeFileSync(
-      join(sessionDir, "prompts.jsonl"),
+      join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-06T00:00:00Z","prompt":"implement auth"}\n',
     );
 

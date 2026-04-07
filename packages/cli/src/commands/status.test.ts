@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { AGENTNOTE_DIR, SESSION_FILE } from "../core/constants.js";
 
 describe("agentnote status", () => {
   let testDir: string;
@@ -44,7 +45,7 @@ describe("agentnote status", () => {
 
   it("shows session ID when session is active", () => {
     writeFileSync(
-      join(testDir, ".git", "agentnote", "session"),
+      join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE),
       "a1b2c3d4-3333-3333-3333-333333333333",
     );
 

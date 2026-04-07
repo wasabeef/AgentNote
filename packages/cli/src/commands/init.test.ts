@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { NOTES_REF_FULL } from "../core/constants.js";
 
 describe("agentnote init", () => {
   let testDir: string;
@@ -54,7 +55,7 @@ describe("agentnote init", () => {
       cwd: testDir,
       encoding: "utf-8",
     });
-    assert.ok(fetchConfig.includes("refs/notes/agentnote"), "should configure notes auto-fetch");
+    assert.ok(fetchConfig.includes(NOTES_REF_FULL), "should configure notes auto-fetch");
 
     // Output messages
     assert.ok(output.includes("✓"), "should show success markers");

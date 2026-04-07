@@ -4,6 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import {
+  AGENTNOTE_DIR,
+  CHANGES_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+} from "../core/constants.js";
 
 describe("agentnote session", () => {
   let testDir: string;
@@ -20,16 +27,16 @@ describe("agentnote session", () => {
     // Create two commits with the same session, each with an agentnote note.
     for (let i = 1; i <= 2; i++) {
       // Simulate a session
-      writeFileSync(join(testDir, ".git", "agentnote", "session"), sessionId);
-      const sessionDir = join(testDir, ".git", "agentnote", "sessions", sessionId);
+      writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+      const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
       mkdirSync(sessionDir, { recursive: true });
 
       writeFileSync(
-        join(sessionDir, "prompts.jsonl"),
+        join(sessionDir, PROMPTS_FILE),
         `{"event":"prompt","timestamp":"2026-04-02T10:0${i}:00Z","prompt":"implement step ${i}"}\n`,
       );
       writeFileSync(
-        join(sessionDir, "changes.jsonl"),
+        join(sessionDir, CHANGES_FILE),
         `{"event":"file_change","tool":"Write","file":"${join(testDir, `step${i}.ts`)}"}\n`,
       );
 
