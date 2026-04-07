@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
 import { git } from "../git.js";
+import { CHANGES_FILE, PROMPTS_FILE, TRANSCRIPT_PATH_FILE } from "./constants.js";
 import type { Interaction } from "./entry.js";
 import { buildEntry } from "./entry.js";
 import { readJsonlEntries, readJsonlField } from "./jsonl.js";
@@ -29,8 +30,8 @@ export async function recordCommitEntry(opts: {
   const commitFileSet = new Set(commitFiles);
 
   // Read all change and prompt entries from the session.
-  const changeEntries = await readJsonlEntries(join(sessionDir, "changes.jsonl"));
-  const promptEntries = await readJsonlEntries(join(sessionDir, "prompts.jsonl"));
+  const changeEntries = await readJsonlEntries(join(sessionDir, CHANGES_FILE));
+  const promptEntries = await readJsonlEntries(join(sessionDir, PROMPTS_FILE));
 
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -64,7 +65,7 @@ export async function recordCommitEntry(opts: {
     prompts = relevantPromptEntries.map((e) => e.prompt as string);
   } else {
     // Fallback: no turn data — use all prompts and changes (v1 compat).
-    aiFiles = await readJsonlField(join(sessionDir, "changes.jsonl"), "file");
+    aiFiles = await readJsonlField(join(sessionDir, CHANGES_FILE), "file");
     prompts = promptEntries.map((e) => e.prompt as string);
     relevantPromptEntries = promptEntries;
   }
@@ -134,7 +135,7 @@ function attachFilesTouched(
 }
 
 async function readSavedTranscriptPath(sessionDir: string): Promise<string | null> {
-  const saved = join(sessionDir, "transcript_path");
+  const saved = join(sessionDir, TRANSCRIPT_PATH_FILE);
   if (!existsSync(saved)) return null;
   const p = (await readFile(saved, "utf-8")).trim();
   return p || null;

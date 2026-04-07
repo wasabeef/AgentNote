@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { AGENTNOTE_DIR, SESSION_FILE } from "./core/constants.js";
 import { git, repoRoot } from "./git.js";
 
 let _root: string | null = null;
@@ -30,12 +31,12 @@ async function gitDir(): Promise<string> {
 
 /** Path to the agentnote data directory inside the git dir. */
 export async function agentnoteDir(): Promise<string> {
-  return join(await gitDir(), "agentnote");
+  return join(await gitDir(), AGENTNOTE_DIR);
 }
 
 /** Path to the active session ID file. */
 export async function sessionFile(): Promise<string> {
-  return join(await agentnoteDir(), "session");
+  return join(await agentnoteDir(), SESSION_FILE);
 }
 
 /** .claude/settings.json */

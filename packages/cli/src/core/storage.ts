@@ -1,6 +1,5 @@
 import { gitSafe } from "../git.js";
-
-const NOTES_REF = "agentnote";
+import { NOTES_REF } from "./constants.js";
 
 /** Write a agentnote entry as a git note on a commit. */
 export async function writeNote(commitSha: string, data: Record<string, unknown>): Promise<void> {

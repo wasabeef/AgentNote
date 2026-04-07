@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 1;
+import { SCHEMA_VERSION } from "./constants.js";
 
 export interface Interaction {
   prompt: string;
@@ -18,7 +18,7 @@ export interface AgentnoteEntry {
 
 /** Calculate the ratio of files in the commit that were touched by AI. */
 export function calcAiRatio(commitFiles: string[], aiFiles: string[]): number {
-  if(commitFiles.length === 0)return 0;
+  if (commitFiles.length === 0) return 0;
   const aiSet = new Set(aiFiles);
   const matched = commitFiles.filter((f) => aiSet.has(f));
   return Math.round((matched.length / commitFiles.length) * 100);
@@ -37,7 +37,7 @@ export function buildEntry(opts: {
     timestamp: new Date().toISOString(),
     interactions: opts.interactions.map((i) => {
       const base: Interaction = { prompt: i.prompt, response: i.response };
-      if(i.files_touched && i.files_touched.length > 0) {
+      if (i.files_touched && i.files_touched.length > 0) {
         base.files_touched = i.files_touched;
       }
       return base;
