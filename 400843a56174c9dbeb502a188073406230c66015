@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T03:49:26.602Z",
+  "interactions": [
+    {
+      "prompt": "実装を開始してほしい。\n\nコミットはしないこと。\n実装が完了したら codex にレビューしてもらうこと。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/hook.ts"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    "packages/cli/src/commands/hook.ts"
+  ],
+  "files_by_ai": [
+    "packages/cli/src/commands/hook.ts"
+  ],
+  "ai_ratio": 100
+}
