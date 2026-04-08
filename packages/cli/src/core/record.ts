@@ -322,17 +322,15 @@ async function computeLineAttribution(opts: {
   }
 
   // Completeness check (issue #3 from adversarial review):
-  // If any AI file has no blob data at all (neither pre nor post), the session
-  // predates hook v2 or blob capture failed. Return null to fall back to file-level
-  // attribution rather than silently reporting a partial (potentially misleading) ratio.
+  // An AI file needs a complete blob pair (pre + post) for line-level attribution.
+  // Having only post blobs (PreToolUse hook not yet active) is not enough — it would
+  // produce 0% AI ratio instead of falling back to file-level.
   for (const file of aiFileSet) {
     if (!commitFileSet.has(file)) continue;
     const hasPairs = (turnPairsByFile.get(file) ?? []).length > 0;
     const hasNewFileEdit = hadNewFileEditByFile.get(file) ?? false;
-    const hasFallbackPre = (preBlobsFallback.get(file) ?? []).length > 0;
-    const hasFallbackPost = (postBlobsFallback.get(file) ?? []).length > 0;
-    if (!hasPairs && !hasNewFileEdit && !hasFallbackPre && !hasFallbackPost) {
-      // No blob data for this AI file — fall back to file-level for the whole commit.
+    if (!hasPairs && !hasNewFileEdit) {
+      // No complete blob pair for this AI file — fall back to file-level for the whole commit.
       return null;
     }
   }
