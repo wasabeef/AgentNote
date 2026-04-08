@@ -170,13 +170,13 @@ describe("agentnote commit", () => {
 
     // Simulate already-rotated data (previous turn — archived with an arbitrary prefix).
     // File path must be repo-relative, matching what the hook normalizes to.
-    const rotatedChanges = join(sessionDir, "changes-prevturn.jsonl");
+    const rotatedChanges = join(sessionDir, "changes-m3h8k2n1.jsonl");
     writeFileSync(
       rotatedChanges,
       '{"event":"file_change","tool":"Write","file":"cross-turn.ts","turn":1}\n',
     );
 
-    const rotatedPrompts = join(sessionDir, "prompts-prevturn.jsonl");
+    const rotatedPrompts = join(sessionDir, "prompts-m3h8k2n1.jsonl");
     writeFileSync(
       rotatedPrompts,
       '{"event":"prompt","timestamp":"2026-04-07T00:00:00Z","prompt":"cross-turn prompt","turn":1}\n',
@@ -215,6 +215,59 @@ describe("agentnote commit", () => {
     assert.ok(
       existsSync(rotatedPrompts),
       "rotated prompts file should still exist for split-commit support",
+    );
+  });
+
+  it("survives multiple UserPromptSubmit gaps between edit and commit (multi-turn N>1)", () => {
+    // The primary bug: AI edits in turn 1, many intermediate UserPromptSubmit events
+    // fire without commits, and the commit finally happens at turn 5.
+    // With the old purge, the archive from turn 2 would be deleted at turn 3.
+    // With the fix, archives persist and are readable at commit time.
+    const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+
+    // Turn 1: AI edits multi-gap.ts. Rotated at turn 2.
+    const archiveId = Date.now().toString(36);
+    writeFileSync(
+      join(sessionDir, `changes-${archiveId}.jsonl`),
+      `{"event":"file_change","tool":"Write","file":"multi-gap.ts","turn":1}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, `prompts-${archiveId}.jsonl`),
+      `{"event":"prompt","timestamp":"2026-04-08T00:00:00Z","prompt":"implement feature","turn":1}\n`,
+    );
+
+    // Turns 2-4: UserPromptSubmit fires (rotation happens), no edits, no commits.
+    // Under old code, purge would delete the archive at each turn.
+    // Under new code, nothing to rotate (no changes.jsonl), archive persists.
+
+    // Turn 5: prompt "y" (confirm), then commit.
+    writeFileSync(join(sessionDir, "turn"), "5");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-08T00:05:00Z","prompt":"y","turn":5}\n',
+    );
+
+    writeFileSync(join(testDir, "multi-gap.ts"), "export const multiGap = true;");
+    execSync("git add multi-gap.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: multi-turn gap commit"`, { cwd: testDir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+
+    assert.ok(entry.ai_ratio > 0, "ai_ratio should be > 0 for multi-turn gap commit");
+    assert.ok(
+      entry.interactions.some((i: { prompt: string }) => i.prompt === "implement feature"),
+      "should include the original prompt from turn 1",
+    );
+    assert.ok(
+      existsSync(join(sessionDir, `changes-${archiveId}.jsonl`)),
+      "archive should persist (not purged by intermediate UserPromptSubmit events)",
     );
   });
 });
