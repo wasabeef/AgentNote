@@ -33,6 +33,11 @@ export const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
 
 // ─── Session infrastructure ───
 export const HEARTBEAT_FILE = "heartbeat";
+export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
+
+// ─── Git ───
+/** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
+export const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 
 // ─── Schema ───
 export const SCHEMA_VERSION = 1 as const;
