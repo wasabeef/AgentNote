@@ -1,0 +1,41 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T06:50:58.683Z",
+  "interactions": [
+    {
+      "prompt": "実装を開始してほしい。\n\nコミットはしないこと。\n実装が完了したら codex にレビューしてもらうこと。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/constants.ts"
+      ]
+    },
+    {
+      "prompt": "PR 2\n\nその後 DESIGN 更新まで行って。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/attribution.ts"
+      ]
+    },
+    {
+      "prompt": "作業を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/constants.ts",
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/attribution.ts"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    "packages/cli/src/core/attribution.ts",
+    "packages/cli/src/core/constants.ts",
+    "packages/cli/src/core/entry.ts"
+  ],
+  "files_by_ai": [
+    "packages/cli/src/core/constants.ts",
+    "packages/cli/src/core/attribution.ts",
+    "packages/cli/src/core/entry.ts"
+  ],
+  "ai_ratio": 100
+}
