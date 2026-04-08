@@ -71,6 +71,8 @@ export async function session(sessionId: string): Promise<void> {
   console.log();
 
   let totalPrompts = 0;
+  let totalAiLines = 0;
+  let totalAllLines = 0;
   let totalRatio = 0;
   let ratioCount = 0;
 
@@ -82,16 +84,28 @@ export async function session(sessionId: string): Promise<void> {
         (m.entry as unknown as { prompts?: unknown[] }).prompts?.length ??
         0;
       totalPrompts += promptCount;
-      totalRatio += m.entry.ai_ratio;
-      ratioCount++;
+      if (m.entry.ai_added_lines !== undefined && m.entry.total_added_lines !== undefined) {
+        totalAiLines += m.entry.ai_added_lines;
+        totalAllLines += m.entry.total_added_lines;
+      } else {
+        totalRatio += m.entry.ai_ratio;
+        ratioCount++;
+      }
       suffix = `  [🤖${m.entry.ai_ratio}% | ${promptCount}p]`;
     }
     console.log(`${m.shortInfo}${suffix}`);
   }
 
   console.log();
-  if (ratioCount > 0) {
-    const avgRatio = Math.round(totalRatio / ratioCount);
-    console.log(`Total: ${totalPrompts} prompts, avg AI ratio ${avgRatio}%`);
+  const displayRatio =
+    totalAllLines > 0
+      ? Math.round((totalAiLines / totalAllLines) * 100)
+      : ratioCount > 0
+        ? Math.round(totalRatio / ratioCount)
+        : null;
+
+  if (displayRatio !== null) {
+    const lineDetail = totalAllLines > 0 ? ` (${totalAiLines}/${totalAllLines} lines)` : "";
+    console.log(`Total: ${totalPrompts} prompts, AI ratio ${displayRatio}%${lineDetail}`);
   }
 }

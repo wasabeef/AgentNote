@@ -32,6 +32,12 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "node packages/cli/dist/cli.js hook" }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {

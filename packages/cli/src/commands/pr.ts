@@ -31,6 +31,8 @@ interface CommitEntry {
   files_ai: number;
   files: Array<{ path: string; by_ai: boolean }>;
   interactions: Interaction[];
+  ai_added_lines: number | null;
+  total_added_lines: number | null;
 }
 
 interface PrReport {
@@ -72,6 +74,8 @@ async function collectReport(base: string): Promise<PrReport | null> {
         files_ai: 0,
         files: [],
         interactions: [],
+        ai_added_lines: null,
+        total_added_lines: null,
       });
       continue;
     }
@@ -83,6 +87,8 @@ async function collectReport(base: string): Promise<PrReport | null> {
       prompts?: string[];
       files_in_commit?: string[];
       files_by_ai?: string[];
+      ai_added_lines?: number;
+      total_added_lines?: number;
     };
     const interactions: Interaction[] =
       entry.interactions ??
@@ -105,12 +111,26 @@ async function collectReport(base: string): Promise<PrReport | null> {
         by_ai: filesByAi.includes(f),
       })),
       interactions,
+      ai_added_lines: entry.ai_added_lines ?? null,
+      total_added_lines: entry.total_added_lines ?? null,
     });
   }
 
   const tracked = commits.filter((c) => c.session_id !== null);
   const totalFiles = tracked.reduce((s, c) => s + c.files_total, 0);
   const totalFilesAi = tracked.reduce((s, c) => s + c.files_ai, 0);
+
+  // Use weighted line-level ratio when available; fall back to file-level.
+  const totalAiLines = tracked.reduce((s, c) => s + (c.ai_added_lines ?? 0), 0);
+  const totalAllLines = tracked.reduce((s, c) => s + (c.total_added_lines ?? 0), 0);
+  const hasLineData = tracked.some((c) => c.total_added_lines !== null);
+  const overallAiRatio = hasLineData
+    ? totalAllLines > 0
+      ? Math.round((totalAiLines / totalAllLines) * 100)
+      : 0
+    : totalFiles > 0
+      ? Math.round((totalFilesAi / totalFiles) * 100)
+      : 0;
 
   return {
     base,
@@ -120,7 +140,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
     total_prompts: tracked.reduce((s, c) => s + c.prompts_count, 0),
     total_files: totalFiles,
     total_files_ai: totalFilesAi,
-    overall_ai_ratio: totalFiles > 0 ? Math.round((totalFilesAi / totalFiles) * 100) : 0,
+    overall_ai_ratio: overallAiRatio,
     commits,
   };
 }
