@@ -6,13 +6,22 @@ export interface HookInput {
 }
 
 export interface NormalizedEvent {
-  kind: "session_start" | "stop" | "prompt" | "file_change" | "pre_commit" | "post_commit";
+  kind:
+    | "session_start"
+    | "stop"
+    | "prompt"
+    | "pre_edit"
+    | "file_change"
+    | "pre_commit"
+    | "post_commit";
   sessionId: string;
   timestamp: string;
   prompt?: string;
   response?: string;
   file?: string;
   tool?: string;
+  /** Stable identifier correlating a PreToolUse event with its PostToolUse counterpart. */
+  toolUseId?: string;
   commitCommand?: string;
   transcriptPath?: string;
   model?: string;

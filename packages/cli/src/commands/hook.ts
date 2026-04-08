@@ -5,8 +5,10 @@ import { claudeCode } from "../agents/claude-code.js";
 import type { HookInput } from "../agents/types.js";
 import {
   CHANGES_FILE,
+  EMPTY_BLOB,
   EVENTS_FILE,
   HEARTBEAT_FILE,
+  PRE_BLOBS_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
@@ -19,6 +21,40 @@ import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
 import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
+
+/**
+ * Normalize an absolute file path to a repo-relative path.
+ * Returns the original path if normalization fails or path is already relative.
+ */
+async function normalizeToRepoRelative(filePath: string): Promise<string> {
+  if (!isAbsolute(filePath)) return filePath;
+  try {
+    const rawRoot = (await git(["rev-parse", "--show-toplevel"])).trim();
+    const repoRoot = await realpath(rawRoot);
+    let normalized = filePath;
+    if (repoRoot.startsWith("/private") && !normalized.startsWith("/private")) {
+      normalized = `/private${normalized}`;
+    } else if (!repoRoot.startsWith("/private") && normalized.startsWith("/private")) {
+      normalized = normalized.replace(/^\/private/, "");
+    }
+    return relative(repoRoot, normalized);
+  } catch {
+    return filePath;
+  }
+}
+
+/**
+ * Compute the git blob hash for a file on disk and write it to the object store.
+ * Returns EMPTY_BLOB if the file does not exist or on error.
+ */
+async function blobHash(absPath: string): Promise<string> {
+  try {
+    if (!existsSync(absPath)) return EMPTY_BLOB;
+    return (await git(["hash-object", "-w", absPath])).trim();
+  } catch {
+    return EMPTY_BLOB;
+  }
+}
 
 /** Read all of stdin as a string. */
 async function readStdin(): Promise<string> {
@@ -84,7 +120,7 @@ export async function hook(): Promise<void> {
       // This ensures split commits each get scoped notes, while the next
       // prompt starts with clean JSONL files.
       const rotateId = Date.now().toString(36);
-      await rotateLogs(sessionDir, rotateId);
+      await rotateLogs(sessionDir, rotateId, [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE]);
 
       // Increment turn counter for causal file attribution.
       const turnPath = join(sessionDir, TURN_FILE);
@@ -106,27 +142,11 @@ export async function hook(): Promise<void> {
       break;
     }
 
-    case "file_change": {
-      // Normalize absolute paths to repo-relative for consistent matching.
-      // Use git directly instead of cached root() since hook runs in different cwd contexts.
-      let filePath = event.file ?? "";
-      if (isAbsolute(filePath)) {
-        try {
-          const rawRoot = (await git(["rev-parse", "--show-toplevel"])).trim();
-          // Resolve symlinks on the repo root (macOS /var → /private/var).
-          const repoRoot = await realpath(rawRoot);
-          // Normalize file path to match — add /private if root has it and file doesn't.
-          let normalizedFile = filePath;
-          if (repoRoot.startsWith("/private") && !normalizedFile.startsWith("/private")) {
-            normalizedFile = `/private${normalizedFile}`;
-          } else if (!repoRoot.startsWith("/private") && normalizedFile.startsWith("/private")) {
-            normalizedFile = normalizedFile.replace(/^\/private/, "");
-          }
-          filePath = relative(repoRoot, normalizedFile);
-        } catch {
-          // Fallback: keep as-is.
-        }
-      }
+    case "pre_edit": {
+      // Capture blob hash before AI edit for line-level attribution.
+      const absPath = event.file ?? "";
+      const filePath = await normalizeToRepoRelative(absPath);
+
       // Read current turn for causal attribution.
       let turn = 0;
       const turnPath = join(sessionDir, TURN_FILE);
@@ -135,6 +155,37 @@ export async function hook(): Promise<void> {
         turn = Number.parseInt(raw, 10) || 0;
       }
 
+      // Write blob to object store before the edit happens.
+      const preBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
+
+      await appendJsonl(join(sessionDir, PRE_BLOBS_FILE), {
+        event: "pre_blob",
+        turn,
+        file: filePath,
+        blob: preBlob,
+        // tool_use_id links this pre-blob to its PostToolUse counterpart,
+        // enabling correct pairing even when async hooks fire out of order.
+        tool_use_id: event.toolUseId ?? null,
+      });
+      break;
+    }
+
+    case "file_change": {
+      // Normalize absolute paths to repo-relative for consistent matching.
+      const absPath = event.file ?? "";
+      const filePath = await normalizeToRepoRelative(absPath);
+
+      // Read current turn for causal attribution.
+      let turn = 0;
+      const turnPath = join(sessionDir, TURN_FILE);
+      if (existsSync(turnPath)) {
+        const raw = (await readFile(turnPath, "utf-8")).trim();
+        turn = Number.parseInt(raw, 10) || 0;
+      }
+
+      // Capture post-edit blob hash for line-level attribution.
+      const postBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
+
       await appendJsonl(join(sessionDir, CHANGES_FILE), {
         event: "file_change",
         timestamp: event.timestamp,
@@ -142,6 +193,10 @@ export async function hook(): Promise<void> {
         file: filePath,
         session_id: event.sessionId,
         turn,
+        blob: postBlob,
+        // Same tool_use_id as the matching pre_blob entry — used for reliable pairing
+        // even when this async hook fires after the next prompt has advanced the turn counter.
+        tool_use_id: event.toolUseId ?? null,
       });
       break;
     }

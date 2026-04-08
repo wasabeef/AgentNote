@@ -12,6 +12,10 @@ const HOOKS_CONFIG = {
   UserPromptSubmit: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
   PreToolUse: [
     {
+      matcher: "Edit|Write|NotebookEdit",
+      hooks: [{ type: "command", command: HOOK_COMMAND }],
+    },
+    {
       matcher: "Bash",
       hooks: [{ type: "command", if: "Bash(*git commit*)", command: HOOK_COMMAND }],
     },
@@ -43,6 +47,8 @@ interface ClaudeEvent {
   prompt?: string;
   tool_name?: string;
   tool_input?: { file_path?: string; command?: string };
+  /** Stable identifier for a PreToolUse/PostToolUse pair. Used to correlate pre/post blob snapshots. */
+  tool_use_id?: string;
   model?: string;
   transcript_path?: string;
 }
@@ -160,8 +166,22 @@ export const claudeCode: AgentAdapter = {
           ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt }
           : null;
       case "PreToolUse": {
+        const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";
-        if (e.tool_name === "Bash" && isGitCommit(cmd)) {
+        if (
+          (tool === "Edit" || tool === "Write" || tool === "NotebookEdit") &&
+          e.tool_input?.file_path
+        ) {
+          return {
+            kind: "pre_edit",
+            sessionId: sid,
+            timestamp: ts,
+            tool,
+            file: e.tool_input.file_path,
+            toolUseId: e.tool_use_id,
+          };
+        }
+        if (tool === "Bash" && isGitCommit(cmd)) {
           return { kind: "pre_commit", sessionId: sid, timestamp: ts, commitCommand: cmd };
         }
         return null;
@@ -178,6 +198,7 @@ export const claudeCode: AgentAdapter = {
             timestamp: ts,
             tool,
             file: e.tool_input.file_path,
+            toolUseId: e.tool_use_id,
           };
         }
         if (tool === "Bash" && isGitCommit(e.tool_input?.command ?? "")) {
