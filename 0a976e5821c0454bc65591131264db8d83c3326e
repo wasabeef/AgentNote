@@ -1,0 +1,41 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T06:51:05.989Z",
+  "interactions": [
+    {
+      "prompt": "実装を開始してほしい。\n\nコミットはしないこと。\n実装が完了したら codex にレビューしてもらうこと。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/commands/hook.ts"
+      ]
+    },
+    {
+      "prompt": "作業を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/agents/types.ts",
+        "packages/cli/src/agents/claude-code.ts",
+        "packages/cli/src/commands/hook.ts",
+        "packages/cli/src/core/record.ts"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    "packages/cli/src/agents/claude-code.ts",
+    "packages/cli/src/agents/types.ts",
+    "packages/cli/src/commands/hook.ts",
+    "packages/cli/src/core/record.ts"
+  ],
+  "files_by_ai": [
+    "packages/cli/src/core/record.ts",
+    "packages/cli/src/commands/hook.ts",
+    "packages/cli/src/agents/types.ts",
+    "packages/cli/src/agents/claude-code.ts"
+  ],
+  "ai_ratio": 0,
+  "ai_added_lines": 0,
+  "total_added_lines": 322,
+  "deleted_lines": 24
+}
