@@ -25,6 +25,8 @@ wasabeef/agentnote/
 │   │   │   ├── git.ts              # git CLI wrapper
 │   │   │   ├── paths.ts            # path resolution
 │   │   │   ├── core/               # agent-agnostic logic
+│   │   │   │   ├── attribution.ts  # line-level AI attribution (3-diff algorithm)
+│   │   │   │   ├── constants.ts    # shared constants (file names, patterns)
 │   │   │   │   ├── entry.ts        # build entry JSON, calc ai_ratio
 │   │   │   │   ├── jsonl.ts        # JSONL read/append helpers
 │   │   │   │   ├── record.ts       # shared recordCommitEntry()
@@ -124,12 +126,15 @@ Append-only JSONL files, accumulated during a session, rotated after each commit
 ├── session                          # active session ID (single line)
 └── sessions/<session-id>/
     ├── prompts.jsonl                # one prompt per line (current turn)
-    ├── changes.jsonl                # files touched by AI (current turn)
+    ├── changes.jsonl                # files touched by AI, with post-edit blob hash (current turn)
+    ├── pre_blobs.jsonl              # file blob hashes captured before each AI edit (current turn)
     ├── events.jsonl                 # session lifecycle
+    ├── heartbeat                    # epoch-ms timestamp of last activity (for TTL cleanup)
     ├── transcript_path              # path to agent's transcript file
     ├── turn                         # monotonic turn counter (incremented on UserPromptSubmit)
-    ├── prompts-<sha>.jsonl          # archived after commit (purged at next turn boundary)
-    └── changes-<sha>.jsonl          # archived after commit (purged at next turn boundary)
+    ├── prompts-<id>.jsonl           # archived at next turn boundary (Base36 rotation ID)
+    ├── changes-<id>.jsonl           # archived at next turn boundary
+    └── pre_blobs-<id>.jsonl         # archived at next turn boundary
 ```
 
 **Layer 2 — Git notes (`refs/notes/agentnote`)**
@@ -159,12 +164,18 @@ Note content per commit:
   ],
   "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
   "files_by_ai": ["src/auth.ts"],
-  "ai_ratio": 50
+  "ai_ratio": 73,
+  "ai_added_lines": 146,
+  "total_added_lines": 200,
+  "deleted_lines": 12
 }
 ```
 
 - **`v`**: Schema version. Currently `1`. Includes `files_touched` per interaction for turn-based file attribution.
-- **`ai_ratio`**: Percentage of files in the commit that were touched by AI tools (Edit/Write). Calculated as `files_by_ai.length / files_in_commit.length * 100`, rounded. This is a file-count metric, not a line-count metric. A file counts as "by AI" if any Edit/Write tool use targeted it during the session. File paths are normalized to repo-relative at recording time and matched by exact string comparison.
+- **`ai_ratio`**: AI authorship percentage (0–100, rounded). When line-level blob data is available, computed as `ai_added_lines / total_added_lines * 100`. Falls back to file-count ratio (`files_by_ai.length / files_in_commit.length * 100`) for sessions recorded before blob capture was introduced.
+- **`ai_added_lines`**: Added lines in this commit attributed to AI. Present only when line-level attribution is available (blob data from PreToolUse/PostToolUse hooks).
+- **`total_added_lines`**: Total added lines across all files in this commit. Present only when line-level attribution is available.
+- **`deleted_lines`**: Total deleted lines in this commit. Deletions are not attributed (old-side positions are not comparable to new-side positions). Present only when line-level attribution is available.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID
@@ -181,13 +192,45 @@ This avoids timestamp-based attribution, which is unreliable when hooks fire asy
 
 Fallback: if no turn data is present (entries recorded before turn tracking was introduced), all prompts and changes are used without filtering (v1 compat).
 
+### Line-level AI attribution
+
+`ai_ratio` is computed at the line (added-line) level using a 3-diff position algorithm when blob data is available.
+
+**Data captured by hooks:**
+
+- **`PreToolUse Edit/Write/NotebookEdit`** (synchronous) → `git hash-object -w <file>` before the edit → stored as `preBlob` in `pre_blobs.jsonl`
+- **`PostToolUse Edit/Write/NotebookEdit`** (asynchronous) → `git hash-object -w <file>` after the edit → stored as `postBlob` in `changes.jsonl`
+
+**Attribution algorithm per file (at commit time):**
+
+For each file in the commit, collect all `(preBlob, postBlob)` pairs from the session (FIFO per file). Then run 3 diffs, all targeting the committed blob:
+
+```
+diff1: parentBlob → committedBlob   → positions of all added lines in the commit
+diff2: preBlob_T  → committedBlob   → AI's edit + any human edits after
+diff3: postBlob_T → committedBlob   → human edits after AI (only)
+
+AI positions for turn T = diff2 ∩ diff1 positions \ diff3 positions
+```
+
+Union AI positions across all turns. Count how many positions from `diff1` are in the AI union — this gives `ai_added_lines`. Positions are 1-based line numbers in the committed file, so they are directly comparable across all three diffs.
+
+**Key properties:**
+
+- Deletions are excluded from `ai_ratio` (old-side positions are not comparable to new-side positions). Tracked separately as `deleted_lines`.
+- Human edits after the AI write are correctly subtracted from AI attribution.
+- New files created by AI (no preBlob) attribute all added lines to AI.
+- Falls back to file-level binary attribution if blob data is unavailable (old sessions, failed hooks).
+
+**Object store:** Blob hashes are written to the git object store via `git hash-object -w` during hooks. Loose objects are cleaned up by `git gc` over time. The canonical empty blob (`e69de29...`) is written once per commit in `recordCommitEntry` to support new-file diffs.
+
 ### Cross-turn commits and split commit support
 
 **Cross-turn scenario**: AI edits files in turn N, then the user confirms ("y") in turn N+1, triggering the commit. By turn N+1, `UserPromptSubmit` has already rotated `changes.jsonl` → `changes-<sha>.jsonl`. `recordCommitEntry()` reads both the current file and all `stem-*.jsonl` archives so nothing is lost.
 
 **Split commit scenario**: Multiple `git commit` calls in the same turn (e.g. `/commit` splitting into several semantic commits). Rotated archives are **not** deleted at commit time — they remain available for each commit in the turn. Each commit scopes its own data via `commitFileSet` to avoid double-counting.
 
-Archives are purged at the **start of the next `UserPromptSubmit`** (turn boundary) by `rotateLogs()`, which calls `purgeRotatedArchives()` before renaming the current files.
+Archives are purged at the **start of the next `UserPromptSubmit`** (turn boundary) by `rotateLogs()`, which renames the current files into new archives and leaves previous archives in place until the next turn rotation.
 
 ### Why git notes over alternatives
 
@@ -458,9 +501,9 @@ In practice, notes conflicts are rare because each developer writes to different
 
 If multiple Claude Code sessions run in the same repo simultaneously, `.git/agentnote/session` (the active session pointer) may be overwritten by the last writer. Session-specific data in `.git/agentnote/sessions/<id>/` is isolated and safe. Since `prepare-commit-msg` reads the session ID from the file, a concurrent overwrite could attach the wrong session ID to a trailer. In practice this is rare — concurrent commits from the same repo are uncommon.
 
-### ai_ratio is file-count based
+### ai_ratio accuracy depends on blob data
 
-A 1-line AI edit to a 10,000-line file counts the same as a fully AI-written 5-line file. This is a known simplification. Line-count based measurement is a future consideration but adds complexity (requires diffstat parsing).
+`ai_ratio` uses line-level attribution when `pre_blobs.jsonl` data is available (sessions recorded with hook v2+). For older sessions or when blob capture fails, it falls back to file-count ratio. Deletions are always excluded from the attribution denominator — only added lines are classified as AI or human.
 
 ## Multi-agent extensibility
 
@@ -499,18 +542,19 @@ interface HookInput {
 }
 
 interface NormalizedEvent {
-  kind: "session_start" | "stop" | "prompt" | "file_change";
+  kind: "session_start" | "stop" | "prompt" | "pre_edit" | "file_change" | "pre_commit" | "post_commit";
   sessionId: string;
   timestamp: string;
   prompt?: string;
   response?: string;
   file?: string;
   tool?: string;
+  commitCommand?: string;
   transcriptPath?: string;
   model?: string;
 }
-// Note: "pre_commit" and "post_commit" are handled by git hooks,
-// not by agent adapters. This keeps commit integration agent-agnostic.
+// "pre_edit": fired by PreToolUse Edit/Write/NotebookEdit — captures preBlob before the edit.
+// "pre_commit" and "post_commit": Claude Code PreToolUse/PostToolUse for git commit commands.
 
 interface AgentAdapter {
   name: string;
