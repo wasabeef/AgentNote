@@ -120,17 +120,18 @@ async function collectReport(base: string): Promise<PrReport | null> {
   const totalFiles = tracked.reduce((s, c) => s + c.files_total, 0);
   const totalFilesAi = tracked.reduce((s, c) => s + c.files_ai, 0);
 
-  // Use weighted line-level ratio when available; fall back to file-level.
-  const totalAiLines = tracked.reduce((s, c) => s + (c.ai_added_lines ?? 0), 0);
-  const totalAllLines = tracked.reduce((s, c) => s + (c.total_added_lines ?? 0), 0);
-  const hasLineData = tracked.some((c) => c.total_added_lines !== null);
-  const overallAiRatio = hasLineData
-    ? totalAllLines > 0
-      ? Math.round((totalAiLines / totalAllLines) * 100)
-      : 0
-    : totalFiles > 0
-      ? Math.round((totalFilesAi / totalFiles) * 100)
-      : 0;
+  // Use weighted line-level ratio when ALL tracked commits have line data.
+  // On mixed branches (legacy + line-level notes), fall back to file-level
+  // so legacy commits don't silently contribute zero weight.
+  const allHaveLineData = tracked.every((c) => c.total_added_lines !== null);
+  let overallAiRatio: number;
+  if (allHaveLineData) {
+    const totalAiLines = tracked.reduce((s, c) => s + (c.ai_added_lines ?? 0), 0);
+    const totalAllLines = tracked.reduce((s, c) => s + (c.total_added_lines ?? 0), 0);
+    overallAiRatio = totalAllLines > 0 ? Math.round((totalAiLines / totalAllLines) * 100) : 0;
+  } else {
+    overallAiRatio = totalFiles > 0 ? Math.round((totalFilesAi / totalFiles) * 100) : 0;
+  }
 
   return {
     base,

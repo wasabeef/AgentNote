@@ -44,6 +44,22 @@ export async function recordCommitEntry(opts: {
   const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
   const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
 
+  // Correct async turn drift: PostToolUse (async) may read TURN_FILE after the next
+  // prompt has incremented it. Pre-blob entries (sync PreToolUse) have the authoritative
+  // turn. Override changeEntries' turn with the pre-blob turn when tool_use_id matches.
+  const preBlobEntriesForTurnFix = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
+  const preBlobTurnById = new Map<string, number>();
+  for (const e of preBlobEntriesForTurnFix) {
+    const id = e.tool_use_id as string | undefined;
+    if (id && typeof e.turn === "number") preBlobTurnById.set(id, e.turn);
+  }
+  for (const entry of changeEntries) {
+    const id = entry.tool_use_id as string | undefined;
+    if (id && preBlobTurnById.has(id)) {
+      entry.turn = preBlobTurnById.get(id);
+    }
+  }
+
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
 
