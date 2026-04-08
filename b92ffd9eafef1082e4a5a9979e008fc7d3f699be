@@ -1,0 +1,55 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T07:30:57.844Z",
+  "interactions": [
+    {
+      "prompt": "作業を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/show.ts"
+      ]
+    },
+    {
+      "prompt": "agentnote を表示して。動作確認してください。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/record.ts"
+      ]
+    },
+    {
+      "prompt": "1,3を実行してください",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/record.ts"
+      ]
+    },
+    {
+      "prompt": "自動でコミットしていいので、調査を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/core/record.ts"
+      ]
+    },
+    {
+      "prompt": "  cd /Users/a12622/git/context-history/packages/cli && node dist/cli.js show HEAD\ncommit:  bd2f80c chore: remove debug probes from attribution investigation\nsession: 50b9c691-167f-4440-8abd-6f041cb2bf74\n\nai:      50% (0/0 lines) [██████████░░░░░░░░░░]\nfiles:   2 changed, 1 by AI\n\n  packages/cli/src/core/attribution.ts  🤖\n  packages/cli/src/core/record.ts  👤\n\nprompts: 1\n\n  1. ## Commit\n     → 13 ファイル (12 modified + 1 new)、英語コミットスタイル。\n     📄 packages/cli/src/core/attribution.ts\n\n\n\n正しい？",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/show.ts",
+        "packages/cli/src/core/record.ts"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    "packages/cli/src/commands/show.ts",
+    "packages/cli/src/core/record.ts"
+  ],
+  "files_by_ai": [
+    "packages/cli/src/commands/show.ts",
+    "packages/cli/src/core/record.ts"
+  ],
+  "ai_ratio": 100,
+  "ai_added_lines": 31,
+  "total_added_lines": 31,
+  "deleted_lines": 16
+}
