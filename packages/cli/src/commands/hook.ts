@@ -6,6 +6,7 @@ import type { HookInput } from "../agents/types.js";
 import {
   CHANGES_FILE,
   EVENTS_FILE,
+  HEARTBEAT_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
@@ -61,6 +62,7 @@ export async function hook(): Promise<void> {
         timestamp: event.timestamp,
         model: event.model ?? null,
       });
+      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
 
@@ -100,6 +102,7 @@ export async function hook(): Promise<void> {
         prompt: event.prompt,
         turn,
       });
+      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
 
