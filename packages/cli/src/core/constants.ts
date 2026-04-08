@@ -27,6 +27,13 @@ export const TRUNCATE_RESPONSE_SHOW = 200;
 export const TRUNCATE_RESPONSE_PR = 500;
 export const TRUNCATE_RESPONSE_CHAT = 800;
 
+// ─── Archive ───
+/** Base36 rotation ID pattern: [0-9a-z]{6,} (future-safe for post-2059 length growth). */
+export const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
+
+// ─── Session infrastructure ───
+export const HEARTBEAT_FILE = "heartbeat";
+
 // ─── Schema ───
 export const SCHEMA_VERSION = 1 as const;
 
