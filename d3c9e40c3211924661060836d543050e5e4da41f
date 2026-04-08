@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T07:26:16.830Z",
+  "interactions": [],
+  "files_in_commit": [
+    "packages/cli/src/core/attribution.ts"
+  ],
+  "files_by_ai": [],
+  "ai_ratio": 0,
+  "ai_added_lines": 0,
+  "total_added_lines": 1,
+  "deleted_lines": 0
+}
