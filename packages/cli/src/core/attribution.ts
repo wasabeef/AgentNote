@@ -139,4 +139,3 @@ async function gitDiffUnified0(blobA: string, blobB: string): Promise<string> {
 
 // Re-export EMPTY_BLOB so callers don't need a separate import.
 export { EMPTY_BLOB };
-// debug probe
