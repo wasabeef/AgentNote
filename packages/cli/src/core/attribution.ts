@@ -129,7 +129,11 @@ async function gitDiffUnified0(blobA: string, blobB: string): Promise<string> {
   // Guard: empty string means "no blob" (file didn't exist). Treat as no diff.
   if (!blobA || !blobB || blobA === blobB) return "";
   // git diff exits with code 1 when there are differences — not an error.
-  const { stdout } = await gitSafe(["diff", "--unified=0", "--no-color", blobA, blobB]);
+  // Any other non-zero exit (e.g. missing blob object) is a hard failure.
+  const { stdout, exitCode } = await gitSafe(["diff", "--unified=0", "--no-color", blobA, blobB]);
+  if (exitCode !== 0 && exitCode !== 1) {
+    throw new Error(`git diff failed with exit code ${exitCode}`);
+  }
   return stdout;
 }
 

@@ -69,15 +69,28 @@ export async function recordCommitEntry(opts: {
   const relevantTurns = new Set<number>();
 
   if (hasTurnData) {
-    // Option 3: scope data to this commit's files via turn IDs.
-    aiFiles = [
-      ...new Set(
-        changeEntries.map((e) => e.file as string).filter((f) => f && commitFileSet.has(f)),
-      ),
-    ];
+    // Scope data to this commit's files via turn IDs.
+    // Include files from both changeEntries (PostToolUse) AND pre-blob entries (PreToolUse)
+    // so that a dropped async PostToolUse doesn't silently hide an AI-authored file.
+    const aiFileSet = new Set<string>();
+    for (const e of changeEntries) {
+      const f = e.file as string;
+      if (f && commitFileSet.has(f)) aiFileSet.add(f);
+    }
+    for (const e of preBlobEntriesForTurnFix) {
+      const f = e.file as string;
+      if (f && commitFileSet.has(f)) aiFileSet.add(f);
+    }
+    aiFiles = [...aiFileSet];
 
     // Find turns that touched files in this commit.
     for (const entry of changeEntries) {
+      const file = entry.file as string;
+      if (file && commitFileSet.has(file)) {
+        relevantTurns.add(typeof entry.turn === "number" ? entry.turn : 0);
+      }
+    }
+    for (const entry of preBlobEntriesForTurnFix) {
       const file = entry.file as string;
       if (file && commitFileSet.has(file)) {
         relevantTurns.add(typeof entry.turn === "number" ? entry.turn : 0);
@@ -385,6 +398,7 @@ async function computeLineAttribution(opts: {
 /**
  * Parse `git diff-tree --raw --root -r HEAD` output into a file → blob hash map.
  * Maps the all-zeros "null blob" to EMPTY_BLOB.
+ * Handles rename (R*) and copy (C*) statuses by using the destination path as key.
  */
 function parseDiffTreeBlobs(
   output: string,
@@ -393,12 +407,16 @@ function parseDiffTreeBlobs(
   const ZEROS = "0000000000000000000000000000000000000000";
 
   for (const line of output.split("\n")) {
-    // Format: :oldmode newmode oldblob newblob status\tfile
+    // Standard: :oldmode newmode oldblob newblob status\tfile
+    // Rename/copy: :oldmode newmode oldblob newblob R100\told\tnew
     const m = line.match(/^:\d+ \d+ ([0-9a-f]+) ([0-9a-f]+) \w+\t(.+)$/);
     if (!m) continue;
     const parentBlob = m[1] === ZEROS ? EMPTY_BLOB : m[1];
     const committedBlob = m[2] === ZEROS ? EMPTY_BLOB : m[2];
-    const file = m[3];
+    const paths = m[3];
+    // For rename/copy, paths = "old\tnew" — use the destination (last part).
+    const parts = paths.split("\t");
+    const file = parts[parts.length - 1];
     map.set(file, { parentBlob, committedBlob });
   }
   return map;
