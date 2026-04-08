@@ -116,6 +116,27 @@ export async function recordCommitEntry(opts: {
       return relevantTurns.has(turn);
     });
     prompts = relevantPromptEntries.map((e) => e.prompt as string);
+
+    // DEBUG: always dump attribution state for investigation (temporary)
+    try {
+      const { appendFileSync } = await import("node:fs");
+      const debugPath = join(sessionDir, "debug_record.log");
+      const lines = [
+        `--- recordCommitEntry debug ${new Date().toISOString()} ---`,
+        `commitFiles: ${JSON.stringify(commitFiles)}`,
+        `consumedPairs.size: ${consumedPairs.size}`,
+        `allChangeEntries.length: ${allChangeEntries.length}`,
+        `changeEntries.length (after filter): ${changeEntries.length}`,
+        `allPreBlobEntries.length: ${allPreBlobEntries.length}`,
+        `preBlobEntries.length (after filter): ${preBlobEntriesForTurnFix.length}`,
+        `aiFiles: ${JSON.stringify(aiFiles)}`,
+        `relevantTurns: ${JSON.stringify([...relevantTurns])}`,
+        `prompts.length: ${prompts.length}`,
+        `prompts: ${JSON.stringify(prompts.map((p) => p.slice(0, 40)))}`,
+        `hasTurnData: ${hasTurnData}`,
+      ];
+      appendFileSync(debugPath, `${lines.join("\n")}\n\n`);
+    } catch { /* ignore */ }
   } else {
     // Fallback: no turn data — use all prompts and changes (v1 compat).
     aiFiles = changeEntries.map((e) => e.file as string).filter(Boolean);
