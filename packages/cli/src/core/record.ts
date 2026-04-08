@@ -3,7 +3,13 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { claudeCode } from "../agents/claude-code.js";
 import { git } from "../git.js";
-import { CHANGES_FILE, PROMPTS_FILE, TRANSCRIPT_PATH_FILE } from "./constants.js";
+import {
+  ARCHIVE_ID_RE,
+  CHANGES_FILE,
+  PROMPTS_FILE,
+  TRANSCRIPT_PATH_FILE,
+  TURN_FILE,
+} from "./constants.js";
 import type { Interaction } from "./entry.js";
 import { buildEntry } from "./entry.js";
 import { readJsonlEntries } from "./jsonl.js";
@@ -40,6 +46,7 @@ export async function recordCommitEntry(opts: {
   let aiFiles: string[];
   let prompts: string[];
   let relevantPromptEntries: Record<string, unknown>[];
+  const relevantTurns = new Set<number>();
 
   if (hasTurnData) {
     // Option 3: scope data to this commit's files via turn IDs.
@@ -50,7 +57,6 @@ export async function recordCommitEntry(opts: {
     ];
 
     // Find turns that touched files in this commit.
-    const relevantTurns = new Set<number>();
     for (const entry of changeEntries) {
       const file = entry.file as string;
       if (file && commitFileSet.has(file)) {
@@ -75,9 +81,22 @@ export async function recordCommitEntry(opts: {
   const transcriptPath = opts.transcriptPath ?? (await readSavedTranscriptPath(sessionDir));
 
   // Build interactions from transcript for accurate prompt-response pairing.
+  // Suppress transcript pairing for cross-turn commits: slice(-prompts.length)
+  // is only accurate when all relevant edits are from the current turn.
+  let crossTurnCommit = false;
+  if (hasTurnData && relevantTurns.size > 0) {
+    const turnFilePath = join(sessionDir, TURN_FILE);
+    let currentTurn = 0;
+    if (existsSync(turnFilePath)) {
+      currentTurn = Number.parseInt((await readFile(turnFilePath, "utf-8")).trim(), 10) || 0;
+    }
+    const minRelevantTurn = Math.min(...relevantTurns);
+    crossTurnCommit = minRelevantTurn < currentTurn;
+  }
+
   let interactions: Interaction[];
 
-  if (transcriptPath && prompts.length > 0) {
+  if (transcriptPath && prompts.length > 0 && !crossTurnCommit) {
     const allInteractions = await claudeCode.extractInteractions(transcriptPath);
     interactions =
       allInteractions.length > 0
@@ -147,8 +166,20 @@ async function readAllSessionJsonl(
   const stem = baseFile.slice(0, baseFile.lastIndexOf(".jsonl"));
   const files = await readdir(sessionDir).catch(() => [] as string[]);
   const matching = files
-    .filter((f) => f === baseFile || (f.startsWith(`${stem}-`) && f.endsWith(".jsonl")))
-    .sort()
+    .filter((f) => {
+      if (f === baseFile) return true;
+      // Match rotated archives: stem-<Base36 ID>.jsonl
+      const suffix = f.slice(stem.length + 1, -".jsonl".length);
+      return f.startsWith(`${stem}-`) && f.endsWith(".jsonl") && ARCHIVE_ID_RE.test(suffix);
+    })
+    .sort((a, b) => {
+      // Numeric Base36 sort. Base file (no suffix) sorts last (most recent).
+      const getId = (f: string): number => {
+        const s = f.slice(stem.length + 1, -".jsonl".length);
+        return s ? parseInt(s, 36) : Infinity;
+      };
+      return getId(a) - getId(b);
+    })
     .map((f) => join(sessionDir, f));
 
   const all: Record<string, unknown>[] = [];
