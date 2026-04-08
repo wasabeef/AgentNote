@@ -319,9 +319,12 @@ No consumed state. Stateless per commit.
 - [x] `commands/hook.ts`: `pre_edit` handler (preBlob capture, sync), `file_change` postBlob + `tool_use_id`, `rotateLogs` includes `PRE_BLOBS_FILE`
 - [x] `core/attribution.ts` (NEW): `parseUnifiedHunks`, `expandNewPositions`, `countLines`, `computePositionAttribution`
 - [x] `core/constants.ts`: `PRE_BLOBS_FILE`, `EMPTY_BLOB`
-- [x] `core/record.ts`: `computeLineAttribution` with `tool_use_id` join, FIFO fallback, completeness check, `ensureEmptyBlobInStore`, `parseDiffTreeBlobs`
+- [x] `core/record.ts`: `computeLineAttribution` with `tool_use_id` join, FIFO fallback, completeness check, `ensureEmptyBlobInStore`, `parseDiffTreeBlobs`, consumed pairs (`committed_pairs.jsonl`)
 - [x] `core/entry.ts`: `ai_added_lines`, `total_added_lines`, `deleted_lines`, `LineCounts`, line-level `calcAiRatio`
 - [x] Consumer updates: `show.ts` (lines display), `pr.ts` (weighted ratio), `session.ts` (weighted ratio)
 - [x] `docs/knowledge/DESIGN.md`: Line-level attribution section + schema update + NormalizedEvent update
-- [x] Build + typecheck + lint + all 40 tests pass
-- [x] Codex adversarial review: 3 issues found and fixed (tool_use_id join, async turn fix, completeness check)
+- [x] Build + typecheck + lint + all 51 tests pass
+- [x] Codex adversarial review: 3 rounds, all issues fixed
+- [x] Consumed pairs (`committed_pairs.jsonl`) to prevent re-attribution
+- [x] Unit tests for `attribution.ts` (parseUnifiedHunks, expandNewPositions, countLines)
+- [x] Integration test for consumed pairs (split commit re-attribution prevention)

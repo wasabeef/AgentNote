@@ -8,6 +8,7 @@ import { computePositionAttribution } from "./attribution.js";
 import {
   ARCHIVE_ID_RE,
   CHANGES_FILE,
+  COMMITTED_PAIRS_FILE,
   EMPTY_BLOB,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
@@ -16,7 +17,7 @@ import {
 } from "./constants.js";
 import type { Interaction, LineCounts } from "./entry.js";
 import { buildEntry } from "./entry.js";
-import { readJsonlEntries } from "./jsonl.js";
+import { appendJsonl, readJsonlEntries } from "./jsonl.js";
 import { writeNote } from "./storage.js";
 
 /** Record an agentnote entry as a git note after a successful commit. */
@@ -41,24 +42,36 @@ export async function recordCommitEntry(opts: {
 
   // Read all change and prompt entries: current files + any rotated (archived) files
   // from previous turns that have not yet been attributed to a commit.
-  const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
+  const allChangeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
   const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
 
   // Correct async turn drift: PostToolUse (async) may read TURN_FILE after the next
   // prompt has incremented it. Pre-blob entries (sync PreToolUse) have the authoritative
   // turn. Override changeEntries' turn with the pre-blob turn when tool_use_id matches.
-  const preBlobEntriesForTurnFix = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
+  const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
   const preBlobTurnById = new Map<string, number>();
-  for (const e of preBlobEntriesForTurnFix) {
+  for (const e of allPreBlobEntries) {
     const id = e.tool_use_id as string | undefined;
     if (id && typeof e.turn === "number") preBlobTurnById.set(id, e.turn);
   }
-  for (const entry of changeEntries) {
+  for (const entry of allChangeEntries) {
     const id = entry.tool_use_id as string | undefined;
     if (id && preBlobTurnById.has(id)) {
       entry.turn = preBlobTurnById.get(id);
     }
   }
+
+  // Filter out (turn, file) pairs already attributed to a previous commit.
+  // This prevents re-attribution when archives persist for split-commit support.
+  const consumedPairs = await readConsumedPairs(sessionDir);
+  const changeEntries = allChangeEntries.filter((e) => {
+    const key = `${e.turn}:${e.file}`;
+    return !consumedPairs.has(key);
+  });
+  const preBlobEntriesForTurnFix = allPreBlobEntries.filter((e) => {
+    const key = `${e.turn}:${e.file}`;
+    return !consumedPairs.has(key);
+  });
 
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -163,6 +176,10 @@ export async function recordCommitEntry(opts: {
   });
 
   await writeNote(commitSha, entry as unknown as Record<string, unknown>);
+
+  // Record consumed (turn, file) pairs so subsequent commits in this session
+  // don't re-attribute the same edits. Append-only, not rotated.
+  await recordConsumedPairs(sessionDir, changeEntries, commitFileSet);
 
   // Do NOT delete rotated archives here. They are kept available for subsequent
   // split commits in the same turn (each commit scopes its own files via
@@ -420,6 +437,37 @@ function parseDiffTreeBlobs(
     map.set(file, { parentBlob, committedBlob });
   }
   return map;
+}
+
+/** Read consumed (turn, file) pairs from committed_pairs.jsonl. */
+async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
+  const file = join(sessionDir, COMMITTED_PAIRS_FILE);
+  if (!existsSync(file)) return new Set();
+  const entries = await readJsonlEntries(file);
+  const set = new Set<string>();
+  for (const e of entries) {
+    if (e.turn !== undefined && e.file) set.add(`${e.turn}:${e.file}`);
+  }
+  return set;
+}
+
+/** Append consumed (turn, file) pairs for files in this commit. */
+async function recordConsumedPairs(
+  sessionDir: string,
+  changeEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+): Promise<void> {
+  const seen = new Set<string>();
+  const pairsFile = join(sessionDir, COMMITTED_PAIRS_FILE);
+  for (const entry of changeEntries) {
+    const file = entry.file as string;
+    const turn = entry.turn;
+    if (!file || !commitFileSet.has(file) || turn === undefined) continue;
+    const key = `${turn}:${file}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await appendJsonl(pairsFile, { turn, file });
+  }
 }
 
 /**

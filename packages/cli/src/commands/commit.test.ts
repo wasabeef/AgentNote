@@ -270,4 +270,55 @@ describe("agentnote commit", () => {
       "archive should persist (not purged by intermediate UserPromptSubmit events)",
     );
   });
+
+  it("does not re-attribute consumed (turn, file) pairs in subsequent commits", () => {
+    const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+
+    // Turn 1: AI edits split-a.ts
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-09T00:00:00Z","prompt":"write split-a","turn":1}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"split-a.ts","turn":1}\n',
+    );
+
+    // First commit: only split-a.ts
+    writeFileSync(join(testDir, "split-a.ts"), "export const a = 1;");
+    execSync("git add split-a.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: split-a"`, { cwd: testDir });
+
+    const note1 = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry1 = JSON.parse(note1);
+    assert.ok(entry1.ai_ratio > 0, "first commit should have ai_ratio > 0");
+
+    // Second commit: human file only, but the old turn-1 archive still exists.
+    // Without consumed pairs, the old (turn:1, split-a.ts) would leak into relevantTurns.
+    writeFileSync(join(testDir, "human-only.ts"), "export const h = 2;");
+    execSync("git add human-only.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: human-only"`, { cwd: testDir });
+
+    const note2 = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry2 = JSON.parse(note2);
+    assert.equal(
+      entry2.ai_ratio,
+      0,
+      "second commit should have ai_ratio 0 — no AI files (consumed pairs filtered out)",
+    );
+    assert.equal(
+      entry2.files_by_ai.length,
+      0,
+      "no files should be attributed to AI in the second commit",
+    );
+  });
 });

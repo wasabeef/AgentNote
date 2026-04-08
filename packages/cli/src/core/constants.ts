@@ -34,6 +34,8 @@ export const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
 // ─── Session infrastructure ───
 export const HEARTBEAT_FILE = "heartbeat";
 export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
+/** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
+export const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 
 // ─── Git ───
 /** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
