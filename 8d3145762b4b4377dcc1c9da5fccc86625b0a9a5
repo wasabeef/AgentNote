@@ -1,0 +1,36 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-08T06:51:12.864Z",
+  "interactions": [
+    {
+      "prompt": "作業を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/show.ts",
+        "packages/cli/src/commands/pr.ts",
+        "packages/cli/src/commands/session.ts"
+      ]
+    },
+    {
+      "prompt": "settings.json を更新して",
+      "response": null,
+      "files_touched": [
+        ".claude/settings.json"
+      ]
+    }
+  ],
+  "files_in_commit": [
+    ".claude/settings.json",
+    "packages/cli/src/commands/pr.ts",
+    "packages/cli/src/commands/session.ts",
+    "packages/cli/src/commands/show.ts"
+  ],
+  "files_by_ai": [
+    "packages/cli/src/commands/show.ts",
+    "packages/cli/src/commands/pr.ts",
+    "packages/cli/src/commands/session.ts",
+    ".claude/settings.json"
+  ],
+  "ai_ratio": 100
+}
