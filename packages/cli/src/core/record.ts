@@ -64,14 +64,10 @@ export async function recordCommitEntry(opts: {
   // Filter out (turn, file) pairs already attributed to a previous commit.
   // This prevents re-attribution when archives persist for split-commit support.
   const consumedPairs = await readConsumedPairs(sessionDir);
-  const changeEntries = allChangeEntries.filter((e) => {
-    const key = `${e.turn}:${e.file}`;
-    return !consumedPairs.has(key);
-  });
-  const preBlobEntriesForTurnFix = allPreBlobEntries.filter((e) => {
-    const key = `${e.turn}:${e.file}`;
-    return !consumedPairs.has(key);
-  });
+  const changeEntries = allChangeEntries.filter((e) => !consumedPairs.has(consumedKey(e)));
+  const preBlobEntriesForTurnFix = allPreBlobEntries.filter(
+    (e) => !consumedPairs.has(consumedKey(e)),
+  );
 
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -439,19 +435,33 @@ function parseDiffTreeBlobs(
   return map;
 }
 
-/** Read consumed (turn, file) pairs from committed_pairs.jsonl. */
+/**
+ * Read consumed change identifiers from committed_pairs.jsonl.
+ * Uses tool_use_id when available (unique per edit), falls back to turn:file.
+ */
 async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
   if (!existsSync(file)) return new Set();
   const entries = await readJsonlEntries(file);
   const set = new Set<string>();
   for (const e of entries) {
-    if (e.turn !== undefined && e.file) set.add(`${e.turn}:${e.file}`);
+    // Prefer tool_use_id (unique per edit) over turn:file (which collides on split commits).
+    if (e.tool_use_id) {
+      set.add(`id:${e.tool_use_id}`);
+    } else if (e.turn !== undefined && e.file) {
+      set.add(`${e.turn}:${e.file}`);
+    }
   }
   return set;
 }
 
-/** Append consumed (turn, file) pairs for files in this commit. */
+/** Build the consumed-pair key for a change/pre-blob entry. */
+function consumedKey(entry: Record<string, unknown>): string {
+  if (entry.tool_use_id) return `id:${entry.tool_use_id}`;
+  return `${entry.turn}:${entry.file}`;
+}
+
+/** Append consumed identifiers for changes used in this commit. */
 async function recordConsumedPairs(
   sessionDir: string,
   changeEntries: Record<string, unknown>[],
@@ -461,12 +471,15 @@ async function recordConsumedPairs(
   const pairsFile = join(sessionDir, COMMITTED_PAIRS_FILE);
   for (const entry of changeEntries) {
     const file = entry.file as string;
-    const turn = entry.turn;
-    if (!file || !commitFileSet.has(file) || turn === undefined) continue;
-    const key = `${turn}:${file}`;
+    if (!file || !commitFileSet.has(file)) continue;
+    const key = consumedKey(entry);
     if (seen.has(key)) continue;
     seen.add(key);
-    await appendJsonl(pairsFile, { turn, file });
+    await appendJsonl(pairsFile, {
+      turn: entry.turn,
+      file,
+      tool_use_id: entry.tool_use_id ?? null,
+    });
   }
 }
 

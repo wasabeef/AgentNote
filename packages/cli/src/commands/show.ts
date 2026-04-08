@@ -42,7 +42,9 @@ export async function show(commitRef?: string): Promise<void> {
     console.log();
     const ratioBar = renderRatioBar(entry.ai_ratio);
     const lineDetail =
-      entry.ai_added_lines !== undefined && entry.total_added_lines !== undefined
+      entry.ai_added_lines !== undefined &&
+      entry.total_added_lines !== undefined &&
+      entry.total_added_lines > 0
         ? ` (${entry.ai_added_lines}/${entry.total_added_lines} lines)`
         : "";
     console.log(`ai:      ${entry.ai_ratio}%${lineDetail} ${ratioBar}`);
