@@ -187,7 +187,7 @@ Note content per commit:
   - **`ai_ratio`**: 0–100 (rounded). Line-level when `method: "line"`, file-count when `method: "file"`, 0 when `method: "none"` (deletion-only).
   - **`method`**: `"line"` (blob-based 3-diff), `"file"` (binary file-count), or `"none"` (deletion-only, no valid ratio).
   - **`lines`**: Present when blob data available. `ai_added`, `total_added`, `deleted`.
-- **`interactions[].tools`**: File-edit tools used in this interaction (`string[] | null`). `null` when telemetry unavailable.
+- **`interactions[].tools`**: File-edit tools used in this interaction. Optional field — omitted when no tool data is available, `null` when adapter doesn't support tool tracking, `string[]` when tools were observed.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID
@@ -303,14 +303,19 @@ agentnote log [n]             list recent commits with session info
 agentnote pr [base] [--json] [--output description|comment] [--update <PR#>]
 agentnote status              show current tracking state
 agentnote hook                handle agent hook events (internal, via stdin)
+agentnote record <session-id> record git note for HEAD (internal, used by post-commit hook)
 ```
 
 ### init model
 
-`agentnote init` does two things:
+`agentnote init` does four things by default:
 
-1. **Agent config** — writes data collection hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team.
-2. **Git hooks** — installs `prepare-commit-msg` and `post-commit` hooks in the repository's hook directory (respects `core.hooksPath`). These are local to `.git/` and must be installed per clone via `agentnote init`.
+1. **Agent config** — writes data collection hooks to `.claude/settings.json`. Commit this file to share with the team.
+2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
+3. **GitHub Actions workflow** — creates `.github/workflows/agentnote.yml` for PR reports. Commit this file.
+4. **Auto-fetch config** — adds `refs/notes/agentnote` to `remote.origin.fetch` so `git pull` fetches notes automatically.
+
+Flags: `--no-hooks`, `--no-git-hooks`, `--no-action`, `--no-notes`, `--hooks`, `--action`.
 
 ### PR report
 
@@ -419,23 +424,19 @@ Action: uses: wasabeef/agentnote@v0             (Marketplace)
 ```bash
 # 1. Enable agentnote (one person, once)
 npx @wasabeef/agentnote init
-git add .claude/settings.json
+git add .claude/settings.json .github/workflows/agentnote.yml
 git commit -m "chore: enable agentnote"
 git push
 
-# 2. New clone setup — install git hooks (per developer, per clone)
+# 2. New clone setup (per developer, per clone)
 git clone <repo> && cd <repo>
-npx @wasabeef/agentnote init   # installs git hooks + agent config
+npx @wasabeef/agentnote init   # installs git hooks + agent config + auto-fetch
 
-# 3. Everyone works normally — hooks fire automatically
-
-# 4. Share session data
-git push origin refs/notes/agentnote
-
-# 5. Add the action to CI (one person, once)
-# Copy .github/workflows/agentnote-pr-report.yml to your repo
-# Or add `uses: wasabeef/agentnote@v0` to an existing workflow
+# 3. Everyone works normally
+# hooks fire automatically — trailer injected, note recorded, notes auto-pushed on push
 ```
+
+Notes are automatically pushed to the remote via the `pre-push` git hook installed by `agentnote init`. No manual `git push origin refs/notes/agentnote` is needed.
 
 ## Constraints
 
@@ -444,7 +445,7 @@ git push origin refs/notes/agentnote
 - **Never break git commit.** All recording wrapped in try/catch. Errors are logged to stderr, never block the commit.
 - **All source in English.** Comments, output, tests.
 - **Git hooks for commit ops.** Trailer injection (`prepare-commit-msg`) and note recording (`post-commit`) use git hooks, not agent hooks. Respects `core.hooksPath` and chains with existing hooks.
-- **No telemetry, no auth, no external services.** Data stays local unless explicitly pushed via `git push origin refs/notes/agentnote`.
+- **No telemetry, no auth, no external services.** Data stays local until pushed. The `pre-push` git hook (installed by `agentnote init`) auto-pushes notes alongside code on every `git push`.
 - **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
 - **Full response storage.** AI responses are stored in full. Git notes blobs are compressed and well within GitHub limits.
 
@@ -473,8 +474,8 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 
 ### Recommendations for users
 
-- **Do not push `refs/notes/agentnote` to public repositories** unless you are comfortable with prompts being visible.
-- Use `agentnote pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared before pushing.
+- **Be aware that `agentnote init` installs a `pre-push` hook that auto-pushes notes** on every `git push`. On public repositories, this means prompts and AI responses will be visible. Use `--no-git-hooks` to skip git hook installation if this is a concern.
+- Use `agentnote pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared.
 - Consider `agentnote init --no-responses` (future) to record prompts only, without AI responses.
 
 ## Known limitations
@@ -542,7 +543,7 @@ Agent Note supports Claude Code today, but the `agents/` + `core/` split makes a
 | Concern | Claude Code | Cursor | Gemini CLI |
 |---|---|---|---|
 | Config file | `.claude/settings.json` | `.cursor/hooks.json` | `.gemini/settings.json` |
-| Hook events | `SessionStart`, `Stop`, `PostToolUse`, `UserPromptSubmit` | `sessionStart`, `sessionEnd`, `beforeSubmitPrompt`, `stop` | TBD |
+| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `sessionStart`, `sessionEnd`, `beforeSubmitPrompt`, `stop` | TBD |
 | Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.cursor/sessions/` | `~/.gemini/sessions/` |
 | Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) |
 | Response format | `{type:"assistant", message:{content:[{type:"text"}]}}` | Different | Different |
