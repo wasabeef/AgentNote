@@ -50,8 +50,9 @@ agentnote show/log/session → reads git notes --ref=agentnote
 
 - **SessionStart/Stop**: Track active session ID in `.git/agentnote/session`
 - **UserPromptSubmit**: Append prompt to `prompts.jsonl`, increment turn counter in `turn` file
+- **PreToolUse (Edit/Write/NotebookEdit)**: Capture pre-edit blob hash via `git hash-object -w` for line-level attribution (synchronous)
 - **PreToolUse (Bash, git commit)**: Inject `--trailer 'Agentnote-Session: <id>'` via `updatedInput` (synchronous, must write to stdout)
-- **PostToolUse (Edit/Write)**: Track file changes in `changes.jsonl` with current turn number
+- **PostToolUse (Edit/Write)**: Track file changes in `changes.jsonl` with current turn number and post-edit blob hash
 - **PostToolUse (Bash, git commit)**: Call `recordCommitEntry()` to write git note, then rotate logs
 
 ### Core modules

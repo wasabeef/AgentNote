@@ -40,7 +40,8 @@ $ agentnote show
 commit:  ce941f7 feat: add JWT auth middleware
 session: a1b2c3d4-5678-90ab-cdef-111122223333
 
-ai:      60% [████████████░░░░░░░░]
+ai:      60% (45/75 lines) [████████████░░░░░░░░]
+model:   claude-sonnet-4-20250514
 files:   5 changed, 3 by AI
 
   CHANGELOG.md  👤
@@ -135,15 +136,24 @@ $ git notes --ref=agentnote show ce941f7
 {
   "v": 1,
   "session_id": "a1b2c3d4-...",
-  "ai_ratio": 60,
+  "model": "claude-sonnet-4-20250514",
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "response": "I'll create the middleware..."
+      "response": "I'll create the middleware...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
     }
   ],
-  "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
-  "files_by_ai": ["src/auth.ts"]
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 60,
+    "method": "line",
+    "lines": { "ai_added": 45, "total_added": 75, "deleted": 3 }
+  }
 }
 ```
 
