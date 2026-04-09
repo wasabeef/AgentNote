@@ -22,12 +22,9 @@ function resolveCliCommand(): string {
   } catch {
     // ignore
   }
-  // No fallback to npx — version skew with the published CLI would silently
-  // misread the new note schema. CI must build packages/cli before running this action.
-  throw new Error(
-    "agentnote CLI not found at packages/cli/dist/cli.js. " +
-      "Run 'npm run build' in packages/cli/ before the action step.",
-  );
+  // Fallback: npx with published package. Safe after publish — CLI and action
+  // ship the same schema. Only a risk if action runs before the matching CLI is published.
+  return "npx --yes @wasabeef/agentnote";
 }
 
 async function run(): Promise<void> {
