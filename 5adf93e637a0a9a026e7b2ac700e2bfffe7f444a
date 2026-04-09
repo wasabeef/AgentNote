@@ -1,0 +1,26 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-09T14:05:19.290Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [],
+  "files": [
+    {
+      "path": ".github/workflows/agentnote-pr-report.yml",
+      "by_ai": false
+    },
+    {
+      "path": ".github/workflows/agentnote.yml",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "line",
+    "lines": {
+      "ai_added": 0,
+      "total_added": 19,
+      "deleted": 103
+    }
+  }
+}
