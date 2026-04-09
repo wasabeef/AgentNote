@@ -7,14 +7,24 @@ inputs:
     description: "Base branch to compare against (default: PR base)"
     required: false
     default: ""
+  output:
+    description: "Report destination: description or comment (default: from agentnote.yml or description)"
+    required: false
+    default: ""
+  format:
+    description: "Report format: chat or table (default: from agentnote.yml or chat)"
+    required: false
+    default: ""
   comment:
-    description: "Post markdown report as PR comment"
+    description: "Legacy: set to false to disable report posting"
     required: false
     default: "true"
 
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
+  overall_method:
+    description: "Attribution method: line, file, mixed, or none"
   tracked_commits:
     description: "Number of commits with agentnote data"
   total_commits:

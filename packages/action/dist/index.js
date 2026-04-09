@@ -29967,15 +29967,14 @@ const child_process_1 = __nccwpck_require__(5317);
 const fs_1 = __nccwpck_require__(9896);
 const path_1 = __nccwpck_require__(6928);
 const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
+const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
+const DESCRIPTION_END = "<!-- agentnote-end -->";
 /**
  * Resolve the agentnote CLI command.
  * Prefers the local monorepo build (no version skew), falls back to npx.
  */
 function resolveCliCommand() {
-    // In CI: action dist/index.js is at packages/action/dist/index.js
-    // CLI dist is at packages/cli/dist/cli.js (same repo checkout)
     try {
-        // In CI checkout: repo root has packages/cli/dist/cli.js (built before action runs).
         const localCli = (0, path_1.resolve)("packages/cli/dist/cli.js");
         if ((0, fs_1.existsSync)(localCli)) {
             return `node ${localCli}`;
@@ -29984,16 +29983,66 @@ function resolveCliCommand() {
     catch {
         // ignore
     }
-    // Fallback: npx with published package. Safe after publish — CLI and action
-    // ship the same schema. Only a risk if action runs before the matching CLI is published.
     return "npx --yes @wasabeef/agentnote";
+}
+/** Read pr.output from agentnote.yml (simple line-based parse). */
+function readConfigOutput() {
+    for (const name of ["agentnote.yml", ".agentnote.yml"]) {
+        const filePath = (0, path_1.resolve)(name);
+        if (!(0, fs_1.existsSync)(filePath))
+            continue;
+        try {
+            const content = (0, fs_1.readFileSync)(filePath, "utf-8");
+            const match = content.match(/^\s+output:\s*(description|comment)/m);
+            if (match)
+                return match[1];
+        }
+        catch {
+            // ignore
+        }
+    }
+    return "description"; // default
+}
+/** Read pr.format from agentnote.yml. */
+function readConfigFormat() {
+    for (const name of ["agentnote.yml", ".agentnote.yml"]) {
+        const filePath = (0, path_1.resolve)(name);
+        if (!(0, fs_1.existsSync)(filePath))
+            continue;
+        try {
+            const content = (0, fs_1.readFileSync)(filePath, "utf-8");
+            const match = content.match(/^\s+format:\s*(chat|table)/m);
+            if (match)
+                return match[1];
+        }
+        catch {
+            // ignore
+        }
+    }
+    return "chat"; // default
 }
 async function run() {
     try {
         const base = core.getInput("base") ||
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
-        const shouldComment = core.getInput("comment") !== "false";
         const cliCmd = resolveCliCommand();
+        // Resolve output mode: input > config > default.
+        const outputInput = core.getInput("output");
+        const commentInput = core.getInput("comment");
+        let outputMode;
+        if (outputInput === "description" || outputInput === "comment") {
+            outputMode = outputInput;
+        }
+        else if (commentInput === "false") {
+            // Legacy: comment=false means no output.
+            outputMode = "description"; // but we'll skip posting below
+        }
+        else {
+            outputMode = readConfigOutput();
+        }
+        // Resolve format: input > config > default.
+        const formatInput = core.getInput("format");
+        const format = formatInput === "chat" || formatInput === "table" ? formatInput : readConfigFormat();
         // Fetch agentnote notes.
         try {
             (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", { stdio: "pipe" });
@@ -30028,7 +30077,7 @@ async function run() {
         // Generate markdown report.
         let markdown = "";
         try {
-            markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}"`, {
+            markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}" --format ${format}`, {
                 encoding: "utf-8",
                 stdio: ["pipe", "pipe", "pipe"],
             }).trim();
@@ -30037,16 +30086,40 @@ async function run() {
             markdown = "";
         }
         core.setOutput("markdown", markdown);
-        // Post or update PR comment.
-        if (shouldComment && markdown && github.context.payload.pull_request) {
-            const token = core.getInput("token") || process.env.GITHUB_TOKEN || "";
-            if (!token) {
-                core.warning("No GitHub token available. Skipping PR comment.");
-                return;
+        // Skip posting if comment=false (legacy opt-out).
+        if (commentInput === "false")
+            return;
+        if (!markdown || !github.context.payload.pull_request)
+            return;
+        const token = core.getInput("token") || process.env.GITHUB_TOKEN || "";
+        if (!token) {
+            core.warning("No GitHub token available. Skipping PR report.");
+            return;
+        }
+        const octokit = github.getOctokit(token);
+        const { owner, repo } = github.context.repo;
+        const issueNumber = github.context.payload.pull_request.number;
+        if (outputMode === "description") {
+            // Upsert into PR description.
+            const { data: pr } = await octokit.rest.pulls.get({ owner, repo, pull_number: issueNumber });
+            const existingBody = pr.body ?? "";
+            const section = `${DESCRIPTION_BEGIN}\n${markdown}\n${DESCRIPTION_END}`;
+            let newBody;
+            if (existingBody.includes(DESCRIPTION_BEGIN)) {
+                const before = existingBody.slice(0, existingBody.indexOf(DESCRIPTION_BEGIN));
+                const after = existingBody.includes(DESCRIPTION_END)
+                    ? existingBody.slice(existingBody.indexOf(DESCRIPTION_END) + DESCRIPTION_END.length)
+                    : "";
+                newBody = `${before.trimEnd()}\n\n${section}${after}`;
             }
-            const octokit = github.getOctokit(token);
-            const { owner, repo } = github.context.repo;
-            const issueNumber = github.context.payload.pull_request.number;
+            else {
+                newBody = `${existingBody.trimEnd()}\n\n${section}`;
+            }
+            await octokit.rest.pulls.update({ owner, repo, pull_number: issueNumber, body: newBody });
+            core.info("Agentnote report added to PR description.");
+        }
+        else {
+            // Post/update PR comment.
             const body = `${COMMENT_MARKER}\n${markdown}`;
             const { data: comments } = await octokit.rest.issues.listComments({
                 owner,
@@ -30055,22 +30128,12 @@ async function run() {
             });
             const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
             if (existing) {
-                await octokit.rest.issues.updateComment({
-                    owner,
-                    repo,
-                    comment_id: existing.id,
-                    body,
-                });
+                await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
             }
             else {
-                await octokit.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: issueNumber,
-                    body,
-                });
+                await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
             }
-            core.info("Agentnote report posted to PR.");
+            core.info("Agentnote report posted as PR comment.");
         }
     }
     catch (error) {
