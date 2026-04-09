@@ -1,8 +1,6 @@
 ## Agentnote PR Report
 ##
-## Posts an AI session report to the PR description(or as a comment).
-##
-## Usage: Copy this file to your repo's .github/workflows/ directory.
+## Posts AI session reports to the PR.
 
 name: Agentnote PR Report
 
@@ -29,10 +27,18 @@ jobs:
       - name: Build CLI
         run: npm ci && npm -w packages/cli run build
 
-      - uses: ./
-        id: report
+      - name: Chat format(comment)
+        uses: ./
         with:
-          output: description
+          output: comment
           format: chat
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Table format(comment)
+        uses: ./
+        with:
+          output: comment
+          format: table
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
