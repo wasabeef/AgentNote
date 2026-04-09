@@ -1,4 +1,4 @@
-# Agent Note
+# Agent Note (agentnote)
 
 <p align="center">
   <img src="docs/assets/hero.jpeg" alt="Agent Note — AI conversations saved to git" width="720">
