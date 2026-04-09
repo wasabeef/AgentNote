@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-09T11:57:10.599Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [
+    {
+      "prompt": "続けて",
+      "response": null,
+      "files_touched": [
+        "README.md"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "削除作業が完了してからでいい",
+      "response": null,
+      "files_touched": [
+        "README.md"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "t",
+      "response": null,
+      "files_touched": [
+        "README.md"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 1,
+      "total_added": 1,
+      "deleted": 1
+    }
+  }
+}
