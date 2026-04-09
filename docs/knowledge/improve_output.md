@@ -2,71 +2,93 @@
 
 ## Goal
 
-Project-level configuration file (`agentnote.yml`) for customizing PR report output. Committed to repo, shared with team.
+1. Project-level config file (`agentnote.yml`) for output customization
+2. Improved PR report format (header, file tables, prompt filtering, model display)
+3. Default output to PR description (not comment)
 
 ## Config File
-
-### Location
-
-**`agentnote.yml`** at repo root. Lookup: `agentnote.yml` → `.agentnote.yml`. First match wins.
-
-### Separation of concerns
-
-| File | Purpose | Who reads |
-|---|---|---|
-| `.claude/settings.json` | Hook configuration (data collection) | Claude Code runtime |
-| `agentnote.yml` | Output configuration (PR report) | CLI + Action |
 
 ### Schema
 
 ```yaml
 # agentnote.yml
 pr:
-  output: description    # description | comment (default: comment)
+  output: description    # description | comment (default: description)
   format: chat           # chat | table (default: chat)
 ```
 
-That's it. Two settings.
+### Location
 
-### Defaults (no config file)
+`agentnote.yml` at repo root. Fallback: `.agentnote.yml`. First match wins.
 
-```yaml
-pr:
-  output: comment
-  format: chat
+### Separation of concerns
+
+| File | Purpose |
+|---|---|
+| `.claude/settings.json` | Hook config (data collection) — read by Claude Code |
+| `agentnote.yml` | Output config (display, PR) — read by CLI + Action |
+
+## Output Format Improvements
+
+### Header
+
+```
+## 🤖 Agent Note
+**AI ratio: 73%** · 45/75 lines · 4/5 commits tracked · 8 prompts · claude-sonnet-4-20250514
 ```
 
-Current behavior. No config file needed to keep existing behavior.
+- Remove "Session Transcript" / "AI Session Report" subtitle
+- Dot-separated metadata for scannability
+- Include line counts, model name
+- "AI ratio" not "Overall AI ratio"
 
-## Features
+### Commit summary (details tag)
 
-### `pr.output` — Report destination
+```
+<code>ce941f7</code> feat: add JWT auth middleware — 73% (45/75 lines) · 3 files
+```
 
-| Value | Behavior |
+- Remove bar chart from summary line (cleaner)
+- Remove emoji counts (detail is inside)
+- Add line counts
+
+### File display
+
+Before (bullet list):
+```
+- `src/auth.ts` 🤖
+- `CHANGELOG.md` 👤
+```
+
+After (table):
+```
+| File | Attribution |
 |---|---|
-| `comment` | Post/update PR comment (current default, idempotent via `<!-- agentnote-pr-report -->` marker) |
-| `description` | Upsert into PR description body (between `<!-- agentnote-begin/end -->` markers, already implemented in `pr.ts`) |
+| `src/middleware/auth.ts` | 🤖 AI |
+| `CHANGELOG.md` | 👤 Human |
+```
 
-CLI: `agentnote pr --output description --update 42`
-Action: reads config. `with.output` input overrides.
+### Table format: Lines column
 
-### `pr.format` — Report format
+```
+| Commit | AI Ratio | Lines | Prompts | Files |
+```
 
-| Value | Description |
-|---|---|
-| `chat` | Collapsible prompt/response per commit (current default) |
-| `table` | Summary table with AI%, prompts, files |
+### Prompt filtering
 
-CLI: `agentnote pr --format chat|table`
-Action: reads config. `with.format` input overrides.
+- Truncate to first meaningful line (120 chars)
+- Filter skill-generated expansions (prompts starting with `## Commit`, `## Plan`, etc.) — show the user's original input only
+- Response truncation: 800 chars (chat), 500 chars (table)
 
-## Config Loading
+### Model in header
 
-### Implementation
+Show model from note's `model` field. Omit if null.
+
+## Implementation
+
+### Config loader (`core/config.ts`)
 
 ```typescript
-// packages/cli/src/core/config.ts (new file)
-
 interface AgentnoteConfig {
   pr: {
     output: "comment" | "description";
@@ -75,98 +97,85 @@ interface AgentnoteConfig {
 }
 
 const DEFAULTS: AgentnoteConfig = {
-  pr: { output: "comment", format: "chat" },
+  pr: { output: "description", format: "chat" },
 };
-
-async function loadConfig(repoRoot: string): Promise<AgentnoteConfig>
 ```
 
-### YAML parsing
+- Find `agentnote.yml` / `.agentnote.yml`
+- Parse YAML (bundled `yaml` as devDep, included in esbuild bundle)
+- Merge with defaults
+- CLI flags override config
 
-Zero runtime dependencies constraint. Options:
-1. **Bundled `yaml` package** — added as devDependency, bundled by esbuild into dist. No runtime dep in distributed package.
-2. **Support only JSON** (`agentnote.json`) — no parser needed but less ergonomic.
-3. **Minimal hand-rolled parser** — our schema is 2 flat keys, trivially parseable.
+### Rendering changes (`commands/pr.ts`)
 
-**Recommendation**: Option 1 (bundled yaml). Schema may grow later. Proper YAML support avoids future migration.
+1. **New header format** — dot-separated, includes lines + model
+2. **Chat format** — file table inside details, no bar chart in summary
+3. **Table format** — add Lines column
+4. **Prompt filtering** — strip skill expansions, truncate
+5. **Output routing** — description (upsert via markers) or comment (existing)
 
-## GitHub Action Changes
+### Action changes
 
-### New inputs
-
-```yaml
-inputs:
-  base:
-    description: "Base branch"
-    default: ""
-  comment:
-    description: "Post as PR comment (legacy)"
-    default: "true"
-  output:
-    description: "Report destination: comment or description"
-    default: ""
-  format:
-    description: "Report format: chat or table"
-    default: ""
-```
-
-### Precedence
-
-1. Action `with:` inputs (highest)
-2. `agentnote.yml` config
-3. Defaults (lowest)
-
-### Backward compatibility
-
-- `comment: "true"` (existing) → `output: comment`
-- `comment: "false"` → no report posted
-- New `output` input overrides `comment` if specified
-
-## Task Dependency Graph
-
-```
-#A config.ts (loader + types + defaults)
- ├→ #B pr.ts (read config, apply output/format)
- ├→ #C action (read config, new inputs)
- └→ #D tests + docs
-```
+- Read `agentnote.yml` from repo root
+- New inputs: `output`, `format` (override config)
+- Default output: `description` (currently `comment`)
+- Backward compatible: `comment: "true"` still works
 
 ## Task Breakdown
+
+```
+#A config.ts (loader + types)
+ ├→ #B pr.ts rendering improvements
+ ├→ #C pr.ts output routing (description/comment)
+ ├→ #D action (config + new inputs)
+ └→ #E tests + docs
+```
 
 ### #A: Config loader
 
 **Files**: `core/config.ts` (new)
 **Effort**: S
 
-- `AgentnoteConfig` interface
-- `loadConfig(repoRoot)`: find yml/json, parse, merge defaults
-- Add `yaml` devDependency (bundled by esbuild)
+- `AgentnoteConfig` interface + defaults
+- `loadConfig(repoRoot)`: find yml, parse, merge defaults
+- Add `yaml` devDependency
 
-### #B: PR command integration
+### #B: PR rendering improvements
 
 **Files**: `commands/pr.ts`
 **Effort**: M
 
-- Load config at start of `pr()`
-- `--output` flag → route to description or comment
-- `--format` flag → select renderer
-- Config values as defaults, CLI flags override
+- New header format (dot-separated, model, lines)
+- Chat format: file table, cleaner summary line
+- Table format: add Lines column
+- Prompt filtering (skill expansion detection, truncation)
+- Both `renderMarkdown()` and `renderChat()` updated
 
-### #C: GitHub Action
+### #C: PR output routing
+
+**Files**: `commands/pr.ts`
+**Effort**: S
+
+- Load config → `pr.output`
+- `--output` CLI flag override
+- Route to `upsertInDescription()` (description) or comment (existing)
+
+### #D: Action integration
 
 **Files**: `packages/action/src/index.ts`, `action.yml`
 **Effort**: M
 
-- Read `agentnote.yml` from repo root
+- Read `agentnote.yml` from checkout root
 - New inputs: `output`, `format`
-- Route report to description/comment based on config + inputs
-- Backward compatible `comment` input
+- Default `output: description`
+- Route report accordingly
+- Rebuild with ncc
 
-### #D: Tests + docs
+### #E: Tests + docs
 
-**Files**: `core/config.test.ts`, `README.md`, `DESIGN.md`
+**Files**: `config.test.ts`, `pr.test.ts`, `README.md`
 **Effort**: S
 
-- Config loading tests (file lookup, parse, defaults)
+- Config loading tests
+- Prompt filtering tests
 - README: add agentnote.yml section
-- DESIGN.md: config file documentation

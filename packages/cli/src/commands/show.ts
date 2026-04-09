@@ -6,7 +6,6 @@ import {
   TRUNCATE_PROMPT,
   TRUNCATE_RESPONSE_SHOW,
 } from "../core/constants.js";
-import type { AgentnoteEntry } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 import { normalizeEntry } from "./normalize.js";

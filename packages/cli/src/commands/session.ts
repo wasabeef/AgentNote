@@ -106,20 +106,20 @@ export async function session(sessionId: string): Promise<void> {
   console.log();
 
   // Display rollup ratio — same partitioning as pr.ts.
-  let overallMethod: string;
+  let _overallMethod: string;
   let overallRatio: number | null = null;
   let lineDetail = "";
 
   if (lineCount > 0 && fileCount === 0) {
-    overallMethod = "line";
+    _overallMethod = "line";
     overallRatio = lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * 100) : 0;
     lineDetail = ` (${lineAiAdded}/${lineTotalAdded} lines)`;
   } else if (lineCount === 0 && fileCount > 0) {
-    overallMethod = "file";
+    _overallMethod = "file";
     overallRatio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
   } else if (lineCount > 0 && fileCount > 0) {
     // Mixed: same formula as pr.ts — weighted average of ai_ratio by files count.
-    overallMethod = "mixed";
+    _overallMethod = "mixed";
     let weightedSum = 0;
     let weightTotal = 0;
     for (const m of matches) {
@@ -134,7 +134,7 @@ export async function session(sessionId: string): Promise<void> {
     }
     overallRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
   } else {
-    overallMethod = "none";
+    _overallMethod = "none";
   }
 
   if (overallRatio !== null) {
