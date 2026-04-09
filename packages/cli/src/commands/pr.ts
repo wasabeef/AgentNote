@@ -1,10 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import {
-  TRUNCATE_PROMPT,
-  TRUNCATE_RESPONSE_CHAT,
-  TRUNCATE_RESPONSE_PR,
-} from "../core/constants.js";
+import { TRUNCATE_PROMPT, TRUNCATE_RESPONSE_PR } from "../core/constants.js";
 import type { Attribution } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
@@ -41,6 +37,7 @@ interface CommitEntry {
 interface PrReport {
   base: string;
   head: string;
+  repo_url: string | null;
   total_commits: number;
   tracked_commits: number;
   total_prompts: number;
@@ -159,9 +156,23 @@ async function collectReport(base: string): Promise<PrReport | null> {
   // Extract model from tracked commits (use first non-null).
   const model = tracked.find((c) => c.model)?.model ?? null;
 
+  // Derive repo URL for commit links.
+  let repoUrl: string | null = null;
+  try {
+    const remoteUrl = await git(["remote", "get-url", "origin"]);
+    // Convert git@github.com:owner/repo.git or https://github.com/owner/repo.git → https://github.com/owner/repo
+    repoUrl = remoteUrl
+      .replace(/\.git$/, "")
+      .replace(/^git@github\.com:/, "https://github.com/")
+      .replace(/^ssh:\/\/git@github\.com\//, "https://github.com/");
+  } catch {
+    // no remote
+  }
+
   return {
     base,
     head,
+    repo_url: repoUrl,
     total_commits: commits.length,
     tracked_commits: tracked.length,
     total_prompts: tracked.reduce((s, c) => s + c.prompts_count, 0),
@@ -176,11 +187,20 @@ async function collectReport(base: string): Promise<PrReport | null> {
 
 // ─── Shared rendering helpers ──────────────────────
 
-/** Build the unified header line for both formats. */
-function renderHeader(report: PrReport): string {
-  const parts = [`**AI ratio: ${report.overall_ai_ratio}%**`];
+/** Render progress bar for AI ratio. */
+function renderProgressBar(ratio: number, width = 8): string {
+  const filled = Math.round((ratio / 100) * width);
+  return "█".repeat(filled) + "░".repeat(width - filled);
+}
 
-  // Add line counts if available from line-attributed commits.
+/** Build the header (2 lines: ratio + bar, then metadata). */
+function renderHeader(report: PrReport): string[] {
+  // Line 1: ratio + progress bar
+  const line1 = `**AI ratio: ${report.overall_ai_ratio}%** ${renderProgressBar(report.overall_ai_ratio)}`;
+
+  // Line 2: metadata
+  const meta: string[] = [];
+
   const lineCommits = report.commits.filter(
     (c) => c.attribution?.method === "line" && c.attribution.lines,
   );
@@ -190,37 +210,22 @@ function renderHeader(report: PrReport): string {
       (s, c) => s + (c.attribution?.lines?.total_added ?? 0),
       0,
     );
-    if (totalAdded > 0) parts.push(`${aiAdded}/${totalAdded} lines`);
+    if (totalAdded > 0) meta.push(`\`${aiAdded}/${totalAdded} lines\``);
   }
 
-  parts.push(`${report.tracked_commits}/${report.total_commits} commits tracked`);
-  parts.push(`${report.total_prompts} prompts`);
-  if (report.model) parts.push(report.model);
+  meta.push(`\`${report.tracked_commits}/${report.total_commits} commits\``);
+  meta.push(`\`${report.total_prompts} prompts\``);
+  if (report.model) meta.push(`\`${report.model}\``);
 
-  return parts.join(" · ");
+  return [line1, meta.join(" · ")];
 }
 
-/** Build commit summary for details tag. */
-function commitSummary(c: CommitEntry): string {
-  if (c.ai_ratio === null) {
-    return `<code>${c.short}</code> ${c.message} — no tracking data`;
+/** Format commit hash as a link if repo URL is available. */
+function commitLink(c: CommitEntry, repoUrl: string | null): string {
+  if (repoUrl) {
+    return `[\`${c.short}\`](${repoUrl}/commit/${c.sha})`;
   }
-  const lineDetail =
-    c.attribution?.method === "line" && c.attribution.lines && c.attribution.lines.total_added > 0
-      ? ` (${c.attribution.lines.ai_added}/${c.attribution.lines.total_added} lines)`
-      : "";
-  const filesLabel = c.files_total > 0 ? ` · ${c.files_total} files` : "";
-  return `<code>${c.short}</code> ${c.message} — ${c.ai_ratio}%${lineDetail}${filesLabel}`;
-}
-
-/** Render file table for a commit. */
-function renderFileTable(files: Array<{ path: string; by_ai: boolean }>): string[] {
-  if (files.length === 0) return [];
-  const lines = ["| File | Attribution |", "|---|---|"];
-  for (const f of files) {
-    lines.push(`| \`${f.path}\` | ${f.by_ai ? "🤖 AI" : "👤 Human"} |`);
-  }
-  return lines;
+  return `\`${c.short}\``;
 }
 
 /** Extract the first meaningful line from a prompt, filtering skill expansions. */
@@ -248,17 +253,18 @@ function cleanPrompt(prompt: string, maxLen: number): string {
 function renderMarkdown(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agent Note");
+  lines.push("## 🧑💬🤖 Agent Note");
   lines.push("");
-  lines.push(renderHeader(report));
+  lines.push(...renderHeader(report));
   lines.push("");
 
   lines.push("| Commit | AI Ratio | Lines | Prompts | Files |");
   lines.push("|---|---|---|---|---|");
 
   for (const c of report.commits) {
+    const link = commitLink(c, report.repo_url);
     if (c.ai_ratio === null) {
-      lines.push(`| \`${c.short}\` ${c.message} | — | — | — | — |`);
+      lines.push(`| ${link} ${c.message} | — | — | — | — |`);
       continue;
     }
 
@@ -269,7 +275,7 @@ function renderMarkdown(report: PrReport): string {
     const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
 
     lines.push(
-      `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% | ${linesCol} | ${c.prompts_count} | ${fileList} |`,
+      `| ${link} ${c.message} | ${c.ai_ratio}% | ${linesCol} | ${c.prompts_count} | ${fileList} |`,
     );
   }
 
@@ -282,80 +288,24 @@ function renderMarkdown(report: PrReport): string {
     lines.push("");
 
     for (const c of withPrompts) {
-      lines.push(`### \`${c.short}\` ${c.message}`);
+      lines.push(`### ${commitLink(c, report.repo_url)} ${c.message}`);
       lines.push("");
 
       for (const { prompt, response } of c.interactions) {
-        lines.push(`> **Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
+        lines.push(`> **🧑 Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
         if (response) {
           const truncated =
             response.length > TRUNCATE_RESPONSE_PR
               ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
               : response;
           lines.push(">");
-          lines.push(`> **Response:** ${truncated.split("\n").join("\n> ")}`);
+          lines.push(`> **🤖 Response:** ${truncated.split("\n").join("\n> ")}`);
         }
         lines.push("");
       }
     }
 
     lines.push("</details>");
-  }
-
-  return lines.join("\n");
-}
-
-// ─── Chat format rendering ──────────────────────────
-
-function renderChat(report: PrReport): string {
-  const lines: string[] = [];
-
-  lines.push("## 🤖 Agent Note");
-  lines.push("");
-  lines.push(renderHeader(report));
-
-  for (const c of report.commits) {
-    lines.push("");
-
-    if (c.ai_ratio === null) {
-      lines.push(`<details>`);
-      lines.push(`<summary>${commitSummary(c)}</summary>`);
-      lines.push("");
-      lines.push("*No agentnote data for this commit.*");
-      lines.push("");
-      lines.push(`</details>`);
-      continue;
-    }
-
-    lines.push(`<details>`);
-    lines.push(`<summary>${commitSummary(c)}</summary>`);
-    lines.push("");
-
-    for (const { prompt, response } of c.interactions) {
-      lines.push("**🧑 Prompt**");
-      lines.push(`> ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
-      lines.push("");
-
-      if (response) {
-        lines.push("**🤖 Response**");
-        lines.push("");
-        const truncated =
-          response.length > TRUNCATE_RESPONSE_CHAT
-            ? `${response.slice(0, TRUNCATE_RESPONSE_CHAT)}…`
-            : response;
-        lines.push(truncated);
-        lines.push("");
-      }
-    }
-
-    // File table
-    const fileTableLines = renderFileTable(c.files);
-    if (fileTableLines.length > 0) {
-      lines.push(...fileTableLines);
-      lines.push("");
-    }
-
-    lines.push(`</details>`);
   }
 
   return lines.join("\n");
@@ -403,14 +353,12 @@ async function updatePrDescription(prNumber: string, section: string): Promise<v
 
 export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
-  const formatIdx = args.indexOf("--format");
   const outputIdx = args.indexOf("--output");
   const updateIdx = args.indexOf("--update");
   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
   const positional = args.filter(
     (a, i) =>
       !a.startsWith("--") &&
-      (formatIdx === -1 || i !== formatIdx + 1) &&
       (outputIdx === -1 || i !== outputIdx + 1) &&
       (updateIdx === -1 || i !== updateIdx + 1),
   );
@@ -421,7 +369,6 @@ export async function pr(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const format = formatIdx !== -1 ? args[formatIdx + 1] : "chat";
   const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : "description";
 
   const report = await collectReport(base);
@@ -435,16 +382,11 @@ export async function pr(args: string[]): Promise<void> {
     return;
   }
 
-  let rendered: string;
   if (isJson) {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
-  if (format === "chat") {
-    rendered = renderChat(report);
-  } else {
-    rendered = renderMarkdown(report);
-  }
+  const rendered = renderMarkdown(report);
 
   // Output routing: --update <PR#> triggers description/comment update.
   if (prNumber) {

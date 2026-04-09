@@ -1,22 +1,8 @@
 ## Agentnote PR Report
 ##
-## Posts an AI session report as a PR comment and exposes structured data as outputs.
+## Posts an AI session report to the PR and exposes structured data as outputs.
 ##
 ## Usage: Copy this file to your repo's .github/workflows/ directory.
-##
-## Outputs (from the 'report' step):
-##   overall_ai_ratio  - PR-wide AI ratio (0-100)
-##   tracked_commits   - number of commits with agentnote data
-##   total_commits     - total commits in the PR
-##   total_prompts     - total prompts across all commits
-##   json              - full JSON report (use with fromJSON())
-##   markdown          - rendered markdown report
-##
-## Example: use outputs in a subsequent step
-##
-##   - name: Check AI ratio
-##     if: fromJSON(steps.report.outputs.json).overall_ai_ratio > 90
-##     run: echo "High AI ratio — extra review recommended"
 
 name: Agentnote PR Report
 
@@ -49,7 +35,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Generate report
         id: report

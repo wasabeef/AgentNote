@@ -11,10 +11,6 @@ inputs:
     description: "Report destination: description or comment (default: description)"
     required: false
     default: ""
-  format:
-    description: "Report format: chat or table (default: chat)"
-    required: false
-    default: ""
   comment:
     description: "Legacy: set to false to disable report posting"
     required: false
@@ -37,5 +33,5 @@ outputs:
     description: "Rendered markdown report"
 
 runs:
-  using: "node22"
+  using: "node24"
   main: "packages/action/dist/index.js"

@@ -299,7 +299,7 @@ agentnote init              add hooks to agent config (commit to share with team
 agentnote commit [args]       git commit with session context (convenience wrapper)
 agentnote show [commit]       show session details for a commit
 agentnote log [n]             list recent commits with session info
-agentnote pr [base] [--json] [--format chat|table] [--output description|comment] [--update <PR#>]
+agentnote pr [base] [--json] [--output description|comment] [--update <PR#>]
 agentnote status              show current tracking state
 agentnote hook                handle agent hook events (internal, via stdin)
 ```
@@ -316,24 +316,22 @@ agentnote hook                handle agent hook events (internal, via stdin)
 `agentnote pr` produces markdown or structured JSON reports.
 
 ```bash
-agentnote pr                              # default: chat format
-agentnote pr --format chat                # collapsible per-commit conversations
-agentnote pr --format table               # summary table
+agentnote pr                              # markdown report (table format)
 agentnote pr --json                       # structured JSON (for scripts/actions)
 agentnote pr --output description --update 42  # upsert into PR description
 agentnote pr --output comment --update 42      # post as PR comment
 ```
 
-Two markdown formats:
+Output: table format with summary header, per-commit rows, and collapsible prompts/responses section.
 
-- **`chat`** (default) — per-commit collapsible details with prompts, responses, and file attribution table
-- **`table`** — summary table with AI ratio, line counts, prompt count, and files per commit
+```
+## 🧑💬🤖 Agent Note
 
-Both use a unified header:
+**AI ratio: 73%** ████████
+`45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
 ```
-## 🤖 Agent Note
-**AI ratio: 73%** · 45/75 lines · 4/5 commits tracked · 8 prompts · claude-sonnet-4-20250514
-```
+
+Commit hashes are linked to the GitHub commit page. Prompts/responses are in a collapsible `<details>` section.
 
 Prompt display: first meaningful line only (120 chars). Skill-generated expansions (`/commit`, `/plan`) are filtered to show the user's original input.
 
@@ -382,7 +380,6 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `output` | `description` | Report destination: `description` or `comment` |
-| `format` | `chat` | Report format: `chat` or `table` |
 | `comment` | `"true"` | Legacy: set to `"false"` to disable posting |
 
 ### Action outputs
@@ -403,7 +400,7 @@ The action:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
 2. `agentnote pr --json` → parse outputs
-3. `agentnote pr --format <chat|table>` → markdown
+3. `agentnote pr` → markdown
 4. Set GitHub Actions outputs
 5. Post report to PR description (upsert between markers) or as a comment
 

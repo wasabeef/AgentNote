@@ -127,8 +127,10 @@ async function run(): Promise<void> {
       await octokit.rest.pulls.update({ owner, repo, pull_number: issueNumber, body: newBody });
       core.info("Agentnote report added to PR description.");
     } else {
-      // Post/update PR comment.
-      const body = `${COMMENT_MARKER}\n${markdown}`;
+      // Post/update PR comment. Use format-specific marker so chat and table
+      // comments can coexist without overwriting each other.
+      const marker = `<!-- agentnote-${format} -->`;
+      const body = `${marker}\n${markdown}`;
 
       const { data: comments } = await octokit.rest.issues.listComments({
         owner,
@@ -136,7 +138,7 @@ async function run(): Promise<void> {
         issue_number: issueNumber,
       });
 
-      const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
+      const existing = comments.find((c) => c.body?.includes(marker));
 
       if (existing) {
         await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
