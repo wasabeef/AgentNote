@@ -10,6 +10,7 @@ import {
   CHANGES_FILE,
   COMMITTED_PAIRS_FILE,
   EMPTY_BLOB,
+  EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
   TRANSCRIPT_PATH_FILE,
@@ -163,12 +164,24 @@ export async function recordCommitEntry(opts: {
     changeEntries,
   });
 
+  // Read model from session events (SessionStart).
+  const model = await readSessionModel(sessionDir);
+
+  // Aggregate per-interaction tools from changeEntries.
+  const interactionTools = buildInteractionTools(
+    changeEntries,
+    relevantPromptEntries,
+    commitFileSet,
+  );
+
   const entry = buildEntry({
     sessionId: opts.sessionId,
+    model,
     interactions,
     commitFiles,
     aiFiles,
     lineCounts: lineCounts ?? undefined,
+    interactionTools,
   });
 
   await writeNote(commitSha, entry as unknown as Record<string, unknown>);
@@ -181,7 +194,7 @@ export async function recordCommitEntry(opts: {
   // split commits in the same turn (each commit scopes its own files via
   // commitFileSet). Archives are purged at the start of the next turn by rotateLogs.
 
-  return { promptCount: interactions.length, aiRatio: entry.ai_ratio };
+  return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
 
 /** Attach files_touched per interaction, scoped to the current commit's files. */
@@ -481,6 +494,52 @@ async function recordConsumedPairs(
       tool_use_id: entry.tool_use_id ?? null,
     });
   }
+}
+
+/** Read the model field from the session's events.jsonl (set at SessionStart). */
+async function readSessionModel(sessionDir: string): Promise<string | null> {
+  const eventsFile = join(sessionDir, EVENTS_FILE);
+  if (!existsSync(eventsFile)) return null;
+  const entries = await readJsonlEntries(eventsFile);
+  for (const e of entries) {
+    if (e.event === "session_start" && typeof e.model === "string" && e.model) {
+      return e.model;
+    }
+  }
+  return null;
+}
+
+/**
+ * Aggregate per-interaction tools from changeEntries.
+ * Returns a Map from interaction index → tools array (file-edit tools only).
+ * Returns null tools for interactions with no observed file-edit events.
+ */
+function buildInteractionTools(
+  changeEntries: Record<string, unknown>[],
+  promptEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+): Map<number, string[] | null> {
+  // Group tools by turn.
+  const toolsByTurn = new Map<number, Set<string>>();
+  for (const entry of changeEntries) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    const file = entry.file as string;
+    const tool = entry.tool as string | undefined;
+    if (!file || !commitFileSet.has(file) || !tool) continue;
+    if (!toolsByTurn.has(turn)) toolsByTurn.set(turn, new Set());
+    toolsByTurn.get(turn)?.add(tool);
+  }
+
+  // Map interaction index → tools.
+  const result = new Map<number, string[] | null>();
+  for (let i = 0; i < promptEntries.length; i++) {
+    const promptEntry = promptEntries[i];
+    if (!promptEntry) continue;
+    const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+    const tools = toolsByTurn.get(turn);
+    result.set(i, tools ? [...tools] : null);
+  }
+  return result;
 }
 
 /**

@@ -155,27 +155,39 @@ Note content per commit:
   "v": 1,
   "session_id": "a1b2c3d4-...",
   "timestamp": "2026-04-02T10:30:00Z",
+  "model": "claude-sonnet-4-20250514",
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
       "response": "I'll create the middleware with... ",
-      "files_touched": ["src/auth.ts"]
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
     }
   ],
-  "files_in_commit": ["src/auth.ts", "CHANGELOG.md"],
-  "files_by_ai": ["src/auth.ts"],
-  "ai_ratio": 73,
-  "ai_added_lines": 146,
-  "total_added_lines": 200,
-  "deleted_lines": 12
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": {
+      "ai_added": 146,
+      "total_added": 200,
+      "deleted": 12
+    }
+  }
 }
 ```
 
-- **`v`**: Schema version. Currently `1`. Includes `files_touched` per interaction for turn-based file attribution.
-- **`ai_ratio`**: AI authorship percentage (0–100, rounded). When line-level blob data is available, computed as `ai_added_lines / total_added_lines * 100`. Falls back to file-count ratio (`files_by_ai.length / files_in_commit.length * 100`) for sessions recorded before blob capture was introduced.
-- **`ai_added_lines`**: Added lines in this commit attributed to AI. Present only when line-level attribution is available (blob data from PreToolUse/PostToolUse hooks).
-- **`total_added_lines`**: Total added lines across all files in this commit. Present only when line-level attribution is available.
-- **`deleted_lines`**: Total deleted lines in this commit. Deletions are not attributed (old-side positions are not comparable to new-side positions). Present only when line-level attribution is available.
+- **`v`**: Schema version. Currently `1`.
+- **`model`**: LLM model identifier from SessionStart. `null` for agents that don't expose it.
+- **`files`**: Array of `{path, by_ai}`. `by_ai` is true if any AI tool (Edit/Write) targeted the file.
+- **`attribution`**: AI authorship metrics.
+  - **`ai_ratio`**: 0–100 (rounded). Line-level when `method: "line"`, file-count when `method: "file"`, 0 when `method: "none"` (deletion-only).
+  - **`method`**: `"line"` (blob-based 3-diff), `"file"` (binary file-count), or `"none"` (deletion-only, no valid ratio).
+  - **`lines`**: Present when blob data available. `ai_added`, `total_added`, `deleted`.
+- **`interactions[].tools`**: File-edit tools used in this interaction (`string[] | null`). `null` when telemetry unavailable.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID

@@ -82,9 +82,9 @@ describe("agentnote commit", () => {
     const entry = JSON.parse(note);
     assert.equal(entry.v, 1, "should have schema version 1");
     assert.equal(entry.interactions.length, 2, "should have 2 interactions");
-    assert.ok(entry.ai_ratio >= 0 && entry.ai_ratio <= 100, "ratio 0-100");
+    assert.ok(entry.attribution.ai_ratio >= 0 && entry.attribution.ai_ratio <= 100, "ratio 0-100");
     assert.equal(entry.session_id, sessionId);
-    assert.ok(entry.files_in_commit.length > 0);
+    assert.ok(entry.files.length > 0);
   });
 
   it("works without active session (plain git commit)", () => {
@@ -199,7 +199,10 @@ describe("agentnote commit", () => {
     });
     const entry = JSON.parse(note);
 
-    assert.ok(entry.ai_ratio > 0, "ai_ratio should be > 0 — cross-turn.ts was AI-written");
+    assert.ok(
+      entry.attribution.ai_ratio > 0,
+      "ai_ratio should be > 0 — cross-turn.ts was AI-written",
+    );
     assert.ok(
       entry.interactions.some((i: { prompt: string }) => i.prompt === "cross-turn prompt"),
       "should include prompt from rotated file",
@@ -260,7 +263,7 @@ describe("agentnote commit", () => {
     });
     const entry = JSON.parse(note);
 
-    assert.ok(entry.ai_ratio > 0, "ai_ratio should be > 0 for multi-turn gap commit");
+    assert.ok(entry.attribution.ai_ratio > 0, "ai_ratio should be > 0 for multi-turn gap commit");
     assert.ok(
       entry.interactions.some((i: { prompt: string }) => i.prompt === "implement feature"),
       "should include the original prompt from turn 1",
@@ -297,7 +300,7 @@ describe("agentnote commit", () => {
       encoding: "utf-8",
     });
     const entry1 = JSON.parse(note1);
-    assert.ok(entry1.ai_ratio > 0, "first commit should have ai_ratio > 0");
+    assert.ok(entry1.attribution.ai_ratio > 0, "first commit should have ai_ratio > 0");
 
     // Second commit: human file only, but the old turn-1 archive still exists.
     // Without consumed pairs, the old (turn:1, split-a.ts) would leak into relevantTurns.
@@ -311,12 +314,12 @@ describe("agentnote commit", () => {
     });
     const entry2 = JSON.parse(note2);
     assert.equal(
-      entry2.ai_ratio,
+      entry2.attribution.ai_ratio,
       0,
       "second commit should have ai_ratio 0 — no AI files (consumed pairs filtered out)",
     );
     assert.equal(
-      entry2.files_by_ai.length,
+      entry2.files.filter((f: { by_ai: boolean }) => f.by_ai).length,
       0,
       "no files should be attributed to AI in the second commit",
     );

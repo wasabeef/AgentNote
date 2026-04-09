@@ -57,7 +57,7 @@ agentnote show/log/session → reads git notes --ref=agentnote
 ### Core modules
 
 - **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Includes turn-based file attribution.
-- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Interactions include optional `files_touched` per prompt.
+- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, and `interactions[].tools`.
 - **`core/jsonl.ts`**: `readJsonlField()` (deduplicated single field), `readJsonlEntries()` (full objects), `appendJsonl()`.
 - **`core/storage.ts`**: `writeNote()` and `readNote()` using `refs/notes/agentnote`.
 - **`core/rotate.ts`**: Rename JSONL files with commit SHA prefix after each commit.

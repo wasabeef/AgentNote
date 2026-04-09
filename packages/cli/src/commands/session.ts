@@ -2,6 +2,7 @@ import { MAX_COMMITS, TRAILER_KEY } from "../core/constants.js";
 import type { AgentnoteEntry } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
+import { normalizeEntry } from "./normalize.js";
 
 interface SessionCommit {
   sha: string;
@@ -43,7 +44,7 @@ export async function session(sessionId: string): Promise<void> {
     // First check trailer match (fast path).
     if (trailer === sessionId) {
       const note = await readNote(fullSha);
-      const entry = note as unknown as AgentnoteEntry | null;
+      const entry = note ? normalizeEntry(note) : null;
       matches.push({ sha: fullSha, shortInfo, entry });
       continue;
     }
@@ -52,7 +53,7 @@ export async function session(sessionId: string): Promise<void> {
     if (!trailer) {
       const note = await readNote(fullSha);
       if (note && (note as Record<string, unknown>).session_id === sessionId) {
-        const entry = note as unknown as AgentnoteEntry | null;
+        const entry = normalizeEntry(note);
         matches.push({ sha: fullSha, shortInfo, entry });
       }
     }
@@ -71,41 +72,49 @@ export async function session(sessionId: string): Promise<void> {
   console.log();
 
   let totalPrompts = 0;
-  let totalAiLines = 0;
-  let totalAllLines = 0;
-  let totalRatio = 0;
-  let ratioCount = 0;
+  // Rollup: separate line-eligible and file-only commits.
+  let lineAiAdded = 0;
+  let lineTotalAdded = 0;
+  let lineCount = 0;
+  let fileFilesAi = 0;
+  let fileFilesTotal = 0;
+  let fileCount = 0;
 
   for (const m of matches) {
     let suffix = "";
     if (m.entry) {
-      const promptCount =
-        m.entry.interactions?.length ??
-        (m.entry as unknown as { prompts?: unknown[] }).prompts?.length ??
-        0;
+      const promptCount = m.entry.interactions?.length ?? 0;
       totalPrompts += promptCount;
-      if (m.entry.ai_added_lines !== undefined && m.entry.total_added_lines !== undefined) {
-        totalAiLines += m.entry.ai_added_lines;
-        totalAllLines += m.entry.total_added_lines;
-      } else {
-        totalRatio += m.entry.ai_ratio;
-        ratioCount++;
+
+      const attr = m.entry.attribution;
+      if (attr.method === "line" && attr.lines && attr.lines.total_added > 0) {
+        lineAiAdded += attr.lines.ai_added;
+        lineTotalAdded += attr.lines.total_added;
+        lineCount++;
+      } else if (attr.method === "file") {
+        fileFilesAi += m.entry.files.filter((f) => f.by_ai).length;
+        fileFilesTotal += m.entry.files.length;
+        fileCount++;
       }
-      suffix = `  [🤖${m.entry.ai_ratio}% | ${promptCount}p]`;
+      // method: "none" — excluded from ratio
+
+      suffix = `  [🤖${attr.ai_ratio}% | ${promptCount}p]`;
     }
     console.log(`${m.shortInfo}${suffix}`);
   }
 
   console.log();
-  const displayRatio =
-    totalAllLines > 0
-      ? Math.round((totalAiLines / totalAllLines) * 100)
-      : ratioCount > 0
-        ? Math.round(totalRatio / ratioCount)
-        : null;
 
-  if (displayRatio !== null) {
-    const lineDetail = totalAllLines > 0 ? ` (${totalAiLines}/${totalAllLines} lines)` : "";
-    console.log(`Total: ${totalPrompts} prompts, AI ratio ${displayRatio}%${lineDetail}`);
+  // Display rollup ratio.
+  if (lineCount > 0 && fileCount === 0) {
+    const ratio = lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * 100) : 0;
+    console.log(
+      `Total: ${totalPrompts} prompts, AI ratio ${ratio}% (${lineAiAdded}/${lineTotalAdded} lines)`,
+    );
+  } else if (fileCount > 0) {
+    const ratio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
+    console.log(`Total: ${totalPrompts} prompts, AI ratio ${ratio}%`);
+  } else if (totalPrompts > 0) {
+    console.log(`Total: ${totalPrompts} prompts`);
   }
 }

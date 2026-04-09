@@ -1,13 +1,43 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { execSync } from "node:child_process";
+import { execSync } from "child_process";
+import { existsSync } from "fs";
+import { resolve } from "path";
 
 const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 
+/**
+ * Resolve the agentnote CLI command.
+ * Prefers the local monorepo build (no version skew), falls back to npx.
+ */
+function resolveCliCommand(): string {
+  // In CI: action dist/index.js is at packages/action/dist/index.js
+  // CLI dist is at packages/cli/dist/cli.js (same repo checkout)
+  try {
+    // Try relative from CWD (repo root in CI)
+    const candidates = [
+      resolve("packages/cli/dist/cli.js"),
+      resolve("node_modules/.bin/agentnote"),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        return `node ${candidate}`;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  // Fallback: use npx with the published package.
+  return "npx --yes @wasabeef/agentnote";
+}
+
 async function run(): Promise<void> {
   try {
-    const base = core.getInput("base") || `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
+    const base =
+      core.getInput("base") ||
+      `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
     const shouldComment = core.getInput("comment") !== "false";
+    const cliCmd = resolveCliCommand();
 
     // Fetch agentnote notes.
     try {
@@ -19,7 +49,7 @@ async function run(): Promise<void> {
     // Generate JSON report.
     let json: string;
     try {
-      json = execSync(`npx --yes @wasabeef/agentnote pr "${base}" --json`, {
+      json = execSync(`${cliCmd} pr "${base}" --json`, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
@@ -37,6 +67,7 @@ async function run(): Promise<void> {
 
     // Set outputs.
     core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
+    core.setOutput("overall_method", String(report.overall_method ?? "file"));
     core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
     core.setOutput("total_commits", String(report.total_commits ?? 0));
     core.setOutput("total_prompts", String(report.total_prompts ?? 0));
@@ -45,7 +76,7 @@ async function run(): Promise<void> {
     // Generate markdown report.
     let markdown = "";
     try {
-      markdown = execSync(`npx --yes @wasabeef/agentnote pr "${base}"`, {
+      markdown = execSync(`${cliCmd} pr "${base}"`, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();

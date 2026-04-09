@@ -1,6 +1,7 @@
 import { TRAILER_KEY } from "../core/constants.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
+import { normalizeEntry } from "./normalize.js";
 
 export async function log(count: number = 10): Promise<void> {
   const raw = await git([
@@ -32,13 +33,9 @@ export async function log(count: number = 10): Promise<void> {
     let promptCount = "";
     const note = await readNote(fullSha);
     if (note) {
-      const entry = note as unknown as {
-        ai_ratio?: number;
-        interactions?: unknown[];
-        prompts?: unknown[];
-      };
-      ratioStr = `${entry.ai_ratio}%`;
-      promptCount = `${entry.interactions?.length ?? entry.prompts?.length ?? 0}p`;
+      const entry = normalizeEntry(note);
+      ratioStr = `${entry.attribution.ai_ratio}%`;
+      promptCount = `${entry.interactions?.length ?? 0}p`;
     }
 
     if (ratioStr) {

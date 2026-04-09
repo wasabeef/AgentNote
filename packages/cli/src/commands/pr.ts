@@ -5,8 +5,10 @@ import {
   TRUNCATE_RESPONSE_CHAT,
   TRUNCATE_RESPONSE_PR,
 } from "../core/constants.js";
+import type { Attribution } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
+import { normalizeEntry } from "./normalize.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,13 +28,13 @@ interface CommitEntry {
   message: string;
   session_id: string | null;
   ai_ratio: number | null;
+  attribution_method: string | null;
   prompts_count: number;
   files_total: number;
   files_ai: number;
   files: Array<{ path: string; by_ai: boolean }>;
   interactions: Interaction[];
-  ai_added_lines: number | null;
-  total_added_lines: number | null;
+  attribution: Attribution | null;
 }
 
 interface PrReport {
@@ -44,6 +46,7 @@ interface PrReport {
   total_files: number;
   total_files_ai: number;
   overall_ai_ratio: number;
+  overall_method: "line" | "file" | "mixed" | "none";
   commits: CommitEntry[];
 }
 
@@ -69,50 +72,33 @@ async function collectReport(base: string): Promise<PrReport | null> {
         message,
         session_id: null,
         ai_ratio: null,
+        attribution_method: null,
         prompts_count: 0,
         files_total: 0,
         files_ai: 0,
         files: [],
         interactions: [],
-        ai_added_lines: null,
-        total_added_lines: null,
+        attribution: null,
       });
       continue;
     }
 
-    const entry = note as unknown as {
-      session_id?: string;
-      ai_ratio?: number;
-      interactions?: Interaction[];
-      prompts?: string[];
-      files_in_commit?: string[];
-      files_by_ai?: string[];
-      ai_added_lines?: number;
-      total_added_lines?: number;
-    };
-    const interactions: Interaction[] =
-      entry.interactions ??
-      (entry.prompts ?? []).map((p: string) => ({ prompt: p, response: null }));
-
-    const filesInCommit: string[] = entry.files_in_commit ?? [];
-    const filesByAi: string[] = entry.files_by_ai ?? [];
+    const entry = normalizeEntry(note);
+    const aiCount = entry.files.filter((f) => f.by_ai).length;
 
     commits.push({
       sha,
       short,
       message,
       session_id: entry.session_id ?? null,
-      ai_ratio: entry.ai_ratio ?? 0,
-      prompts_count: interactions.length,
-      files_total: filesInCommit.length,
-      files_ai: filesByAi.length,
-      files: filesInCommit.map((f: string) => ({
-        path: f,
-        by_ai: filesByAi.includes(f),
-      })),
-      interactions,
-      ai_added_lines: entry.ai_added_lines ?? null,
-      total_added_lines: entry.total_added_lines ?? null,
+      ai_ratio: entry.attribution.ai_ratio,
+      attribution_method: entry.attribution.method,
+      prompts_count: entry.interactions.length,
+      files_total: entry.files.length,
+      files_ai: aiCount,
+      files: entry.files,
+      interactions: entry.interactions,
+      attribution: entry.attribution,
     });
   }
 
@@ -120,17 +106,47 @@ async function collectReport(base: string): Promise<PrReport | null> {
   const totalFiles = tracked.reduce((s, c) => s + c.files_total, 0);
   const totalFilesAi = tracked.reduce((s, c) => s + c.files_ai, 0);
 
-  // Use weighted line-level ratio when ALL tracked commits have line data.
-  // On mixed branches (legacy + line-level notes), fall back to file-level
-  // so legacy commits don't silently contribute zero weight.
-  const allHaveLineData = tracked.every((c) => c.total_added_lines !== null);
-  let overallAiRatio: number;
-  if (allHaveLineData) {
-    const totalAiLines = tracked.reduce((s, c) => s + (c.ai_added_lines ?? 0), 0);
-    const totalAllLines = tracked.reduce((s, c) => s + (c.total_added_lines ?? 0), 0);
-    overallAiRatio = totalAllLines > 0 ? Math.round((totalAiLines / totalAllLines) * 100) : 0;
+  // Rollup: partition by attribution method.
+  const lineEligible = tracked.filter(
+    (c) =>
+      c.attribution?.method === "line" &&
+      c.attribution.lines &&
+      c.attribution.lines.total_added > 0,
+  );
+  const fileOnly = tracked.filter((c) => c.attribution?.method === "file");
+  const excluded = tracked.filter((c) => c.attribution?.method === "none");
+  const eligible = [...lineEligible, ...fileOnly];
+
+  let overallMethod: "line" | "file" | "mixed" | "none";
+  if (tracked.length > 0 && excluded.length === tracked.length) {
+    overallMethod = "none";
+  } else if (eligible.length === 0) {
+    overallMethod = "none";
+  } else if (fileOnly.length === 0 && lineEligible.length > 0) {
+    overallMethod = "line";
+  } else if (lineEligible.length === 0) {
+    overallMethod = "file";
   } else {
+    overallMethod = "mixed";
+  }
+
+  let overallAiRatio: number;
+  if (overallMethod === "line") {
+    const aiAdded = lineEligible.reduce((s, c) => s + (c.attribution?.lines?.ai_added ?? 0), 0);
+    const totalAdded = lineEligible.reduce(
+      (s, c) => s + (c.attribution?.lines?.total_added ?? 0),
+      0,
+    );
+    overallAiRatio = totalAdded > 0 ? Math.round((aiAdded / totalAdded) * 100) : 0;
+  } else if (overallMethod === "file") {
     overallAiRatio = totalFiles > 0 ? Math.round((totalFilesAi / totalFiles) * 100) : 0;
+  } else if (overallMethod === "mixed") {
+    // Weighted average by files.length
+    const weightedSum = eligible.reduce((s, c) => s + (c.ai_ratio ?? 0) * c.files_total, 0);
+    const weightTotal = eligible.reduce((s, c) => s + c.files_total, 0);
+    overallAiRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
+  } else {
+    overallAiRatio = 0;
   }
 
   return {
@@ -142,6 +158,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
     total_files: totalFiles,
     total_files_ai: totalFilesAi,
     overall_ai_ratio: overallAiRatio,
+    overall_method: overallMethod,
     commits,
   };
 }
