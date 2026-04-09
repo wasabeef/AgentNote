@@ -24,7 +24,7 @@ describe("agentnote commit", () => {
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
-    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --hooks --no-git-hooks`, { cwd: testDir });
   });
 
   after(() => {

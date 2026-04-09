@@ -33,7 +33,7 @@ describe("agentnote status", () => {
   });
 
   it("shows 'active' after start", () => {
-    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --hooks --no-git-hooks`, { cwd: testDir });
 
     const output = execSync(`node ${cliPath} status`, {
       cwd: testDir,

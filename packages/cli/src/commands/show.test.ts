@@ -21,7 +21,7 @@ describe("agentnote show", () => {
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
-    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --hooks --no-git-hooks`, { cwd: testDir });
 
     // simulate a session
     const sessionId = "a1b2c3d4-1111-1111-1111-111111111111";
@@ -62,6 +62,13 @@ describe("agentnote show", () => {
   });
 
   it("shows 'none' for commit without session", () => {
+    // Remove session file so hooks don't inject trailer or record note.
+    const sessionPath = join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE);
+    try {
+      rmSync(sessionPath);
+    } catch {
+      /* already gone */
+    }
     execSync("git commit --allow-empty -m 'no session'", { cwd: testDir });
     const output = execSync(`node ${cliPath} show`, {
       cwd: testDir,

@@ -50,6 +50,24 @@ switch (command) {
   case "hook":
     await hook();
     break;
+  case "record": {
+    // Record agentnote entry for HEAD — used by post-commit git hook.
+    // Unlike `commit`, this does NOT run `git commit`.
+    // Session ID is passed as argument (validated by the hook) to avoid re-reading
+    // the session file and prevent TOCTOU races with concurrent sessions.
+    const sid = args[0];
+    if (sid) {
+      try {
+        const { recordCommitEntry } = await import("./core/record.js");
+        const { agentnoteDir } = await import("./paths.js");
+        const dir = await agentnoteDir();
+        await recordCommitEntry({ agentnoteDirPath: dir, sessionId: sid });
+      } catch {
+        /* never break git */
+      }
+    }
+    break;
+  }
   case "version":
   case "--version":
   case "-v":

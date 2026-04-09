@@ -19,7 +19,7 @@ import {
 import type { Interaction, LineCounts } from "./entry.js";
 import { buildEntry } from "./entry.js";
 import { appendJsonl, readJsonlEntries } from "./jsonl.js";
-import { writeNote } from "./storage.js";
+import { readNote, writeNote } from "./storage.js";
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -29,6 +29,11 @@ export async function recordCommitEntry(opts: {
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, "sessions", opts.sessionId);
   const commitSha = await git(["rev-parse", "HEAD"]);
+
+  // Idempotent: skip if a note already exists for this commit.
+  // Prevents double-recording when both `agentnote commit` and post-commit hook run.
+  const existingNote = await readNote(commitSha);
+  if (existingNote) return { promptCount: 0, aiRatio: 0 };
 
   // Get files in THIS specific commit.
   let commitFiles: string[] = [];

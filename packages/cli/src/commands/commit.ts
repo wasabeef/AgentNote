@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { TRAILER_KEY } from "../core/constants.js";
+import { join } from "node:path";
+import { HEARTBEAT_FILE, TRAILER_KEY } from "../core/constants.js";
 import { recordCommitEntry } from "../core/record.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 
@@ -11,6 +12,18 @@ export async function commit(args: string[]): Promise<void> {
 
   if (existsSync(sf)) {
     sessionId = (await readFile(sf, "utf-8")).trim();
+    // Verify session is not explicitly stopped (heartbeat = 0).
+    // Missing heartbeat is allowed (backward compat with older sessions).
+    if (sessionId) {
+      const dir = await agentnoteDir();
+      const hbPath = join(dir, "sessions", sessionId, HEARTBEAT_FILE);
+      try {
+        const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
+        if (hb === 0) sessionId = ""; // explicitly stopped
+      } catch {
+        // No heartbeat file — session may predate heartbeat tracking. Allow it.
+      }
+    }
   }
 
   const gitArgs = ["commit"];
