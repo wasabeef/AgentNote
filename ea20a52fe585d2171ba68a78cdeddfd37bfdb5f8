@@ -1,0 +1,65 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-09T10:54:38.119Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [
+    {
+      "prompt": "output のデフォルトは description で。\n\nそれぞれのパターンの出力方法のサンプルを一時的な md ファイルで出力してみて",
+      "response": null,
+      "files_touched": [
+        "docs/knowledge/output_samples.md"
+      ],
+      "tools": [
+        "Write"
+      ]
+    },
+    {
+      "prompt": "@docs/knowledge/improve_output.md @docs/knowledge/output_samples.md を codex にレビューしてもらい。最高の出力方法の検討をお願いしたい",
+      "response": null,
+      "files_touched": [
+        "docs/knowledge/output_samples.md"
+      ],
+      "tools": [
+        "Write"
+      ]
+    },
+    {
+      "prompt": "続けて",
+      "response": null,
+      "files_touched": [
+        "docs/knowledge/improve_output.md"
+      ],
+      "tools": [
+        "Write"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/improve_output.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/output_samples.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/session.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/show.ts",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 98,
+    "method": "line",
+    "lines": {
+      "ai_added": 332,
+      "total_added": 338,
+      "deleted": 105
+    }
+  }
+}
