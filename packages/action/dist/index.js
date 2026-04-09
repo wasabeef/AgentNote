@@ -29985,48 +29985,12 @@ function resolveCliCommand() {
     }
     return "npx --yes @wasabeef/agentnote";
 }
-/** Read pr.output from agentnote.yml (simple line-based parse). */
-function readConfigOutput() {
-    for (const name of ["agentnote.yml", ".agentnote.yml"]) {
-        const filePath = (0, path_1.resolve)(name);
-        if (!(0, fs_1.existsSync)(filePath))
-            continue;
-        try {
-            const content = (0, fs_1.readFileSync)(filePath, "utf-8");
-            const match = content.match(/^\s+output:\s*(description|comment)/m);
-            if (match)
-                return match[1];
-        }
-        catch {
-            // ignore
-        }
-    }
-    return "description"; // default
-}
-/** Read pr.format from agentnote.yml. */
-function readConfigFormat() {
-    for (const name of ["agentnote.yml", ".agentnote.yml"]) {
-        const filePath = (0, path_1.resolve)(name);
-        if (!(0, fs_1.existsSync)(filePath))
-            continue;
-        try {
-            const content = (0, fs_1.readFileSync)(filePath, "utf-8");
-            const match = content.match(/^\s+format:\s*(chat|table)/m);
-            if (match)
-                return match[1];
-        }
-        catch {
-            // ignore
-        }
-    }
-    return "chat"; // default
-}
 async function run() {
     try {
         const base = core.getInput("base") ||
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
         const cliCmd = resolveCliCommand();
-        // Resolve output mode: input > config > default.
+        // Resolve output mode from action inputs.
         const outputInput = core.getInput("output");
         const commentInput = core.getInput("comment");
         let outputMode;
@@ -30034,15 +29998,14 @@ async function run() {
             outputMode = outputInput;
         }
         else if (commentInput === "false") {
-            // Legacy: comment=false means no output.
-            outputMode = "description"; // but we'll skip posting below
+            outputMode = "description";
         }
         else {
-            outputMode = readConfigOutput();
+            outputMode = "description"; // default
         }
-        // Resolve format: input > config > default.
+        // Resolve format from action inputs.
         const formatInput = core.getInput("format");
-        const format = formatInput === "chat" || formatInput === "table" ? formatInput : readConfigFormat();
+        const format = formatInput === "chat" || formatInput === "table" ? formatInput : "chat";
         // Fetch agentnote notes.
         try {
             (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", { stdio: "pipe" });

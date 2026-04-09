@@ -112,24 +112,6 @@ No extra commands. Just use `git commit` normally.
 | `agentnote log [n]` | List recent commits with AI ratio |
 | `agentnote status` | Show tracking state |
 
-## Configuration
-
-Create `agentnote.yml` at your repo root to customize PR report output:
-
-```yaml
-# agentnote.yml
-pr:
-  output: description    # description | comment (default: description)
-  format: chat           # chat | table (default: chat)
-```
-
-| Setting | Options | Default | Description |
-|---|---|---|---|
-| `pr.output` | `description`, `comment` | `description` | Where to post the PR report |
-| `pr.format` | `chat`, `table` | `chat` | Report format (collapsible conversations or summary table) |
-
-CLI flags (`--output`, `--format`) override config file values.
-
 ## Works with
 
 Claude Code — more agents coming (Cursor, Gemini CLI)

@@ -362,21 +362,6 @@ JSON output structure:
 }
 ```
 
-### Configuration file
-
-`agentnote.yml` at repo root controls output settings. Committed to share with the team.
-
-```yaml
-# agentnote.yml
-pr:
-  output: description    # description | comment (default: description)
-  format: chat           # chat | table (default: chat)
-```
-
-- `pr.output: description` — upsert report into PR body between `<!-- agentnote-begin/end -->` markers
-- `pr.output: comment` — post/update a PR comment with `<!-- agentnote-pr-report -->` marker
-- CLI flags (`--output`, `--format`) override config values
-
 ## GitHub Action
 
 ### Usage
@@ -414,7 +399,7 @@ pr:
 
 ### Action internals
 
-The action reads `agentnote.yml` for default settings, then:
+The action:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
 2. `agentnote pr --json` → parse outputs

@@ -8,11 +8,11 @@ inputs:
     required: false
     default: ""
   output:
-    description: "Report destination: description or comment (default: from agentnote.yml or description)"
+    description: "Report destination: description or comment (default: description)"
     required: false
     default: ""
   format:
-    description: "Report format: chat or table (default: from agentnote.yml or chat)"
+    description: "Report format: chat or table (default: chat)"
     required: false
     default: ""
   comment:

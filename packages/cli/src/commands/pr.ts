@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { loadConfig } from "../core/config.js";
 import {
   BAR_WIDTH_COMPACT,
   TRUNCATE_PROMPT,
@@ -423,12 +422,8 @@ export async function pr(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Load config (CLI flags override config values).
-  const repoRoot = await git(["rev-parse", "--show-toplevel"]);
-  const config = await loadConfig(repoRoot);
-
-  const format = formatIdx !== -1 ? args[formatIdx + 1] : config.pr.format;
-  const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : config.pr.output;
+  const format = formatIdx !== -1 ? args[formatIdx + 1] : "chat";
+  const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : "description";
 
   const report = await collectReport(base);
 
