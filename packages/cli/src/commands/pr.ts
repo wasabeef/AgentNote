@@ -210,12 +210,12 @@ function renderHeader(report: PrReport): string[] {
       (s, c) => s + (c.attribution?.lines?.total_added ?? 0),
       0,
     );
-    if (totalAdded > 0) meta.push(`${aiAdded}/${totalAdded} lines`);
+    if (totalAdded > 0) meta.push(`\`${aiAdded}/${totalAdded} lines\``);
   }
 
-  meta.push(`${report.tracked_commits}/${report.total_commits} commits tracked`);
-  meta.push(`${report.total_prompts} prompts`);
-  if (report.model) meta.push(report.model);
+  meta.push(`\`${report.tracked_commits}/${report.total_commits} commits\``);
+  meta.push(`\`${report.total_prompts} prompts\``);
+  if (report.model) meta.push(`\`${report.model}\``);
 
   return [line1, meta.join(" · ")];
 }
