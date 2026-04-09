@@ -100,10 +100,11 @@ export function buildEntry(opts: {
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
     }
-    // Attach tools from interactionTools map, or inherit from interaction itself.
-    const tools = opts.interactionTools?.get(idx) ?? i.tools;
-    if (tools !== undefined) {
-      base.tools = tools;
+    // Attach tools from interactionTools map (preserving null), or inherit from interaction.
+    if (opts.interactionTools?.has(idx)) {
+      base.tools = opts.interactionTools.get(idx) ?? null;
+    } else if (i.tools !== undefined) {
+      base.tools = i.tools;
     }
     return base;
   });

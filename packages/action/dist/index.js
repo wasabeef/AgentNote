@@ -29975,15 +29975,10 @@ function resolveCliCommand() {
     // In CI: action dist/index.js is at packages/action/dist/index.js
     // CLI dist is at packages/cli/dist/cli.js (same repo checkout)
     try {
-        // Try relative from CWD (repo root in CI)
-        const candidates = [
-            (0, path_1.resolve)("packages/cli/dist/cli.js"),
-            (0, path_1.resolve)("node_modules/.bin/agentnote"),
-        ];
-        for (const candidate of candidates) {
-            if ((0, fs_1.existsSync)(candidate)) {
-                return `node ${candidate}`;
-            }
+        // In CI checkout: repo root has packages/cli/dist/cli.js (built before action runs).
+        const localCli = (0, path_1.resolve)("packages/cli/dist/cli.js");
+        if ((0, fs_1.existsSync)(localCli)) {
+            return `node ${localCli}`;
         }
     }
     catch {

@@ -105,15 +105,48 @@ export async function session(sessionId: string): Promise<void> {
 
   console.log();
 
-  // Display rollup ratio.
+  // Display rollup ratio — same partitioning as pr.ts.
+  let overallMethod: string;
+  let overallRatio: number | null = null;
+  let lineDetail = "";
+
   if (lineCount > 0 && fileCount === 0) {
-    const ratio = lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * 100) : 0;
-    console.log(
-      `Total: ${totalPrompts} prompts, AI ratio ${ratio}% (${lineAiAdded}/${lineTotalAdded} lines)`,
-    );
-  } else if (fileCount > 0) {
-    const ratio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
-    console.log(`Total: ${totalPrompts} prompts, AI ratio ${ratio}%`);
+    overallMethod = "line";
+    overallRatio = lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * 100) : 0;
+    lineDetail = ` (${lineAiAdded}/${lineTotalAdded} lines)`;
+  } else if (lineCount === 0 && fileCount > 0) {
+    overallMethod = "file";
+    overallRatio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
+  } else if (lineCount > 0 && fileCount > 0) {
+    // Mixed: weighted average by files count from eligible commits.
+    overallMethod = "mixed";
+    const eligibleFiles =
+      fileFilesTotal +
+      matches
+        .filter(
+          (m) =>
+            m.entry?.attribution.method === "line" &&
+            m.entry.attribution.lines &&
+            m.entry.attribution.lines.total_added > 0,
+        )
+        .reduce((s, m) => s + (m.entry?.files.length ?? 0), 0);
+    const eligibleFilesAi =
+      fileFilesAi +
+      matches
+        .filter(
+          (m) =>
+            m.entry?.attribution.method === "line" &&
+            m.entry.attribution.lines &&
+            m.entry.attribution.lines.total_added > 0,
+        )
+        .reduce((s, m) => s + (m.entry?.files.filter((f) => f.by_ai).length ?? 0), 0);
+    overallRatio = eligibleFiles > 0 ? Math.round((eligibleFilesAi / eligibleFiles) * 100) : 0;
+  } else {
+    overallMethod = "none";
+  }
+
+  if (overallRatio !== null) {
+    console.log(`Total: ${totalPrompts} prompts, AI ratio ${overallRatio}%${lineDetail}`);
   } else if (totalPrompts > 0) {
     console.log(`Total: ${totalPrompts} prompts`);
   }

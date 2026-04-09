@@ -139,9 +139,12 @@ async function collectReport(base: string): Promise<PrReport | null> {
     );
     overallAiRatio = totalAdded > 0 ? Math.round((aiAdded / totalAdded) * 100) : 0;
   } else if (overallMethod === "file") {
-    overallAiRatio = totalFiles > 0 ? Math.round((totalFilesAi / totalFiles) * 100) : 0;
+    // Use eligible commits only (excludes method:"none" deletion-only commits).
+    const eligibleFiles = eligible.reduce((s, c) => s + c.files_total, 0);
+    const eligibleFilesAi = eligible.reduce((s, c) => s + c.files_ai, 0);
+    overallAiRatio = eligibleFiles > 0 ? Math.round((eligibleFilesAi / eligibleFiles) * 100) : 0;
   } else if (overallMethod === "mixed") {
-    // Weighted average by files.length
+    // Weighted average by files.length from eligible commits only.
     const weightedSum = eligible.reduce((s, c) => s + (c.ai_ratio ?? 0) * c.files_total, 0);
     const weightTotal = eligible.reduce((s, c) => s + c.files_total, 0);
     overallAiRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
