@@ -188,7 +188,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
 // ─── Shared rendering helpers ──────────────────────
 
 /** Render progress bar for AI ratio. */
-function renderProgressBar(ratio: number, width = 16): string {
+function renderProgressBar(ratio: number, width = 8): string {
   const filled = Math.round((ratio / 100) * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
