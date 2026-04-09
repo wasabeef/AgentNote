@@ -225,11 +225,11 @@ diff3: postBlob_T → committedBlob   → human edits after AI (only)
 AI positions for turn T = diff2 ∩ diff1 positions \ diff3 positions
 ```
 
-Union AI positions across all turns. Count how many positions from `diff1` are in the AI union — this gives `ai_added_lines`. Positions are 1-based line numbers in the committed file, so they are directly comparable across all three diffs.
+Union AI positions across all turns. Count how many positions from `diff1` are in the AI union — this gives `attribution.lines.ai_added`. Positions are 1-based line numbers in the committed file, so they are directly comparable across all three diffs.
 
 **Key properties:**
 
-- Deletions are excluded from `ai_ratio` (old-side positions are not comparable to new-side positions). Tracked separately as `deleted_lines`.
+- Deletions are excluded from `attribution.ai_ratio` (old-side positions are not comparable to new-side positions). Tracked separately as `attribution.lines.deleted`.
 - Human edits after the AI write are correctly subtracted from AI attribution.
 - New files created by AI (no preBlob) attribute all added lines to AI.
 - Falls back to file-level binary attribution if blob data is unavailable (old sessions, failed hooks).
