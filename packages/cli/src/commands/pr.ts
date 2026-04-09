@@ -292,14 +292,14 @@ function renderMarkdown(report: PrReport): string {
       lines.push("");
 
       for (const { prompt, response } of c.interactions) {
-        lines.push(`> **Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
+        lines.push(`> **🧑 Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
         if (response) {
           const truncated =
             response.length > TRUNCATE_RESPONSE_PR
               ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
               : response;
           lines.push(">");
-          lines.push(`> **Response:** ${truncated.split("\n").join("\n> ")}`);
+          lines.push(`> **🤖 Response:** ${truncated.split("\n").join("\n> ")}`);
         }
         lines.push("");
       }
