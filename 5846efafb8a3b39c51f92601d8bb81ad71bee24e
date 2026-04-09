@@ -1,0 +1,100 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-09T13:51:32.943Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [
+    {
+      "prompt": "実装を開始してほしい。\n\nコミットはしないこと。\n実装が完了したら codex にレビューしてもらうこと。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/hook.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "作業を続けて",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/hook.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "はい。\n\nagentnote init の修正とドキュメント更新して",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/init.ts",
+        "packages/cli/src/commands/show.test.ts"
+      ],
+      "tools": [
+        "Write",
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "init 処理に関して、完了する前に codex ni",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/init.ts",
+        "packages/cli/src/commands/hook.ts",
+        "packages/cli/src/cli.ts",
+        "packages/cli/src/commands/commit.test.ts",
+        "packages/cli/src/commands/show.test.ts",
+        "packages/cli/src/commands/status.test.ts",
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/commands/commit.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/cli.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/commit.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/commit.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/hook.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/show.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/status.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 92,
+    "method": "line",
+    "lines": {
+      "ai_added": 190,
+      "total_added": 206,
+      "deleted": 11
+    }
+  }
+}
