@@ -23,6 +23,8 @@ function resolveCliCommand(): string {
     // ignore
   }
   // Fallback: use npx with the published package.
+  // NOTE: This can cause version skew if the published CLI has a different schema.
+  // CI workflows should build the CLI before running the action to avoid this.
   return "npx --yes @wasabeef/agentnote";
 }
 
