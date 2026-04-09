@@ -176,8 +176,8 @@ Auto-post AI session reports on every PR:
   with:
     base: main
 
-- if: fromJSON(steps.agentnote.outputs.json).overall_ai_ratio > 90
-  run: echo "::warning::High AI ratio — consider extra review"
+# Use structured outputs in subsequent steps
+- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
 ```
 
 </details>

@@ -355,8 +355,6 @@ JSON output structure:
 
 # Use structured outputs
 - run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
-- if: fromJSON(steps.agentnote.outputs.json).overall_ai_ratio > 90
-  run: echo "::warning::High AI ratio — consider extra review"
 ```
 
 ### Action inputs
