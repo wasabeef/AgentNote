@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: wasabeef/agentnote@v0
+      - uses: ./
         id: report
         with:
           output: description
