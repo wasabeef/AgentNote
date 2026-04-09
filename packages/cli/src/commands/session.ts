@@ -118,29 +118,21 @@ export async function session(sessionId: string): Promise<void> {
     overallMethod = "file";
     overallRatio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
   } else if (lineCount > 0 && fileCount > 0) {
-    // Mixed: weighted average by files count from eligible commits.
+    // Mixed: same formula as pr.ts — weighted average of ai_ratio by files count.
     overallMethod = "mixed";
-    const eligibleFiles =
-      fileFilesTotal +
-      matches
-        .filter(
-          (m) =>
-            m.entry?.attribution.method === "line" &&
-            m.entry.attribution.lines &&
-            m.entry.attribution.lines.total_added > 0,
-        )
-        .reduce((s, m) => s + (m.entry?.files.length ?? 0), 0);
-    const eligibleFilesAi =
-      fileFilesAi +
-      matches
-        .filter(
-          (m) =>
-            m.entry?.attribution.method === "line" &&
-            m.entry.attribution.lines &&
-            m.entry.attribution.lines.total_added > 0,
-        )
-        .reduce((s, m) => s + (m.entry?.files.filter((f) => f.by_ai).length ?? 0), 0);
-    overallRatio = eligibleFiles > 0 ? Math.round((eligibleFilesAi / eligibleFiles) * 100) : 0;
+    let weightedSum = 0;
+    let weightTotal = 0;
+    for (const m of matches) {
+      if (!m.entry) continue;
+      const attr = m.entry.attribution;
+      const isLineEligible = attr.method === "line" && attr.lines && attr.lines.total_added > 0;
+      const isFileEligible = attr.method === "file";
+      if (isLineEligible || isFileEligible) {
+        weightedSum += attr.ai_ratio * m.entry.files.length;
+        weightTotal += m.entry.files.length;
+      }
+    }
+    overallRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
   } else {
     overallMethod = "none";
   }
