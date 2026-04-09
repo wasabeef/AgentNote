@@ -331,7 +331,7 @@ Two markdown formats:
 
 Both use a unified header:
 ```
-## 🤖 Agent Note
+## 🧑💬🤖 Agent Note
 **AI ratio: 73%** · 45/75 lines · 4/5 commits tracked · 8 prompts · claude-sonnet-4-20250514
 ```
 

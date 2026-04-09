@@ -253,7 +253,7 @@ function cleanPrompt(prompt: string, maxLen: number): string {
 function renderMarkdown(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agent Note");
+  lines.push("## 🧑💬🤖 Agent Note");
   lines.push("");
   lines.push(...renderHeader(report));
   lines.push("");
