@@ -1,7 +1,9 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { loadConfig } from "../core/config.js";
 import {
   BAR_WIDTH_COMPACT,
+  TRUNCATE_PROMPT,
   TRUNCATE_RESPONSE_CHAT,
   TRUNCATE_RESPONSE_PR,
 } from "../core/constants.js";
@@ -27,6 +29,7 @@ interface CommitEntry {
   short: string;
   message: string;
   session_id: string | null;
+  model: string | null;
   ai_ratio: number | null;
   attribution_method: string | null;
   prompts_count: number;
@@ -47,6 +50,7 @@ interface PrReport {
   total_files_ai: number;
   overall_ai_ratio: number;
   overall_method: "line" | "file" | "mixed" | "none";
+  model: string | null;
   commits: CommitEntry[];
 }
 
@@ -71,6 +75,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
         short,
         message,
         session_id: null,
+        model: null,
         ai_ratio: null,
         attribution_method: null,
         prompts_count: 0,
@@ -91,6 +96,7 @@ async function collectReport(base: string): Promise<PrReport | null> {
       short,
       message,
       session_id: entry.session_id ?? null,
+      model: entry.model ?? null,
       ai_ratio: entry.attribution.ai_ratio,
       attribution_method: entry.attribution.method,
       prompts_count: entry.interactions.length,
@@ -152,6 +158,9 @@ async function collectReport(base: string): Promise<PrReport | null> {
     overallAiRatio = 0;
   }
 
+  // Extract model from tracked commits (use first non-null).
+  const model = tracked.find((c) => c.model)?.model ?? null;
+
   return {
     base,
     head,
@@ -162,37 +171,107 @@ async function collectReport(base: string): Promise<PrReport | null> {
     total_files_ai: totalFilesAi,
     overall_ai_ratio: overallAiRatio,
     overall_method: overallMethod,
+    model,
     commits,
   };
 }
 
-// ─── Markdown rendering ─────────────────────────────
+// ─── Shared rendering helpers ──────────────────────
+
+/** Build the unified header line for both formats. */
+function renderHeader(report: PrReport): string {
+  const parts = [`**AI ratio: ${report.overall_ai_ratio}%**`];
+
+  // Add line counts if available from line-attributed commits.
+  const lineCommits = report.commits.filter(
+    (c) => c.attribution?.method === "line" && c.attribution.lines,
+  );
+  if (lineCommits.length > 0) {
+    const aiAdded = lineCommits.reduce((s, c) => s + (c.attribution?.lines?.ai_added ?? 0), 0);
+    const totalAdded = lineCommits.reduce(
+      (s, c) => s + (c.attribution?.lines?.total_added ?? 0),
+      0,
+    );
+    if (totalAdded > 0) parts.push(`${aiAdded}/${totalAdded} lines`);
+  }
+
+  parts.push(`${report.tracked_commits}/${report.total_commits} commits tracked`);
+  parts.push(`${report.total_prompts} prompts`);
+  if (report.model) parts.push(report.model);
+
+  return parts.join(" · ");
+}
+
+/** Build commit summary for details tag. */
+function commitSummary(c: CommitEntry): string {
+  if (c.ai_ratio === null) {
+    return `<code>${c.short}</code> ${c.message} — no tracking data`;
+  }
+  const lineDetail =
+    c.attribution?.method === "line" && c.attribution.lines && c.attribution.lines.total_added > 0
+      ? ` (${c.attribution.lines.ai_added}/${c.attribution.lines.total_added} lines)`
+      : "";
+  const filesLabel = c.files_total > 0 ? ` · ${c.files_total} files` : "";
+  return `<code>${c.short}</code> ${c.message} — ${c.ai_ratio}%${lineDetail}${filesLabel}`;
+}
+
+/** Render file table for a commit. */
+function renderFileTable(files: Array<{ path: string; by_ai: boolean }>): string[] {
+  if (files.length === 0) return [];
+  const lines = ["| File | Attribution |", "|---|---|"];
+  for (const f of files) {
+    lines.push(`| \`${f.path}\` | ${f.by_ai ? "🤖 AI" : "👤 Human"} |`);
+  }
+  return lines;
+}
+
+/** Extract the first meaningful line from a prompt, filtering skill expansions. */
+function cleanPrompt(prompt: string, maxLen: number): string {
+  // Skip skill-generated expansions (start with ## heading).
+  const lines = prompt.split("\n").filter((l) => l.trim());
+  let firstLine = lines[0] ?? "";
+
+  // If prompt starts with a markdown heading (skill expansion), find the actual user input.
+  if (firstLine.startsWith("## ") || firstLine.startsWith("# ")) {
+    // Look for a non-heading, non-empty line after the first heading.
+    const userLine = lines.find(
+      (l, i) => i > 0 && !l.startsWith("#") && !l.startsWith("```") && l.trim().length > 10,
+    );
+    if (userLine) firstLine = userLine.trim();
+    else firstLine = firstLine.replace(/^#+\s*/, "");
+  }
+
+  if (firstLine.length <= maxLen) return firstLine;
+  return `${firstLine.slice(0, maxLen)}…`;
+}
+
+// ─── Table format rendering ─────────────────────────
 
 function renderMarkdown(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agent Note — AI Session Report");
+  lines.push("## 🤖 Agent Note");
   lines.push("");
-  lines.push(
-    `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
-      `(${report.tracked_commits}/${report.total_commits} commits tracked, ${report.total_prompts} prompts)`,
-  );
+  lines.push(renderHeader(report));
   lines.push("");
 
-  lines.push("| Commit | AI | Prompts | Files |");
-  lines.push("|---|---|---|---|");
+  lines.push("| Commit | AI Ratio | Lines | Prompts | Files |");
+  lines.push("|---|---|---|---|---|");
 
   for (const c of report.commits) {
     if (c.ai_ratio === null) {
-      lines.push(`| \`${c.short}\` ${c.message} | — | — | — |`);
+      lines.push(`| \`${c.short}\` ${c.message} | — | — | — | — |`);
       continue;
     }
 
-    const bar = renderBar(c.ai_ratio);
+    const linesCol =
+      c.attribution?.method === "line" && c.attribution.lines && c.attribution.lines.total_added > 0
+        ? `${c.attribution.lines.ai_added}/${c.attribution.lines.total_added}`
+        : "—";
     const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
 
     lines.push(
-      `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% ${bar} | ${c.prompts_count} | ${fileList} |`,
+      `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% | ${linesCol} | ${c.prompts_count} | ${fileList} |`,
     );
   }
 
@@ -201,15 +280,15 @@ function renderMarkdown(report: PrReport): string {
   const withPrompts = report.commits.filter((c) => c.interactions.length > 0);
   if (withPrompts.length > 0) {
     lines.push("<details>");
-    lines.push(`<summary>Prompts & Responses (${report.total_prompts} total)</summary>`);
+    lines.push(`<summary>💬 Prompts & Responses (${report.total_prompts} total)</summary>`);
     lines.push("");
 
     for (const c of withPrompts) {
-      lines.push(`**\`${c.short}\`** ${c.message}`);
+      lines.push(`### \`${c.short}\` ${c.message}`);
       lines.push("");
 
       for (const { prompt, response } of c.interactions) {
-        lines.push(`> **Prompt:** ${prompt}`);
+        lines.push(`> **Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
         if (response) {
           const truncated =
             response.length > TRUNCATE_RESPONSE_PR
@@ -228,39 +307,21 @@ function renderMarkdown(report: PrReport): string {
   return lines.join("\n");
 }
 
-// ─── Chat-style rendering ───────────────────────────
+// ─── Chat format rendering ──────────────────────────
 
 function renderChat(report: PrReport): string {
   const lines: string[] = [];
 
-  lines.push("## 🤖 Agent Note — Session Transcript");
+  lines.push("## 🤖 Agent Note");
   lines.push("");
-  lines.push(
-    `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
-      `(${report.tracked_commits}/${report.total_commits} commits tracked, ${report.total_prompts} prompts)`,
-  );
+  lines.push(renderHeader(report));
 
   for (const c of report.commits) {
     lines.push("");
 
-    const ratioLabel =
-      c.ai_ratio === null
-        ? ""
-        : c.ai_ratio === 0
-          ? "👤 Human 100% ░░░░░"
-          : `AI ${c.ai_ratio}% ${renderBar(c.ai_ratio)}`;
-
-    const aiCount = c.files.filter((f) => f.by_ai).length;
-    const humanCount = c.files.length - aiCount;
-    const fileSummary =
-      c.files.length > 0 ? ` · ${c.files.length} files (${aiCount} 🤖 ${humanCount} 👤)` : "";
-
-    const summaryExtra = ratioLabel ? ` — ${ratioLabel}` : "";
-    const summaryFiles = fileSummary;
-
-    if (c.interactions.length === 0 && c.ai_ratio === null) {
+    if (c.ai_ratio === null) {
       lines.push(`<details>`);
-      lines.push(`<summary><code>${c.short}</code> ${c.message}</summary>`);
+      lines.push(`<summary>${commitSummary(c)}</summary>`);
       lines.push("");
       lines.push("*No agentnote data for this commit.*");
       lines.push("");
@@ -269,20 +330,17 @@ function renderChat(report: PrReport): string {
     }
 
     lines.push(`<details>`);
-    lines.push(
-      `<summary><code>${c.short}</code> ${c.message}${summaryExtra}${summaryFiles}</summary>`,
-    );
+    lines.push(`<summary>${commitSummary(c)}</summary>`);
     lines.push("");
 
     for (const { prompt, response } of c.interactions) {
-      lines.push(`> **🧑 Prompt**`);
-      lines.push(`> ${prompt.split("\n").join("\n> ")}`);
+      lines.push("**🧑 Prompt**");
+      lines.push(`> ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
       lines.push("");
 
       if (response) {
-        lines.push(`**🤖 Response**`);
+        lines.push("**🤖 Response**");
         lines.push("");
-
         const truncated =
           response.length > TRUNCATE_RESPONSE_CHAT
             ? `${response.slice(0, TRUNCATE_RESPONSE_CHAT)}…`
@@ -292,51 +350,15 @@ function renderChat(report: PrReport): string {
       }
     }
 
-    if (c.interactions.length > 0 && c.ai_ratio === 0) {
-      lines.push("*AI provided guidance, but the code was written by a human.*");
-      lines.push("");
-    }
-
-    // File list at the end of each commit's details
-    if (c.files.length > 0) {
-      lines.push("**Files:**");
-      for (const f of c.files) {
-        lines.push(`- \`${f.path}\` ${f.by_ai ? "🤖" : "👤"}`);
-      }
+    // File table
+    const fileTableLines = renderFileTable(c.files);
+    if (fileTableLines.length > 0) {
+      lines.push(...fileTableLines);
       lines.push("");
     }
 
     lines.push(`</details>`);
   }
-
-  // Collapsible summary table
-  lines.push("");
-  lines.push("---");
-  lines.push("");
-  lines.push("<details>");
-  lines.push(`<summary>📊 Summary</summary>`);
-  lines.push("");
-  lines.push(
-    `**Overall AI ratio: ${report.overall_ai_ratio}%** ` +
-      `(${report.tracked_commits}/${report.total_commits} commits, ${report.total_prompts} prompts)`,
-  );
-  lines.push("");
-  lines.push("| Commit | AI | Prompts | Files |");
-  lines.push("|---|---|---|---|");
-
-  for (const c of report.commits) {
-    if (c.ai_ratio === null) {
-      lines.push(`| \`${c.short}\` ${c.message} | — | — | — |`);
-      continue;
-    }
-    const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
-    lines.push(
-      `| \`${c.short}\` ${c.message} | ${c.ai_ratio}% ${renderBar(c.ai_ratio)} | ${c.prompts_count} | ${fileList} |`,
-    );
-  }
-
-  lines.push("");
-  lines.push("</details>");
 
   return lines.join("\n");
 }
@@ -384,13 +406,14 @@ async function updatePrDescription(prNumber: string, section: string): Promise<v
 export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
   const formatIdx = args.indexOf("--format");
-  const format = formatIdx !== -1 ? args[formatIdx + 1] : "table";
+  const outputIdx = args.indexOf("--output");
   const updateIdx = args.indexOf("--update");
   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
   const positional = args.filter(
     (a, i) =>
       !a.startsWith("--") &&
       (formatIdx === -1 || i !== formatIdx + 1) &&
+      (outputIdx === -1 || i !== outputIdx + 1) &&
       (updateIdx === -1 || i !== updateIdx + 1),
   );
   const base = positional[0] ?? (await detectBaseBranch());
@@ -399,6 +422,13 @@ export async function pr(args: string[]): Promise<void> {
     console.error("error: could not detect base branch. pass it as argument: agentnote pr <base>");
     process.exit(1);
   }
+
+  // Load config (CLI flags override config values).
+  const repoRoot = await git(["rev-parse", "--show-toplevel"]);
+  const config = await loadConfig(repoRoot);
+
+  const format = formatIdx !== -1 ? args[formatIdx + 1] : config.pr.format;
+  const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : config.pr.output;
 
   const report = await collectReport(base);
 
@@ -411,21 +441,74 @@ export async function pr(args: string[]): Promise<void> {
     return;
   }
 
-  let output: string;
+  let rendered: string;
   if (isJson) {
-    output = JSON.stringify(report, null, 2);
-  } else if (format === "chat") {
-    output = renderChat(report);
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  if (format === "chat") {
+    rendered = renderChat(report);
   } else {
-    output = renderMarkdown(report);
+    rendered = renderMarkdown(report);
   }
 
+  // Output routing: --update <PR#> triggers description/comment update.
   if (prNumber) {
-    await updatePrDescription(prNumber, output);
-    console.log(`agentnote: PR #${prNumber} description updated`);
+    if (outputMode === "description") {
+      await updatePrDescription(prNumber, rendered);
+      console.log(`agentnote: PR #${prNumber} description updated`);
+    } else {
+      // Comment mode: post via gh CLI.
+      await postPrComment(prNumber, rendered);
+      console.log(`agentnote: PR #${prNumber} comment posted`);
+    }
   } else {
-    console.log(output);
+    console.log(rendered);
   }
+}
+
+/** Post or update a PR comment using gh CLI. */
+async function postPrComment(prNumber: string, content: string): Promise<void> {
+  const marker = "<!-- agentnote-pr-report -->";
+  const body = `${marker}\n${content}`;
+
+  // Check for existing comment.
+  try {
+    const { stdout } = await execFileAsync(
+      "gh",
+      [
+        "pr",
+        "view",
+        prNumber,
+        "--json",
+        "comments",
+        "--jq",
+        `.comments[] | select(.body | contains("${marker}")) | .id`,
+      ],
+      { encoding: "utf-8" },
+    );
+    const commentId = stdout.trim().split("\n")[0];
+    if (commentId) {
+      await execFileAsync(
+        "gh",
+        [
+          "api",
+          "-X",
+          "PATCH",
+          `/repos/{owner}/{repo}/issues/comments/${commentId}`,
+          "-f",
+          `body=${body}`,
+        ],
+        { encoding: "utf-8" },
+      );
+      return;
+    }
+  } catch {
+    // No existing comment or gh not available.
+  }
+
+  // Create new comment.
+  await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], { encoding: "utf-8" });
 }
 
 // ─── Helpers ────────────────────────────────────────

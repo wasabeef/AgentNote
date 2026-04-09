@@ -63,7 +63,7 @@ describe("agentnote pr", () => {
   it("outputs markdown table by default", () => {
     const output = execSync(`node ${cliPath} pr HEAD~2`, { cwd: testDir, encoding: "utf-8" });
 
-    assert.ok(output.includes("Agent Note — AI Session Report"));
+    assert.ok(output.includes("## 🤖 Agent Note"));
     assert.ok(output.includes("feat: add A"));
     assert.ok(output.includes("feat: add B"));
     assert.ok(output.includes("🤖"));
@@ -75,7 +75,7 @@ describe("agentnote pr", () => {
       encoding: "utf-8",
     });
 
-    assert.ok(output.includes("Session Transcript"));
+    assert.ok(output.includes("## 🤖 Agent Note"));
     assert.ok(output.includes("🧑 Prompt"));
     assert.ok(output.includes("add feature A"));
     assert.ok(output.includes("<details>"));
