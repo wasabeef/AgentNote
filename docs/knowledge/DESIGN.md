@@ -269,14 +269,15 @@ Injected via the `prepare-commit-msg` git hook, which reads the active session I
 
 ### Git hooks for commit integration
 
-Two git hooks handle all commit-related operations:
+Three git hooks handle commit integration and notes sharing:
 
 | Git hook | When | What it does |
 |---|---|---|
-| `prepare-commit-msg` | Before commit message editor opens | Reads `.git/agentnote/session`, appends `Agentnote-Session` trailer to message file |
-| `post-commit` | After commit succeeds | Calls `recordCommitEntry()` to write session data as a git note on HEAD |
+| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness via heartbeat, appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
+| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agentnote record <session-id>` to write git note. Idempotent — skips if note already exists. |
+| `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
-These replaced the previous approach of using AI agent PreToolUse/PostToolUse hooks to detect `git commit` commands via pattern matching, which was fragile with chained commands (`git add && git commit`).
+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Stop writes `0` to heartbeat for immediate invalidation. Missing heartbeat in git hooks = skip (fail closed).
 
 ### Git hook installation
 
