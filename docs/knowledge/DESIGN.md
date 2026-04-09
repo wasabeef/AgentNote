@@ -50,7 +50,7 @@ wasabeef/agentnote/
 │   └── action/                     # GitHub Action (Marketplace)
 │       ├── action.yml              # action definition (inputs/outputs)
 │       ├── src/
-│       │   └── index.ts            # calls CLI, sets outputs, posts comment
+│       │   └── index.ts            # calls CLI, sets outputs, posts to PR description/comment
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
 │       └── package.json            # name: @wasabeef/agentnote-action (private, not published)
@@ -299,7 +299,7 @@ agentnote init              add hooks to agent config (commit to share with team
 agentnote commit [args]       git commit with session context (convenience wrapper)
 agentnote show [commit]       show session details for a commit
 agentnote log [n]             list recent commits with session info
-agentnote pr [base] [--json]  generate report for a PR (markdown or structured JSON)
+agentnote pr [base] [--json] [--format chat|table] [--output description|comment] [--update <PR#>]
 agentnote status              show current tracking state
 agentnote hook                handle agent hook events (internal, via stdin)
 ```
@@ -316,7 +316,7 @@ agentnote hook                handle agent hook events (internal, via stdin)
 `agentnote pr` produces markdown or structured JSON reports.
 
 ```bash
-agentnote pr                              # default format (chat or table from config)
+agentnote pr                              # default: chat format
 agentnote pr --format chat                # collapsible per-commit conversations
 agentnote pr --format table               # summary table
 agentnote pr --json                       # structured JSON (for scripts/actions)
@@ -381,8 +381,8 @@ JSON output structure:
 | Input | Default | Description |
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
-| `output` | from config | Report destination: `description` or `comment` |
-| `format` | from config | Report format: `chat` or `table` |
+| `output` | `description` | Report destination: `description` or `comment` |
+| `format` | `chat` | Report format: `chat` or `table` |
 | `comment` | `"true"` | Legacy: set to `"false"` to disable posting |
 
 ### Action outputs
@@ -499,7 +499,7 @@ git config notes.rewrite.amend true
 
 GitHub's "Squash and merge" creates a new commit with a new SHA. All notes from the individual PR commits are lost on the merge commit. The PR report is only meaningful **before merge**.
 
-Workaround: the GitHub Action posts the report as a PR comment before merge, preserving the data in the PR conversation.
+Workaround: the GitHub Action posts the report to the PR description (or comment) before merge, preserving the data in the PR.
 
 ### Clone does not include notes
 
@@ -552,7 +552,7 @@ Agent Note supports Claude Code today, but the `agents/` + `core/` split makes a
 ### What stays the same (`core/` + git hooks)
 
 - Git notes storage (`refs/notes/agentnote`)
-- Entry data structure (interactions, ai_ratio, files)
+- Entry data structure (interactions, files, attribution)
 - JSONL append and rotation
 - Display commands (show, log, pr, status)
 - Commit trailer (`Agentnote-Session`) — injected by `prepare-commit-msg` git hook
@@ -579,6 +579,7 @@ interface NormalizedEvent {
   response?: string;
   file?: string;
   tool?: string;
+  toolUseId?: string;
   commitCommand?: string;
   transcriptPath?: string;
   model?: string;
