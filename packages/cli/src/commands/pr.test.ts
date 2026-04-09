@@ -69,17 +69,15 @@ describe("agentnote pr", () => {
     assert.ok(output.includes("🤖"));
   });
 
-  it("outputs chat format with --format chat", () => {
-    const output = execSync(`node ${cliPath} pr HEAD~2 --format chat`, {
+  it("includes prompts section in markdown output", () => {
+    const output = execSync(`node ${cliPath} pr HEAD~2`, {
       cwd: testDir,
       encoding: "utf-8",
     });
 
     assert.ok(output.includes("## 🤖 Agent Note"));
-    assert.ok(output.includes("🧑 Prompt"));
+    assert.ok(output.includes("Prompt"));
     assert.ok(output.includes("add feature A"));
-    assert.ok(output.includes("<details>"));
-    assert.ok(output.includes("</details>"));
   });
 
   it("outputs JSON with --json", () => {

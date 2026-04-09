@@ -1,10 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import {
-  TRUNCATE_PROMPT,
-  TRUNCATE_RESPONSE_CHAT,
-  TRUNCATE_RESPONSE_PR,
-} from "../core/constants.js";
+import { TRUNCATE_PROMPT, TRUNCATE_RESPONSE_PR } from "../core/constants.js";
 import type { Attribution } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
@@ -232,30 +228,6 @@ function commitLink(c: CommitEntry, repoUrl: string | null): string {
   return `\`${c.short}\``;
 }
 
-/** Build commit summary for details tag. */
-function commitSummary(c: CommitEntry, repoUrl: string | null): string {
-  const link = commitLink(c, repoUrl);
-  if (c.ai_ratio === null) {
-    return `${link} ${c.message} — no tracking data`;
-  }
-  const lineDetail =
-    c.attribution?.method === "line" && c.attribution.lines && c.attribution.lines.total_added > 0
-      ? ` (${c.attribution.lines.ai_added}/${c.attribution.lines.total_added} lines)`
-      : "";
-  const filesLabel = c.files_total > 0 ? ` · ${c.files_total} files` : "";
-  return `${link} ${c.message} — ${c.ai_ratio}%${lineDetail}${filesLabel}`;
-}
-
-/** Render file table for a commit. */
-function renderFileTable(files: Array<{ path: string; by_ai: boolean }>): string[] {
-  if (files.length === 0) return [];
-  const lines = ["| File | Attribution |", "|---|---|"];
-  for (const f of files) {
-    lines.push(`| \`${f.path}\` | ${f.by_ai ? "🤖 AI" : "👤 Human"} |`);
-  }
-  return lines;
-}
-
 /** Extract the first meaningful line from a prompt, filtering skill expansions. */
 function cleanPrompt(prompt: string, maxLen: number): string {
   // Skip skill-generated expansions (start with ## heading).
@@ -339,62 +311,6 @@ function renderMarkdown(report: PrReport): string {
   return lines.join("\n");
 }
 
-// ─── Chat format rendering ──────────────────────────
-
-function renderChat(report: PrReport): string {
-  const lines: string[] = [];
-
-  lines.push("## 🤖 Agent Note");
-  lines.push("");
-  lines.push(...renderHeader(report));
-
-  for (const c of report.commits) {
-    lines.push("");
-
-    if (c.ai_ratio === null) {
-      lines.push(`<details>`);
-      lines.push(`<summary>${commitSummary(c, report.repo_url)}</summary>`);
-      lines.push("");
-      lines.push("*No agentnote data for this commit.*");
-      lines.push("");
-      lines.push(`</details>`);
-      continue;
-    }
-
-    lines.push(`<details>`);
-    lines.push(`<summary>${commitSummary(c, report.repo_url)}</summary>`);
-    lines.push("");
-
-    for (const { prompt, response } of c.interactions) {
-      lines.push("**🧑 Prompt**");
-      lines.push(`> ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
-      lines.push("");
-
-      if (response) {
-        lines.push("**🤖 Response**");
-        lines.push("");
-        const truncated =
-          response.length > TRUNCATE_RESPONSE_CHAT
-            ? `${response.slice(0, TRUNCATE_RESPONSE_CHAT)}…`
-            : response;
-        lines.push(truncated);
-        lines.push("");
-      }
-    }
-
-    // File table
-    const fileTableLines = renderFileTable(c.files);
-    if (fileTableLines.length > 0) {
-      lines.push(...fileTableLines);
-      lines.push("");
-    }
-
-    lines.push(`</details>`);
-  }
-
-  return lines.join("\n");
-}
-
 // ─── CLI entry point ────────────────────────────────
 
 /** Wrap rendered content with HTML comment markers for safe insertion into PR descriptions. */
@@ -437,14 +353,12 @@ async function updatePrDescription(prNumber: string, section: string): Promise<v
 
 export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
-  const formatIdx = args.indexOf("--format");
   const outputIdx = args.indexOf("--output");
   const updateIdx = args.indexOf("--update");
   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
   const positional = args.filter(
     (a, i) =>
       !a.startsWith("--") &&
-      (formatIdx === -1 || i !== formatIdx + 1) &&
       (outputIdx === -1 || i !== outputIdx + 1) &&
       (updateIdx === -1 || i !== updateIdx + 1),
   );
@@ -455,7 +369,6 @@ export async function pr(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const format = formatIdx !== -1 ? args[formatIdx + 1] : "chat";
   const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : "description";
 
   const report = await collectReport(base);
@@ -469,16 +382,11 @@ export async function pr(args: string[]): Promise<void> {
     return;
   }
 
-  let rendered: string;
   if (isJson) {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
-  if (format === "chat") {
-    rendered = renderChat(report);
-  } else {
-    rendered = renderMarkdown(report);
-  }
+  const rendered = renderMarkdown(report);
 
   // Output routing: --update <PR#> triggers description/comment update.
   if (prNumber) {
