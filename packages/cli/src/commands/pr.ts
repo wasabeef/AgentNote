@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
-  BAR_WIDTH_COMPACT,
   TRUNCATE_PROMPT,
   TRUNCATE_RESPONSE_CHAT,
   TRUNCATE_RESPONSE_PR,
@@ -507,12 +506,6 @@ async function postPrComment(prNumber: string, content: string): Promise<void> {
 }
 
 // ─── Helpers ────────────────────────────────────────
-
-function renderBar(ratio: number): string {
-  const width = BAR_WIDTH_COMPACT;
-  const filled = Math.round((ratio / 100) * width);
-  return "█".repeat(filled) + "░".repeat(width - filled);
-}
 
 function basename(path: string): string {
   return path.split("/").pop() ?? path;
