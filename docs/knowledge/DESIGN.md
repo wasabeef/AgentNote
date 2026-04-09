@@ -311,37 +311,71 @@ agentnote hook                handle agent hook events (internal, via stdin)
 1. **Agent config** — writes data collection hooks to the agent's config (e.g., `.claude/settings.json`). Commit this file to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg` and `post-commit` hooks in the repository's hook directory (respects `core.hooksPath`). These are local to `.git/` and must be installed per clone via `agentnote init`.
 
-### PR report: data and presentation separated
+### PR report
 
-`agentnote pr` produces two output formats:
+`agentnote pr` produces markdown or structured JSON reports.
 
 ```bash
-agentnote pr                    # markdown (human-readable)
-agentnote pr --json             # structured JSON (for scripts/actions)
-agentnote pr origin/main --json # explicit base branch
+agentnote pr                              # default format (chat or table from config)
+agentnote pr --format chat                # collapsible per-commit conversations
+agentnote pr --format table               # summary table
+agentnote pr --json                       # structured JSON (for scripts/actions)
+agentnote pr --output description --update 42  # upsert into PR description
+agentnote pr --output comment --update 42      # post as PR comment
 ```
+
+Two markdown formats:
+
+- **`chat`** (default) — per-commit collapsible details with prompts, responses, and file attribution table
+- **`table`** — summary table with AI ratio, line counts, prompt count, and files per commit
+
+Both use a unified header:
+```
+## 🤖 Agent Note
+**AI ratio: 73%** · 45/75 lines · 4/5 commits tracked · 8 prompts · claude-sonnet-4-20250514
+```
+
+Prompt display: first meaningful line only (120 chars). Skill-generated expansions (`/commit`, `/plan`) are filtered to show the user's original input.
 
 JSON output structure:
 
 ```json
 {
-  "overall_ai_ratio": 80,
+  "overall_ai_ratio": 73,
+  "overall_method": "line",
+  "model": "claude-sonnet-4-20250514",
   "total_commits": 5,
   "tracked_commits": 4,
-  "total_prompts": 6,
+  "total_prompts": 8,
   "commits": [
     {
       "sha": "...",
       "short": "dd4f971",
       "message": "feat: add Button",
+      "model": "claude-sonnet-4-20250514",
       "ai_ratio": 100,
-      "prompts_count": 1,
+      "attribution": { "ai_ratio": 100, "method": "line", "lines": { "ai_added": 32, "total_added": 32, "deleted": 0 } },
       "files": [{"path": "button.tsx", "by_ai": true}],
-      "interactions": [{"prompt": "...", "response": "..."}]
+      "interactions": [{"prompt": "...", "response": "...", "tools": ["Write"]}]
     }
   ]
 }
 ```
+
+### Configuration file
+
+`agentnote.yml` at repo root controls output settings. Committed to share with the team.
+
+```yaml
+# agentnote.yml
+pr:
+  output: description    # description | comment (default: description)
+  format: chat           # chat | table (default: chat)
+```
+
+- `pr.output: description` — upsert report into PR body between `<!-- agentnote-begin/end -->` markers
+- `pr.output: comment` — post/update a PR comment with `<!-- agentnote-pr-report -->` marker
+- CLI flags (`--output`, `--format`) override config values
 
 ## GitHub Action
 
@@ -362,30 +396,31 @@ JSON output structure:
 | Input | Default | Description |
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
-| `comment` | `"true"` | Post markdown report as PR comment |
+| `output` | from config | Report destination: `description` or `comment` |
+| `format` | from config | Report format: `chat` or `table` |
+| `comment` | `"true"` | Legacy: set to `"false"` to disable posting |
 
 ### Action outputs
 
 | Output | Type | Description |
 |---|---|---|
 | `overall_ai_ratio` | number | PR-wide AI ratio (0-100) |
+| `overall_method` | string | Attribution method: `line`, `file`, `mixed`, `none` |
 | `tracked_commits` | number | Commits with agentnote data |
 | `total_commits` | number | Total commits in PR |
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
 | `markdown` | string | Rendered markdown report |
 
-Each commit's data is available inside the `json` output — per-commit AI ratio, file-level attribution, full prompt-response interactions.
-
 ### Action internals
 
-The action is a thin wrapper:
+The action reads `agentnote.yml` for default settings, then:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
-2. `npx @wasabeef/agentnote pr --json` → parse outputs
-3. `npx @wasabeef/agentnote pr` → markdown
+2. `agentnote pr --json` → parse outputs
+3. `agentnote pr --format <chat|table>` → markdown
 4. Set GitHub Actions outputs
-5. Optionally post markdown as PR comment (with `<!-- agentnote-pr-report -->` marker for idempotent updates)
+5. Post report to PR description (upsert between markers) or as a comment
 
 Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a single `dist/index.js` that is committed to the repo. No `npm install` needed at runtime.
 
