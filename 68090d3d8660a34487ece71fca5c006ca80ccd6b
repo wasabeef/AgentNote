@@ -1,0 +1,89 @@
+{
+  "v": 1,
+  "session_id": "157ec79f-58f2-4be3-9e9d-a445abdf49c6",
+  "timestamp": "2026-04-10T11:00:53.011Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "website/astro.config.mjs",
+      "by_ai": false
+    },
+    {
+      "path": "website/public/hero.png",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/assets/hero.png",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/getting-started.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/styles/custom.css",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "file"
+  }
+}
