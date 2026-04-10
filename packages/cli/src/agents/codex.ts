@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
@@ -28,14 +28,138 @@ type CodexHooksFile = {
 
 type RolloutLine = {
   type?: string;
-  payload?: {
-    type?: string;
-    role?: string;
-    name?: string;
-    input?: string;
-    content?: Array<{ type?: string; text?: string }>;
-  };
+  payload?: Record<string, unknown>;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function appendUnique(values: string[], seen: Set<string>, next: string): void {
+  const trimmed = next.trim();
+  if (!trimmed || seen.has(trimmed)) return;
+  seen.add(trimmed);
+  values.push(trimmed);
+}
+
+function collectMessageText(value: unknown, seen = new Set<unknown>()): string[] {
+  if (typeof value === "string") {
+    return value.trim() ? [value.trim()] : [];
+  }
+
+  if (!value || seen.has(value)) return [];
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectMessageText(item, seen));
+  }
+
+  if (!isRecord(value)) return [];
+
+  if (typeof value.text === "string") {
+    return value.text.trim() ? [value.text.trim()] : [];
+  }
+
+  if (typeof value.value === "string") {
+    return value.value.trim() ? [value.value.trim()] : [];
+  }
+
+  return [
+    ...collectMessageText(value.text, seen),
+    ...collectMessageText(value.content, seen),
+    ...collectMessageText(value.input, seen),
+    ...collectMessageText(value.output, seen),
+    ...collectMessageText(value.value, seen),
+  ];
+}
+
+function parseJsonString(value: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[] {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      const parsed = parseJsonString(value);
+      if (parsed !== value) return collectPatchStrings(parsed, seen);
+    }
+    if (value.includes("*** Begin Patch")) return [value];
+    return [];
+  }
+
+  if (!value || seen.has(value)) return [];
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectPatchStrings(item, seen));
+  }
+
+  if (!isRecord(value)) return [];
+
+  return [
+    ...collectPatchStrings(value.patch, seen),
+    ...collectPatchStrings(value.input, seen),
+    ...collectPatchStrings(value.arguments, seen),
+    ...collectPatchStrings(value.content, seen),
+    ...collectPatchStrings(value.text, seen),
+  ];
+}
+
+function readTranscriptSessionId(candidate: string): string | null {
+  try {
+    const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
+    const match = preview.match(/"id"\s*:\s*"([^"]+)"/);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function findTranscriptCandidate(rootDir: string, sessionId: string): string | null {
+  const queue: string[] = [rootDir];
+  let scanned = 0;
+
+  while (queue.length > 0 && scanned < 256) {
+    const current = queue.shift();
+    if (!current) break;
+
+    let entries: ReturnType<typeof readdirSync>;
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+      const candidate = join(current, entry.name);
+      if (!isValidTranscriptPath(candidate)) continue;
+
+      if (entry.isDirectory()) {
+        queue.push(candidate);
+        continue;
+      }
+
+      if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+      scanned += 1;
+
+      if (entry.name === `${sessionId}.jsonl`) {
+        return candidate;
+      }
+
+      if (readTranscriptSessionId(candidate) === sessionId) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
 
 function codexHome(): string {
   return process.env.CODEX_HOME ?? join(homedir(), ".codex");
@@ -264,22 +388,7 @@ export const codex: AgentAdapter = {
     const sessionsDir = join(codexHome(), "sessions");
     if (!existsSync(sessionsDir)) return null;
 
-    try {
-      for (const entry of readdirSync(sessionsDir)) {
-        const candidate = join(sessionsDir, entry);
-        if (
-          basename(candidate) === `${sessionId}.jsonl` &&
-          existsSync(candidate) &&
-          isValidTranscriptPath(candidate)
-        ) {
-          return candidate;
-        }
-      }
-    } catch {
-      // ignore unreadable dirs
-    }
-
-    return null;
+    return findTranscriptCandidate(sessionsDir, sessionId);
   },
 
   async extractInteractions(
@@ -310,13 +419,11 @@ export const codex: AgentAdapter = {
 
       if (entry.type !== "response_item" || !entry.payload) continue;
       const payload = entry.payload;
+      const payloadType = typeof payload.type === "string" ? payload.type : undefined;
+      const payloadRole = typeof payload.role === "string" ? payload.role : undefined;
 
-      if (payload.type === "message" && payload.role === "user") {
-        const prompt = (payload.content ?? [])
-          .filter((item) => item.type === "input_text" && item.text)
-          .map((item) => item.text?.trim())
-          .filter((text): text is string => Boolean(text))
-          .join("\n");
+      if (payloadType === "message" && payloadRole === "user") {
+        const prompt = collectMessageText(payload.content).join("\n");
         if (!prompt) continue;
         if (current) interactions.push(current);
         current = { prompt, response: null };
@@ -325,26 +432,36 @@ export const codex: AgentAdapter = {
 
       if (!current) continue;
 
-      if (payload.type === "message" && payload.role === "assistant") {
-        const response = (payload.content ?? [])
-          .filter((item) => item.type === "output_text" && item.text)
-          .map((item) => item.text?.trim())
-          .filter((text): text is string => Boolean(text))
-          .join("\n");
+      if (payloadType === "message" && payloadRole === "assistant") {
+        const response = collectMessageText(payload.content).join("\n");
         if (response) {
           current.response = current.response ? `${current.response}\n${response}` : response;
         }
         continue;
       }
 
-      if (payload.type === "custom_tool_call" && payload.name === "apply_patch" && payload.input) {
-        const files = extractFilesFromApplyPatch(payload.input);
-        const lineStats = extractLineStatsFromApplyPatch(payload.input);
-        if (files.length > 0) {
-          current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
-        }
-        if (Object.keys(lineStats).length > 0) {
-          current.line_stats = current.line_stats ?? {};
+      const toolName =
+        typeof payload.name === "string"
+          ? payload.name
+          : typeof payload.call_name === "string"
+            ? payload.call_name
+            : undefined;
+
+      if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
+        const patchInputs = [
+          ...collectPatchStrings(payload.input),
+          ...collectPatchStrings(payload.arguments),
+        ];
+        const files: string[] = [];
+        const fileSeen = new Set<string>();
+        current.line_stats = current.line_stats ?? {};
+
+        for (const patchInput of patchInputs) {
+          for (const file of extractFilesFromApplyPatch(patchInput)) {
+            appendUnique(files, fileSeen, file);
+          }
+
+          const lineStats = extractLineStatsFromApplyPatch(patchInput);
           for (const [file, stats] of Object.entries(lineStats)) {
             const previous = current.line_stats[file] ?? { added: 0, deleted: 0 };
             current.line_stats[file] = {
@@ -352,6 +469,14 @@ export const codex: AgentAdapter = {
               deleted: previous.deleted + stats.deleted,
             };
           }
+        }
+
+        if (files.length > 0) {
+          current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
+        }
+
+        if (Object.keys(current.line_stats).length === 0) {
+          delete current.line_stats;
         }
       }
     }
