@@ -57,21 +57,44 @@ starlight-theme-select {
 
 /* Hero section */
 .hero {
-  padding-block: 4rem;
+  padding-block: 2rem 4rem;
+  position: relative;
 }
 
-.hero img {
-  object-fit: contain !important;
-  aspect-ratio: auto !important;
-  width: 100% !important;
-  height: auto !important;
+.hero::before {
+  content: "";
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  aspect-ratio: 3/2;
+  background: url("/agentnote/hero.png") center/contain no-repeat;
   border-radius: 12px;
 }
+
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hero h1 {
+  display: none !important;
+}
+
 
 .hero .tagline {
   font-size: 1.25rem;
   line-height: 1.75;
-  max-width: 42ch;
+  max-width: 48ch;
+  color: var(--sl-color-gray-1) !important;
 }
 
 /* Action buttons */
@@ -90,6 +113,7 @@ starlight-theme-select {
 
 .hero .action a[data-variant="primary"]:hover {
   opacity: 0.9;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
 }
 
 /* Cards */

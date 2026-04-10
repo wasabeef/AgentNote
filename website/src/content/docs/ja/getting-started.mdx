@@ -1,0 +1,74 @@
+---
+title: はじめに
+description: 1 コマンドで Agent Note をリポジトリにセットアップ
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+## インストール
+
+<Steps>
+1. **init を実行**
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+   以下が設定されます:
+   - エージェントフック (`.claude/settings.json`)
+   - Git フック (`prepare-commit-msg`, `post-commit`, `pre-push`)
+   - GitHub Actions ワークフロー (`.github/workflows/agentnote.yml`)
+   - notes の自動 fetch 設定
+
+2. **生成ファイルをコミット**
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. **完了。** Claude Code でコーディングすれば、すべてのコミットが自動追跡されます。
+</Steps>
+
+## 新しいクローン
+
+各開発者はクローン後に init を実行してローカルの git フックをインストールします:
+
+```bash
+git clone <repo> && cd <repo>
+npx @wasabeef/agentnote init
+```
+
+<Aside>
+  Git フックは `.git/` 内に配置されるため、コミットされません。開発者ごとに一度 `init` を実行する必要があります。
+</Aside>
+
+## 動作確認
+
+```bash
+agentnote show
+```
+
+```
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+files:   5 changed, 3 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+```
+
+## 対応エージェント
+
+| エージェント | 状態 |
+|---|---|
+| Claude Code | 対応済み |
+| Cursor | 近日対応 |
+| Gemini CLI | 近日対応 |
+| Codex CLI | 近日対応 |
+| GitHub Copilot | 近日対応 |

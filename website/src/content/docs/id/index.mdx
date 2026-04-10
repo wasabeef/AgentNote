@@ -1,0 +1,93 @@
+---
+title: Agent Note
+description: Ketahui mengapa kode Anda berubah, bukan hanya apa yang berubah.
+template: splash
+hero:
+  tagline: Setiap prompt AI, respons, dan atribusi file — terhubung ke git commit Anda secara otomatis. Presisi level baris. Tanpa konfigurasi.
+  actions:
+    - text: Mulai
+      link: /agentnote/id/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/wasabeef/agentnote
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Apa yang Dilakukan Agent Note
+
+<CardGrid stagger>
+  <Card title="Atribusi AI Level Baris" icon="pencil">
+    Algoritma posisi 3-diff menghitung baris mana yang ditulis AI dan mana yang ditulis manusia — bukan sekadar file mana.
+  </Card>
+  <Card title="Pelacakan Sesi" icon="document">
+    Prompt, respons, nama model, dan penggunaan tool — semuanya terhubung ke commit yang dihasilkan.
+  </Card>
+  <Card title="Laporan PR" icon="rocket">
+    Laporan sesi AI otomatis di pull request dengan rasio per commit, jumlah baris, dan hash yang tertaut.
+  </Card>
+  <Card title="Native Git" icon="setting">
+    Tersimpan sebagai git notes — tidak terlihat oleh branch dan CI. Bisa di-push, di-fetch, dan dibagikan.
+  </Card>
+</CardGrid>
+
+## Setup dalam 60 Detik
+
+<Steps>
+1. Jalankan init di repository Anda
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+2. Commit file yang dihasilkan
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. Coding dengan AI, commit seperti biasa — semuanya dilacak secara otomatis
+</Steps>
+
+## Lihat Langsung
+
+<Tabs>
+  <TabItem label="agentnote show">
+  ```
+  commit:  ce941f7 feat: add JWT auth middleware
+  session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+  ai:      60% (45/75 lines) [█████░░░]
+  model:   claude-sonnet-4-20250514
+  files:   5 changed, 3 by AI
+
+    src/middleware/auth.ts  🤖
+    src/types/token.ts  🤖
+    CHANGELOG.md  👤
+  ```
+  </TabItem>
+  <TabItem label="agentnote log">
+  ```
+  ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+  326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+  ba091be fix: update deps
+  ```
+  </TabItem>
+  <TabItem label="PR Report">
+  ```
+  ## 🧑💬🤖 Agent Note
+
+  **AI ratio: 73%** ████████
+  `45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+
+  | Commit | AI Ratio | Lines | Prompts | Files |
+  |---|---|---|---|---|
+  | ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖 |
+  ```
+  </TabItem>
+</Tabs>

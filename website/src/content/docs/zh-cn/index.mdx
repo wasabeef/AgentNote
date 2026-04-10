@@ -1,0 +1,93 @@
+---
+title: Agent Note
+description: 记录代码变更的原因，而不仅仅是变更内容。
+template: splash
+hero:
+  tagline: 每一次 AI 提示词、响应和文件级 AI 标注——自动关联到你的 git 提交。行级精度，零配置。
+  actions:
+    - text: 开始使用
+      link: /agentnote/zh-cn/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/wasabeef/agentnote
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Agent Note 能做什么
+
+<CardGrid stagger>
+  <Card title="行级 AI 贡献度分析" icon="pencil">
+    3-diff 定位算法精确判定哪些行由 AI 编写、哪些由人类编写——不只是文件级别。
+  </Card>
+  <Card title="会话追踪" icon="document">
+    提示词、响应、模型名称和工具使用记录——全部关联到对应的提交。
+  </Card>
+  <Card title="PR 报告" icon="rocket">
+    在 Pull Request 上自动生成 AI 会话报告，包含每次提交的比例、行数和关联哈希。
+  </Card>
+  <Card title="Git 原生" icon="setting">
+    以 git notes 形式存储——对分支和 CI 不可见。可推送、可拉取、可共享。
+  </Card>
+</CardGrid>
+
+## 60 秒完成配置
+
+<Steps>
+1. 在仓库中运行 init
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+2. 提交生成的文件
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. 用 AI 编写代码，正常提交——一切自动追踪
+</Steps>
+
+## 实际效果
+
+<Tabs>
+  <TabItem label="agentnote show">
+  ```
+  commit:  ce941f7 feat: add JWT auth middleware
+  session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+  ai:      60% (45/75 lines) [█████░░░]
+  model:   claude-sonnet-4-20250514
+  files:   5 changed, 3 by AI
+
+    src/middleware/auth.ts  🤖
+    src/types/token.ts  🤖
+    CHANGELOG.md  👤
+  ```
+  </TabItem>
+  <TabItem label="agentnote log">
+  ```
+  ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+  326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+  ba091be fix: update deps
+  ```
+  </TabItem>
+  <TabItem label="PR Report">
+  ```
+  ## 🧑💬🤖 Agent Note
+
+  **AI ratio: 73%** ████████
+  `45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+
+  | Commit | AI Ratio | Lines | Prompts | Files |
+  |---|---|---|---|---|
+  | ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖 |
+  ```
+  </TabItem>
+</Tabs>

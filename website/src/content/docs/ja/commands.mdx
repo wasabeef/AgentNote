@@ -1,0 +1,88 @@
+---
+title: コマンド
+description: Agent Note CLI コマンドリファレンス
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## agentnote init
+
+リポジトリに Agent Note をセットアップします。
+
+```bash
+npx @wasabeef/agentnote init
+```
+
+| フラグ | 説明 |
+|---|---|
+| `--no-hooks` | エージェントフックの設定をスキップ |
+| `--no-git-hooks` | git フックのインストールをスキップ |
+| `--no-action` | ワークフローの作成をスキップ |
+| `--no-notes` | 自動 fetch 設定をスキップ |
+| `--hooks` | エージェントフックのみインストール |
+| `--action` | ワークフローのみ作成 |
+
+## agentnote show
+
+コミットの AI セッション詳細を表示します。
+
+```bash
+agentnote show          # HEAD
+agentnote show abc123   # 特定のコミット
+```
+
+```
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+files:   5 changed, 3 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+```
+
+## agentnote log
+
+最近のコミットを AI 比率付きで一覧表示します。
+
+```bash
+agentnote log      # 直近 10 件
+agentnote log 20   # 直近 20 件
+```
+
+## agentnote pr
+
+PR レポートを生成します。
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  agentnote pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  agentnote pr origin/main --json
+  ```
+  </TabItem>
+  <TabItem label="PR 更新">
+  ```bash
+  agentnote pr origin/main --output description --update 42
+  ```
+  </TabItem>
+</Tabs>
+
+## agentnote commit
+
+セッショントレーラーと note 記録を含む `git commit` のラッパーです。
+
+```bash
+agentnote commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  git フックがインストールされていれば不要です — `git commit` が同じ処理を自動的に行います。
+</Aside>

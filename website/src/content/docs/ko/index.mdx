@@ -1,0 +1,93 @@
+---
+title: Agent Note
+description: 코드가 왜 변경됐는지 기록합니다.
+template: splash
+hero:
+  tagline: 모든 AI 프롬프트, 응답, 파일별 AI 기여 정보를 git 커밋에 자동으로 연결합니다. 라인 단위 정밀도. 설정 불필요.
+  actions:
+    - text: 시작하기
+      link: /agentnote/ko/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/wasabeef/agentnote
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Agent Note가 하는 일
+
+<CardGrid stagger>
+  <Card title="라인 단위 AI 기여도 판정" icon="pencil">
+    3-diff 포지션 알고리즘으로 AI가 작성한 라인과 사람이 작성한 라인을 정확히 구분합니다. 파일 단위가 아닌 라인 단위로.
+  </Card>
+  <Card title="세션 추적" icon="document">
+    프롬프트, 응답, 모델명, 도구 사용 이력 — 모두 해당 커밋에 연결됩니다.
+  </Card>
+  <Card title="PR 리포트" icon="rocket">
+    풀 리퀘스트에 AI 세션 리포트를 자동 생성합니다. 커밋별 비율, 라인 수, 해시 링크 포함.
+  </Card>
+  <Card title="Git 네이티브" icon="setting">
+    git notes로 저장되어 브랜치와 CI에 영향 없음. push, fetch, 팀 공유 가능.
+  </Card>
+</CardGrid>
+
+## 60초 만에 설정
+
+<Steps>
+1. 리포지토리에서 init 실행
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+2. 생성된 파일을 커밋
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. AI로 코딩하고 평소처럼 커밋 — 모든 것이 자동으로 추적됩니다
+</Steps>
+
+## 직접 확인해 보세요
+
+<Tabs>
+  <TabItem label="agentnote show">
+  ```
+  commit:  ce941f7 feat: add JWT auth middleware
+  session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+  ai:      60% (45/75 lines) [█████░░░]
+  model:   claude-sonnet-4-20250514
+  files:   5 changed, 3 by AI
+
+    src/middleware/auth.ts  🤖
+    src/types/token.ts  🤖
+    CHANGELOG.md  👤
+  ```
+  </TabItem>
+  <TabItem label="agentnote log">
+  ```
+  ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+  326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+  ba091be fix: update deps
+  ```
+  </TabItem>
+  <TabItem label="PR Report">
+  ```
+  ## 🧑💬🤖 Agent Note
+
+  **AI ratio: 73%** ████████
+  `45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+
+  | Commit | AI Ratio | Lines | Prompts | Files |
+  |---|---|---|---|---|
+  | ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖 |
+  ```
+  </TabItem>
+</Tabs>

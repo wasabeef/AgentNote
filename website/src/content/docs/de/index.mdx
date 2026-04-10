@@ -1,0 +1,93 @@
+---
+title: Agent Note
+description: Erfahre, warum sich dein Code geändert hat — nicht nur was.
+template: splash
+hero:
+  tagline: Jeder KI-Prompt, jede Antwort und Dateizuordnung — automatisch an deine Git-Commits angehängt. Zeilengenau. Ohne Konfiguration.
+  actions:
+    - text: Loslegen
+      link: /agentnote/de/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/wasabeef/agentnote
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Was Agent Note leistet
+
+<CardGrid stagger>
+  <Card title="KI-Zuordnung auf Zeilenebene" icon="pencil">
+    Ein 3-Diff-Positionsalgorithmus ermittelt, welche Zeilen von der KI und welche vom Menschen geschrieben wurden — nicht nur welche Dateien.
+  </Card>
+  <Card title="Session-Tracking" icon="document">
+    Prompts, Antworten, Modellname und Tool-Nutzung — alles verknüpft mit den Commits, die daraus entstanden sind.
+  </Card>
+  <Card title="PR-Berichte" icon="rocket">
+    Automatische KI-Sitzungsberichte in Pull Requests mit Anteil pro Commit, Zeilenanzahl und verlinkten Hashes.
+  </Card>
+  <Card title="Git-nativ" icon="setting">
+    Gespeichert als Git Notes — unsichtbar für Branches und CI. Kann gepusht, gefetcht und im Team geteilt werden.
+  </Card>
+</CardGrid>
+
+## Einrichtung in 60 Sekunden
+
+<Steps>
+1. Führe init in deinem Repository aus
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+2. Committe die generierten Dateien
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. Programmiere mit KI, committe wie gewohnt — alles wird automatisch erfasst
+</Steps>
+
+## In Aktion erleben
+
+<Tabs>
+  <TabItem label="agentnote show">
+  ```
+  commit:  ce941f7 feat: add JWT auth middleware
+  session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+  ai:      60% (45/75 lines) [█████░░░]
+  model:   claude-sonnet-4-20250514
+  files:   5 changed, 3 by AI
+
+    src/middleware/auth.ts  🤖
+    src/types/token.ts  🤖
+    CHANGELOG.md  👤
+  ```
+  </TabItem>
+  <TabItem label="agentnote log">
+  ```
+  ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+  326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+  ba091be fix: update deps
+  ```
+  </TabItem>
+  <TabItem label="PR Report">
+  ```
+  ## 🧑💬🤖 Agent Note
+
+  **AI ratio: 73%** ████████
+  `45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+
+  | Commit | AI Ratio | Lines | Prompts | Files |
+  |---|---|---|---|---|
+  | ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖 |
+  ```
+  </TabItem>
+</Tabs>

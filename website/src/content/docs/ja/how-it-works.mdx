@@ -1,0 +1,71 @@
+---
+title: 仕組み
+description: Agent Note が AI セッションデータを git コミットに紐づける仕組み
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## データの流れ
+
+<Steps>
+1. Claude Code にプロンプトを送る → エージェントフックがプロンプトを記録
+2. Claude がコードを書く → フックが変更ファイルと blob ハッシュを記録
+3. `git commit` を実行 → トレーラーが挿入され、note が記録される
+4. `git push` を実行 → notes が自動的にリモートに push される
+</Steps>
+
+特別なコマンドは不要。`git commit` と `git push` を普通に使うだけです。
+
+## ストレージ
+
+<CardGrid>
+  <Card title="レイヤー 1: ローカル一時データ" icon="laptop">
+    `.git/agentnote/sessions/` 内のセッションデータ。プロンプト、変更、blob ハッシュの JSONL ファイル。コミットごとにローテーション。push されません。
+  </Card>
+  <Card title="レイヤー 2: Git Notes" icon="document">
+    `refs/notes/agentnote` の永続レコード。コミットごとに 1 つの JSON。push・fetch・チーム共有が可能。
+  </Card>
+</CardGrid>
+
+### Note スキーマ
+
+```json
+{
+  "v": 1,
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "JWT 認証ミドルウェアを実装して",
+      "response": "ミドルウェアを作成します...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## 行単位の帰属判定
+
+AI の著作は 3-diff ポジションアルゴリズムで行単位に計算されます:
+
+| Diff | From | To | 内容 |
+|---|---|---|---|
+| diff1 | 親コミット | コミットされたファイル | このコミットの全変更 |
+| diff2 | AI 編集前 | コミットされたファイル | AI の編集 + その後の人間の編集 |
+| diff3 | AI 編集後 | コミットされたファイル | 人間の編集のみ |
+
+**AI のポジション = diff2 にあり diff3 にないポジション**
+
+<Aside type="tip">
+  削除行は別途追跡されます — AI にも人間にも帰属しません。blob データが利用できない場合はファイル単位の帰属に自動フォールバックします。
+</Aside>

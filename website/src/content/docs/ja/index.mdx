@@ -1,0 +1,93 @@
+---
+title: Agent Note
+description: コードが「なぜ」変わったのかを記録する
+template: splash
+hero:
+  tagline: AI のプロンプト・レスポンス・ファイルごとの著作情報を、git コミットに自動で紐づけます。行単位の精度。設定不要。
+  actions:
+    - text: はじめる
+      link: /agentnote/ja/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/wasabeef/agentnote
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Agent Note でできること
+
+<CardGrid stagger>
+  <Card title="行単位の AI 著作判定" icon="pencil">
+    3-diff アルゴリズムで、AI が書いた行と人間が書いた行を見分けます。ファイル単位ではなく行単位。
+  </Card>
+  <Card title="セッション記録" icon="document">
+    プロンプト・レスポンス・使用モデル・ツール情報をコミットと一緒に記録します。
+  </Card>
+  <Card title="PR レポート" icon="rocket">
+    プルリクエストに AI セッションレポートを自動投稿。コミットごとの AI 比率・変更行数・リンク付きハッシュを表示。
+  </Card>
+  <Card title="Git ネイティブ" icon="setting">
+    git notes で保存するため、ブランチや CI に影響しません。push・fetch でチーム共有も簡単。
+  </Card>
+</CardGrid>
+
+## 60 秒でセットアップ
+
+<Steps>
+1. リポジトリで init を実行
+
+   ```bash
+   npx @wasabeef/agentnote init
+   ```
+
+2. 生成されたファイルをコミット
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote.yml
+   git commit -m "chore: enable agentnote"
+   git push
+   ```
+
+3. あとは普通に AI でコーディングしてコミットするだけ — すべて自動で記録されます
+</Steps>
+
+## 実際の表示
+
+<Tabs>
+  <TabItem label="agentnote show">
+  ```
+  commit:  ce941f7 feat: add JWT auth middleware
+  session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+  ai:      60% (45/75 lines) [█████░░░]
+  model:   claude-sonnet-4-20250514
+  files:   5 changed, 3 by AI
+
+    src/middleware/auth.ts  🤖
+    src/types/token.ts  🤖
+    CHANGELOG.md  👤
+  ```
+  </TabItem>
+  <TabItem label="agentnote log">
+  ```
+  ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+  326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+  ba091be fix: update deps
+  ```
+  </TabItem>
+  <TabItem label="PR レポート">
+  ```
+  ## 🧑💬🤖 Agent Note
+
+  **AI ratio: 73%** ████████
+  `45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+
+  | Commit | AI Ratio | Lines | Prompts | Files |
+  |---|---|---|---|---|
+  | ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖 |
+  ```
+  </TabItem>
+</Tabs>
