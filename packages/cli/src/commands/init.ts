@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
-import { claudeCode } from "../agents/claude-code.js";
+import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import { NOTES_FETCH_REFSPEC, NOTES_REF_FULL, TRAILER_KEY } from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
@@ -86,6 +86,14 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 `;
 
 export async function init(args: string[]): Promise<void> {
+  const agentArgIndex = args.indexOf("--agent");
+  const agentName =
+    agentArgIndex >= 0 && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
+  if (!hasAgent(agentName)) {
+    console.error(`error: unknown agent '${agentName}'`);
+    process.exit(1);
+  }
+
   const skipHooks = args.includes("--no-hooks");
   const skipAction = args.includes("--no-action");
   const skipNotes = args.includes("--no-notes");
@@ -94,19 +102,22 @@ export async function init(args: string[]): Promise<void> {
   const actionOnly = args.includes("--action");
 
   const repoRoot = await root();
+  const adapter = getAgent(agentName);
   const results: string[] = [];
 
   // Always create the data directory.
   await mkdir(await agentnoteDir(), { recursive: true });
 
-  // Agent hooks (Claude Code settings.json)
+  // Agent hooks
   if (!skipHooks && !actionOnly) {
-    const adapter = claudeCode;
     if (await adapter.isEnabled(repoRoot)) {
       results.push("  · hooks already configured");
     } else {
       await adapter.installHooks(repoRoot);
-      results.push("  ✓ hooks added to .claude/settings.json");
+      results.push(`  ✓ hooks added for ${adapter.name}`);
+      for (const relPath of await adapter.managedPaths(repoRoot)) {
+        results.push(`    ${relPath}`);
+      }
     }
   }
 
@@ -169,16 +180,19 @@ export async function init(args: string[]): Promise<void> {
 
   // Determine what needs to be committed
   const toCommit: string[] = [];
-  if (!skipHooks && !actionOnly) toCommit.push(".claude/settings.json");
+  if (!skipHooks && !actionOnly) {
+    toCommit.push(...(await adapter.managedPaths(repoRoot)));
+  }
   if (!skipAction && !hooksOnly) {
     const workflowPath = join(repoRoot, ".github", "workflows", "agentnote.yml");
     if (existsSync(workflowPath)) toCommit.push(".github/workflows/agentnote.yml");
   }
 
-  if (toCommit.length > 0) {
+  const uniqueToCommit = [...new Set(toCommit)];
+  if (uniqueToCommit.length > 0) {
     console.log("");
     console.log("  Next: commit and push these files");
-    console.log(`    git add ${toCommit.join(" ")}`);
+    console.log(`    git add ${uniqueToCommit.join(" ")}`);
     console.log('    git commit -m "chore: enable agentnote session tracking"');
     console.log("    git push");
   }

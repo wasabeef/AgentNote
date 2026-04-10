@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
@@ -16,15 +16,21 @@ import {
 
 describe("agentnote commit", () => {
   let testDir: string;
+  let testHome: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-commit-"));
+    testHome = join(testDir, ".home");
+    mkdirSync(testHome, { recursive: true });
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
-    execSync(`node ${cliPath} init --hooks --no-git-hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --hooks --no-git-hooks`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
   });
 
   after(() => {
@@ -120,7 +126,7 @@ describe("agentnote commit", () => {
     mkdirSync(sessionDir, { recursive: true });
 
     // Create a transcript file under ~/.claude/ (valid path)
-    const transcriptDir = join(homedir(), ".claude", "projects", "commit-test", "sessions");
+    const transcriptDir = join(testHome, ".claude", "projects", "commit-test", "sessions");
     mkdirSync(transcriptDir, { recursive: true });
     const transcriptPath = join(transcriptDir, `${sessionId}.jsonl`);
     writeFileSync(
@@ -142,6 +148,7 @@ describe("agentnote commit", () => {
     execSync("git add auth.ts", { cwd: testDir });
     execSync(`node ${cliPath} commit -m "feat: auth with transcript"`, {
       cwd: testDir,
+      env: { ...process.env, HOME: testHome },
     });
 
     // Verify response is in the note

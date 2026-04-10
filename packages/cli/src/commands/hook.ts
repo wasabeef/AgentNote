@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
-import { claudeCode } from "../agents/claude-code.js";
+import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import type { HookInput } from "../agents/types.js";
 import {
   CHANGES_FILE,
@@ -13,12 +13,12 @@ import {
   SESSION_FILE,
   SESSIONS_DIR,
   TRAILER_KEY,
-  TRANSCRIPT_PATH_FILE,
   TURN_FILE,
 } from "../core/constants.js";
 import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
+import { writeSessionAgent, writeSessionTranscriptPath } from "../core/session.js";
 import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
@@ -65,7 +65,7 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
-export async function hook(): Promise<void> {
+export async function hook(args: string[] = []): Promise<void> {
   const raw = await readStdin();
 
   // Determine if this is a synchronous hook (PreToolUse) by peeking at the event name.
@@ -77,7 +77,12 @@ export async function hook(): Promise<void> {
     return;
   }
 
-  const adapter = claudeCode;
+  const agentArgIndex = args.indexOf("--agent");
+  const agentName =
+    agentArgIndex >= 0 && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
+  if (!hasAgent(agentName)) return;
+
+  const adapter = getAgent(agentName);
   const input: HookInput = { raw, sync };
   const event = adapter.parseEvent(input);
   if (!event) return;
@@ -89,13 +94,15 @@ export async function hook(): Promise<void> {
   switch (event.kind) {
     case "session_start": {
       await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
+      await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
-        await writeFile(join(sessionDir, TRANSCRIPT_PATH_FILE), event.transcriptPath);
+        await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
         event: "session_start",
         session_id: event.sessionId,
         timestamp: event.timestamp,
+        agent: adapter.name,
         model: event.model ?? null,
       });
       await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
@@ -103,8 +110,9 @@ export async function hook(): Promise<void> {
     }
 
     case "stop": {
+      await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
-        await writeFile(join(sessionDir, TRANSCRIPT_PATH_FILE), event.transcriptPath);
+        await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
         event: "stop",
@@ -119,6 +127,10 @@ export async function hook(): Promise<void> {
     }
 
     case "prompt": {
+      await writeSessionAgent(sessionDir, adapter.name);
+      if (event.transcriptPath) {
+        await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
+      }
       // Rotate logs from previous prompt batch before starting fresh.
       // This ensures split commits each get scoped notes, while the next
       // prompt starts with clean JSONL files.

@@ -34,6 +34,9 @@ export interface AgentAdapter {
   /** Config file path relative to repo root (e.g., ".claude/settings.json"). */
   settingsRelPath: string;
 
+  /** All repo-relative files this adapter manages. */
+  managedPaths(repoRoot: string): Promise<string[]>;
+
   /** Add agentnote hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
   installHooks(repoRoot: string): Promise<void>;
 
@@ -52,5 +55,5 @@ export interface AgentAdapter {
   /** Extract all prompt-response pairs from the agent's transcript. */
   extractInteractions(
     transcriptPath: string,
-  ): Promise<Array<{ prompt: string; response: string | null }>>;
+  ): Promise<Array<{ prompt: string; response: string | null; files_touched?: string[] }>>;
 }

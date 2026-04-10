@@ -1,13 +1,17 @@
 import { stat } from "node:fs/promises";
-import { claudeCode } from "../agents/claude-code.js";
+import { join } from "node:path";
+import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import {
   BAR_WIDTH_FULL,
+  SESSIONS_DIR,
   TRAILER_KEY,
   TRUNCATE_PROMPT,
   TRUNCATE_RESPONSE_SHOW,
 } from "../core/constants.js";
+import { readSessionAgent, readSessionTranscriptPath } from "../core/session.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
+import { agentnoteDir } from "../paths.js";
 import { normalizeEntry } from "./normalize.js";
 
 export async function show(commitRef?: string): Promise<void> {
@@ -48,6 +52,9 @@ export async function show(commitRef?: string): Promise<void> {
   if (entry.model) {
     console.log(`model:   ${entry.model}`);
   }
+  if (entry.agent) {
+    console.log(`agent:   ${entry.agent}`);
+  }
 
   const aiCount = entry.files.filter((f) => f.by_ai).length;
   console.log(`files:   ${entry.files.length} changed, ${aiCount} by AI`);
@@ -80,8 +87,11 @@ export async function show(commitRef?: string): Promise<void> {
   }
 
   // Show transcript location only if available locally.
-  const adapter = claudeCode;
-  const transcriptPath = adapter.findTranscript(sessionId);
+  const sessionDir = join(await agentnoteDir(), SESSIONS_DIR, sessionId);
+  const sessionAgent = (await readSessionAgent(sessionDir)) ?? entry.agent ?? getDefaultAgent().name;
+  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getDefaultAgent();
+  const transcriptPath =
+    (await readSessionTranscriptPath(sessionDir)) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
     const stats = await stat(transcriptPath);

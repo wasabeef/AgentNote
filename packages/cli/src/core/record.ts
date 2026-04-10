@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { claudeCode } from "../agents/claude-code.js";
+import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import { git } from "../git.js";
 import { computePositionAttribution } from "./attribution.js";
 import {
@@ -13,12 +13,12 @@ import {
   EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
-  TRANSCRIPT_PATH_FILE,
   TURN_FILE,
 } from "./constants.js";
 import type { Interaction, LineCounts } from "./entry.js";
 import { buildEntry } from "./entry.js";
 import { appendJsonl, readJsonlEntries } from "./jsonl.js";
+import { readSessionAgent, readSessionTranscriptPath } from "./session.js";
 import { readNote, writeNote } from "./storage.js";
 
 /** Record an agentnote entry as a git note after a successful commit. */
@@ -28,6 +28,9 @@ export async function recordCommitEntry(opts: {
   transcriptPath?: string;
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, "sessions", opts.sessionId);
+  const sessionAgent = await readSessionAgent(sessionDir);
+  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : getDefaultAgent().name;
+  const adapter = getAgent(agentName);
   const commitSha = await git(["rev-parse", "HEAD"]);
 
   // Idempotent: skip if a note already exists for this commit.
@@ -126,7 +129,7 @@ export async function recordCommitEntry(opts: {
   }
 
   // Resolve transcript path from argument or saved file.
-  const transcriptPath = opts.transcriptPath ?? (await readSavedTranscriptPath(sessionDir));
+  const transcriptPath = opts.transcriptPath ?? (await readSessionTranscriptPath(sessionDir));
 
   // Build interactions from transcript for accurate prompt-response pairing.
   // Suppress transcript pairing for cross-turn commits: slice(-prompts.length)
@@ -144,12 +147,30 @@ export async function recordCommitEntry(opts: {
 
   let interactions: Interaction[];
 
-  if (transcriptPath && prompts.length > 0 && !crossTurnCommit) {
-    const allInteractions = await claudeCode.extractInteractions(transcriptPath);
-    interactions =
-      allInteractions.length > 0
-        ? allInteractions.slice(-prompts.length)
-        : prompts.map((p) => ({ prompt: p, response: null }));
+  if (transcriptPath && !crossTurnCommit) {
+    const allInteractions = await adapter.extractInteractions(transcriptPath);
+    const transcriptMatched = allInteractions.filter((interaction) =>
+      (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
+    );
+
+    if (transcriptMatched.length > 0) {
+      interactions = transcriptMatched.map((interaction) => ({
+        prompt: interaction.prompt,
+        response: interaction.response,
+        files_touched: interaction.files_touched?.filter((file) => commitFileSet.has(file)),
+      }));
+      aiFiles = [
+        ...new Set(
+          interactions.flatMap((interaction) =>
+            (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file)),
+          ),
+        ),
+      ];
+    } else if (prompts.length > 0 && allInteractions.length > 0) {
+      interactions = allInteractions.slice(-prompts.length);
+    } else {
+      interactions = prompts.map((p) => ({ prompt: p, response: null }));
+    }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
   }
@@ -180,6 +201,7 @@ export async function recordCommitEntry(opts: {
   );
 
   const entry = buildEntry({
+    agent: agentName,
     sessionId: opts.sessionId,
     model,
     interactions,
@@ -263,13 +285,6 @@ async function readAllSessionJsonl(
     all.push(...entries);
   }
   return all;
-}
-
-async function readSavedTranscriptPath(sessionDir: string): Promise<string | null> {
-  const saved = join(sessionDir, TRANSCRIPT_PATH_FILE);
-  if (!existsSync(saved)) return null;
-  const p = (await readFile(saved, "utf-8")).trim();
-  return p || null;
 }
 
 /**
