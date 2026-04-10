@@ -21,6 +21,7 @@ npx @wasabeef/agentnote init
 | `--no-notes` | 自動 fetch 設定をスキップ |
 | `--hooks` | エージェントフックのみインストール |
 | `--action` | ワークフローのみ作成 |
+| `--agent <name>` | `claude-code` や `codex` など、利用するエージェントを指定 |
 
 ## agentnote show
 
@@ -37,6 +38,7 @@ session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
+agent:   claude-code
 files:   5 changed, 3 by AI
 
   src/middleware/auth.ts  🤖

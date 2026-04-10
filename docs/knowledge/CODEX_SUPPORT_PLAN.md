@@ -1215,7 +1215,50 @@ Codex を Claude と同等品質で「対応済み」と呼ぶには、さらに
 
 この条件が満たせない間は、docs 上の表現も `Base support` 相当に留めるべきである。
 
-### 18.5 `entireio/cli` から転用できる受け入れ基準
+### 18.5 `Preview` から `対応済み` への昇格条件
+
+Codex CLI の docs 表記を `Preview` から `対応済み` へ上げる条件を、実装判断ではなく運用判断として明文化する。
+ここでいう `対応済み` は「Codex でも日常運用に必要な記録が、保守的で安定した条件の下で継続的に成立する」ことを意味する。
+
+最低条件:
+
+- `agentnote init --agent codex` が新規 repo と既存 repo の両方で安定して動く
+- `show`, `status`, `log`, `pr` が Codex note を特別扱いせず表示できる
+- Codex transcript から prompt, response, files_touched を継続的に復元できる
+- file attribution が主要な編集経路で安定して成立する
+- Claude non-regression test が継続的に通る
+
+ここでいう「file attribution が主要な編集経路で安定して成立する」とは、少なくとも次を満たすことを指す。
+
+- `apply_patch` を使った編集で、コミットに含まれる AI 編集ファイルを妥当に復元できる
+- transcript から根拠が取れない変更を、AI 変更として過剰計上しない
+- transcript parser の前提が test fixture に固定され、schema 変化で壊れたときに test で検知できる
+
+`対応済み` に上げてもよいが、まだ `Full support` と呼んではいけない条件:
+
+- file attribution は安定している
+- line attribution は条件付きでしか成立しない
+- docs に line attribution の条件が明記されている
+
+つまり、`対応済み` は「Codex を production 利用してよい」という意味であり、「Claude と同等精度」という意味ではない。
+
+### 18.6 `対応済み` から `Full support` への昇格条件
+
+Codex CLI を `Full support` へ上げる条件は、`対応済み` よりさらに強い。
+ここでいう `Full support` は、Claude Code の現在表現と同じく「line attribution を含む主要機能が、通常運用で特別条件なしに信頼できる」ことを意味する。
+
+必要条件:
+
+- line attribution が例外的な成功ではなく、通常の Codex 編集フローで安定して成立する
+- `apply_patch` 以外を含む主要編集経路でも attribution の説明責任が立つ
+- line attribution の成立条件が内部事情ではなく、docs 上で簡潔に説明できる
+- transcript schema 変更に対する parser の回復性、または十分な検知性がある
+- Claude と Codex の両方で release 前の非回帰確認が routine 化されている
+
+現時点の実装はこの条件をまだ満たしていない。
+したがって、2026-04-10 時点では Codex CLI を `Preview` と表現するのが妥当である。
+
+### 18.7 `entireio/cli` から転用できる受け入れ基準
 
 Codex transcript parser については、少なくとも次を満たすべきである。
 
@@ -1559,7 +1602,8 @@ Base MVP と Parity MVP の表現は次で固定する。
 - file attribution は `apply_patch` ベースの保守的推定
 - Claude と同等の line-level attribution は未保証
 
-Parity MVP 完了後にだけ、Codex を `Supported` または `Full support` へ上げる。
+`Preview` から `対応済み` へ上げるには、18.5 の昇格条件を満たすこと。
+`対応済み` から `Full support` へ上げるには、18.6 の昇格条件を満たすこと。
 
 これにより docs wording は解決。
 

@@ -14,8 +14,14 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    npx @wasabeef/agentnote init
    ```
 
+   For Codex CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
    This configures:
-   - Agent hooks (`.claude/settings.json`)
+   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI)
    - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Action workflow (`.github/workflows/agentnote.yml`)
    - Auto-fetch for git notes on pull
@@ -28,7 +34,9 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    git push
    ```
 
-3. **Done.** Start coding with Claude Code — every commit is tracked automatically.
+   Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote.yml`.
+
+3. **Done.** Start coding with your agent — every commit is tracked automatically.
 </Steps>
 
 ## New Clone Setup
@@ -90,13 +98,14 @@ prompts: 2
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+| `--agent <name>` | Choose the agent adapter, for example `claude-code` or `codex` |
 
 ## Works With
 
 | Agent | Status |
 |---|---|
 | Claude Code | Fully supported |
+| Codex CLI | Preview |
+| GitHub Copilot | Coming soon |
 | Cursor | Coming soon |
 | Gemini CLI | Coming soon |
-| Codex CLI | Coming soon |
-| GitHub Copilot | Coming soon |

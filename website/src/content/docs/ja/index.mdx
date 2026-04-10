@@ -3,7 +3,7 @@ title: Agent Note
 description: コードが「なぜ」変わったのかを記録する
 template: splash
 hero:
-  tagline: AI のプロンプト・レスポンス・ファイルごとの著作情報を、git コミットに自動で紐づけます。行単位の精度。設定不要。
+  tagline: AI のプロンプト・レスポンス・ファイルごとの著作情報を、git コミットに自動で紐づけます。エージェントが十分な編集履歴を出せる場合は行単位でも追跡できます。
   actions:
     - text: はじめる
       link: /agentnote/ja/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="行単位の AI 著作判定" icon="pencil">
-    3-diff アルゴリズムで、AI が書いた行と人間が書いた行を見分けます。ファイル単位ではなく行単位。
+    Claude Code は 3-diff で完全な行単位判定。Codex は transcript の patch 行数と commit が一致した場合に行単位へ昇格します。
   </Card>
   <Card title="セッション記録" icon="document">
     プロンプト・レスポンス・使用モデル・ツール情報をコミットと一緒に記録します。
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Codex CLI の場合:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. 生成されたファイルをコミット
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Codex CLI の場合は `.claude/settings.json` の代わりに `.codex/config.toml` と `.codex/hooks.json` をコミットします。
 
 3. あとは普通に AI でコーディングしてコミットするだけ — すべて自動で記録されます
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## 対応状況
+
+| エージェント | 状態 | 補足 |
+|---|---|---|
+| Claude Code | 対応済み | 行単位の著作判定 |
+| Codex CLI | Preview | transcript ベース。patch 行数と commit が一致したときは行単位へ昇格 |
+| Cursor | 近日対応 | |
+| Gemini CLI | 近日対応 | |
