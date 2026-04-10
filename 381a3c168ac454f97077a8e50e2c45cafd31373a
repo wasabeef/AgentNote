@@ -1,0 +1,33 @@
+{
+  "v": 1,
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-10T12:41:30.547Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [
+    {
+      "prompt": "これをユーザーが利用したときに毎回エラーが起こってるようじゃ困るでしょ",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/hook.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/commands/hook.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 11,
+      "total_added": 11,
+      "deleted": 3
+    }
+  }
+}
