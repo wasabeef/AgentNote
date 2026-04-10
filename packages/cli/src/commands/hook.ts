@@ -205,16 +205,24 @@ export async function hook(): Promise<void> {
     }
 
     case "pre_commit": {
-      // Inject Agentnote-Session trailer using the session ID from the event directly,
-      // not from the file — avoids race with async SessionStart/Stop writes.
+      // Inject Agentnote-Session trailer into the git commit part of the command.
+      // The command may be chained (e.g., "git add . && git commit -m '...' && git push"),
+      // so we must inject --trailer into the git commit segment only, not at the end.
       const cmd = event.commitCommand ?? "";
       if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
+        const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
+        // Replace "git commit" with "git commit --trailer ..." to ensure the trailer
+        // is attached to the commit command, not to a subsequent chained command.
+        const updatedCmd = cmd.replace(
+          /(git\s+commit)/,
+          `$1 ${trailer}`,
+        );
         process.stdout.write(
           JSON.stringify({
             hookSpecificOutput: {
               hookEventName: "PreToolUse",
               updatedInput: {
-                command: `${cmd} --trailer '${TRAILER_KEY}: ${event.sessionId}'`,
+                command: updatedCmd,
               },
             },
           }),
