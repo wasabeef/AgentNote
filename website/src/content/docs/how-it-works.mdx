@@ -90,10 +90,10 @@ All three diffs target the committed blob, so positions are directly comparable.
 | **UserPromptSubmit** | Appends prompt, increments turn counter, rotates logs |
 | **PreToolUse Edit/Write** | Captures pre-edit blob hash (synchronous) |
 | **PostToolUse Edit/Write** | Captures post-edit blob hash + file path |
-| **Stop** | Invalidates heartbeat (writes 0) |
+| **Stop** | Logs stop event (heartbeat stays active — Stop = response end, not session end) |
 
 <Aside>
-  Git hooks verify session freshness via heartbeat before injecting trailers or recording notes. A stopped session (heartbeat = 0) is immediately inactive.
+  Git hooks verify session freshness via heartbeat before injecting trailers or recording notes. Heartbeat is updated on SessionStart and each prompt.
 </Aside>
 
 ## Git Notes

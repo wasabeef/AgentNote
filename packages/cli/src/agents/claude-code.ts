@@ -12,7 +12,7 @@ const HOOKS_CONFIG = {
   UserPromptSubmit: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
   PreToolUse: [
     {
-      matcher: "Edit|Write|NotebookEdit",
+      matcher: "Edit|Write|MultiEdit|NotebookEdit",
       hooks: [{ type: "command", command: HOOK_COMMAND }],
     },
     {
@@ -22,7 +22,7 @@ const HOOKS_CONFIG = {
   ],
   PostToolUse: [
     {
-      matcher: "Edit|Write|NotebookEdit|Bash",
+      matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
       hooks: [{ type: "command", command: HOOK_COMMAND, async: true }],
     },
   ],
@@ -169,7 +169,10 @@ export const claudeCode: AgentAdapter = {
         const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";
         if (
-          (tool === "Edit" || tool === "Write" || tool === "NotebookEdit") &&
+          (tool === "Edit" ||
+            tool === "Write" ||
+            tool === "MultiEdit" ||
+            tool === "NotebookEdit") &&
           e.tool_input?.file_path
         ) {
           return {
@@ -189,7 +192,10 @@ export const claudeCode: AgentAdapter = {
       case "PostToolUse": {
         const tool = e.tool_name;
         if (
-          (tool === "Edit" || tool === "Write" || tool === "NotebookEdit") &&
+          (tool === "Edit" ||
+            tool === "Write" ||
+            tool === "MultiEdit" ||
+            tool === "NotebookEdit") &&
           e.tool_input?.file_path
         ) {
           return {

@@ -85,7 +85,7 @@ GitHub resolves `uses: wasabeef/agentnote@v0` by looking for `action.yml` at the
 name: "Agent Note PR Report"
 description: "AI session tracking report for pull requests"
 runs:
-  using: "node22"
+  using: "node24"
   main: "packages/action/dist/index.js"
 ```
 
@@ -265,7 +265,11 @@ feat: add auth middleware
 Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
-Injected via the `prepare-commit-msg` git hook, which reads the active session ID from `.git/agentnote/session` and appends the trailer to the commit message file. This fires for every `git commit` regardless of how it's invoked — no command pattern matching needed.
+Injected via two parallel paths:
+1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session` and appends trailer to the commit message file.
+2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook rewrites the git commit command to inject `--trailer` directly.
+
+Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agentnote init`), the agent hook still injects the trailer.
 
 ### Git hooks for commit integration
 
@@ -277,7 +281,7 @@ Three git hooks handle commit integration and notes sharing:
 | `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agentnote record <session-id>` to write git note. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
-Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Stop writes `0` to heartbeat for immediate invalidation. Missing heartbeat in git hooks = skip (fail closed).
+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is updated on `SessionStart` and `UserPromptSubmit`. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Missing heartbeat in git hooks = skip (fail closed).
 
 ### Git hook installation
 
@@ -468,8 +472,8 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 | Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
-| GitHub Action markdown injection | PR comment body must sanitize prompts that contain markdown/HTML. Image tags and links from untrusted prompts are escaped. |
-| `npx --yes` supply chain | Hook command tries local binary first (`$(npm bin)/agentnote`, then `agentnote` in PATH), falls back to `npx` only as last resort. Pin versions in production. |
+| GitHub Action markdown injection | PR report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
+| `npx --yes` supply chain | Claude Code agent hooks use `npx --yes @wasabeef/agentnote hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agentnote`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
 ### Recommendations for users

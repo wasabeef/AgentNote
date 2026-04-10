@@ -111,15 +111,10 @@ export async function hook(): Promise<void> {
         session_id: event.sessionId,
         timestamp: event.timestamp,
       });
-      // Invalidate the heartbeat so git hooks immediately stop attributing commits
-      // to this session. Writing "0" makes the heartbeat appear infinitely stale.
-      // Do NOT delete the session file — that creates a TOCTOU race with concurrent
-      // sessions. SessionStart always overwrites the pointer for the next session.
-      try {
-        await writeFile(join(sessionDir, HEARTBEAT_FILE), "0");
-      } catch {
-        // Not critical.
-      }
+      // Do NOT invalidate heartbeat on Stop. Claude Code fires Stop when the AI
+      // finishes responding, NOT when the session ends. The session remains active
+      // for subsequent prompts. SessionStart from the next session overwrites the
+      // session pointer and heartbeat naturally.
       break;
     }
 

@@ -17,6 +17,9 @@ usage:
   agentnote init                 set up hooks, workflow, and notes auto-fetch
   agentnote show [commit]        show session details for a commit
   agentnote log [n]              list recent commits with session info
+  agentnote pr [base] [--json]   generate PR report
+  agentnote session <id>         show commits for a session
+  agentnote commit [args]        git commit with session tracking
   agentnote status               show current tracking state
   agentnote version              print version
   agentnote help                 show this help

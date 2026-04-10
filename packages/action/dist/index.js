@@ -30003,9 +30003,6 @@ async function run() {
         else {
             outputMode = "description"; // default
         }
-        // Resolve format from action inputs.
-        const formatInput = core.getInput("format");
-        const format = formatInput === "chat" || formatInput === "table" ? formatInput : "chat";
         // Fetch agentnote notes.
         try {
             (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", { stdio: "pipe" });
@@ -30040,7 +30037,7 @@ async function run() {
         // Generate markdown report.
         let markdown = "";
         try {
-            markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}" --format ${format}`, {
+            markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}"`, {
                 encoding: "utf-8",
                 stdio: ["pipe", "pipe", "pipe"],
             }).trim();
@@ -30054,7 +30051,7 @@ async function run() {
             return;
         if (!markdown || !github.context.payload.pull_request)
             return;
-        const token = core.getInput("token") || process.env.GITHUB_TOKEN || "";
+        const token = process.env.GITHUB_TOKEN || "";
         if (!token) {
             core.warning("No GitHub token available. Skipping PR report.");
             return;
@@ -30082,9 +30079,8 @@ async function run() {
             core.info("Agentnote report added to PR description.");
         }
         else {
-            // Post/update PR comment. Use format-specific marker so chat and table
-            // comments can coexist without overwriting each other.
-            const marker = `<!-- agentnote-${format} -->`;
+            // Post/update PR comment.
+            const marker = "<!-- agentnote-pr-report -->";
             const body = `${marker}\n${markdown}`;
             const { data: comments } = await octokit.rest.issues.listComments({
                 owner,
