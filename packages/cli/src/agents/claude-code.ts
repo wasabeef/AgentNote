@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
+import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
 const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude-code`;
@@ -249,7 +249,7 @@ export const claudeCode: AgentAdapter = {
 
   async extractInteractions(
     transcriptPath: string,
-  ): Promise<Array<{ prompt: string; response: string | null; files_touched?: string[] }>> {
+  ): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     try {

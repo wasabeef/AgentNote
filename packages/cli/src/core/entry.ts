@@ -23,6 +23,7 @@ export interface Interaction {
   prompt: string;
   response: string | null;
   files_touched?: string[];
+  line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
 }
 

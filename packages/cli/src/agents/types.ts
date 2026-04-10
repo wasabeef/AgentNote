@@ -5,6 +5,13 @@ export interface HookInput {
   sync: boolean;
 }
 
+export interface TranscriptInteraction {
+  prompt: string;
+  response: string | null;
+  files_touched?: string[];
+  line_stats?: Record<string, { added: number; deleted: number }>;
+}
+
 export interface NormalizedEvent {
   kind:
     | "session_start"
@@ -53,7 +60,5 @@ export interface AgentAdapter {
   findTranscript(sessionId: string): string | null;
 
   /** Extract all prompt-response pairs from the agent's transcript. */
-  extractInteractions(
-    transcriptPath: string,
-  ): Promise<Array<{ prompt: string; response: string | null; files_touched?: string[] }>>;
+  extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]>;
 }

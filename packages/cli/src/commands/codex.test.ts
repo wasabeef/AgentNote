@@ -43,7 +43,7 @@ describe("agentnote codex", () => {
     assert.ok(hooks.includes("agentnote hook --agent codex"), "hooks should call codex mode");
   });
 
-  it("records Codex session metadata and builds notes from transcript-driven file attribution", () => {
+  it("records Codex session metadata and upgrades to line attribution when patch counts match the commit", () => {
     const sessionId = "codex-session-1";
     const transcriptDir = join(testHome, ".codex", "sessions");
     mkdirSync(transcriptDir, { recursive: true });
@@ -100,8 +100,10 @@ describe("agentnote codex", () => {
     );
     assert.equal(note.agent, "codex");
     assert.equal(note.model, "gpt-5-codex");
-    assert.equal(note.attribution.method, "file");
+    assert.equal(note.attribution.method, "line");
     assert.equal(note.attribution.ai_ratio, 100);
+    assert.equal(note.attribution.lines.ai_added, 1);
+    assert.equal(note.attribution.lines.total_added, 1);
     assert.equal(note.interactions[0].prompt, "Create hello.txt");
     assert.equal(note.interactions[0].response, "Creating the file.");
     assert.deepEqual(note.interactions[0].files_touched, ["hello.txt"]);
@@ -113,5 +115,58 @@ describe("agentnote codex", () => {
     });
     assert.ok(showOutput.includes("agent:   codex"), "show should report codex as the agent");
     assert.ok(showOutput.includes("hello.txt"), "show should report transcript-derived file touch");
+    assert.ok(showOutput.includes("(1/1 lines)"), "show should include line-level attribution details");
+  });
+
+  it("falls back to file attribution when transcript patch counts do not match the commit", () => {
+    const sessionId = "codex-session-2";
+    const transcriptDir = join(testHome, ".codex", "sessions");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout-mismatch.jsonl");
+    writeFileSync(
+      transcriptPath,
+      '{"timestamp":"2026-04-10T01:00:00Z","type":"session_meta","payload":{"id":"codex-session-2","timestamp":"2026-04-10T01:00:00Z"}}\n' +
+        '{"timestamp":"2026-04-10T01:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Update hello.txt"}]}}\n' +
+        '{"timestamp":"2026-04-10T01:00:02Z","type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","input":"*** Begin Patch\\n*** Update File: hello-again.txt\\n@@\\n-Hello\\n+Hello from Codex\\n*** End Patch\\n"}}\n',
+    );
+
+    const sessionStart = JSON.stringify({
+      hook_event_name: "SessionStart",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    const promptEvent = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      prompt: "Update hello.txt",
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    writeFileSync(join(testDir, "hello-again.txt"), "Hello from Codex\nAnd human line\n");
+    execSync("git add hello-again.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: codex mismatch"`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    const note = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(note.attribution.method, "file");
+    assert.equal(note.attribution.ai_ratio, 100);
   });
 });

@@ -2,7 +2,12 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
-import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
+import type {
+  AgentAdapter,
+  HookInput,
+  NormalizedEvent,
+  TranscriptInteraction,
+} from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const HOOKS_REL_PATH = ".codex/hooks.json";
@@ -116,6 +121,35 @@ function extractFilesFromApplyPatch(input: string): string[] {
     files.push(file);
   }
   return files;
+}
+
+function extractLineStatsFromApplyPatch(input: string): Record<string, { added: number; deleted: number }> {
+  const stats: Record<string, { added: number; deleted: number }> = {};
+  let currentFile: string | null = null;
+
+  for (const rawLine of input.split("\n")) {
+    const line = rawLine.trimEnd();
+    const header = line.match(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/);
+    if (header) {
+      currentFile = header[1]?.trim() || null;
+      if (currentFile && !stats[currentFile]) {
+        stats[currentFile] = { added: 0, deleted: 0 };
+      }
+      continue;
+    }
+
+    if (!currentFile) continue;
+    if (line.startsWith("*** End") || line.startsWith("*** Begin") || line.startsWith("@@")) continue;
+    if (line.startsWith("+")) {
+      stats[currentFile].added += 1;
+      continue;
+    }
+    if (line.startsWith("-")) {
+      stats[currentFile].deleted += 1;
+    }
+  }
+
+  return stats;
 }
 
 export const codex: AgentAdapter = {
@@ -250,7 +284,7 @@ export const codex: AgentAdapter = {
 
   async extractInteractions(
     transcriptPath: string,
-  ): Promise<Array<{ prompt: string; response: string | null; files_touched?: string[] }>> {
+  ): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     let content: string;
@@ -260,9 +294,8 @@ export const codex: AgentAdapter = {
       return [];
     }
 
-    const interactions: Array<{ prompt: string; response: string | null; files_touched?: string[] }> =
-      [];
-    let current: { prompt: string; response: string | null; files_touched?: string[] } | null = null;
+    const interactions: TranscriptInteraction[] = [];
+    let current: TranscriptInteraction | null = null;
 
     for (const rawLine of content.split("\n")) {
       const line = rawLine.trim();
@@ -306,8 +339,19 @@ export const codex: AgentAdapter = {
 
       if (payload.type === "custom_tool_call" && payload.name === "apply_patch" && payload.input) {
         const files = extractFilesFromApplyPatch(payload.input);
+        const lineStats = extractLineStatsFromApplyPatch(payload.input);
         if (files.length > 0) {
           current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
+        }
+        if (Object.keys(lineStats).length > 0) {
+          current.line_stats = current.line_stats ?? {};
+          for (const [file, stats] of Object.entries(lineStats)) {
+            const previous = current.line_stats[file] ?? { added: 0, deleted: 0 };
+            current.line_stats[file] = {
+              added: previous.added + stats.added,
+              deleted: previous.deleted + stats.deleted,
+            };
+          }
         }
       }
     }

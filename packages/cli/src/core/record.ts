@@ -2,9 +2,10 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { TranscriptInteraction } from "../agents/types.js";
 import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
-import { git } from "../git.js";
-import { computePositionAttribution } from "./attribution.js";
+import { git, gitSafe } from "../git.js";
+import { computePositionAttribution, countLines, parseUnifiedHunks } from "./attribution.js";
 import {
   ARCHIVE_ID_RE,
   CHANGES_FILE,
@@ -146,10 +147,12 @@ export async function recordCommitEntry(opts: {
   }
 
   let interactions: Interaction[];
+  let transcriptLineCounts: LineCounts | undefined;
 
   if (transcriptPath && !crossTurnCommit) {
     const allInteractions = await adapter.extractInteractions(transcriptPath);
-    const transcriptMatched = allInteractions.filter((interaction) =>
+    const interactionWindow = findTranscriptPromptWindow(allInteractions, prompts);
+    const transcriptMatched = interactionWindow.filter((interaction) =>
       (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
     );
 
@@ -158,6 +161,7 @@ export async function recordCommitEntry(opts: {
         prompt: interaction.prompt,
         response: interaction.response,
         files_touched: interaction.files_touched?.filter((file) => commitFileSet.has(file)),
+        line_stats: interaction.line_stats,
       }));
       aiFiles = [
         ...new Set(
@@ -166,8 +170,9 @@ export async function recordCommitEntry(opts: {
           ),
         ),
       ];
-    } else if (prompts.length > 0 && allInteractions.length > 0) {
-      interactions = allInteractions.slice(-prompts.length);
+      transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
+    } else if (prompts.length > 0 && interactionWindow.length > 0) {
+      interactions = interactionWindow;
     } else {
       interactions = prompts.map((p) => ({ prompt: p, response: null }));
     }
@@ -207,7 +212,7 @@ export async function recordCommitEntry(opts: {
     interactions,
     commitFiles,
     aiFiles,
-    lineCounts: lineCounts ?? undefined,
+    lineCounts: lineCounts ?? transcriptLineCounts,
     interactionTools,
   });
 
@@ -222,6 +227,90 @@ export async function recordCommitEntry(opts: {
   // commitFileSet). Archives are purged at the start of the next turn by rotateLogs.
 
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
+}
+
+function findTranscriptPromptWindow(
+  interactions: TranscriptInteraction[],
+  prompts: string[],
+): TranscriptInteraction[] {
+  if (prompts.length === 0 || interactions.length === 0) return interactions;
+
+  for (let start = interactions.length - prompts.length; start >= 0; start--) {
+    const candidate = interactions.slice(start, start + prompts.length);
+    if (candidate.length !== prompts.length) continue;
+    const matches = candidate.every((interaction, index) => interaction.prompt === prompts[index]);
+    if (matches) return candidate;
+  }
+
+  return interactions.slice(-prompts.length);
+}
+
+async function resolveTranscriptLineCounts(
+  commitFileSet: Set<string>,
+  interactions: TranscriptInteraction[],
+): Promise<LineCounts | undefined> {
+  const transcriptStats = new Map<string, { added: number; deleted: number }>();
+
+  for (const interaction of interactions) {
+    for (const [file, stats] of Object.entries(interaction.line_stats ?? {})) {
+      if (!commitFileSet.has(file)) continue;
+      const previous = transcriptStats.get(file) ?? { added: 0, deleted: 0 };
+      transcriptStats.set(file, {
+        added: previous.added + stats.added,
+        deleted: previous.deleted + stats.deleted,
+      });
+    }
+  }
+
+  if (transcriptStats.size === 0) return undefined;
+
+  const committedDiffCounts = await readCommittedDiffCounts(commitFileSet);
+  if (committedDiffCounts.size !== commitFileSet.size) return undefined;
+
+  let aiAddedLines = 0;
+  let totalAddedLines = 0;
+  let deletedLines = 0;
+
+  for (const file of commitFileSet) {
+    const transcript = transcriptStats.get(file);
+    const committed = committedDiffCounts.get(file);
+    if (!transcript || !committed) return undefined;
+    if (transcript.added !== committed.added || transcript.deleted !== committed.deleted) {
+      return undefined;
+    }
+    aiAddedLines += transcript.added;
+    totalAddedLines += committed.added;
+    deletedLines += committed.deleted;
+  }
+
+  return { aiAddedLines, totalAddedLines, deletedLines };
+}
+
+async function readCommittedDiffCounts(
+  commitFileSet: Set<string>,
+): Promise<Map<string, { added: number; deleted: number }>> {
+  const counts = new Map<string, { added: number; deleted: number }>();
+
+  for (const file of commitFileSet) {
+    const { stdout, exitCode } = await gitSafe([
+      "diff-tree",
+      "--patch",
+      "--unified=0",
+      "--root",
+      "--no-commit-id",
+      "-r",
+      "HEAD",
+      "--",
+      file,
+    ]);
+    if (exitCode !== 0 && exitCode !== 1) {
+      return new Map();
+    }
+    const diffCounts = countLines(parseUnifiedHunks(stdout));
+    counts.set(file, diffCounts);
+  }
+
+  return counts;
 }
 
 /** Attach files_touched per interaction, scoped to the current commit's files. */
