@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* Typography — shared across themes */
+:root {
+  --sl-font: 'IBM Plex Sans', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', monospace;
+  --sl-text-h1: 2.5rem;
+  --sl-text-h2: 1.75rem;
+  --sl-text-h3: 1.25rem;
+}
+
+/* Accent color — shared */
+:root {
+  --sl-color-accent-low: #0d2818;
+  --sl-color-accent: #22C55E;
+  --sl-color-accent-high: #86efac;
+}
+
+/* Dark theme */
+:root[data-theme="dark"] {
+  --sl-color-white: #F8FAFC;
+  --sl-color-gray-1: #e2e8f0;
+  --sl-color-gray-2: #94a3b8;
+  --sl-color-gray-3: #64748b;
+  --sl-color-gray-4: #334155;
+  --sl-color-gray-5: #1e293b;
+  --sl-color-gray-6: #0f172a;
+  --sl-color-black: #020617;
+}
+
+/* Force dark theme — override light to use dark values */
+:root[data-theme="light"] {
+  --sl-color-accent-low: #0d2818;
+  --sl-color-accent: #22C55E;
+  --sl-color-accent-high: #86efac;
+  --sl-color-white: #F8FAFC;
+  --sl-color-gray-1: #e2e8f0;
+  --sl-color-gray-2: #94a3b8;
+  --sl-color-gray-3: #64748b;
+  --sl-color-gray-4: #334155;
+  --sl-color-gray-5: #1e293b;
+  --sl-color-gray-6: #0f172a;
+  --sl-color-black: #020617;
+}
+
+/* Header logo */
+.site-title img {
+  height: 2rem;
+  width: auto;
+  border-radius: 4px;
+}
+
+/* Hide theme toggle */
+starlight-theme-select {
+  display: none;
+}
+
+/* Hero section */
+.hero {
+  padding-block: 4rem;
+}
+
+.hero img {
+  object-fit: contain !important;
+  aspect-ratio: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 12px;
+}
+
+.hero .tagline {
+  font-size: 1.25rem;
+  line-height: 1.75;
+  max-width: 42ch;
+}
+
+/* Action buttons */
+.hero .action a[data-variant="primary"] {
+  background: var(--sl-color-accent);
+  color: white;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  transition: opacity 200ms;
+}
+
+:root[data-theme="light"] .hero .action a[data-variant="primary"] {
+  color: white;
+}
+
+.hero .action a[data-variant="primary"]:hover {
+  opacity: 0.9;
+}
+
+/* Cards */
+.card {
+  border-radius: 12px;
+  transition: border-color 200ms;
+}
+
+.card:hover {
+  border-color: var(--sl-color-accent);
+}
+
+/* Code blocks */
+pre {
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+/* Sidebar */
+nav.sidebar .top-level > li > details > summary,
+nav.sidebar .top-level > li > a {
+  font-weight: 500;
+}
+
+/* Content area */
+.sl-markdown-content {
+  line-height: 1.75;
+}
+
+.sl-markdown-content h2 {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sl-color-gray-4);
+}
+
+/* Tables */
+.sl-markdown-content table {
+  font-size: 0.9rem;
+}
+
+/* Inline code */
+.sl-markdown-content :not(pre) > code {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}

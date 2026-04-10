@@ -1,0 +1,88 @@
+---
+title: GitHub Action
+description: Automatically post AI session reports on pull requests.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Add this workflow — created automatically by `agentnote init`:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/agentnote@v0
+```
+
+That's it. Every PR gets an AI session report.
+
+## Inputs
+
+| Input | Default | Description |
+|---|---|---|
+| `base` | PR base branch | Base branch to compare against |
+| `output` | `description` | Report destination: `description` or `comment` |
+| `comment` | `true` | Legacy: set to `false` to disable posting |
+
+### Post as comment instead of description
+
+```yaml
+- uses: wasabeef/agentnote@v0
+  with:
+    output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Outputs
+
+| Output | Type | Description |
+|---|---|---|
+| `overall_ai_ratio` | number | PR-wide AI ratio (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed`, or `none` |
+| `tracked_commits` | number | Commits with agentnote data |
+| `total_commits` | number | Total commits in PR |
+| `total_prompts` | number | Total prompts across all commits |
+| `json` | string | Full structured report |
+| `markdown` | string | Rendered markdown report |
+
+### Use outputs in workflow
+
+```yaml
+- uses: wasabeef/agentnote@v0
+  id: agentnote
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+The PR report includes:
+
+- **Header** — AI ratio with progress bar, line counts, commit count, prompts, model
+- **Table** — per-commit AI ratio, line counts, prompts, files with attribution
+- **Prompts** — collapsible section with per-commit prompt/response pairs
+
+<Aside type="tip">
+  Commit hashes in the report are linked to their GitHub commit page.
+</Aside>
+
+## Notes Sharing
+
+The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git hook installed by `agentnote init` auto-pushes notes on every `git push` — no manual push needed.

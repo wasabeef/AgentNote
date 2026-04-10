@@ -1,7 +1,7 @@
 # Agent Note
 
 <p align="center">
-  <img src="docs/assets/hero.jpeg" alt="Agent Note — AI conversations saved to git" width="720">
+  <img src="docs/assets/hero.png" alt="Agent Note — AI conversations saved to git" width="720">
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
 <p align="center">
-Agent Note records every prompt, every AI response, and which files were AI-written — then attaches it all to your git commits. Zero config. One command.
+Agent Note records every prompt, every AI response, and which lines were AI-written — then attaches it all to your git commits. Line-level precision. Zero config.
 </p>
 
 ## Setup
@@ -22,13 +22,15 @@ Agent Note records every prompt, every AI response, and which files were AI-writ
 npx @wasabeef/agentnote init
 ```
 
-Or install as a dev dependency:
+Commit the generated files and push:
 
 ```bash
-npm install --save-dev @wasabeef/agentnote
+git add .claude/settings.json .github/workflows/agentnote.yml
+git commit -m "chore: enable agentnote"
+git push
 ```
 
-Hooks, GitHub Action workflow, and notes auto-fetch — all configured in one command. Commit the generated files to share with your team.
+Each developer runs `init` after cloning to install local git hooks.
 
 ## What You Get
 
@@ -40,23 +42,20 @@ $ agentnote show
 commit:  ce941f7 feat: add JWT auth middleware
 session: a1b2c3d4-5678-90ab-cdef-111122223333
 
-ai:      60% (45/75 lines) [████████████░░░░░░░░]
+ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 files:   5 changed, 3 by AI
 
-  CHANGELOG.md  👤
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
   src/middleware/__tests__/auth.test.ts  🤖
+  CHANGELOG.md  👤
   README.md  👤
 
 prompts: 2
 
   1. Implement JWT auth middleware with refresh token rotation
-     → I'll create the middleware with token verification and rotation...
-
   2. Add tests for expired token and invalid signature
-     → Here are the test cases covering the edge cases...
 ```
 
 ### Scan your history at a glance
@@ -69,25 +68,24 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR reports for code review
+### PR reports
 
 ```
-$ agentnote pr --format chat --update 42
+$ agentnote pr --output description --update 42
 ```
 
-Inserts a collapsible session transcript into the PR description:
+Posts an AI session report to the PR description:
 
-<details>
-<summary><code>dd4f971</code> feat: add Button component — AI 100% █████ · 1 files (1 🤖 0 👤)</summary>
+```
+## 🧑💬🤖 Agent Note
 
-> **🧑 Prompt**
-> Create a shared Button component with variant support
+**AI ratio: 73%** ████████
+`45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
 
-**🤖 Response**
-
-I'll create a Button component that accepts primary, secondary, and danger variants...
-
-</details>
+| Commit | AI Ratio | Lines | Prompts | Files |
+|---|---|---|---|---|
+| ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖, token.ts 🤖 |
+```
 
 ## How It Works
 
@@ -95,35 +93,47 @@ I'll create a Button component that accepts primary, secondary, and danger varia
 You prompt Claude Code
   → hooks capture the prompt
 Claude writes code
-  → hooks track which files were touched
-You (or Claude) run git commit
-  → session trailer injected automatically
-  → prompt + response + file attribution saved as git note
+  → hooks track files + blob hashes
+You git commit
+  → trailer injected, note recorded
+You git push
+  → notes auto-pushed to remote
 ```
-
-No extra commands. Just use `git commit` normally.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `agentnote init` | Set up hooks, workflow, and notes auto-fetch |
-| `agentnote show [commit]` | Show the AI conversation behind a commit |
+| `agentnote init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
+| `agentnote show [commit]` | Show the AI session behind a commit |
 | `agentnote log [n]` | List recent commits with AI ratio |
+| `agentnote pr [base]` | Generate PR report (markdown or JSON) |
 | `agentnote status` | Show tracking state |
 
 ## Works with
 
-Claude Code — more agents coming (Cursor, Gemini CLI)
+Claude Code — more agents coming (Cursor, Gemini CLI, Codex CLI)
 
-## Team Sharing
+## GitHub Action
 
-Session data is stored as [git notes](https://git-scm.com/docs/git-notes) — invisible to `git branch`, GitHub UI, and CI.
-
-```bash
-git push origin refs/notes/agentnote          # share
-git fetch origin refs/notes/agentnote:refs/notes/agentnote  # fetch
+```yaml
+- uses: wasabeef/agentnote@v0
 ```
+
+<details>
+<summary>Full example with outputs</summary>
+
+```yaml
+- uses: wasabeef/agentnote@v0
+  id: agentnote
+  with:
+    base: main
+
+# Use structured outputs
+- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+```
+
+</details>
 
 <details>
 <summary>What gets saved</summary>
@@ -155,29 +165,6 @@ $ git notes --ref=agentnote show ce941f7
     "lines": { "ai_added": 45, "total_added": 75, "deleted": 3 }
   }
 }
-```
-
-</details>
-
-## GitHub Action
-
-Auto-post AI session reports on every PR:
-
-```yaml
-- uses: wasabeef/agentnote@v0
-```
-
-<details>
-<summary>Full example with outputs</summary>
-
-```yaml
-- uses: wasabeef/agentnote@v0
-  id: agentnote
-  with:
-    base: main
-
-# Use structured outputs in subsequent steps
-- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
 ```
 
 </details>

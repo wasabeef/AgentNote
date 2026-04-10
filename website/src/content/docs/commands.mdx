@@ -1,0 +1,123 @@
+---
+title: Commands
+description: CLI command reference for Agent Note.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## agentnote init
+
+Set up Agent Note in the current repository.
+
+```bash
+npx @wasabeef/agentnote init
+```
+
+| Flag | Description |
+|---|---|
+| `--no-hooks` | Skip agent hook configuration |
+| `--no-git-hooks` | Skip git hook installation |
+| `--no-action` | Skip workflow creation |
+| `--no-notes` | Skip auto-fetch config |
+| `--hooks` | Only install agent hooks |
+| `--action` | Only create workflow |
+
+## agentnote show
+
+Show AI session details for a commit.
+
+```bash
+agentnote show          # HEAD
+agentnote show abc123   # specific commit
+```
+
+```
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+files:   5 changed, 3 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
+
+## agentnote log
+
+List recent commits with AI ratio.
+
+```bash
+agentnote log      # last 10
+agentnote log 20   # last 20
+```
+
+```
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
+
+## agentnote pr
+
+Generate a PR report.
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  agentnote pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  agentnote pr origin/main --json
+  ```
+  </TabItem>
+  <TabItem label="Update PR">
+  ```bash
+  # Insert into PR description
+  agentnote pr origin/main --output description --update 42
+
+  # Post as PR comment
+  agentnote pr origin/main --output comment --update 42
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  The default output destination is `description` (upserts between HTML markers in the PR body).
+</Aside>
+
+## agentnote session
+
+Show all commits belonging to a session.
+
+```bash
+agentnote session a1b2c3d4-5678-90ab-cdef-111122223333
+```
+
+## agentnote status
+
+Show current tracking state.
+
+```bash
+agentnote status
+```
+
+## agentnote commit
+
+Convenience wrapper for `git commit` with session trailer and note recording.
+
+```bash
+agentnote commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  Not needed if git hooks are installed — `git commit` does the same thing automatically.
+</Aside>

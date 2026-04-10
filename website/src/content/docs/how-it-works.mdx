@@ -1,0 +1,116 @@
+---
+title: How It Works
+description: How Agent Note captures AI session data and attaches it to git commits.
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Data Flow
+
+<Steps>
+1. You prompt Claude Code → agent hooks capture the prompt
+2. Claude writes code → hooks track files touched + blob hashes
+3. You run `git commit` → trailer injected, note recorded
+4. You `git push` → notes auto-pushed to remote
+</Steps>
+
+No extra commands. Just use `git commit` and `git push` normally.
+
+## Storage
+
+<CardGrid>
+  <Card title="Layer 1: Local Temp" icon="laptop">
+    Session data in `.git/agentnote/sessions/`. JSONL files for prompts, changes, and blob hashes. Rotated after each commit. Never pushed.
+  </Card>
+  <Card title="Layer 2: Git Notes" icon="document">
+    Permanent record in `refs/notes/agentnote`. One JSON per commit. Pushable, fetchable, shareable with the team.
+  </Card>
+</CardGrid>
+
+### Session Files
+
+| File | Purpose |
+|---|---|
+| `prompts.jsonl` | One prompt per line with turn number |
+| `changes.jsonl` | Files touched by AI with post-edit blob hashes |
+| `pre_blobs.jsonl` | File state before each AI edit |
+| `heartbeat` | Session activity timestamp |
+| `turn` | Monotonic counter incremented on each prompt |
+
+### Note Schema
+
+```json
+{
+  "v": 1,
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "Implement JWT auth middleware",
+      "response": "I'll create the middleware...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Line-Level Attribution
+
+AI authorship is computed per-line using a 3-diff position algorithm:
+
+| Diff | From | To | What it captures |
+|---|---|---|---|
+| diff1 | parent commit | committed file | All changes in this commit |
+| diff2 | pre-AI-edit | committed file | AI edit + human edits after |
+| diff3 | post-AI-edit | committed file | Human edits only |
+
+**AI positions = diff2 positions NOT in diff3**
+
+All three diffs target the committed blob, so positions are directly comparable.
+
+<Aside type="tip">
+  Deletions are tracked separately — not attributed to AI or human. Falls back to file-level binary attribution when blob data is unavailable.
+</Aside>
+
+## Session Lifecycle
+
+| Event | What happens |
+|---|---|
+| **SessionStart** | Creates session directory, writes heartbeat |
+| **UserPromptSubmit** | Appends prompt, increments turn counter, rotates logs |
+| **PreToolUse Edit/Write** | Captures pre-edit blob hash (synchronous) |
+| **PostToolUse Edit/Write** | Captures post-edit blob hash + file path |
+| **Stop** | Invalidates heartbeat (writes 0) |
+
+<Aside>
+  Git hooks verify session freshness via heartbeat before injecting trailers or recording notes. A stopped session (heartbeat = 0) is immediately inactive.
+</Aside>
+
+## Git Notes
+
+Git notes are invisible to branch listings, GitHub UI, and CI — but pushable and fetchable.
+
+```bash
+# Share with team
+git push origin refs/notes/agentnote
+
+# Fetch from remote
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# View a note
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agentnote init` configures auto-fetch and the `pre-push` hook handles auto-push. No manual commands needed.
+</Aside>
