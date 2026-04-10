@@ -68,7 +68,7 @@ starlight-theme-select {
   max-width: 640px;
   margin: 0 auto 2rem;
   aspect-ratio: 3/2;
-  background: url("/agentnote/hero.png") center/contain no-repeat;
+  background: url("/hero.png") center/contain no-repeat;
   border-radius: 12px;
 }
 
