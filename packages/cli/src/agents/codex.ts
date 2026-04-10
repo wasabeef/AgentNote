@@ -1,13 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
-import type {
-  AgentAdapter,
-  HookInput,
-  NormalizedEvent,
-  TranscriptInteraction,
-} from "./types.js";
+import { join } from "node:path";
+import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const HOOKS_REL_PATH = ".codex/hooks.json";
@@ -23,7 +18,10 @@ type CodexHookPayload = {
 };
 
 type CodexHooksFile = {
-  hooks?: Record<string, Array<{ matcher?: string; hooks: Array<{ type: string; command: string }> }>>;
+  hooks?: Record<
+    string,
+    Array<{ matcher?: string; hooks: Array<{ type: string; command: string }> }>
+  >;
 };
 
 type RolloutLine = {
@@ -176,7 +174,10 @@ function normalizeTranscriptPath(value?: string | null): string | undefined {
 
 function normalizeConfigToml(content: string): string {
   if (content.match(/^\s*features\.codex_hooks\s*=\s*(true|false)\s*$/m)) {
-    return content.replace(/^\s*features\.codex_hooks\s*=\s*(true|false)\s*$/m, "features.codex_hooks = true");
+    return content.replace(
+      /^\s*features\.codex_hooks\s*=\s*(true|false)\s*$/m,
+      "features.codex_hooks = true",
+    );
   }
 
   if (content.match(/^\s*\[features\]\s*$/m)) {
@@ -247,7 +248,9 @@ function extractFilesFromApplyPatch(input: string): string[] {
   return files;
 }
 
-function extractLineStatsFromApplyPatch(input: string): Record<string, { added: number; deleted: number }> {
+function extractLineStatsFromApplyPatch(
+  input: string,
+): Record<string, { added: number; deleted: number }> {
   const stats: Record<string, { added: number; deleted: number }> = {};
   let currentFile: string | null = null;
 
@@ -263,7 +266,8 @@ function extractLineStatsFromApplyPatch(input: string): Record<string, { added: 
     }
 
     if (!currentFile) continue;
-    if (line.startsWith("*** End") || line.startsWith("*** Begin") || line.startsWith("@@")) continue;
+    if (line.startsWith("*** End") || line.startsWith("*** Begin") || line.startsWith("@@"))
+      continue;
     if (line.startsWith("+")) {
       stats[currentFile].added += 1;
       continue;
@@ -391,9 +395,7 @@ export const codex: AgentAdapter = {
     return findTranscriptCandidate(sessionsDir, sessionId);
   },
 
-  async extractInteractions(
-    transcriptPath: string,
-  ): Promise<TranscriptInteraction[]> {
+  async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     let content: string;
@@ -447,7 +449,10 @@ export const codex: AgentAdapter = {
             ? payload.call_name
             : undefined;
 
-      if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
+      if (
+        (payloadType === "custom_tool_call" || payloadType === "function_call") &&
+        toolName === "apply_patch"
+      ) {
         const patchInputs = [
           ...collectPatchStrings(payload.input),
           ...collectPatchStrings(payload.arguments),

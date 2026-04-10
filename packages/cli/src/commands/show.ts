@@ -88,7 +88,8 @@ export async function show(commitRef?: string): Promise<void> {
 
   // Show transcript location only if available locally.
   const sessionDir = join(await agentnoteDir(), SESSIONS_DIR, sessionId);
-  const sessionAgent = (await readSessionAgent(sessionDir)) ?? entry.agent ?? getDefaultAgent().name;
+  const sessionAgent =
+    (await readSessionAgent(sessionDir)) ?? entry.agent ?? getDefaultAgent().name;
   const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getDefaultAgent();
   const transcriptPath =
     (await readSessionTranscriptPath(sessionDir)) ?? adapter.findTranscript(sessionId);

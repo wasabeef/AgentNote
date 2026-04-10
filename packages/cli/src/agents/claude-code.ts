@@ -247,9 +247,7 @@ export const claudeCode: AgentAdapter = {
     return null;
   },
 
-  async extractInteractions(
-    transcriptPath: string,
-  ): Promise<TranscriptInteraction[]> {
+  async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     try {

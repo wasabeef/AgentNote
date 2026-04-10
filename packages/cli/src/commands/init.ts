@@ -88,7 +88,9 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 export async function init(args: string[]): Promise<void> {
   const agentArgIndex = args.indexOf("--agent");
   const agentName =
-    agentArgIndex >= 0 && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
+    agentArgIndex >= 0 && args[agentArgIndex + 1]
+      ? args[agentArgIndex + 1]
+      : getDefaultAgent().name;
   if (!hasAgent(agentName)) {
     console.error(`error: unknown agent '${agentName}'`);
     process.exit(1);

@@ -4,7 +4,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AGENTNOTE_DIR, EVENTS_FILE, PROMPTS_FILE, SESSION_AGENT_FILE, SESSION_FILE, SESSIONS_DIR } from "../core/constants.js";
+import {
+  AGENTNOTE_DIR,
+  EVENTS_FILE,
+  PROMPTS_FILE,
+  SESSION_AGENT_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+} from "../core/constants.js";
 
 describe("agentnote codex", () => {
   let testDir: string;
@@ -80,7 +87,10 @@ describe("agentnote codex", () => {
     });
 
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
-    assert.equal(readFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), "utf-8"), sessionId);
+    assert.equal(
+      readFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), "utf-8"),
+      sessionId,
+    );
     assert.equal(readFileSync(join(sessionDir, SESSION_AGENT_FILE), "utf-8").trim(), "codex");
     assert.ok(existsSync(join(sessionDir, EVENTS_FILE)), "session events should exist");
     assert.ok(existsSync(join(sessionDir, PROMPTS_FILE)), "prompt log should exist");
@@ -115,7 +125,10 @@ describe("agentnote codex", () => {
     });
     assert.ok(showOutput.includes("agent:   codex"), "show should report codex as the agent");
     assert.ok(showOutput.includes("hello.txt"), "show should report transcript-derived file touch");
-    assert.ok(showOutput.includes("(1/1 lines)"), "show should include line-level attribution details");
+    assert.ok(
+      showOutput.includes("(1/1 lines)"),
+      "show should include line-level attribution details",
+    );
   });
 
   it("falls back to file attribution when transcript patch counts do not match the commit", () => {
@@ -222,7 +235,10 @@ describe("agentnote codex", () => {
     );
     assert.equal(note.attribution.method, "line");
     assert.deepEqual(
-      note.files.filter((file: { by_ai: boolean }) => file.by_ai).map((file: { path: string }) => file.path).sort(),
+      note.files
+        .filter((file: { by_ai: boolean }) => file.by_ai)
+        .map((file: { path: string }) => file.path)
+        .sort(),
       ["multi.txt", "note.txt"],
     );
     assert.equal(note.interactions[0].prompt, "Create multi.txt\nand note.txt");
@@ -235,6 +251,9 @@ describe("agentnote codex", () => {
       encoding: "utf-8",
     });
     assert.ok(showOutput.includes("transcript:"), "show should still resolve transcript paths");
-    assert.ok(showOutput.includes("note.txt"), "show should include files extracted from function_call apply_patch");
+    assert.ok(
+      showOutput.includes("note.txt"),
+      "show should include files extracted from function_call apply_patch",
+    );
   });
 });

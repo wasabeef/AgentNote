@@ -84,7 +84,13 @@ describe("agentnote init", () => {
       `${JSON.stringify(
         {
           hooks: {
-            SessionStart: [{ hooks: [{ type: "command", command: "npx --yes @wasabeef/agentnote hook", async: true }] }],
+            SessionStart: [
+              {
+                hooks: [
+                  { type: "command", command: "npx --yes @wasabeef/agentnote hook", async: true },
+                ],
+              },
+            ],
           },
         },
         null,

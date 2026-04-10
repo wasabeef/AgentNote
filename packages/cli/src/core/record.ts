@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { TranscriptInteraction } from "../agents/types.js";
 import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
+import type { TranscriptInteraction } from "../agents/types.js";
 import { git, gitSafe } from "../git.js";
 import { computePositionAttribution, countLines, parseUnifiedHunks } from "./attribution.js";
 import {

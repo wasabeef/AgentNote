@@ -79,7 +79,9 @@ export async function hook(args: string[] = []): Promise<void> {
 
   const agentArgIndex = args.indexOf("--agent");
   const agentName =
-    agentArgIndex >= 0 && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
+    agentArgIndex >= 0 && args[agentArgIndex + 1]
+      ? args[agentArgIndex + 1]
+      : getDefaultAgent().name;
   if (!hasAgent(agentName)) return;
 
   const adapter = getAgent(agentName);
@@ -225,10 +227,7 @@ export async function hook(args: string[] = []): Promise<void> {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
         // Replace "git commit" with "git commit --trailer ..." to ensure the trailer
         // is attached to the commit command, not to a subsequent chained command.
-        const updatedCmd = cmd.replace(
-          /(git\s+commit)/,
-          `$1 ${trailer}`,
-        );
+        const updatedCmd = cmd.replace(/(git\s+commit)/, `$1 ${trailer}`);
         process.stdout.write(
           JSON.stringify({
             hookSpecificOutput: {
