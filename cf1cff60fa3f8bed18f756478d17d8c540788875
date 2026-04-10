@@ -1,0 +1,233 @@
+{
+  "v": 1,
+  "session_id": "03df8ae9-d54b-40bb-95c1-7b0c74392c5b",
+  "timestamp": "2026-04-10T10:21:17.786Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/charts.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/colors.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/icons.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/landing.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/products.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/react-performance.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/astro.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/flutter.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/nextjs.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/react-native.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/react.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/svelte.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/swiftui.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/stacks/vue.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/styles.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/typography.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/ui-reasoning.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/ux-guidelines.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/data/web-interface.csv",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/__pycache__/core.cpython-312.pyc",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/__pycache__/core.cpython-314.pyc",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/__pycache__/design_system.cpython-312.pyc",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/__pycache__/design_system.cpython-314.pyc",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/__pycache__/search.cpython-314.pyc",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/core.py",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/design_system.py",
+      "by_ai": false
+    },
+    {
+      "path": ".claude/skills/ui-ux-pro-max/scripts/search.py",
+      "by_ai": false
+    },
+    {
+      "path": ".github/workflows/docs.yml",
+      "by_ai": false
+    },
+    {
+      "path": "README.md",
+      "by_ai": false
+    },
+    {
+      "path": "design-system/agent-note/MASTER.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/assets/hero.jpeg",
+      "by_ai": false
+    },
+    {
+      "path": "docs/assets/hero.png",
+      "by_ai": false
+    },
+    {
+      "path": "website/.gitignore",
+      "by_ai": false
+    },
+    {
+      "path": "website/astro.config.mjs",
+      "by_ai": false
+    },
+    {
+      "path": "website/package-lock.json",
+      "by_ai": false
+    },
+    {
+      "path": "website/package.json",
+      "by_ai": false
+    },
+    {
+      "path": "website/public/favicon.png",
+      "by_ai": false
+    },
+    {
+      "path": "website/public/favicon.svg",
+      "by_ai": false
+    },
+    {
+      "path": "website/public/og.png",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/.DS_Store",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/assets/logo.jpg",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content.config.ts",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/getting-started.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/styles/custom.css",
+      "by_ai": false
+    },
+    {
+      "path": "website/tsconfig.json",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "file"
+  }
+}
