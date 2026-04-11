@@ -1,0 +1,44 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "50b9c691-167f-4440-8abd-6f041cb2bf74",
+  "timestamp": "2026-04-11T01:44:24.421Z",
+  "model": "claude-opus-4-6[1m]",
+  "interactions": [
+    {
+      "prompt": "y",
+      "response": null,
+      "files_touched": [
+        "packages/cli/package.json"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "https://github.com/wasabeef/agentnote/pull/3 がマージされました。",
+      "response": null,
+      "files_touched": [
+        "packages/cli/package.json"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/package.json",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 1,
+      "total_added": 1,
+      "deleted": 1
+    }
+  }
+}
