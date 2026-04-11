@@ -13,7 +13,7 @@
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
 <p align="center">
-Agent Note records every prompt, every AI response, and AI file attribution — then attaches it all to your git commits. Line-level precision where the agent exposes enough edit history.
+Agent Note records each prompt, response, and AI-attributed file, then attaches that context to your git commits. It reaches line-level attribution when the agent exposes enough edit history.
 </p>
 
 <p align="center">
@@ -118,7 +118,7 @@ You git push
 | Command | What it does |
 | --- | --- |
 | `agentnote init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
-| `agentnote show [commit]` | Show the AI session behind a commit |
+| `agentnote show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
 | `agentnote log [n]` | List recent commits with AI ratio |
 | `agentnote pr [base]` | Generate PR report (markdown or JSON) |
 | `agentnote status` | Show tracking state |
