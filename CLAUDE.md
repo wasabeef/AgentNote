@@ -110,6 +110,18 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **PreToolUse (sync)**: Typecheck before `git commit` — blocks if types fail
 - **PostToolUse (async)**: Biome lint after Edit/Write — feedback only
 
+## Commit conventions
+
+- **Conventional Commits** required. Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`, `perf:`, `build:`. Used by git-cliff for changelog generation.
+- **Scope is optional** but encouraged for targeted changes: `feat(website):`, `fix(action):`.
+- **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.
+- **Before committing**, all four checks must pass (run from `packages/cli/`):
+  1. `npm run build` — esbuild bundle
+  2. `npm run typecheck` — tsc --noEmit
+  3. `npm run lint` — biome check
+  4. `npm test` — node:test (requires build first)
+- **Version bumps** go in a dedicated `chore: bump version to x.y.z` commit. Tag `vx.y.z` triggers the release workflow (test → GitHub Release → npm publish).
+
 ## Constraints
 
 - **Zero runtime dependencies for CLI.** Only devDependencies. The action has its own deps (`@actions/core`, `@actions/github`), bundled with ncc.
