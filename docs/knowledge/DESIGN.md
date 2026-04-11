@@ -96,7 +96,7 @@ This gives users `uses: wasabeef/agentnote@v0` while code lives in `packages/act
 ### Two execution paths
 
 1. **CLI** (`packages/cli/`) — `agentnote init`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
-2. **Hook handler** — `agentnote hook`, called by Claude Code via stdin JSON. All data collection.
+2. **Hook handler** — `agentnote hook`, called by agent-specific hooks via stdin JSON (`--agent claude-code` or `--agent codex`). All data collection.
 
 ### Data flow
 
@@ -113,7 +113,7 @@ Stop        Prompt    (Edit/Write)        │                       │
 session       .jsonl     .jsonl
 ```
 
-AI agent hooks handle data **collection** (prompts, file changes, session lifecycle). Git hooks handle commit **integration** (trailer injection, note recording). This separation means commit tracking works regardless of how `git commit` is invoked — chained commands, aliases, or scripts.
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). This separation means commit tracking works regardless of how `git commit` is invoked — chained commands, aliases, or scripts.
 
 ### Storage: two layers
 
@@ -302,11 +302,11 @@ When an existing hook file is found, agentnote chains to it — the original hoo
 agentnote init              add hooks to agent config (commit to share with team)
 
 agentnote commit [args]       git commit with session context (convenience wrapper)
-agentnote show [commit]       show session details for a commit
+agentnote show [commit]       show session details for HEAD or a commit SHA
 agentnote log [n]             list recent commits with session info
 agentnote pr [base] [--json] [--output description|comment] [--update <PR#>]
 agentnote status              show current tracking state
-agentnote hook                handle agent hook events (internal, via stdin)
+agentnote hook                handle agent hook events (internal, via stdin, agent-specific)
 agentnote record <session-id> record git note for HEAD (internal, used by post-commit hook)
 ```
 
@@ -540,17 +540,17 @@ If multiple Claude Code sessions run in the same repo simultaneously, `.git/agen
 
 ## Multi-agent extensibility
 
-Agent Note supports Claude Code today, but the `agents/` + `core/` split makes adding agents straightforward.
+Agent Note supports Claude Code and Codex CLI today, and the `agents/` + `core/` split makes adding more agents straightforward.
 
 ### What varies per agent
 
-| Concern | Claude Code | Cursor | Gemini CLI |
+| Concern | Claude Code | Codex CLI | Future agents |
 |---|---|---|---|
-| Config file | `.claude/settings.json` | `.cursor/hooks.json` | `.gemini/settings.json` |
-| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `sessionStart`, `sessionEnd`, `beforeSubmitPrompt`, `stop` | TBD |
-| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.cursor/sessions/` | `~/.gemini/sessions/` |
+| Config files | `.claude/settings.json` | `.codex/config.toml` + `.codex/hooks.json` | Varies |
+| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `SessionStart`, `UserPromptSubmit`, `Stop` | Varies |
+| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.codex/sessions/.../*.jsonl` | Varies |
+| Attribution strategy | Hook-captured blob pairs + transcript | Transcript-driven, with safe line-level upgrade when patch counts match | Varies |
 | Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) |
-| Response format | `{type:"assistant", message:{content:[{type:"text"}]}}` | Different | Different |
 
 ### What stays the same (`core/` + git hooks)
 
@@ -562,7 +562,7 @@ Agent Note supports Claude Code today, but the `agents/` + `core/` split makes a
 - Note recording — handled by `post-commit` git hook
 - GitHub Action (agent-agnostic — reads git notes)
 
-Commit integration is fully agent-agnostic. Adding a new agent only requires implementing data collection hooks — git hooks handle the rest.
+Commit integration is fully agent-agnostic. Adding a new agent only requires implementing its collection path and transcript parser — git hooks handle the rest.
 
 ### AgentAdapter interface
 
@@ -619,7 +619,7 @@ interface AgentAdapter {
 1. Create `packages/cli/src/agents/<agent-name>.ts` implementing `AgentAdapter`
 2. Register it in `agents/index.ts`
 3. `agentnote init --agent <name>` calls `adapter.installHooks()`
-4. `agentnote hook` detects agent from event payload or `--agent` flag
+4. `agentnote hook` is dispatched by `--agent <name>`; bare `agentnote hook` is retained only for legacy Claude compatibility and now fails fast for Codex payloads
 5. All core logic and the GitHub Action work unchanged
 
 ## entire.io comparison
