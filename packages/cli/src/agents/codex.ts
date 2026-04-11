@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -126,9 +126,9 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
     const current = queue.shift();
     if (!current) break;
 
-    let entries: ReturnType<typeof readdirSync>;
+    let entries: Dirent<string>[];
     try {
-      entries = readdirSync(current, { withFileTypes: true });
+      entries = readdirSync(current, { withFileTypes: true }) as Dirent<string>[];
     } catch {
       continue;
     }

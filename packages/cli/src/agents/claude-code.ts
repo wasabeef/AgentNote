@@ -81,7 +81,7 @@ export const claudeCode: AgentAdapter = {
       }
     }
 
-    const hooks = ((settings.hooks ?? {}) as Record<string, unknown[]> | undefined) ?? {};
+    const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
 
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
