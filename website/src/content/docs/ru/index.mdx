@@ -3,7 +3,7 @@ title: Agent Note
 description: Узнай, почему изменился код, а не только что изменилось.
 template: splash
 hero:
-  tagline: Каждый промпт ИИ, ответ и атрибуция файлов — автоматически привязаны к твоим git-коммитам. Точность до строки. Без настройки.
+  tagline: Каждый промпт ИИ, ответ и атрибуция файлов автоматически привязаны к вашим git-коммитам. Построчная атрибуция доступна, когда агент сохраняет достаточно истории редактирования.
   actions:
     - text: Начать
       link: /agentnote/ru/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="Атрибуция ИИ на уровне строк" icon="pencil">
-    Алгоритм позиционирования 3-diff определяет, какие строки написаны ИИ, а какие — человеком. Не просто файлы, а конкретные строки.
+    Claude Code даёт полную атрибуцию на уровне строк. Codex повышается до уровня строк, когда счётчики patch в transcript совпадают с финальным коммитом.
   </Card>
   <Card title="Отслеживание сессий" icon="document">
     Промпты, ответы, название модели и использованные инструменты — всё привязано к коммитам, которые они породили.
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Для Codex CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. Закоммитьте сгенерированные файлы
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Репозитории с Codex коммитят `.codex/config.toml` и `.codex/hooks.json` вместо `.claude/settings.json`.
 
 3. Пишите код с ИИ, коммитьте как обычно — всё отслеживается автоматически
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## Поддержка
+
+| Агент | Статус | Примечания |
+|---|---|---|
+| Claude Code | Полная поддержка | Построчная атрибуция через пары blob, сохранённые хуками |
+| Codex CLI | Preview | Основано на transcript; повышается до уровня строк, когда счётчики patch совпадают с коммитом |
+| Cursor | Скоро | |
+| Gemini CLI | Скоро | |

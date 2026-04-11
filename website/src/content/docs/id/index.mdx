@@ -3,7 +3,7 @@ title: Agent Note
 description: Ketahui mengapa kode Anda berubah, bukan hanya apa yang berubah.
 template: splash
 hero:
-  tagline: Setiap prompt AI, respons, dan atribusi file — terhubung ke git commit Anda secara otomatis. Presisi level baris. Tanpa konfigurasi.
+  tagline: Setiap prompt AI, respons, dan atribusi file — terhubung ke git commit Anda secara otomatis. Atribusi level baris tersedia saat agen menyediakan riwayat edit yang memadai.
   actions:
     - text: Mulai
       link: /agentnote/id/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="Atribusi AI Level Baris" icon="pencil">
-    Algoritma posisi 3-diff menghitung baris mana yang ditulis AI dan mana yang ditulis manusia — bukan sekadar file mana.
+    Claude Code mendapat atribusi penuh hingga level baris. Codex naik ke level baris saat jumlah patch di transcript cocok dengan commit final.
   </Card>
   <Card title="Pelacakan Sesi" icon="document">
     Prompt, respons, nama model, dan penggunaan tool — semuanya terhubung ke commit yang dihasilkan.
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Untuk Codex CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. Commit file yang dihasilkan
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Repository Codex meng-commit `.codex/config.toml` dan `.codex/hooks.json` sebagai pengganti `.claude/settings.json`.
 
 3. Coding dengan AI, commit seperti biasa — semuanya dilacak secara otomatis
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## Dukungan
+
+| Agen | Status | Catatan |
+|---|---|---|
+| Claude Code | Dukungan penuh | Atribusi level baris melalui pasangan blob yang ditangkap hook |
+| Codex CLI | Preview | Berbasis transcript; naik ke level baris saat jumlah patch cocok dengan commit |
+| Cursor | Segera hadir | |
+| Gemini CLI | Segera hadir | |

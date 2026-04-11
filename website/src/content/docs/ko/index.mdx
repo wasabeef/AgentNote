@@ -3,7 +3,7 @@ title: Agent Note
 description: 코드가 왜 변경됐는지 기록합니다.
 template: splash
 hero:
-  tagline: 모든 AI 프롬프트, 응답, 파일별 AI 기여 정보를 git 커밋에 자동으로 연결합니다. 라인 단위 정밀도. 설정 불필요.
+  tagline: 모든 AI 프롬프트, 응답, 파일별 AI 기여 정보를 git 커밋에 자동으로 연결합니다. 에이전트가 충분한 편집 이력을 제공하면 라인 단위까지 추적합니다.
   actions:
     - text: 시작하기
       link: /agentnote/ko/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="라인 단위 AI 기여도 판정" icon="pencil">
-    3-diff 포지션 알고리즘으로 AI가 작성한 라인과 사람이 작성한 라인을 정확히 구분합니다. 파일 단위가 아닌 라인 단위로.
+    Claude Code 는 완전한 라인 단위 판정을 제공합니다. Codex 는 transcript 의 patch 수와 최종 commit 이 일치할 때 라인 단위로 승격됩니다.
   </Card>
   <Card title="세션 추적" icon="document">
     프롬프트, 응답, 모델명, 도구 사용 이력 — 모두 해당 커밋에 연결됩니다.
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Codex CLI 의 경우:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. 생성된 파일을 커밋
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Codex 저장소는 `.claude/settings.json` 대신 `.codex/config.toml` 과 `.codex/hooks.json` 을 커밋합니다.
 
 3. AI로 코딩하고 평소처럼 커밋 — 모든 것이 자동으로 추적됩니다
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## 지원 상태
+
+| 에이전트 | 상태 | 비고 |
+|---|---|---|
+| Claude Code | 정식 지원 | hook 으로 수집한 blob 쌍을 이용한 라인 단위 판정 |
+| Codex CLI | Preview | transcript 기반. patch 수와 commit 이 일치할 때 라인 단위로 승격 |
+| Cursor | 예정 | |
+| Gemini CLI | 예정 | |

@@ -3,7 +3,7 @@ title: Agent Note
 description: 記錄程式碼為何變更，而非只是變更了什麼。
 template: splash
 hero:
-  tagline: 每一次 AI 提示詞、回應和檔案級 AI 標註——自動關聯到你的 git 提交。行級精度，零設定。
+  tagline: 每一次 AI 提示詞、回應和檔案級 AI 標註都會自動關聯到你的 git 提交。當代理提供足夠的編輯歷史時，也能提升到行級歸因。
   actions:
     - text: 開始使用
       link: /agentnote/zh-tw/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="行級 AI 貢獻度分析" icon="pencil">
-    3-diff 定位演算法精確判定哪些行由 AI 撰寫、哪些由人類撰寫——不只是檔案層級。
+    Claude Code 提供完整的行級歸因。Codex 會在 transcript 中的 patch 行數與最終 commit 一致時提升到行級。
   </Card>
   <Card title="工作階段追蹤" icon="document">
     提示詞、回應、模型名稱和工具使用紀錄——全部關聯到對應的提交。
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   如果你使用 Codex CLI：
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. 提交產生的檔案
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Codex 儲存庫需要提交 `.codex/config.toml` 與 `.codex/hooks.json`，而不是 `.claude/settings.json`。
 
 3. 用 AI 寫程式，照常提交——一切自動追蹤
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## 支援情況
+
+| Agent | 狀態 | 說明 |
+|---|---|---|
+| Claude Code | 完整支援 | 透過 hook 擷取的 blob 配對實現行級歸因 |
+| Codex CLI | Preview | 以 transcript 為基礎；當 patch 行數與 commit 一致時提升到行級 |
+| Cursor | 即將支援 | |
+| Gemini CLI | 即將支援 | |

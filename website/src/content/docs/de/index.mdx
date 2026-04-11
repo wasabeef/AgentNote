@@ -3,7 +3,7 @@ title: Agent Note
 description: Erfahre, warum sich dein Code geändert hat — nicht nur was.
 template: splash
 hero:
-  tagline: Jeder KI-Prompt, jede Antwort und Dateizuordnung — automatisch an deine Git-Commits angehängt. Zeilengenau. Ohne Konfiguration.
+  tagline: Jeder KI-Prompt, jede Antwort und Dateizuordnung — automatisch an deine Git-Commits angehängt. Zeilengenau, wenn der Agent genug Bearbeitungsverlauf bereitstellt.
   actions:
     - text: Loslegen
       link: /agentnote/de/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="KI-Zuordnung auf Zeilenebene" icon="pencil">
-    Ein 3-Diff-Positionsalgorithmus ermittelt, welche Zeilen von der KI und welche vom Menschen geschrieben wurden — nicht nur welche Dateien.
+    Claude Code erhält vollständige Zuordnung auf Zeilenebene. Codex wird auf Zeilenebene hochgestuft, wenn die Patch-Zahlen im Transcript zum finalen Commit passen.
   </Card>
   <Card title="Session-Tracking" icon="document">
     Prompts, Antworten, Modellname und Tool-Nutzung — alles verknüpft mit den Commits, die daraus entstanden sind.
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Für Codex CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. Committe die generierten Dateien
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Codex-Repositories committen `.codex/config.toml` und `.codex/hooks.json` statt `.claude/settings.json`.
 
 3. Programmiere mit KI, committe wie gewohnt — alles wird automatisch erfasst
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## Unterstützung
+
+| Agent | Status | Hinweise |
+|---|---|---|
+| Claude Code | Voll unterstützt | Zuordnung auf Zeilenebene über per Hook erfasste Blob-Paare |
+| Codex CLI | Preview | Transcript-basiert; Zeilenebene nur, wenn die Patch-Zahlen zum Commit passen |
+| Cursor | Demnächst | |
+| Gemini CLI | Demnächst | |

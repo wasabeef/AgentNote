@@ -3,7 +3,7 @@ title: Agent Note
 description: Saiba por que seu código mudou, não apenas o que mudou.
 template: splash
 hero:
-  tagline: Cada prompt de IA, resposta e atribuição de arquivo — vinculados aos seus commits git automaticamente. Precisão por linha. Sem configuração.
+  tagline: Cada prompt de IA, resposta e atribuição de arquivo — vinculados aos seus commits git automaticamente. Atribuição em nível de linha quando o agente expõe histórico de edição suficiente.
   actions:
     - text: Começar
       link: /agentnote/pt-br/getting-started/
@@ -21,7 +21,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 <CardGrid stagger>
   <Card title="Atribuição de IA por linha" icon="pencil">
-    Um algoritmo de posicionamento 3-diff calcula quais linhas foram escritas pela IA e quais pelo humano — não apenas quais arquivos.
+    Claude Code tem atribuição completa por linha. O Codex sobe para nível de linha quando as contagens de patch do transcript batem com o commit final.
   </Card>
   <Card title="Rastreamento de sessão" icon="document">
     Prompts, respostas, nome do modelo e uso de ferramentas — tudo vinculado aos commits que geraram.
@@ -43,6 +43,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init
    ```
 
+   Para Codex CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
 2. Faça commit dos arquivos gerados
 
    ```bash
@@ -50,6 +56,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git commit -m "chore: enable agentnote"
    git push
    ```
+
+   Repositórios com Codex versionam `.codex/config.toml` e `.codex/hooks.json` no lugar de `.claude/settings.json`.
 
 3. Programe com IA, faça commit normalmente — tudo é rastreado automaticamente
 </Steps>
@@ -64,6 +72,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
+  agent:   claude-code
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖
@@ -91,3 +100,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   ```
   </TabItem>
 </Tabs>
+
+## Compatibilidade
+
+| Agente | Status | Notas |
+|---|---|---|
+| Claude Code | Suporte completo | Atribuição por linha via pares de blobs capturados pelos hooks |
+| Codex CLI | Preview | Baseado em transcript; sobe para nível de linha quando as contagens de patch batem com o commit |
+| Cursor | Em breve | |
+| Gemini CLI | Em breve | |
