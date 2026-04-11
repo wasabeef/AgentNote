@@ -12,6 +12,7 @@ Agent Note (`@wasabeef/agentnote`) is a monorepo CLI + GitHub Action that links 
 packages/cli/     # @wasabeef/agentnote — npm package (CLI)
 packages/action/  # GitHub Action (Marketplace)
 action.yml        # root pointer to packages/action/dist/index.js
+website/          # Documentation site (Astro Starlight, 12 locales)
 ```
 
 ## Commands (run from packages/cli/)
@@ -35,30 +36,54 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote show`, `agentnote log`, `agentnote session`, `agentnote pr`. Run by users and CI.
-2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by Claude Code hooks via stdin JSON. All data collection.
+1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote show`, `agentnote log`, `agentnote session`, `agentnote pr`, `agentnote status`, `agentnote commit`, `agentnote record`. Run by users and CI.
+2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by agent hooks via stdin JSON. All data collection. Agent-agnostic via adapter pattern.
 
 ### Data flow
 
 ```
-Claude Code hooks → agentnote hook (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
-git commit (via Claude Code) → PreToolUse injects --trailer → PostToolUse records entry to git notes
+Agent hooks → agentnote hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
+git commit → prepare-commit-msg injects trailer → post-commit calls agentnote record → git note written
+git push → pre-push auto-pushes refs/notes/agentnote
 agentnote show/log/session → reads git notes --ref=agentnote
 ```
 
+### Agent adapters (`packages/cli/src/agents/`)
+
+Agent Note supports multiple coding agents via an adapter pattern:
+
+- **`types.ts`**: `AgentAdapter` interface — each agent defines its hooks config, event parser, and transcript reader.
+- **`index.ts`**: Agent registry — `getAgent()`, `hasAgent()`, `listAgents()`. Default: `claude-code`.
+- **`claude-code.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.
+- **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.
+
 ### Hook event handling (`packages/cli/src/commands/hook.ts`)
 
-- **SessionStart/Stop**: Track active session ID in `.git/agentnote/session`
-- **UserPromptSubmit**: Append prompt to `prompts.jsonl`, increment turn counter in `turn` file
-- **PreToolUse (Edit/Write/NotebookEdit)**: Capture pre-edit blob hash via `git hash-object -w` for line-level attribution (synchronous)
-- **PreToolUse (Bash, git commit)**: Inject `--trailer 'Agentnote-Session: <id>'` via `updatedInput` (synchronous, must write to stdout)
-- **PostToolUse (Edit/Write)**: Track file changes in `changes.jsonl` with current turn number and post-edit blob hash
+- **SessionStart**: Create session directory, write heartbeat, store agent name via `writeSessionAgent()`
+- **Stop**: Log stop event only — does **not** invalidate heartbeat (Stop = AI response end, not session end)
+- **UserPromptSubmit**: Append prompt to `prompts.jsonl`, increment turn counter in `turn` file, capture human snapshot via `git diff HEAD --numstat`
+- **PreToolUse (Edit/Write/MultiEdit/NotebookEdit)**: Capture pre-edit blob hash via `git hash-object -w` for line-level attribution (synchronous)
+- **PreToolUse (Bash, git commit)**: Inject `--trailer` into the `git commit` segment only via regex replace (`cmd.replace(/(git\s+commit)/, ...)`) to handle chained commands like `git commit && git push` (synchronous, must write to stdout)
+- **PostToolUse (Edit/Write/MultiEdit/NotebookEdit)**: Track file changes in `changes.jsonl` with current turn number and post-edit blob hash
 - **PostToolUse (Bash, git commit)**: Call `recordCommitEntry()` to write git note, then rotate logs
+
+### Git hooks (`agentnote init`)
+
+`agentnote init` installs three git hooks alongside the agent's hook config:
+
+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour), injects `Agentnote-Session` trailer into commit message. Skips amends.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agentnote record <sid>` to write git note.
+- **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
+
+Existing hooks are backed up and chained. Compatible with husky/lefthook.
 
 ### Core modules
 
-- **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Includes turn-based file attribution.
+- **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Agent-aware via registry. Idempotent (checks existing note). Includes consumed-pairs deduplication to prevent re-attribution across split commits.
 - **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, and `interactions[].tools`.
+- **`core/attribution.ts`**: 3-diff position algorithm for line-level AI attribution. Parses unified diff hunks, computes AI vs human line positions.
+- **`core/session.ts`**: `writeSessionAgent()` / `readSessionAgent()` / `writeSessionTranscriptPath()` / `readSessionTranscriptPath()`. Per-session agent metadata.
+- **`core/constants.ts`**: Shared constants — `TRAILER_KEY`, `SESSION_AGENT_FILE`, `HEARTBEAT_FILE`, etc.
 - **`core/jsonl.ts`**: `readJsonlField()` (deduplicated single field), `readJsonlEntries()` (full objects), `appendJsonl()`.
 - **`core/storage.ts`**: `writeNote()` and `readNote()` using `refs/notes/agentnote`.
 - **`core/rotate.ts`**: Rename JSONL files with commit SHA prefix after each commit.
@@ -75,8 +100,8 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 ### init vs hook
 
-- `init` modifies `.claude/settings.json` — intended to be committed to git so the team shares the same hooks config.
-- `hook` is called by Claude Code at runtime. It never modifies settings.json.
+- `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
+- `hook` is called by the coding agent at runtime. It never modifies config files.
 
 ### Harness hooks
 
