@@ -16,6 +16,10 @@
 Agent Note records every prompt, every AI response, and AI file attribution — then attaches it all to your git commits. Line-level precision where the agent exposes enough edit history.
 </p>
 
+<p align="center">
+  <a href="https://wasabeef.github.io/agentnote/">Documentation</a>
+</p>
+
 ## Setup
 
 ```bash
