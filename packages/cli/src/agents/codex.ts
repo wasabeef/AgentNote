@@ -396,13 +396,18 @@ export const codex: AgentAdapter = {
   },
 
   async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
-    if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
+    if (!isValidTranscriptPath(transcriptPath)) {
+      throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
+    }
+    if (!existsSync(transcriptPath)) {
+      throw new Error(`Codex transcript not found: ${transcriptPath}`);
+    }
 
     let content: string;
     try {
       content = await readFile(transcriptPath, "utf-8");
     } catch {
-      return [];
+      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
     }
 
     const interactions: TranscriptInteraction[] = [];

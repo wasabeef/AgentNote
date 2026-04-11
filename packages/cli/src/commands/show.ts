@@ -14,7 +14,15 @@ import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 import { normalizeEntry } from "./normalize.js";
 
+const COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
+
 export async function show(commitRef?: string): Promise<void> {
+  if (commitRef && !COMMIT_REF_PATTERN.test(commitRef)) {
+    console.error("usage: agentnote show [commit]");
+    console.error("commit must be HEAD or a 7-40 character commit SHA");
+    process.exit(1);
+  }
+
   const ref = commitRef ?? "HEAD";
 
   const commitInfo = await git(["log", "-1", "--format=%h %s", ref]);

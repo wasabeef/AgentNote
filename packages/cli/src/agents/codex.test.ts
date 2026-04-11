@@ -57,4 +57,23 @@ describe("codex adapter", () => {
 
     assert.equal(codex.findTranscript(sessionId), transcriptPath);
   });
+
+  it("ignores unknown roles and unrelated payload types in transcripts", async () => {
+    const transcriptDir = join(codexHome, "sessions", "roles");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+
+    writeFileSync(
+      transcriptPath,
+      '{"type":"response_item","payload":{"type":"message","role":"system","content":[{"type":"output_text","text":"System guidance"}]}}\n' +
+        '{"type":"response_item","payload":{"type":"tool_use","name":"shell","input":{"command":"pwd"}}}\n' +
+        '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Create a note"}]}}\n' +
+        '{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Working on it."}]}}\n',
+    );
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+    assert.equal(interactions.length, 1);
+    assert.equal(interactions[0].prompt, "Create a note");
+    assert.equal(interactions[0].response, "Working on it.");
+  });
 });

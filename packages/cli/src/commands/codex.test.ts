@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -255,5 +255,49 @@ describe("agentnote codex", () => {
       showOutput.includes("note.txt"),
       "show should include files extracted from function_call apply_patch",
     );
+  });
+
+  it("does not write a git note when the Codex transcript cannot be read", () => {
+    const sessionId = "codex-session-missing-transcript";
+    const missingTranscriptPath = join(testHome, ".codex", "sessions", "missing.jsonl");
+
+    const sessionStart = JSON.stringify({
+      hook_event_name: "SessionStart",
+      session_id: sessionId,
+      transcript_path: missingTranscriptPath,
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    const promptEvent = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: sessionId,
+      transcript_path: missingTranscriptPath,
+      prompt: "Create missing-note.txt",
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    writeFileSync(join(testDir, "missing-note.txt"), "Draft\n");
+    execSync("git add missing-note.txt", { cwd: testDir });
+
+    const output = execSync(`node ${cliPath} commit -m "feat: missing transcript" 2>&1`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+      encoding: "utf-8",
+    });
+    assert.match(output, /agentnote: warning:/, "commit should warn when transcript reading fails");
+
+    const noteResult = spawnSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.notEqual(noteResult.status, 0, "should skip writing a git note on transcript failure");
   });
 });

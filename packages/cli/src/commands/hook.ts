@@ -22,6 +22,20 @@ import { writeSessionAgent, writeSessionTranscriptPath } from "../core/session.j
 import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function looksLikeCodexPayload(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const hookEventName = value.hook_event_name;
+  const sessionId = value.session_id;
+  const hasTranscriptPath =
+    typeof value.transcript_path === "string" || value.transcript_path === null;
+  if (typeof hookEventName !== "string" || typeof sessionId !== "string") return false;
+  return hasTranscriptPath && ["SessionStart", "UserPromptSubmit", "Stop"].includes(hookEventName);
+}
+
 /**
  * Normalize an absolute file path to a repo-relative path.
  * Returns the original path if normalization fails or path is already relative.
@@ -70,19 +84,25 @@ export async function hook(args: string[] = []): Promise<void> {
 
   // Determine if this is a synchronous hook (PreToolUse) by peeking at the event name.
   let sync = false;
+  let peek: unknown;
   try {
-    const peek = JSON.parse(raw);
-    sync = peek.hook_event_name === "PreToolUse";
+    peek = JSON.parse(raw);
+    sync = isRecord(peek) && peek.hook_event_name === "PreToolUse";
   } catch {
     return;
   }
 
   const agentArgIndex = args.indexOf("--agent");
+  const explicitAgent = agentArgIndex >= 0 && Boolean(args[agentArgIndex + 1]);
   const agentName =
-    agentArgIndex >= 0 && args[agentArgIndex + 1]
-      ? args[agentArgIndex + 1]
-      : getDefaultAgent().name;
+    explicitAgent && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
   if (!hasAgent(agentName)) return;
+
+  if (!explicitAgent && looksLikeCodexPayload(peek)) {
+    console.error("agentnote: Codex hook payload detected; run `agentnote hook --agent codex`");
+    process.exitCode = 1;
+    return;
+  }
 
   const adapter = getAgent(agentName);
   const input: HookInput = { raw, sync };
