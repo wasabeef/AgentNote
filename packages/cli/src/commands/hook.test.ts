@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -204,5 +204,21 @@ describe("agentnote hook", () => {
   it("handles invalid JSON gracefully", () => {
     // should not throw
     execSync(`echo 'not json' | node ${cliPath} hook`, { cwd: testDir });
+  });
+
+  it("fails fast for Codex payloads when --agent codex is omitted", () => {
+    const event = JSON.stringify({
+      hook_event_name: "SessionStart",
+      session_id: "codex-session-guard",
+      transcript_path: "/tmp/codex/rollout.jsonl",
+      model: "gpt-5-codex",
+    });
+
+    const result = spawnSync("zsh", ["-lc", `echo '${event}' | node ${cliPath} hook`], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.notEqual(result.status, 0, "should return a non-zero exit code");
   });
 });

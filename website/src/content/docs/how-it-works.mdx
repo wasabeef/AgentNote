@@ -8,8 +8,8 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 ## Data Flow
 
 <Steps>
-1. You prompt Claude Code → agent hooks capture the prompt
-2. Claude writes code → hooks track files touched + blob hashes
+1. You prompt your coding agent → hooks capture the prompt
+2. The agent writes code → hooks or transcripts track files touched and attribution signals
 3. You run `git commit` → trailer injected, note recorded
 4. You `git push` → notes auto-pushed to remote
 </Steps>
@@ -42,6 +42,7 @@ No extra commands. Just use `git commit` and `git push` normally.
 ```json
 {
   "v": 1,
+  "agent": "claude-code",
   "session_id": "a1b2c3d4-...",
   "model": "claude-sonnet-4-20250514",
   "interactions": [
@@ -64,9 +65,9 @@ No extra commands. Just use `git commit` and `git push` normally.
 }
 ```
 
-## Line-Level Attribution
+## Attribution Modes
 
-AI authorship is computed per-line using a 3-diff position algorithm:
+Claude Code computes AI authorship per-line using a 3-diff position algorithm:
 
 | Diff | From | To | What it captures |
 |---|---|---|---|
@@ -82,6 +83,8 @@ All three diffs target the committed blob, so positions are directly comparable.
   Deletions are tracked separately — not attributed to AI or human. Falls back to file-level binary attribution when blob data is unavailable.
 </Aside>
 
+Codex CLI uses transcript-driven attribution. When transcript patch counts match the final commit diff, Agent Note upgrades Codex commits to `method: "line"`. Otherwise it falls back to `method: "file"` to avoid false positives.
+
 ## Session Lifecycle
 
 | Event | What happens |
@@ -94,6 +97,10 @@ All three diffs target the committed blob, so positions are directly comparable.
 
 <Aside>
   Git hooks verify session freshness via heartbeat before injecting trailers or recording notes. Heartbeat is updated on SessionStart and each prompt.
+</Aside>
+
+<Aside type="tip">
+  Agent Note is agent-aware. Session metadata stores the active adapter, so `show`, `status`, and commit recording can resolve the right transcript format later.
 </Aside>
 
 ## Git Notes

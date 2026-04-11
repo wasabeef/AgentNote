@@ -13,13 +13,19 @@
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
 <p align="center">
-Agent Note records every prompt, every AI response, and which lines were AI-written — then attaches it all to your git commits. Line-level precision. Zero config.
+Agent Note records every prompt, every AI response, and AI file attribution — then attaches it all to your git commits. Line-level precision where the agent exposes enough edit history.
 </p>
 
 ## Setup
 
 ```bash
 npx @wasabeef/agentnote init
+```
+
+For Codex CLI:
+
+```bash
+npx @wasabeef/agentnote init --agent codex
 ```
 
 Commit the generated files and push:
@@ -29,6 +35,8 @@ git add .claude/settings.json .github/workflows/agentnote.yml
 git commit -m "chore: enable agentnote"
 git push
 ```
+
+Codex repositories commit `.codex/config.toml` and `.codex/hooks.json` instead of `.claude/settings.json`.
 
 Each developer runs `init` after cloning to install local git hooks.
 
@@ -44,6 +52,7 @@ session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
+agent:   claude-code
 files:   5 changed, 3 by AI
 
   src/middleware/auth.ts  🤖
@@ -90,10 +99,10 @@ Posts an AI session report to the PR description:
 ## How It Works
 
 ```
-You prompt Claude Code
+You prompt your coding agent
   → hooks capture the prompt
-Claude writes code
-  → hooks track files + blob hashes
+The agent writes code
+  → hooks or transcripts track files + attribution data
 You git commit
   → trailer injected, note recorded
 You git push
@@ -112,7 +121,12 @@ You git push
 
 ## Works with
 
-Claude Code — more agents coming (Cursor, Gemini CLI, Codex CLI)
+| Agent | Status | Attribution |
+| --- | --- | --- |
+| Claude Code | Full support | Line-level |
+| Codex CLI | Preview | File-level by default, line-level when transcript patch counts match the commit |
+| Cursor | Coming soon | — |
+| Gemini CLI | Coming soon | — |
 
 ## GitHub Action
 
@@ -145,6 +159,7 @@ $ git notes --ref=agentnote show ce941f7
 ```json
 {
   "v": 1,
+  "agent": "claude-code",
   "session_id": "a1b2c3d4-...",
   "model": "claude-sonnet-4-20250514",
   "interactions": [

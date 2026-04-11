@@ -14,7 +14,7 @@ const HELP = `
 agentnote v${VERSION} — remember why your code changed
 
 usage:
-  agentnote init                 set up hooks, workflow, and notes auto-fetch
+  agentnote init [--agent name]  set up hooks, workflow, and notes auto-fetch
   agentnote show [commit]        show session details for a commit
   agentnote log [n]              list recent commits with session info
   agentnote pr [base] [--json]   generate PR report
@@ -51,7 +51,7 @@ switch (command) {
     await session(args[0]);
     break;
   case "hook":
-    await hook();
+    await hook(args);
     break;
   case "record": {
     // Record agentnote entry for HEAD — used by post-commit git hook.

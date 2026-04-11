@@ -7,6 +7,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Agent Note",
+      disable404Route: true,
       logo: {
         src: "./src/assets/logo.jpg",
         alt: "Agent Note",

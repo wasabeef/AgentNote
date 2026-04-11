@@ -4,6 +4,10 @@
   "engines": {
     "node": ">=20"
   },
+  "scripts": {
+    "docs:install": "npm ci --prefix website",
+    "docs:build": "npm run build --prefix website"
+  },
   "workspaces": [
     "packages/cli",
     "packages/action"

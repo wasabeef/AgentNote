@@ -3,7 +3,13 @@ name: Deploy Website
 on:
   push:
     branches: [main]
-    paths: [website/**]
+    paths:
+      - website/**
+      - .github/workflows/docs.yml
+  pull_request:
+    paths:
+      - website/**
+      - .github/workflows/docs.yml
 
 permissions:
   contents: read
@@ -33,6 +39,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

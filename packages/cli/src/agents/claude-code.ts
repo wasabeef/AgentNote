@@ -2,28 +2,29 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AgentAdapter, HookInput, NormalizedEvent } from "./types.js";
+import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
+const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude-code`;
 
 const HOOKS_CONFIG = {
-  SessionStart: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
-  Stop: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
-  UserPromptSubmit: [{ hooks: [{ type: "command", command: HOOK_COMMAND, async: true }] }],
+  SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
+  Stop: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
+  UserPromptSubmit: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
   PreToolUse: [
     {
       matcher: "Edit|Write|MultiEdit|NotebookEdit",
-      hooks: [{ type: "command", command: HOOK_COMMAND }],
+      hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND }],
     },
     {
       matcher: "Bash",
-      hooks: [{ type: "command", if: "Bash(*git commit*)", command: HOOK_COMMAND }],
+      hooks: [{ type: "command", if: "Bash(*git commit*)", command: CLAUDE_HOOK_COMMAND }],
     },
   ],
   PostToolUse: [
     {
       matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
-      hooks: [{ type: "command", command: HOOK_COMMAND, async: true }],
+      hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }],
     },
   ],
 };
@@ -62,6 +63,10 @@ export const claudeCode: AgentAdapter = {
   name: "claude-code",
   settingsRelPath: ".claude/settings.json",
 
+  async managedPaths(): Promise<string[]> {
+    return [this.settingsRelPath];
+  },
+
   async installHooks(repoRoot: string): Promise<void> {
     const settingsPath = join(repoRoot, this.settingsRelPath);
     const { dirname } = await import("node:path");
@@ -77,14 +82,18 @@ export const claudeCode: AgentAdapter = {
     }
 
     const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
-    const raw = JSON.stringify(hooks);
 
-    if (
-      raw.includes("@wasabeef/agentnote") ||
-      raw.includes("agentnote hook") ||
-      raw.includes("cli.js hook")
-    )
-      return;
+    for (const [event, entries] of Object.entries(hooks)) {
+      hooks[event] = entries.filter((entry) => {
+        const text = JSON.stringify(entry);
+        return (
+          !text.includes("@wasabeef/agentnote") &&
+          !text.includes("agentnote hook") &&
+          !text.includes("cli.js hook")
+        );
+      });
+      if (hooks[event].length === 0) delete hooks[event];
+    }
 
     for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
       hooks[event] = [...(hooks[event] ?? []), ...entries];
@@ -125,9 +134,9 @@ export const claudeCode: AgentAdapter = {
     try {
       const content = await readFile(settingsPath, "utf-8");
       return (
-        content.includes("@wasabeef/agentnote") ||
-        content.includes("agentnote hook") ||
-        content.includes("cli.js hook")
+        content.includes(CLAUDE_HOOK_COMMAND) ||
+        content.includes("agentnote hook --agent claude-code") ||
+        content.includes("cli.js hook --agent claude-code")
       );
     } catch {
       return false;
@@ -238,9 +247,7 @@ export const claudeCode: AgentAdapter = {
     return null;
   },
 
-  async extractInteractions(
-    transcriptPath: string,
-  ): Promise<Array<{ prompt: string; response: string | null }>> {
+  async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     try {

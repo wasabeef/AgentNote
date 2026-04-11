@@ -23,11 +23,13 @@ export interface Interaction {
   prompt: string;
   response: string | null;
   files_touched?: string[];
+  line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
 }
 
 export interface AgentnoteEntry {
   v: number;
+  agent?: string | null;
   session_id: string;
   timestamp: string;
   model?: string | null;
@@ -69,6 +71,7 @@ function resolveMethod(lineCounts?: LineCounts): "line" | "file" | "none" {
 
 /** Build an agentnote entry from collected data. */
 export function buildEntry(opts: {
+  agent?: string | null;
   sessionId: string;
   model?: string | null;
   interactions: Interaction[];
@@ -111,6 +114,7 @@ export function buildEntry(opts: {
 
   return {
     v: SCHEMA_VERSION,
+    agent: opts.agent ?? null,
     session_id: opts.sessionId,
     timestamp: new Date().toISOString(),
     model: opts.model ?? null,

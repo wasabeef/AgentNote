@@ -14,8 +14,14 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    npx @wasabeef/agentnote init
    ```
 
+   Codex CLI の場合:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent codex
+   ```
+
    以下が設定されます:
-   - エージェントフック (`.claude/settings.json`)
+   - エージェントフック (`.claude/settings.json`、または Codex CLI では `.codex/config.toml` と `.codex/hooks.json`)
    - Git フック (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Actions ワークフロー (`.github/workflows/agentnote.yml`)
    - notes の自動 fetch 設定
@@ -28,7 +34,9 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    git push
    ```
 
-3. **完了。** Claude Code でコーディングすれば、すべてのコミットが自動追跡されます。
+   Codex CLI では `.codex/config.toml` と `.codex/hooks.json` をコミットします。
+
+3. **完了。** 対応エージェントでコーディングすれば、コミットが自動追跡されます。
 </Steps>
 
 ## 新しいクローン
@@ -56,6 +64,7 @@ session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
+agent:   claude-code
 files:   5 changed, 3 by AI
 
   src/middleware/auth.ts  🤖
@@ -68,7 +77,7 @@ files:   5 changed, 3 by AI
 | エージェント | 状態 |
 |---|---|
 | Claude Code | 対応済み |
+| Codex CLI | Preview |
+| GitHub Copilot | 近日対応 |
 | Cursor | 近日対応 |
 | Gemini CLI | 近日対応 |
-| Codex CLI | 近日対応 |
-| GitHub Copilot | 近日対応 |

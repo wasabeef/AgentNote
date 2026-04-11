@@ -46,6 +46,7 @@ export function normalizeEntry(raw: Record<string, unknown>): AgentnoteEntry {
 
   return {
     v: (raw.v as number) ?? 1,
+    agent: (raw.agent as string) ?? null,
     session_id: (raw.session_id as string) ?? "",
     timestamp: (raw.timestamp as string) ?? "",
     model: (raw.model as string) ?? null,

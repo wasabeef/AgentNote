@@ -77,4 +77,24 @@ describe("agentnote show", () => {
 
     assert.ok(output.includes("none"), "should indicate no agentnote data");
   });
+
+  it("rejects non-SHA commit refs", () => {
+    const result = execSync(`node ${cliPath} show HEAD`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.ok(result.includes("commit:"), "HEAD should remain accepted");
+
+    try {
+      execSync(`node ${cliPath} show main`, {
+        cwd: testDir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+      assert.fail("expected show main to fail");
+    } catch (error) {
+      const stderr = (error as { stderr?: string | Buffer }).stderr?.toString() ?? "";
+      assert.match(stderr, /commit must be HEAD or a 7-40 character commit SHA/);
+    }
+  });
 });

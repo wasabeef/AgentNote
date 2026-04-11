@@ -8,8 +8,8 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 ## データの流れ
 
 <Steps>
-1. Claude Code にプロンプトを送る → エージェントフックがプロンプトを記録
-2. Claude がコードを書く → フックが変更ファイルと blob ハッシュを記録
+1. 対応エージェントにプロンプトを送る → フックがプロンプトを記録
+2. エージェントがコードを書く → フックまたは transcript が変更ファイルと著作判定用の情報を記録
 3. `git commit` を実行 → トレーラーが挿入され、note が記録される
 4. `git push` を実行 → notes が自動的にリモートに push される
 </Steps>
@@ -32,6 +32,7 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 ```json
 {
   "v": 1,
+  "agent": "claude-code",
   "session_id": "a1b2c3d4-...",
   "model": "claude-sonnet-4-20250514",
   "interactions": [
@@ -54,9 +55,9 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 }
 ```
 
-## 行単位の帰属判定
+## 帰属判定の仕組み
 
-AI の著作は 3-diff ポジションアルゴリズムで行単位に計算されます:
+Claude Code の AI 著作は 3-diff ポジションアルゴリズムで行単位に計算されます:
 
 | Diff | From | To | 内容 |
 |---|---|---|---|
@@ -69,3 +70,5 @@ AI の著作は 3-diff ポジションアルゴリズムで行単位に計算さ
 <Aside type="tip">
   削除行は別途追跡されます — AI にも人間にも帰属しません。blob データが利用できない場合はファイル単位の帰属に自動フォールバックします。
 </Aside>
+
+Codex CLI は transcript ベースで判定します。transcript の `apply_patch` 行数と最終 commit diff が一致した場合は `method: "line"`、一致しない場合は安全側に倒して `method: "file"` を使います。

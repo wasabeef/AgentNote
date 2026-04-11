@@ -17,6 +17,7 @@ export const EVENTS_FILE = "events.jsonl";
 export const TRANSCRIPT_PATH_FILE = "transcript_path";
 export const TURN_FILE = "turn";
 export const SESSION_FILE = "session";
+export const SESSION_AGENT_FILE = "agent";
 
 // ─── Display limits ───
 export const MAX_COMMITS = 500;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -75,6 +75,37 @@ describe("agentnote init", () => {
     const settingsPath = join(testDir, ".claude", "settings.json");
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     assert.equal(settings.hooks.SessionStart.length, 1, "should not duplicate hooks");
+  });
+
+  it("upgrades legacy Claude hook commands to --agent form", () => {
+    const settingsPath = join(testDir, ".claude", "settings.json");
+    writeFileSync(
+      settingsPath,
+      `${JSON.stringify(
+        {
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  { type: "command", command: "npx --yes @wasabeef/agentnote hook", async: true },
+                ],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    execSync(`node ${cliPath} init --hooks --no-git-hooks`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    const raw = JSON.stringify(settings);
+    assert.ok(raw.includes("--agent claude-code"), "should migrate to explicit Claude hook");
   });
 
   it("--hooks creates only hooks", () => {
