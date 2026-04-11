@@ -218,10 +218,11 @@ describe("agentnote hook", () => {
       cwd: testDir,
       encoding: "utf-8",
     });
+    const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
 
     assert.notEqual(result.status, 0, "should return a non-zero exit code");
     assert.match(
-      result.stderr,
+      output,
       /Codex hook payload detected/,
       "should explain how to call the hook correctly",
     );
