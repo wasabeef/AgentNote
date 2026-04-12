@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import type { HookInput } from "../agents/types.js";
@@ -8,6 +8,7 @@ import {
   EMPTY_BLOB,
   EVENTS_FILE,
   HEARTBEAT_FILE,
+  PENDING_COMMIT_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
@@ -34,6 +35,13 @@ function looksLikeCodexPayload(value: unknown): boolean {
     typeof value.transcript_path === "string" || value.transcript_path === null;
   if (typeof hookEventName !== "string" || typeof sessionId !== "string") return false;
   return hasTranscriptPath && ["SessionStart", "UserPromptSubmit", "Stop"].includes(hookEventName);
+}
+
+function isSynchronousHookEvent(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.hook_event_name !== "string") return false;
+  return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution"].includes(
+    value.hook_event_name,
+  );
 }
 
 /**
@@ -79,6 +87,21 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+async function readCurrentTurn(sessionDir: string): Promise<number> {
+  const turnPath = join(sessionDir, TURN_FILE);
+  if (!existsSync(turnPath)) return 0;
+  const raw = (await readFile(turnPath, "utf-8")).trim();
+  return Number.parseInt(raw, 10) || 0;
+}
+
+async function readCurrentHead(): Promise<string | null> {
+  try {
+    return (await git(["rev-parse", "HEAD"])).trim();
+  } catch {
+    return null;
+  }
+}
+
 export async function hook(args: string[] = []): Promise<void> {
   const raw = await readStdin();
 
@@ -87,7 +110,7 @@ export async function hook(args: string[] = []): Promise<void> {
   let peek: unknown;
   try {
     peek = JSON.parse(raw);
-    sync = isRecord(peek) && peek.hook_event_name === "PreToolUse";
+    sync = isSynchronousHookEvent(peek);
   } catch {
     return;
   }
@@ -136,10 +159,13 @@ export async function hook(args: string[] = []): Promise<void> {
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
+      const turn = await readCurrentTurn(sessionDir);
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
         event: "stop",
         session_id: event.sessionId,
         timestamp: event.timestamp,
+        turn,
+        response: event.response ?? null,
       });
       // Do NOT invalidate heartbeat on Stop. Claude Code fires Stop when the AI
       // finishes responding, NOT when the session ends. The session remains active
@@ -149,9 +175,20 @@ export async function hook(args: string[] = []): Promise<void> {
     }
 
     case "prompt": {
+      await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
+      }
+      const eventsPath = join(sessionDir, EVENTS_FILE);
+      if (!existsSync(eventsPath)) {
+        await appendJsonl(eventsPath, {
+          event: "session_start",
+          session_id: event.sessionId,
+          timestamp: event.timestamp,
+          agent: adapter.name,
+          model: event.model ?? null,
+        });
       }
       // Rotate logs from previous prompt batch before starting fresh.
       // This ensures split commits each get scoped notes, while the next
@@ -161,11 +198,7 @@ export async function hook(args: string[] = []): Promise<void> {
 
       // Increment turn counter for causal file attribution.
       const turnPath = join(sessionDir, TURN_FILE);
-      let turn = 0;
-      if (existsSync(turnPath)) {
-        const raw = (await readFile(turnPath, "utf-8")).trim();
-        turn = Number.parseInt(raw, 10) || 0;
-      }
+      let turn = await readCurrentTurn(sessionDir);
       turn += 1;
       await writeFile(turnPath, String(turn));
 
@@ -175,7 +208,29 @@ export async function hook(args: string[] = []): Promise<void> {
         prompt: event.prompt,
         turn,
       });
+      await appendJsonl(eventsPath, {
+        event: "prompt",
+        session_id: event.sessionId,
+        timestamp: event.timestamp,
+        turn,
+        model: event.model ?? null,
+      });
       await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+      if (adapter.name === "cursor") {
+        process.stdout.write(JSON.stringify({ continue: true }));
+      }
+      break;
+    }
+
+    case "response": {
+      const turn = await readCurrentTurn(sessionDir);
+      await appendJsonl(join(sessionDir, EVENTS_FILE), {
+        event: "response",
+        session_id: event.sessionId,
+        timestamp: event.timestamp,
+        turn,
+        response: event.response ?? null,
+      });
       break;
     }
 
@@ -185,12 +240,7 @@ export async function hook(args: string[] = []): Promise<void> {
       const filePath = await normalizeToRepoRelative(absPath);
 
       // Read current turn for causal attribution.
-      let turn = 0;
-      const turnPath = join(sessionDir, TURN_FILE);
-      if (existsSync(turnPath)) {
-        const raw = (await readFile(turnPath, "utf-8")).trim();
-        turn = Number.parseInt(raw, 10) || 0;
-      }
+      const turn = await readCurrentTurn(sessionDir);
 
       // Write blob to object store before the edit happens.
       const preBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
@@ -213,12 +263,7 @@ export async function hook(args: string[] = []): Promise<void> {
       const filePath = await normalizeToRepoRelative(absPath);
 
       // Read current turn for causal attribution.
-      let turn = 0;
-      const turnPath = join(sessionDir, TURN_FILE);
-      if (existsSync(turnPath)) {
-        const raw = (await readFile(turnPath, "utf-8")).trim();
-        turn = Number.parseInt(raw, 10) || 0;
-      }
+      const turn = await readCurrentTurn(sessionDir);
 
       // Capture post-edit blob hash for line-level attribution.
       const postBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
@@ -231,6 +276,8 @@ export async function hook(args: string[] = []): Promise<void> {
         session_id: event.sessionId,
         turn,
         blob: postBlob,
+        edit_added: event.editStats?.added ?? null,
+        edit_deleted: event.editStats?.deleted ?? null,
         // Same tool_use_id as the matching pre_blob entry — used for reliable pairing
         // even when this async hook fires after the next prompt has advanced the turn counter.
         tool_use_id: event.toolUseId ?? null,
@@ -239,6 +286,24 @@ export async function hook(args: string[] = []): Promise<void> {
     }
 
     case "pre_commit": {
+      if (adapter.name === "cursor") {
+        const headBefore = await readCurrentHead();
+        await writeFile(
+          join(sessionDir, PENDING_COMMIT_FILE),
+          `${JSON.stringify(
+            {
+              command: event.commitCommand ?? "",
+              head_before: headBefore,
+              timestamp: event.timestamp,
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        process.stdout.write(JSON.stringify({ continue: true }));
+        break;
+      }
+
       // Inject Agentnote-Session trailer into the git commit part of the command.
       // The command may be chained (e.g., "git add . && git commit -m '...' && git push"),
       // so we must inject --trailer into the git commit segment only, not at the end.
@@ -263,6 +328,29 @@ export async function hook(args: string[] = []): Promise<void> {
     }
 
     case "post_commit": {
+      if (adapter.name === "cursor") {
+        const pendingPath = join(sessionDir, PENDING_COMMIT_FILE);
+        if (!existsSync(pendingPath)) break;
+
+        let headBefore: string | null = null;
+        try {
+          const pending = JSON.parse(await readFile(pendingPath, "utf-8")) as {
+            head_before?: string | null;
+          };
+          headBefore = pending.head_before?.trim() || null;
+        } catch {
+          headBefore = null;
+        }
+
+        const headAfter = await readCurrentHead();
+        try {
+          await unlink(pendingPath);
+        } catch {
+          // ignore cleanup errors
+        }
+        if (!headAfter || headAfter === headBefore) break;
+      }
+
       try {
         await recordCommitEntry({
           agentnoteDirPath,

@@ -20,22 +20,24 @@ export async function log(count: number = 10): Promise<void> {
     const parts = line.split("\t");
     const fullSha = parts[0];
     const commitPart = parts[1];
-    const sid = parts[2]?.trim();
+    const trailerSessionId = parts[2]?.trim();
 
     if (!fullSha || !commitPart) continue;
+
+    let ratioStr = "";
+    let promptCount = "";
+    let sid = trailerSessionId;
+    const note = await readNote(fullSha);
+    if (note) {
+      const entry = normalizeEntry(note);
+      sid = sid || entry.session_id;
+      ratioStr = `${entry.attribution.ai_ratio}%`;
+      promptCount = `${entry.interactions?.length ?? 0}p`;
+    }
 
     if (!sid) {
       console.log(commitPart);
       continue;
-    }
-
-    let ratioStr = "";
-    let promptCount = "";
-    const note = await readNote(fullSha);
-    if (note) {
-      const entry = normalizeEntry(note);
-      ratioStr = `${entry.attribution.ai_ratio}%`;
-      promptCount = `${entry.interactions?.length ?? 0}p`;
     }
 
     if (ratioStr) {

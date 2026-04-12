@@ -28,26 +28,32 @@ export async function show(commitRef?: string): Promise<void> {
   const commitInfo = await git(["log", "-1", "--format=%h %s", ref]);
   const commitSha = await git(["log", "-1", "--format=%H", ref]);
 
-  const sessionId = (
+  console.log(`commit:  ${commitInfo}`);
+
+  const raw = await readNote(commitSha);
+  const trailerSessionId = (
     await git(["log", "-1", `--format=%(trailers:key=${TRAILER_KEY},valueonly)`, ref])
   ).trim();
 
-  console.log(`commit:  ${commitInfo}`);
+  if (!raw && !trailerSessionId) {
+    console.log("session: none (no agentnote data)");
+    return;
+  }
 
+  if (!raw) {
+    console.log(`session: ${trailerSessionId}`);
+    console.log("entry:   no agentnote note found for this commit");
+    return;
+  }
+
+  const entry = normalizeEntry(raw);
+  const sessionId = trailerSessionId || entry.session_id;
   if (!sessionId) {
     console.log("session: none (no agentnote data)");
     return;
   }
 
   console.log(`session: ${sessionId}`);
-
-  const raw = await readNote(commitSha);
-  if (!raw) {
-    console.log("entry:   no agentnote note found for this commit");
-    return;
-  }
-
-  const entry = normalizeEntry(raw);
 
   console.log();
   const ratioBar = renderRatioBar(entry.attribution.ai_ratio);

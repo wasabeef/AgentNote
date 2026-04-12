@@ -1,11 +1,13 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { getAgent, listAgents } from "../agents/index.js";
-import { TRAILER_KEY } from "../core/constants.js";
+import { AGENTNOTE_HOOK_MARKER, TRAILER_KEY } from "../core/constants.js";
 import { readSessionAgent } from "../core/session.js";
+import { readNote } from "../core/storage.js";
 import { gitSafe } from "../git.js";
 import { agentnoteDir, root, sessionFile } from "../paths.js";
+import { normalizeEntry } from "./normalize.js";
 
 declare const __VERSION__: string;
 const VERSION = __VERSION__;
@@ -23,9 +25,31 @@ export async function status(): Promise<void> {
   }
 
   if (enabledAgents.length > 0) {
-    console.log(`hooks:   active (${enabledAgents.join(", ")})`);
+    console.log(`agent:   active (${enabledAgents.join(", ")})`);
   } else {
-    console.log("hooks:   not configured (run 'agentnote init')");
+    console.log("agent:   not configured (run 'agentnote init')");
+  }
+
+  const captureDetails = await readAgentCaptureDetails(repoRoot, enabledAgents);
+  if (captureDetails.length > 0) {
+    console.log(`capture: ${captureDetails.join("; ")}`);
+  }
+
+  const activeGitHooks = await readManagedGitHooks(repoRoot);
+  if (activeGitHooks.length > 0) {
+    console.log(`git:     active (${activeGitHooks.join(", ")})`);
+    console.log("commit:  tracked via git hooks");
+  } else if (enabledAgents.includes("cursor")) {
+    console.log("git:     not configured");
+    console.log(
+      "commit:  fallback mode (`agentnote commit` recommended; Cursor shell hooks may still attach notes)",
+    );
+  } else if (enabledAgents.length > 0) {
+    console.log("git:     not configured");
+    console.log("commit:  fallback mode (use `agentnote commit`)");
+  } else {
+    console.log("git:     not configured");
+    console.log("commit:  not configured");
   }
 
   const sessionPath = await sessionFile();
@@ -43,9 +67,101 @@ export async function status(): Promise<void> {
   const { stdout } = await gitSafe([
     "log",
     "-20",
-    `--format=%(trailers:key=${TRAILER_KEY},valueonly)`,
+    `--format=%H\t%(trailers:key=${TRAILER_KEY},valueonly)`,
   ]);
 
-  const linked = stdout.split("\n").filter((line) => line.trim().length > 0).length;
+  let linked = 0;
+  for (const line of stdout.split("\n")) {
+    if (!line.trim()) continue;
+    const [sha, trailer] = line.split("\t");
+    if (trailer?.trim()) {
+      linked += 1;
+      continue;
+    }
+    if (!sha) continue;
+    const note = await readNote(sha);
+    if (note && normalizeEntry(note).session_id) {
+      linked += 1;
+    }
+  }
   console.log(`linked:  ${linked}/20 recent commits`);
+}
+
+async function readAgentCaptureDetails(
+  repoRoot: string,
+  enabledAgents: string[],
+): Promise<string[]> {
+  const details: string[] = [];
+
+  if (enabledAgents.includes("cursor")) {
+    const cursorCapabilities = await readCursorCaptureCapabilities(repoRoot);
+    if (cursorCapabilities.length > 0) {
+      details.push(`cursor(${cursorCapabilities.join(", ")})`);
+    }
+  }
+
+  return details;
+}
+
+type CursorHooksConfig = {
+  hooks?: Record<string, Array<{ command?: string }>>;
+};
+
+async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]> {
+  const hooksPath = join(repoRoot, ".cursor", "hooks.json");
+  if (!existsSync(hooksPath)) return [];
+
+  try {
+    const content = await readFile(hooksPath, "utf-8");
+    const parsed = JSON.parse(content) as CursorHooksConfig;
+    const hooks = parsed.hooks ?? {};
+    const hasAgentnoteHook = (eventName: string): boolean =>
+      (hooks[eventName] ?? []).some((entry) => entry.command?.includes("agentnote hook"));
+
+    const capabilities: string[] = [];
+    if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
+    if (hasAgentnoteHook("afterAgentResponse") || hasAgentnoteHook("stop")) {
+      capabilities.push("response");
+    }
+    if (hasAgentnoteHook("afterFileEdit") || hasAgentnoteHook("afterTabFileEdit")) {
+      capabilities.push("edits");
+    }
+    if (hasAgentnoteHook("beforeShellExecution") || hasAgentnoteHook("afterShellExecution")) {
+      capabilities.push("shell");
+    }
+    return capabilities;
+  } catch {
+    return [];
+  }
+}
+
+async function readManagedGitHooks(repoRoot: string): Promise<string[]> {
+  const hookDir = await resolveHookDir(repoRoot);
+  const active: string[] = [];
+
+  for (const name of ["prepare-commit-msg", "post-commit", "pre-push"]) {
+    const hookPath = join(hookDir, name);
+    if (!existsSync(hookPath)) continue;
+    try {
+      const content = await readFile(hookPath, "utf-8");
+      if (content.includes(AGENTNOTE_HOOK_MARKER)) {
+        active.push(name);
+      }
+    } catch {
+      // ignore unreadable hook files
+    }
+  }
+
+  return active;
+}
+
+async function resolveHookDir(repoRoot: string): Promise<string> {
+  const hooksPathConfig = (await gitSafe(["config", "--get", "core.hooksPath"])).stdout.trim();
+  if (hooksPathConfig) {
+    return isAbsolute(hooksPathConfig) ? hooksPathConfig : join(repoRoot, hooksPathConfig);
+  }
+
+  const gitDir = (await gitSafe(["rev-parse", "--git-dir"])).stdout.trim();
+  const resolvedGitDir = isAbsolute(gitDir) ? gitDir : join(repoRoot, gitDir);
+  return join(resolvedGitDir, "hooks");
 }

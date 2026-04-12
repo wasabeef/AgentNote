@@ -2,7 +2,12 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
-import { NOTES_FETCH_REFSPEC, NOTES_REF_FULL, TRAILER_KEY } from "../core/constants.js";
+import {
+  AGENTNOTE_HOOK_MARKER,
+  NOTES_FETCH_REFSPEC,
+  NOTES_REF_FULL,
+  TRAILER_KEY,
+} from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
 
@@ -29,10 +34,8 @@ jobs:
 
 // ─── Git hook scripts ───
 
-const AGENTNOTE_MARKER = "# agentnote-managed";
-
 const PREPARE_COMMIT_MSG_SCRIPT = `#!/bin/sh
-${AGENTNOTE_MARKER}
+${AGENTNOTE_HOOK_MARKER}
 # Inject Agentnote-Session trailer into commit messages.
 # Skip amend/reword/reuse (-c/-C/--amend) — only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
@@ -59,7 +62,7 @@ fi
 `;
 
 const POST_COMMIT_SCRIPT = `#!/bin/sh
-${AGENTNOTE_MARKER}
+${AGENTNOTE_HOOK_MARKER}
 # Record agentnote entry as a git note on HEAD.
 # Read session ID from the finalized commit's trailer (source of truth),
 # not from the mutable session file. This eliminates TOCTOU races between
@@ -76,7 +79,7 @@ fi
 `;
 
 const PRE_PUSH_SCRIPT = `#!/bin/sh
-${AGENTNOTE_MARKER}
+${AGENTNOTE_HOOK_MARKER}
 # Push agentnote notes alongside code. Non-blocking — failure is silent.
 # Use the actual remote ($1) passed by git, not hardcoded origin.
 # Guard against recursion with AGENTNOTE_PUSHING env var.
@@ -197,6 +200,14 @@ export async function init(args: string[]): Promise<void> {
     console.log(`    git add ${uniqueToCommit.join(" ")}`);
     console.log('    git commit -m "chore: enable agentnote session tracking"');
     console.log("    git push");
+    if (adapter.name === "cursor") {
+      console.log("");
+      console.log("  Cursor note");
+      console.log("    With the default git hooks, plain `git commit` is tracked normally.");
+      console.log(
+        '    `agentnote commit -m "..."` is still useful as a fallback wrapper when git hooks are unavailable.',
+      );
+    }
   }
   console.log("");
 }
@@ -226,7 +237,7 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
   if (existsSync(hookPath)) {
     const existing = await readFile(hookPath, "utf-8");
     // Already managed by agentnote — upgrade if content differs.
-    if (existing.includes(AGENTNOTE_MARKER)) {
+    if (existing.includes(AGENTNOTE_HOOK_MARKER)) {
       const backupPath = `${hookPath}.agentnote-backup`;
       // Regenerate chained variant if a backup exists, otherwise bare script.
       const target = existsSync(backupPath)

@@ -29,18 +29,45 @@ describe("agentnote status", () => {
     });
 
     assert.ok(output.includes("not configured"), "should show not configured");
+    assert.ok(output.includes("commit:  not configured"), "should show commit not configured");
     assert.ok(output.includes("session: none"), "should show no session");
   });
 
   it("shows 'active' after start", () => {
-    execSync(`node ${cliPath} init --hooks --no-git-hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --agent cursor --hooks --no-git-hooks`, { cwd: testDir });
 
     const output = execSync(`node ${cliPath} status`, {
       cwd: testDir,
       encoding: "utf-8",
     });
 
-    assert.ok(output.includes("hooks:   active"), "should show hooks active");
+    assert.ok(output.includes("agent:   active"), "should show agent hooks active");
+    assert.ok(
+      output.includes("capture: cursor(prompt, response, edits, shell)"),
+      "should show cursor capture capabilities",
+    );
+    assert.ok(output.includes("git:     not configured"), "should show git hooks missing");
+    assert.ok(output.includes("commit:  fallback mode"), "should show fallback mode");
+  });
+
+  it("shows git hooks as the primary commit path when fully configured", () => {
+    execSync(`node ${cliPath} init --agent cursor --no-action`, { cwd: testDir });
+
+    const output = execSync(`node ${cliPath} status`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(output.includes("agent:   active"), "should show agent hooks active");
+    assert.ok(
+      output.includes("capture: cursor(prompt, response, edits, shell)"),
+      "should show cursor capture capabilities",
+    );
+    assert.ok(
+      output.includes("git:     active (prepare-commit-msg, post-commit, pre-push)"),
+      "should show managed git hooks",
+    );
+    assert.ok(output.includes("commit:  tracked via git hooks"), "should show primary path");
   });
 
   it("shows session ID when session is active", () => {

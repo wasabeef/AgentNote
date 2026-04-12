@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Cursor 의 경우:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. 생성된 파일을 커밋
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Codex 저장소는 `.claude/settings.json` 대신 `.codex/config.toml` 과 `.codex/hooks.json` 을 커밋합니다.
+   Cursor 저장소는 `.cursor/hooks.json` 을 커밋합니다.
 
-3. AI로 코딩하고 평소처럼 커밋 — 모든 것이 자동으로 추적됩니다
+3. Claude Code 와 Codex 는 평소처럼 `git commit` 하면 됩니다.
+   생성된 git hook 이 설치되어 있으면 Cursor preview 도 일반 `git commit` 을 사용할 수 있습니다.
+   git hook 을 쓸 수 없을 때는 `agentnote commit -m "..."` 를 fallback 으로 사용합니다.
 </Steps>
 
 ## 직접 확인해 보세요
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | 정식 지원 | hook 으로 수집한 blob 쌍을 이용한 라인 단위 판정 |
 | Codex CLI | Preview | transcript 기반. patch 수와 commit 이 일치할 때 라인 단위로 승격 |
-| Cursor | 예정 | |
+| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit` 기반 attribution. 마지막 AI edit 의 blob 이 그대로 commit 에 남을 때만 안전하게 라인 단위로 승격 |
 | Gemini CLI | 예정 | |
