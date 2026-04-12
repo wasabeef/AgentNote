@@ -75,6 +75,10 @@ if [ -f "$REPO_ROOT/node_modules/.bin/agentnote" ]; then
   "$REPO_ROOT/node_modules/.bin/agentnote" record "$SESSION_ID" 2>/dev/null || true
 elif command -v agentnote >/dev/null 2>&1; then
   agentnote record "$SESSION_ID" 2>/dev/null || true
+elif command -v npx >/dev/null 2>&1; then
+  # Last-resort fallback for repos that ran \`npx @wasabeef/agentnote init\`
+  # without installing agentnote as a dependency or a global binary.
+  npx --yes @wasabeef/agentnote record "$SESSION_ID" 2>/dev/null || true
 fi
 `;
 
