@@ -267,6 +267,12 @@ export async function hook(args: string[] = []): Promise<void> {
 
       // Capture post-edit blob hash for line-level attribution.
       const postBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
+      // Cursor emits repeated same-file edits without a stable event ID. Persist a
+      // per-edit key so split commits do not consume later edits early.
+      const changeId =
+        adapter.name === "cursor"
+          ? `${event.timestamp}:${event.tool ?? "file_change"}:${filePath}:${postBlob}`
+          : null;
 
       await appendJsonl(join(sessionDir, CHANGES_FILE), {
         event: "file_change",
@@ -276,6 +282,7 @@ export async function hook(args: string[] = []): Promise<void> {
         session_id: event.sessionId,
         turn,
         blob: postBlob,
+        change_id: changeId,
         edit_added: event.editStats?.added ?? null,
         edit_deleted: event.editStats?.deleted ?? null,
         // Same tool_use_id as the matching pre_blob entry — used for reliable pairing

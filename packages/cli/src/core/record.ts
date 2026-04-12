@@ -627,7 +627,7 @@ function parseDiffTreeBlobs(
 
 /**
  * Read consumed change identifiers from committed_pairs.jsonl.
- * Uses tool_use_id when available (unique per edit), falls back to turn:file.
+ * Uses change_id/tool_use_id when available (unique per edit), falls back to turn:file.
  */
 async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
@@ -635,8 +635,11 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const entries = await readJsonlEntries(file);
   const set = new Set<string>();
   for (const e of entries) {
-    // Prefer tool_use_id (unique per edit) over turn:file (which collides on split commits).
-    if (e.tool_use_id) {
+    // Prefer change_id/tool_use_id over turn:file so repeated same-file edits
+    // within one turn stay attributable across split commits.
+    if (typeof e.change_id === "string" && e.change_id) {
+      set.add(`change:${e.change_id}`);
+    } else if (e.tool_use_id) {
       set.add(`id:${e.tool_use_id}`);
     } else if (e.turn !== undefined && e.file) {
       set.add(`${e.turn}:${e.file}`);
@@ -647,6 +650,9 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
 
 /** Build the consumed-pair key for a change/pre-blob entry. */
 function consumedKey(entry: Record<string, unknown>): string {
+  if (typeof entry.change_id === "string" && entry.change_id) {
+    return `change:${entry.change_id}`;
+  }
   if (entry.tool_use_id) return `id:${entry.tool_use_id}`;
   return `${entry.turn}:${entry.file}`;
 }
@@ -668,6 +674,7 @@ async function recordConsumedPairs(
     await appendJsonl(pairsFile, {
       turn: entry.turn,
       file,
+      change_id: entry.change_id ?? null,
       tool_use_id: entry.tool_use_id ?? null,
     });
   }
@@ -678,15 +685,18 @@ async function readResponsesByTurn(sessionDir: string): Promise<Map<number, stri
   if (!existsSync(eventsFile)) return new Map();
 
   const entries = await readJsonlEntries(eventsFile);
-  const responsesByTurn = new Map<number, string>();
+  const responsesByTurn = new Map<number, { response: string; priority: number }>();
   for (const entry of entries) {
     if (entry.event !== "response" && entry.event !== "stop") continue;
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
     const response = typeof entry.response === "string" ? entry.response.trim() : "";
     if (!turn || !response) continue;
-    responsesByTurn.set(turn, response);
+    const priority = entry.event === "response" ? 2 : 1;
+    const current = responsesByTurn.get(turn);
+    if (current && current.priority > priority) continue;
+    responsesByTurn.set(turn, { response, priority });
   }
-  return responsesByTurn;
+  return new Map([...responsesByTurn.entries()].map(([turn, value]) => [turn, value.response]));
 }
 
 /** Read the most useful model field from the session's events.jsonl. */

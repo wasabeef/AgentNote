@@ -345,6 +345,78 @@ describe("agentnote cursor", () => {
     );
   });
 
+  it("prefers Cursor afterAgentResponse text over stop text for the same turn", () => {
+    const sessionId = "conv-cursor-response-priority";
+    const filePath = join(testDir, "response-priority.txt");
+
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "beforeSubmitPrompt",
+        conversation_id: sessionId,
+        prompt: "Create response-priority.txt",
+        model: "gpt-5",
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "afterAgentResponse",
+        conversation_id: sessionId,
+        text: "Created response-priority.txt with the requested content.",
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "stop",
+        conversation_id: sessionId,
+        text: "Agent stopped after finishing the turn.",
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    writeFileSync(filePath, "Preferred response\n");
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "afterFileEdit",
+        conversation_id: sessionId,
+        file_path: filePath,
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    execSync("git add response-priority.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: cursor response priority"`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const note = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(
+      note.interactions[0].response,
+      "Created response-priority.txt with the requested content.",
+    );
+  });
+
   it("records notes for plain git commit when Cursor shell hooks fire", () => {
     const sessionId = "conv-cursor-5";
     const filePath = join(testDir, "shell-commit.txt");
@@ -568,6 +640,18 @@ describe("agentnote cursor", () => {
       encoding: "utf-8",
     });
 
+    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    assert.ok(existsSync(shimPath), "init should create a deterministic repo-local CLI shim");
+    const postCommitHook = readFileSync(join(gitHookDir, "post-commit"), "utf-8");
+    assert.ok(
+      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agentnote"'),
+      "post-commit should prefer the repo-local shim",
+    );
+    assert.ok(
+      !postCommitHook.includes("npx --yes @wasabeef/agentnote record"),
+      "post-commit should not resolve an unpinned package at commit time",
+    );
+
     const sessionId = "conv-cursor-6";
     const filePath = join(testDir, "git-hook-commit.txt");
 
@@ -616,5 +700,82 @@ describe("agentnote cursor", () => {
       encoding: "utf-8",
     });
     assert.ok(commitMessage.includes(`Agentnote-Session: ${sessionId}`));
+  });
+
+  it("keeps Cursor attribution for repeated same-file edits across split commits", () => {
+    const sessionId = "conv-cursor-repeat-file";
+    const filePath = join(testDir, "repeat-file.txt");
+
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "beforeSubmitPrompt",
+        conversation_id: sessionId,
+        prompt: "Update repeat-file.txt twice",
+        model: "gpt-5",
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    writeFileSync(filePath, "first edit\n");
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "afterFileEdit",
+        conversation_id: sessionId,
+        file_path: filePath,
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    execSync("git add repeat-file.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: cursor first split edit"`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const firstNote = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(firstNote.session_id, sessionId);
+    assert.equal(firstNote.files[0].by_ai, true);
+    assert.equal(firstNote.interactions[0].prompt, "Update repeat-file.txt twice");
+
+    writeFileSync(filePath, "second edit\n");
+    execSync(
+      `echo '${JSON.stringify({
+        hook_event_name: "afterFileEdit",
+        conversation_id: sessionId,
+        file_path: filePath,
+      })}' | node ${cliPath} hook --agent cursor`,
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
+
+    execSync("git add repeat-file.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: cursor second split edit"`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const secondNote = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(secondNote.session_id, sessionId);
+    assert.equal(secondNote.files[0].path, "repeat-file.txt");
+    assert.equal(secondNote.files[0].by_ai, true);
+    assert.equal(secondNote.interactions[0].prompt, "Update repeat-file.txt twice");
   });
 });

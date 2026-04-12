@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
 import {
   AGENTNOTE_HOOK_MARKER,
@@ -67,18 +67,21 @@ ${AGENTNOTE_HOOK_MARKER}
 # Read session ID from the finalized commit's trailer (source of truth),
 # not from the mutable session file. This eliminates TOCTOU races between
 # prepare-commit-msg and post-commit.
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then exit 0; fi
-# Prefer repo-local binary over PATH to avoid version skew.
+# Prefer the repo-local shim created at init time so post-commit uses the
+# exact CLI version that generated these hooks.
+if [ -x "$GIT_DIR/agentnote/bin/agentnote" ]; then
+  "$GIT_DIR/agentnote/bin/agentnote" record "$SESSION_ID" 2>/dev/null || true
+  exit 0
+fi
+# Fall back to stable local/global binaries only.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -f "$REPO_ROOT/node_modules/.bin/agentnote" ]; then
   "$REPO_ROOT/node_modules/.bin/agentnote" record "$SESSION_ID" 2>/dev/null || true
 elif command -v agentnote >/dev/null 2>&1; then
   agentnote record "$SESSION_ID" 2>/dev/null || true
-elif command -v npx >/dev/null 2>&1; then
-  # Last-resort fallback for repos that ran \`npx @wasabeef/agentnote init\`
-  # without installing agentnote as a dependency or a global binary.
-  npx --yes @wasabeef/agentnote record "$SESSION_ID" 2>/dev/null || true
 fi
 `;
 
@@ -132,6 +135,7 @@ export async function init(args: string[]): Promise<void> {
 
   // Git hooks (prepare-commit-msg, post-commit, pre-push)
   if (!skipGitHooks && !actionOnly) {
+    await installLocalCliShim(await agentnoteDir());
     const hookDir = await resolveHookDir(repoRoot);
     await mkdir(hookDir, { recursive: true });
 
@@ -228,6 +232,25 @@ async function resolveHookDir(repoRoot: string): Promise<string> {
   }
   const gitDir = await git(["rev-parse", "--git-dir"]);
   return join(gitDir, "hooks");
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
+async function installLocalCliShim(agentnoteDirPath: string): Promise<void> {
+  if (!process.argv[1]) return;
+
+  const shimDir = join(agentnoteDirPath, "bin");
+  const shimPath = join(shimDir, "agentnote");
+  const cliPath = resolve(process.argv[1]);
+  const shim = `#!/bin/sh
+exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
+`;
+
+  await mkdir(shimDir, { recursive: true });
+  await writeFile(shimPath, shim);
+  await chmod(shimPath, 0o755);
 }
 
 /**
