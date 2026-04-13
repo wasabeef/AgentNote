@@ -423,6 +423,26 @@ CLI:    npx @wasabeef/agentnote init          (or npm install --save-dev)
 Action: uses: wasabeef/AgentNote@v0             (Marketplace)
 ```
 
+### Release procedure
+
+`release.yml` is triggered by pushing a tag that matches `v*.*.*`. It does **not** rewrite package versions from the tag name. The npm publish job publishes whatever version is already committed in `packages/cli/package.json`.
+
+Release steps:
+
+1. Update the CLI package version in `packages/cli/package.json`.
+2. Keep the workspace lockfile in sync. At minimum, update the `packages/cli` entry in `package-lock.json` so the committed workspace metadata matches the published package version.
+3. Run the release checks locally:
+   - `npm -w packages/cli run build`
+   - `npm -w packages/cli test`
+4. Commit the version bump to `main`.
+5. Create and push the matching git tag, for example `v0.1.11`.
+
+Important:
+
+- Do **not** cut a release tag before the package version bump lands on `main`.
+- If `packages/cli/package.json` still says `0.1.9` and you push `v0.1.10`, the workflow will still try to publish `0.1.9` and npm will reject it as an already published version.
+- The workflow updates the floating major tag (`v0`) after the GitHub release is created, but it does not manage package.json versions for you.
+
 ### Team workflow
 
 ```bash
