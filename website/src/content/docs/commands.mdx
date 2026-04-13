@@ -21,7 +21,7 @@ npx @wasabeef/agentnote init
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Select the agent adapter, such as `claude-code` or `codex` |
+| `--agent <name>` | Select the agent adapter, such as `claude-code`, `codex`, or `cursor` |
 
 ## agentnote show
 
@@ -112,6 +112,22 @@ Show current tracking state.
 agentnote status
 ```
 
+```text
+agentnote v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+<Aside>
+  `agent:` shows which adapters are enabled, `capture:` summarizes what the active agent hooks collect, `git:` shows whether the managed repo-local git hooks are installed, and `commit:` shows the primary tracking path. If `commit:` shows fallback mode, prefer `agentnote commit`.
+</Aside>
+
 ## agentnote commit
 
 Convenience wrapper for `git commit` with session trailer and note recording.
@@ -122,4 +138,9 @@ agentnote commit -m "feat: add auth"
 
 <Aside type="tip">
   Not needed if git hooks are installed — `git commit` does the same thing automatically.
+</Aside>
+
+<Aside>
+  Cursor preview tracks plain `git commit` normally when the generated git hooks are installed.
+  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed blob still matches the last AI edit. `agentnote commit` remains a useful fallback wrapper when git hooks are unavailable.
 </Aside>

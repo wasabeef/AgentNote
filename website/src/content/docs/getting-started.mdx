@@ -20,8 +20,14 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   For Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
    This configures:
-   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI)
+   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor)
    - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Action workflow (`.github/workflows/agentnote.yml`)
    - Auto-fetch for git notes on pull
@@ -35,8 +41,12 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    ```
 
    Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote.yml`.
+   Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote.yml`.
 
-3. **Done.** Start coding with your agent — every commit is tracked automatically.
+3. **Done.** Start coding with your agent.
+   Claude Code and Codex can use normal `git commit`.
+   Cursor preview also works with normal `git commit` when the generated git hooks are installed.
+   Use `agentnote commit -m "..."` as a fallback when git hooks are unavailable.
 </Steps>
 
 ## New Clone Setup
@@ -54,13 +64,14 @@ npx @wasabeef/agentnote init
 
 ## What Happens Automatically
 
-After init, every `git commit` will:
+After init, plain `git commit` will:
 
 1. **Inject** an `Agentnote-Session` trailer into the commit message
 2. **Record** prompts, responses, and file attribution as a git note
 3. **Push** notes to the remote on `git push`
 
-No extra commands needed.
+Cursor preview also restores prompt / response pairs from response hooks or local transcripts.
+If git hooks are unavailable, `agentnote commit` remains the fallback wrapper.
 
 ## Verify It Works
 
@@ -88,6 +99,24 @@ prompts: 2
   2. Add tests for expired token and invalid signature
 ```
 
+```bash
+agentnote status
+```
+
+```text
+agentnote v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` confirms the enabled adapter, `capture:` shows what the active agent hooks collect, `git:` confirms the managed repo-local git hooks, and `commit:` tells you whether normal `git commit` is the primary path or whether you should use the fallback wrapper.
+
 ## Init Flags
 
 | Flag | Description |
@@ -98,14 +127,14 @@ prompts: 2
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Choose the agent adapter, for example `claude-code` or `codex` |
+| `--agent <name>` | Choose the agent adapter, for example `claude-code`, `codex`, or `cursor` |
 
-## Works With
+## Agent Capabilities
 
-| Agent | Status |
-|---|---|
-| Claude Code | Fully supported |
-| Codex CLI | Preview |
-| GitHub Copilot | Coming soon |
-| Cursor | Coming soon |
-| Gemini CLI | Coming soon |
+| Capability | Claude Code | Codex CLI | Cursor |
+|---|---|---|---|
+| Plain `git commit` with generated git hooks | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes |
+| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts |
+| Default attribution | Line-level | File-level | File-level |
+| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit |

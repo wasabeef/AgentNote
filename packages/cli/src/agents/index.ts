@@ -1,10 +1,12 @@
 import { claudeCode } from "./claude-code.js";
 import { codex } from "./codex.js";
+import { cursor } from "./cursor.js";
 import type { AgentAdapter } from "./types.js";
 
 const AGENTS = new Map<string, AgentAdapter>([
   [claudeCode.name, claudeCode],
   [codex.name, codex],
+  [cursor.name, cursor],
 ]);
 
 const DEFAULT_AGENT = claudeCode.name;

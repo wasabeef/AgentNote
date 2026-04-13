@@ -331,4 +331,89 @@ describe("agentnote commit", () => {
       "no files should be attributed to AI in the second commit",
     );
   });
+
+  it("tracks plain git commit with Claude git hooks after hook events", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-claude-git-hooks-"));
+    const home = join(dir, ".home");
+    mkdirSync(home, { recursive: true });
+
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude-code --no-action`, {
+        cwd: dir,
+        env: { ...process.env, HOME: home },
+        encoding: "utf-8",
+      });
+
+      const sessionId = "a1b2c3d4-1111-2222-3333-444444444444";
+      execSync(
+        `echo '${JSON.stringify({
+          hook_event_name: "SessionStart",
+          session_id: sessionId,
+          model: "claude-opus-4-6",
+        })}' | node ${cliPath} hook`,
+        {
+          cwd: dir,
+          env: { ...process.env, HOME: home },
+          encoding: "utf-8",
+        },
+      );
+
+      execSync(
+        `echo '${JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: sessionId,
+          prompt: "Create claude-git-hook.txt",
+        })}' | node ${cliPath} hook`,
+        {
+          cwd: dir,
+          env: { ...process.env, HOME: home },
+          encoding: "utf-8",
+        },
+      );
+
+      writeFileSync(join(dir, "claude-git-hook.txt"), "Claude git hook\n");
+      execSync(
+        `echo '${JSON.stringify({
+          hook_event_name: "PostToolUse",
+          session_id: sessionId,
+          tool_name: "Write",
+          tool_input: { file_path: join(dir, "claude-git-hook.txt") },
+        })}' | node ${cliPath} hook`,
+        {
+          cwd: dir,
+          env: { ...process.env, HOME: home },
+          encoding: "utf-8",
+        },
+      );
+
+      execSync("git add claude-git-hook.txt", { cwd: dir });
+      execSync(`git commit -m "feat: claude git hook commit"`, {
+        cwd: dir,
+        env: { ...process.env, HOME: home },
+        encoding: "utf-8",
+      });
+
+      const note = JSON.parse(
+        execSync("git notes --ref=agentnote show HEAD", {
+          cwd: dir,
+          encoding: "utf-8",
+        }),
+      );
+      assert.equal(note.session_id, sessionId);
+      assert.equal(note.agent, "claude-code");
+      assert.equal(note.interactions[0].prompt, "Create claude-git-hook.txt");
+
+      const commitMessage = execSync("git log -1 --format=%B", {
+        cwd: dir,
+        encoding: "utf-8",
+      });
+      assert.ok(commitMessage.includes(`${TRAILER_KEY}: ${sessionId}`));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

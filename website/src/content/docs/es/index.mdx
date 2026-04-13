@@ -6,11 +6,11 @@ hero:
   tagline: Cada prompt de IA, respuesta y atribución de archivos — vinculados a tus commits de git automáticamente. Con atribución a nivel de línea cuando el agente expone suficiente historial de edición.
   actions:
     - text: Comenzar
-      link: /agentnote/es/getting-started/
+      link: /AgentNote/es/getting-started/
       icon: right-arrow
       variant: primary
     - text: GitHub
-      link: https://github.com/wasabeef/agentnote
+      link: https://github.com/wasabeef/AgentNote
       icon: external
       variant: minimal
 ---
@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Para Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Haz commit de los archivos generados
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Los repositorios con Codex deben versionar `.codex/config.toml` y `.codex/hooks.json` en lugar de `.claude/settings.json`.
+   Los repositorios con Cursor deben versionar `.cursor/hooks.json`.
 
-3. Programa con IA, haz commit como siempre — todo se registra automáticamente
+3. Claude Code y Codex pueden usar `git commit` normalmente.
+   Con los git hooks generados, Cursor preview también puede usar `git commit` normalmente.
+   Usa `agentnote commit -m "..."` como respaldo si los git hooks no están disponibles.
 </Steps>
 
 ## Míralo en acción
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Soporte completo | Atribución por línea mediante pares de blobs capturados por hooks |
 | Codex CLI | Preview | Basado en transcript; sube a nivel de línea cuando los conteos de patch coinciden con el commit |
-| Cursor | Próximamente | |
+| Cursor | Preview | Atribución basada en `afterFileEdit` / `afterTabFileEdit`, con subida segura a nivel de línea cuando el blob final aún coincide con la edición de IA |
 | Gemini CLI | Próximamente | |

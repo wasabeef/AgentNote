@@ -6,11 +6,11 @@ hero:
   tagline: AI のプロンプト・レスポンス・ファイルごとの著作情報を、git コミットに自動で紐づけます。エージェントが十分な編集履歴を出せる場合は行単位でも追跡できます。
   actions:
     - text: はじめる
-      link: /agentnote/ja/getting-started/
+      link: /AgentNote/ja/getting-started/
       icon: right-arrow
       variant: primary
     - text: GitHub
-      link: https://github.com/wasabeef/agentnote
+      link: https://github.com/wasabeef/AgentNote
       icon: external
       variant: minimal
 ---
@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Cursor の場合:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. 生成されたファイルをコミット
 
    ```bash
@@ -58,9 +64,31 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Codex CLI の場合は `.claude/settings.json` の代わりに `.codex/config.toml` と `.codex/hooks.json` をコミットします。
+   Cursor の場合は `.cursor/hooks.json` をコミットします。
 
-3. あとは普通に AI でコーディングしてコミットするだけ — すべて自動で記録されます
+3. 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
+   git hook が使えない環境では `agentnote commit -m "..."` を fallback として使えます。
 </Steps>
+
+## セットアップ確認
+
+```bash
+agentnote status
+```
+
+```text
+agentnote v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は通常の `git commit` が主経路か fallback mode かを示します。
 
 ## 実際の表示
 
@@ -107,5 +135,15 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | 対応済み | 行単位の著作判定 |
 | Codex CLI | Preview | transcript ベース。patch 行数と commit が一致したときは行単位へ昇格 |
-| Cursor | 近日対応 | |
+| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit` ベース。最後の AI edit の blob がそのまま commit に残るときだけ安全に line-level へ昇格 |
 | Gemini CLI | 近日対応 | |
+
+## Capability の概要
+
+| Capability | Claude Code | Codex CLI | Cursor |
+|---|---|---|---|
+| 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes |
+| Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript |
+| 既定の attribution | Line-level | File-level | File-level |
+| 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき |

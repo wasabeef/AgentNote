@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { NOTES_REF_FULL } from "../core/constants.js";
+import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
 
 describe("agentnote init", () => {
   let testDir: string;
@@ -48,7 +48,7 @@ describe("agentnote init", () => {
     const workflowPath = join(testDir, ".github", "workflows", "agentnote.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
-    assert.ok(workflow.includes("wasabeef/agentnote@v0"), "workflow should reference the action");
+    assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
 
     // Notes fetch config
     const fetchConfig = execSync("git config --get-all remote.origin.fetch", {
@@ -60,6 +60,31 @@ describe("agentnote init", () => {
     // Output messages
     assert.ok(output.includes("✓"), "should show success markers");
     assert.ok(output.includes("Next:"), "should show next steps");
+  });
+
+  it("creates a deterministic repo-local shim for git hooks", () => {
+    execSync(`node ${cliPath} init --agent claude-code --no-action`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    assert.ok(existsSync(shimPath), "repo-local agentnote shim should exist");
+
+    const shim = readFileSync(shimPath, "utf-8");
+    assert.ok(shim.startsWith("#!/bin/sh"), "shim should be executable shell script");
+    assert.ok(shim.includes(process.execPath), "shim should pin the current node binary");
+    assert.ok(shim.includes("dist/cli.js"), "shim should pin the current CLI path");
+
+    const postCommitHook = readFileSync(join(testDir, ".git", "hooks", "post-commit"), "utf-8");
+    assert.ok(
+      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agentnote"'),
+      "post-commit should prefer the repo-local shim",
+    );
+    assert.ok(
+      !postCommitHook.includes("npx --yes @wasabeef/agentnote record"),
+      "post-commit should not resolve an unpinned package at commit time",
+    );
   });
 
   it("is idempotent", () => {

@@ -10,11 +10,11 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 <Steps>
 1. You prompt your coding agent → hooks capture the prompt
 2. The agent writes code → hooks or transcripts track files touched and attribution signals
-3. You run `git commit` → trailer injected, note recorded
+3. You run `git commit` or `agentnote commit` → trailer injected, note recorded
 4. You `git push` → notes auto-pushed to remote
 </Steps>
 
-No extra commands. Just use `git commit` and `git push` normally.
+No extra commands are needed when the repo-local git hooks are installed. Cursor preview also restores prompt / response pairs from response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
 ## Storage
 
@@ -84,6 +84,8 @@ All three diffs target the committed blob, so positions are directly comparable.
 </Aside>
 
 Codex CLI uses transcript-driven attribution. When transcript patch counts match the final commit diff, Agent Note upgrades Codex commits to `method: "line"`. Otherwise it falls back to `method: "file"` to avoid false positives.
+
+Cursor preview uses `afterFileEdit` and `afterTabFileEdit` hooks for attribution. When their edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to `method: "line"`. Otherwise it falls back to `method: "file"`, while still recovering prompt / response pairs from Cursor response hooks or local transcripts when they are available.
 
 ## Session Lifecycle
 

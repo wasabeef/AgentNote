@@ -3,7 +3,7 @@ import starlight from "@astrojs/starlight";
 
 export default defineConfig({
   site: "https://wasabeef.github.io",
-  base: "/agentnote",
+  base: "/AgentNote",
   integrations: [
     starlight({
       title: "Agent Note",
@@ -16,21 +16,21 @@ export default defineConfig({
       customCss: ["./src/styles/custom.css"],
       description: "Know why your code changed, not just what changed.",
       social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/wasabeef/agentnote" },
+        { icon: "github", label: "GitHub", href: "https://github.com/wasabeef/AgentNote" },
       ],
       head: [
-        { tag: "meta", attrs: { property: "og:image", content: "/agentnote/og.png" } },
+        { tag: "meta", attrs: { property: "og:image", content: "/AgentNote/og.png" } },
         { tag: "meta", attrs: { property: "og:image:width", content: "1536" } },
         { tag: "meta", attrs: { property: "og:image:height", content: "1024" } },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } },
-        { tag: "meta", attrs: { name: "twitter:image", content: "/agentnote/og.png" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: "/AgentNote/og.png" } },
         {
           tag: "script",
           content: `
             (function() {
               if (sessionStorage.getItem('lang-redirected')) return;
               var path = location.pathname;
-              var base = '/agentnote';
+              var base = '/AgentNote';
               var locales = ['ja','fr','de','it','es','ko','zh-cn','zh-tw','ru','id','pt-br'];
               var isRoot = path === base || path === base + '/';
               if (!isRoot) return;
@@ -68,7 +68,7 @@ export default defineConfig({
         { slug: "github-action" },
       ],
       editLink: {
-        baseUrl: "https://github.com/wasabeef/agentnote/edit/main/website/",
+        baseUrl: "https://github.com/wasabeef/AgentNote/edit/main/website/",
       },
     }),
   ],

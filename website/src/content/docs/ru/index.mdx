@@ -6,11 +6,11 @@ hero:
   tagline: Каждый промпт ИИ, ответ и атрибуция файлов автоматически привязаны к вашим git-коммитам. Построчная атрибуция доступна, когда агент сохраняет достаточно истории редактирования.
   actions:
     - text: Начать
-      link: /agentnote/ru/getting-started/
+      link: /AgentNote/ru/getting-started/
       icon: right-arrow
       variant: primary
     - text: GitHub
-      link: https://github.com/wasabeef/agentnote
+      link: https://github.com/wasabeef/AgentNote
       icon: external
       variant: minimal
 ---
@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Для Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Закоммитьте сгенерированные файлы
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Репозитории с Codex коммитят `.codex/config.toml` и `.codex/hooks.json` вместо `.claude/settings.json`.
+   Репозитории с Cursor коммитят `.cursor/hooks.json`.
 
-3. Пишите код с ИИ, коммитьте как обычно — всё отслеживается автоматически
+3. Claude Code и Codex могут использовать обычный `git commit`.
+   С установленными сгенерированными git hooks Cursor preview также может использовать обычный `git commit`.
+   `agentnote commit -m "..."` остаётся fallback-вариантом, если git hooks недоступны.
 </Steps>
 
 ## Посмотрите в действии
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Полная поддержка | Построчная атрибуция через пары blob, сохранённые хуками |
 | Codex CLI | Preview | Основано на transcript; повышается до уровня строк, когда счётчики patch совпадают с коммитом |
-| Cursor | Скоро | |
+| Cursor | Preview | Атрибуция через `afterFileEdit` / `afterTabFileEdit` с безопасным повышением до строк, когда итоговый blob всё ещё совпадает с AI-правкой |
 | Gemini CLI | Скоро | |

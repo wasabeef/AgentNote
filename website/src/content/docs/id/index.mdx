@@ -6,11 +6,11 @@ hero:
   tagline: Setiap prompt AI, respons, dan atribusi file — terhubung ke git commit Anda secara otomatis. Atribusi level baris tersedia saat agen menyediakan riwayat edit yang memadai.
   actions:
     - text: Mulai
-      link: /agentnote/id/getting-started/
+      link: /AgentNote/id/getting-started/
       icon: right-arrow
       variant: primary
     - text: GitHub
-      link: https://github.com/wasabeef/agentnote
+      link: https://github.com/wasabeef/AgentNote
       icon: external
       variant: minimal
 ---
@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Untuk Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Commit file yang dihasilkan
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Repository Codex meng-commit `.codex/config.toml` dan `.codex/hooks.json` sebagai pengganti `.claude/settings.json`.
+   Repository Cursor meng-commit `.cursor/hooks.json`.
 
-3. Coding dengan AI, commit seperti biasa — semuanya dilacak secara otomatis
+3. Claude Code dan Codex dapat memakai `git commit` seperti biasa.
+   Dengan git hook yang dihasilkan, Cursor preview juga bisa memakai `git commit` biasa.
+   Gunakan `agentnote commit -m "..."` sebagai fallback bila git hook tidak tersedia.
 </Steps>
 
 ## Lihat Langsung
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Dukungan penuh | Atribusi level baris melalui pasangan blob yang ditangkap hook |
 | Codex CLI | Preview | Berbasis transcript; naik ke level baris saat jumlah patch cocok dengan commit |
-| Cursor | Segera hadir | |
+| Cursor | Preview | Atribusi berbasis `afterFileEdit` / `afterTabFileEdit`, dengan upgrade aman ke level baris saat blob final masih cocok dengan edit AI |
 | Gemini CLI | Segera hadir | |

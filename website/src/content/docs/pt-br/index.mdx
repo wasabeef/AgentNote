@@ -6,11 +6,11 @@ hero:
   tagline: Cada prompt de IA, resposta e atribuição de arquivo — vinculados aos seus commits git automaticamente. Atribuição em nível de linha quando o agente expõe histórico de edição suficiente.
   actions:
     - text: Começar
-      link: /agentnote/pt-br/getting-started/
+      link: /AgentNote/pt-br/getting-started/
       icon: right-arrow
       variant: primary
     - text: GitHub
-      link: https://github.com/wasabeef/agentnote
+      link: https://github.com/wasabeef/AgentNote
       icon: external
       variant: minimal
 ---
@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Para Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Faça commit dos arquivos gerados
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Repositórios com Codex versionam `.codex/config.toml` e `.codex/hooks.json` no lugar de `.claude/settings.json`.
+   Repositórios com Cursor versionam `.cursor/hooks.json`.
 
-3. Programe com IA, faça commit normalmente — tudo é rastreado automaticamente
+3. Claude Code e Codex podem usar `git commit` normalmente.
+   Com os git hooks gerados, o Cursor preview também pode usar `git commit` normalmente.
+   Use `agentnote commit -m "..."` como fallback quando os git hooks não estiverem disponíveis.
 </Steps>
 
 ## Veja em ação
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Suporte completo | Atribuição por linha via pares de blobs capturados pelos hooks |
 | Codex CLI | Preview | Baseado em transcript; sobe para nível de linha quando as contagens de patch batem com o commit |
-| Cursor | Em breve | |
+| Cursor | Preview | Atribuição baseada em `afterFileEdit` / `afterTabFileEdit`, com upgrade seguro para nível de linha quando o blob final ainda corresponde à edição da IA |
 | Gemini CLI | Em breve | |

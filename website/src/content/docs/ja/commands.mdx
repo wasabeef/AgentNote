@@ -21,7 +21,7 @@ npx @wasabeef/agentnote init
 | `--no-notes` | 自動 fetch 設定をスキップ |
 | `--hooks` | エージェントフックのみインストール |
 | `--action` | ワークフローのみ作成 |
-| `--agent <name>` | `claude-code` や `codex` など、利用するエージェントを指定 |
+| `--agent <name>` | `claude-code`、`codex`、`cursor` など、利用するエージェントを指定 |
 
 ## agentnote show
 
@@ -77,6 +77,30 @@ PR レポートを生成します。
   </TabItem>
 </Tabs>
 
+## agentnote status
+
+現在の tracking state を表示します。
+
+```bash
+agentnote status
+```
+
+```text
+agentnote v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+<Aside>
+  `agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は実際の主経路を示します。`commit:` が fallback mode のときは `agentnote commit` を使うのが安全です。
+</Aside>
+
 ## agentnote commit
 
 セッショントレーラーと note 記録を含む `git commit` のラッパーです。
@@ -87,4 +111,9 @@ agentnote commit -m "feat: add auth"
 
 <Aside type="tip">
   git フックがインストールされていれば不要です — `git commit` が同じ処理を自動的に行います。
+</Aside>
+
+<Aside>
+  Cursor preview でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
+  現在は prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合のみ安全に line-level へ昇格します。git hook が使えない環境では `agentnote commit` が fallback として使えます。
 </Aside>

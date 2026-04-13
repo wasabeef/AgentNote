@@ -1,5 +1,6 @@
 // ─── Trailer ───
 export const TRAILER_KEY = "Agentnote-Session";
+export const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
 
 // ─── Git notes ───
 export const NOTES_REF = "agentnote";
@@ -18,6 +19,7 @@ export const TRANSCRIPT_PATH_FILE = "transcript_path";
 export const TURN_FILE = "turn";
 export const SESSION_FILE = "session";
 export const SESSION_AGENT_FILE = "agent";
+export const PENDING_COMMIT_FILE = "pending_commit.json";
 
 // ─── Display limits ───
 export const MAX_COMMITS = 500;

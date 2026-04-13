@@ -130,7 +130,10 @@ export async function recordCommitEntry(opts: {
   }
 
   // Resolve transcript path from argument or saved file.
-  const transcriptPath = opts.transcriptPath ?? (await readSessionTranscriptPath(sessionDir));
+  const transcriptPath =
+    opts.transcriptPath ??
+    (await readSessionTranscriptPath(sessionDir)) ??
+    adapter.findTranscript(opts.sessionId);
 
   // Build interactions from transcript for accurate prompt-response pairing.
   // Suppress transcript pairing for cross-turn commits: slice(-prompts.length)
@@ -179,6 +182,8 @@ export async function recordCommitEntry(opts: {
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
   }
+
+  await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
 
   // Attach per-turn file attribution when turn data is available.
   if (hasTurnData) {
@@ -243,6 +248,29 @@ function findTranscriptPromptWindow(
   }
 
   return interactions.slice(-prompts.length);
+}
+
+async function fillInteractionResponsesFromEvents(
+  sessionDir: string,
+  promptEntries: Record<string, unknown>[],
+  interactions: Interaction[],
+): Promise<void> {
+  if (interactions.length === 0 || promptEntries.length === 0) return;
+
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
+  if (responsesByTurn.size === 0) return;
+
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry || interaction.response) continue;
+    const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+    if (!turn) continue;
+    const response = responsesByTurn.get(turn);
+    if (response) {
+      interaction.response = response;
+    }
+  }
 }
 
 async function resolveTranscriptLineCounts(
@@ -413,6 +441,9 @@ async function computeLineAttribution(opts: {
   const hasPostBlobData = changeEntries.some((e) => e.blob);
   if (!hasPreBlobData && !hasPostBlobData) return null;
 
+  const committedDiffCounts = await readCommittedDiffCounts(commitFileSet);
+  if (committedDiffCounts.size !== commitFileSet.size) return null;
+
   // Build map: tool_use_id → pre-blob info (file, blob, turn captured synchronously).
   // tool_use_id is the stable correlation key between PreToolUse and PostToolUse events.
   // Using it avoids FIFO ordering assumptions broken by async PostToolUse hooks.
@@ -440,8 +471,11 @@ async function computeLineAttribution(opts: {
   // Build turnPairs per file by joining pre/post blobs on tool_use_id.
   const turnPairsByFile = new Map<string, { preBlob: string; postBlob: string }[]>();
   const hadNewFileEditByFile = new Map<string, boolean>();
+  const exactCursorEditCountFiles = new Set<string>();
+  const lastPostBlobByFile = new Map<string, string>();
   // Fallback: postBlobs per file for entries without tool_use_id.
   const postBlobsFallback = new Map<string, string[]>();
+  const cursorEditCountsByFile = new Map<string, { added: number; deleted: number }>();
 
   for (const entry of changeEntries) {
     const file = entry.file as string;
@@ -449,6 +483,21 @@ async function computeLineAttribution(opts: {
     const id = entry.tool_use_id as string | undefined;
     const postBlob = (entry.blob as string) || "";
     if (!file || !commitFileSet.has(file) || !postBlob) continue;
+
+    const editAdded = typeof entry.edit_added === "number" ? entry.edit_added : null;
+    const editDeleted = typeof entry.edit_deleted === "number" ? entry.edit_deleted : null;
+    if (
+      editAdded !== null &&
+      editDeleted !== null &&
+      (!hasTurnData || relevantTurns.has(id ? (preBlobById.get(id)?.turn ?? turn) : turn))
+    ) {
+      const previous = cursorEditCountsByFile.get(file) ?? { added: 0, deleted: 0 };
+      cursorEditCountsByFile.set(file, {
+        added: previous.added + editAdded,
+        deleted: previous.deleted + editDeleted,
+      });
+    }
+    lastPostBlobByFile.set(file, postBlob);
 
     if (id) {
       const pre = preBlobById.get(id);
@@ -493,7 +542,21 @@ async function computeLineAttribution(opts: {
     if (!commitFileSet.has(file)) continue;
     const hasPairs = (turnPairsByFile.get(file) ?? []).length > 0;
     const hasNewFileEdit = hadNewFileEditByFile.get(file) ?? false;
-    if (!hasPairs && !hasNewFileEdit) {
+    const cursorEditCounts = cursorEditCountsByFile.get(file);
+    const committedCounts = committedDiffCounts.get(file);
+    const committedBlob = committedBlobs.get(file)?.committedBlob ?? null;
+    const lastPostBlob = lastPostBlobByFile.get(file) ?? null;
+    const hasExactCursorEditCounts =
+      !!cursorEditCounts &&
+      !!committedCounts &&
+      !!committedBlob &&
+      committedBlob === lastPostBlob &&
+      cursorEditCounts.added === committedCounts.added &&
+      cursorEditCounts.deleted === committedCounts.deleted;
+    if (hasExactCursorEditCounts) {
+      exactCursorEditCountFiles.add(file);
+    }
+    if (!hasPairs && !hasNewFileEdit && !hasExactCursorEditCounts) {
       // No complete blob pair for this AI file — fall back to file-level for the whole commit.
       return null;
     }
@@ -516,6 +579,11 @@ async function computeLineAttribution(opts: {
 
       // New file created by AI from scratch: attribute all added lines to AI.
       if (hadNewFileEdit && aiFileSet.has(file) && turnPairs.length === 0) {
+        totalAiAdded += result.totalAddedLines;
+      } else if (exactCursorEditCountFiles.has(file)) {
+        // Cursor only exposes edit snippets today. If their aggregate line counts
+        // exactly match the final commit diff, we can safely attribute the file's
+        // added lines to AI without guessing positions.
         totalAiAdded += result.totalAddedLines;
       } else {
         totalAiAdded += result.aiAddedLines;
@@ -559,7 +627,7 @@ function parseDiffTreeBlobs(
 
 /**
  * Read consumed change identifiers from committed_pairs.jsonl.
- * Uses tool_use_id when available (unique per edit), falls back to turn:file.
+ * Uses change_id/tool_use_id when available (unique per edit), falls back to turn:file.
  */
 async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
@@ -567,8 +635,11 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const entries = await readJsonlEntries(file);
   const set = new Set<string>();
   for (const e of entries) {
-    // Prefer tool_use_id (unique per edit) over turn:file (which collides on split commits).
-    if (e.tool_use_id) {
+    // Prefer change_id/tool_use_id over turn:file so repeated same-file edits
+    // within one turn stay attributable across split commits.
+    if (typeof e.change_id === "string" && e.change_id) {
+      set.add(`change:${e.change_id}`);
+    } else if (e.tool_use_id) {
       set.add(`id:${e.tool_use_id}`);
     } else if (e.turn !== undefined && e.file) {
       set.add(`${e.turn}:${e.file}`);
@@ -579,6 +650,9 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
 
 /** Build the consumed-pair key for a change/pre-blob entry. */
 function consumedKey(entry: Record<string, unknown>): string {
+  if (typeof entry.change_id === "string" && entry.change_id) {
+    return `change:${entry.change_id}`;
+  }
   if (entry.tool_use_id) return `id:${entry.tool_use_id}`;
   return `${entry.turn}:${entry.file}`;
 }
@@ -600,22 +674,46 @@ async function recordConsumedPairs(
     await appendJsonl(pairsFile, {
       turn: entry.turn,
       file,
+      change_id: entry.change_id ?? null,
       tool_use_id: entry.tool_use_id ?? null,
     });
   }
 }
 
-/** Read the model field from the session's events.jsonl (set at SessionStart). */
+async function readResponsesByTurn(sessionDir: string): Promise<Map<number, string>> {
+  const eventsFile = join(sessionDir, EVENTS_FILE);
+  if (!existsSync(eventsFile)) return new Map();
+
+  const entries = await readJsonlEntries(eventsFile);
+  const responsesByTurn = new Map<number, { response: string; priority: number }>();
+  for (const entry of entries) {
+    if (entry.event !== "response" && entry.event !== "stop") continue;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    const response = typeof entry.response === "string" ? entry.response.trim() : "";
+    if (!turn || !response) continue;
+    const priority = entry.event === "response" ? 2 : 1;
+    const current = responsesByTurn.get(turn);
+    if (current && current.priority > priority) continue;
+    responsesByTurn.set(turn, { response, priority });
+  }
+  return new Map([...responsesByTurn.entries()].map(([turn, value]) => [turn, value.response]));
+}
+
+/** Read the most useful model field from the session's events.jsonl. */
 async function readSessionModel(sessionDir: string): Promise<string | null> {
   const eventsFile = join(sessionDir, EVENTS_FILE);
   if (!existsSync(eventsFile)) return null;
   const entries = await readJsonlEntries(eventsFile);
+  let fallbackModel: string | null = null;
   for (const e of entries) {
     if (e.event === "session_start" && typeof e.model === "string" && e.model) {
       return e.model;
     }
+    if (fallbackModel === null && typeof e.model === "string" && e.model) {
+      fallbackModel = e.model;
+    }
   }
-  return null;
+  return fallbackModel;
 }
 
 /**
