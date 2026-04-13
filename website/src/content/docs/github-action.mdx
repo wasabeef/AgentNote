@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wasabeef/agentnote@v0
+      - uses: wasabeef/AgentNote@v0
 ```
 
 That's it. Every PR gets an AI session report.
@@ -41,7 +41,7 @@ That's it. Every PR gets an AI session report.
 ### Post as comment instead of description
 
 ```yaml
-- uses: wasabeef/agentnote@v0
+- uses: wasabeef/AgentNote@v0
   with:
     output: comment
   env:
@@ -63,7 +63,7 @@ That's it. Every PR gets an AI session report.
 ### Use outputs in workflow
 
 ```yaml
-- uses: wasabeef/agentnote@v0
+- uses: wasabeef/AgentNote@v0
   id: agentnote
   with:
     base: main
