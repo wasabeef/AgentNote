@@ -15,8 +15,8 @@ AI agents already store transcripts locally. Agent Note captures the right metad
 The repository is a monorepo with two packages:
 
 ```
-wasabeef/agentnote/
-├── action.yml                      # root pointer → packages/action (for uses: wasabeef/agentnote@v0)
+wasabeef/AgentNote/
+├── action.yml                      # root pointer → packages/action (for uses: wasabeef/AgentNote@v0)
 │
 ├── packages/
 │   ├── cli/                        # @wasabeef/agentnote — npm package
@@ -78,7 +78,7 @@ The action calls `agentnote pr --json` — it's tightly coupled to the CLI's out
 
 ### Root action.yml trick
 
-GitHub resolves `uses: wasabeef/agentnote@v0` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
+GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
 
 ```yaml
 # action.yml (root)
@@ -89,7 +89,7 @@ runs:
   main: "packages/action/dist/index.js"
 ```
 
-This gives users `uses: wasabeef/agentnote@v0` while code lives in `packages/action/`.
+This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/action/`.
 
 ## Architecture
 
@@ -375,7 +375,7 @@ JSON output structure:
 ### Usage
 
 ```yaml
-- uses: wasabeef/agentnote@v0
+- uses: wasabeef/AgentNote@v0
   id: agentnote
   with:
     base: main
@@ -420,7 +420,7 @@ Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a 
 
 ```
 CLI:    npx @wasabeef/agentnote init          (or npm install --save-dev)
-Action: uses: wasabeef/agentnote@v0             (Marketplace)
+Action: uses: wasabeef/AgentNote@v0             (Marketplace)
 ```
 
 ### Team workflow

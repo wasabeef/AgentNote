@@ -32,7 +32,7 @@ jobs:
       - run: npm run build --prefix website
         env:
           SITE: https://wasabeef.github.io
-          BASE: /agentnote
+          BASE: /AgentNote
       - uses: actions/upload-pages-artifact@v3
         with:
           path: website/dist

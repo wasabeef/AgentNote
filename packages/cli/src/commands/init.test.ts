@@ -48,7 +48,7 @@ describe("agentnote init", () => {
     const workflowPath = join(testDir, ".github", "workflows", "agentnote.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
-    assert.ok(workflow.includes("wasabeef/agentnote@v0"), "workflow should reference the action");
+    assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
 
     // Notes fetch config
     const fetchConfig = execSync("git config --get-all remote.origin.fetch", {

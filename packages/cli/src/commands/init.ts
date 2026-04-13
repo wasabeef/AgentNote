@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wasabeef/agentnote@v0
+      - uses: wasabeef/AgentNote@v0
 `;
 
 // ─── Git hook scripts ───

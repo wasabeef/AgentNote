@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wasabeef/agentnote/actions"><img src="https://img.shields.io/github/actions/workflow/status/wasabeef/agentnote/ci.yml?branch=main" alt="CI"></a>
+  <a href="https://github.com/wasabeef/AgentNote/actions"><img src="https://img.shields.io/github/actions/workflow/status/wasabeef/AgentNote/ci.yml?branch=main" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://www.npmjs.com/package/@wasabeef/agentnote"><img src="https://img.shields.io/npm/v/@wasabeef/agentnote" alt="npm"></a>
 </p>
@@ -17,7 +17,7 @@ Agent Note records each prompt, response, and AI-attributed file, then attaches 
 </p>
 
 <p align="center">
-  <a href="https://wasabeef.github.io/agentnote/">Documentation</a>
+  <a href="https://wasabeef.github.io/AgentNote/">Documentation</a>
 </p>
 
 ## Setup
@@ -174,14 +174,14 @@ You git push
 ## GitHub Action
 
 ```yaml
-- uses: wasabeef/agentnote@v0
+- uses: wasabeef/AgentNote@v0
 ```
 
 <details>
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/agentnote@v0
+- uses: wasabeef/AgentNote@v0
   id: agentnote
   with:
     base: main
