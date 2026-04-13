@@ -56,6 +56,7 @@ Agent Note supports multiple coding agents via an adapter pattern:
 - **`index.ts`**: Agent registry — `getAgent()`, `hasAgent()`, `listAgents()`. Default: `claude-code`.
 - **`claude-code.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.
 - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.
+- **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.
 
 ### Hook event handling (`packages/cli/src/commands/hook.ts`)
 
@@ -100,7 +101,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 ### init vs hook
 
-- `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
+- `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex, `.cursor/hooks.json` for Cursor) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
 - `hook` is called by the coding agent at runtime. It never modifies config files.
 
 ### Harness hooks
