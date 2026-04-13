@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   如果你使用 Cursor：
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. 提交生成的文件
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Codex 仓库需要提交 `.codex/config.toml` 和 `.codex/hooks.json`，而不是 `.claude/settings.json`。
+   Cursor 仓库需要提交 `.cursor/hooks.json`。
 
-3. 用 AI 编写代码，正常提交——一切自动追踪
+3. Claude Code 和 Codex 可以照常使用 `git commit`。
+   如果已安装生成的 git hook，Cursor preview 也可以直接使用普通 `git commit`。
+   如果 git hook 不可用，请使用 `agentnote commit -m "..."` 作为 fallback。
 </Steps>
 
 ## 实际效果
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | 完整支持 | 通过 hook 捕获的 blob 对实现行级归因 |
 | Codex CLI | Preview | 基于 transcript；当 patch 行数与 commit 一致时提升到行级 |
-| Cursor | 即将支持 | |
+| Cursor | Preview | 基于 `afterFileEdit` / `afterTabFileEdit`；仅在最终 blob 仍与 AI edit 一致时安全升级到行级归因 |
 | Gemini CLI | 即将支持 | |

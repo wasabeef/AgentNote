@@ -4,7 +4,7 @@
 
 ## Philosophy
 
-entire.io tried to do too much — shadow branches, condensation, state machines, multi-agent abstraction. The essential need is simpler:
+Tools in this space make different tradeoffs. Some center checkpoints, dedicated metadata branches, and web applications. Agent Note intentionally focuses on a narrower goal:
 
 > **Link every git commit to the AI session that produced it.**
 
@@ -113,7 +113,7 @@ Stop        Prompt    (Edit/Write)        │                       │
 session       .jsonl     .jsonl
 ```
 
-AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). This separation means commit tracking works regardless of how `git commit` is invoked — chained commands, aliases, or scripts.
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, and Cursor, this means plain `git commit` works when the repo-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
 ### Storage: two layers
 
@@ -314,7 +314,7 @@ agentnote record <session-id> record git note for HEAD (internal, used by post-c
 
 `agentnote init` does four things by default:
 
-1. **Agent config** — writes data collection hooks to `.claude/settings.json`. Commit this file to share with the team.
+1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, or `.cursor/hooks.json`). Commit the generated repo-local files to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
 3. **GitHub Actions workflow** — creates `.github/workflows/agentnote.yml` for PR reports. Commit this file.
 4. **Auto-fetch config** — adds `refs/notes/agentnote` to `remote.origin.fetch` so `git pull` fetches notes automatically.
@@ -432,6 +432,11 @@ git add .claude/settings.json .github/workflows/agentnote.yml
 git commit -m "chore: enable agentnote"
 git push
 
+# Codex repositories commit `.codex/config.toml` + `.codex/hooks.json` instead.
+# Cursor repositories commit `.cursor/hooks.json` instead.
+# Plain `git commit` works when the generated git hooks are installed.
+# `agentnote commit -m "..."` remains a useful fallback wrapper.
+
 # 2. New clone setup (per developer, per clone)
 git clone <repo> && cd <repo>
 npx @wasabeef/agentnote init   # installs git hooks + agent config + auto-fetch
@@ -536,21 +541,21 @@ If multiple Claude Code sessions run in the same repo simultaneously, `.git/agen
 
 ### ai_ratio accuracy depends on blob data
 
-`ai_ratio` uses line-level attribution when `pre_blobs.jsonl` data is available (sessions recorded with hook v2+). For older sessions or when blob capture fails, it falls back to file-count ratio. Deletions are always excluded from the attribution denominator — only added lines are classified as AI or human.
+`ai_ratio` uses line-level attribution when `pre_blobs.jsonl` data is available (sessions recorded with hook v2+). Cursor preview can also upgrade to line-level when `afterFileEdit` / `afterTabFileEdit` edit counts match and the final committed blob still matches the last AI edit for an AI-touched file. For older sessions or when those signals are unavailable, it falls back to file-count ratio. Deletions are always excluded from the attribution denominator — only added lines are classified as AI or human.
 
 ## Multi-agent extensibility
 
-Agent Note supports Claude Code and Codex CLI today, and the `agents/` + `core/` split makes adding more agents straightforward.
+Agent Note supports Claude Code, Codex CLI, and Cursor preview today, and the `agents/` + `core/` split makes adding more agents straightforward.
 
 ### What varies per agent
 
-| Concern | Claude Code | Codex CLI | Future agents |
-|---|---|---|---|
-| Config files | `.claude/settings.json` | `.codex/config.toml` + `.codex/hooks.json` | Varies |
-| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `SessionStart`, `UserPromptSubmit`, `Stop` | Varies |
-| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.codex/sessions/.../*.jsonl` | Varies |
-| Attribution strategy | Hook-captured blob pairs + transcript | Transcript-driven, with safe line-level upgrade when patch counts match | Varies |
-| Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) |
+| Concern | Claude Code | Codex CLI | Cursor | Future agents |
+|---|---|---|---|---|
+| Config files | `.claude/settings.json` | `.codex/config.toml` + `.codex/hooks.json` | `.cursor/hooks.json` | Varies |
+| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `SessionStart`, `UserPromptSubmit`, `Stop` | `beforeSubmitPrompt`, `afterAgentResponse`, `afterFileEdit`, `afterTabFileEdit`, `beforeShellExecution`, `afterShellExecution`, `stop` | Varies |
+| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.codex/sessions/.../*.jsonl` | `~/.cursor/projects/<project>/agent-transcripts/...` when available | Varies |
+| Attribution strategy | Hook-captured blob pairs + transcript | Transcript-driven, with safe line-level upgrade when patch counts match | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit, plus response recovery from hooks / transcripts | Varies |
+| Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** by default, plus `beforeShellExecution` / `afterShellExecution` fallback in preview | Varies |
 
 ### What stays the same (`core/` + git hooks)
 
@@ -575,7 +580,7 @@ interface HookInput {
 }
 
 interface NormalizedEvent {
-  kind: "session_start" | "stop" | "prompt" | "pre_edit" | "file_change" | "pre_commit" | "post_commit";
+  kind: "session_start" | "stop" | "response" | "prompt" | "pre_edit" | "file_change" | "pre_commit" | "post_commit";
   sessionId: string;
   timestamp: string;
   prompt?: string;

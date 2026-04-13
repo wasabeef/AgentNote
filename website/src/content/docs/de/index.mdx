@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Für Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Committe die generierten Dateien
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    Codex-Repositories committen `.codex/config.toml` und `.codex/hooks.json` statt `.claude/settings.json`.
+   Cursor-Repositories committen `.cursor/hooks.json`.
 
-3. Programmiere mit KI, committe wie gewohnt — alles wird automatisch erfasst
+3. Claude Code und Codex können `git commit` normal verwenden.
+   Mit den erzeugten Git-Hooks kann Cursor Preview auch normales `git commit` verwenden.
+   `agentnote commit -m "..."` bleibt der Fallback, wenn Git-Hooks nicht verfügbar sind.
 </Steps>
 
 ## In Aktion erleben
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Voll unterstützt | Zuordnung auf Zeilenebene über per Hook erfasste Blob-Paare |
 | Codex CLI | Preview | Transcript-basiert; Zeilenebene nur, wenn die Patch-Zahlen zum Commit passen |
-| Cursor | Demnächst | |
+| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit`-basierte Attribution, mit sicherem Upgrade auf Zeilenebene wenn der finale Blob der KI-Änderung entspricht |
 | Gemini CLI | Demnächst | |

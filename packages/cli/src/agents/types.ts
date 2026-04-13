@@ -16,6 +16,7 @@ export interface NormalizedEvent {
   kind:
     | "session_start"
     | "stop"
+    | "response"
     | "prompt"
     | "pre_edit"
     | "file_change"
@@ -29,6 +30,10 @@ export interface NormalizedEvent {
   tool?: string;
   /** Stable identifier correlating a PreToolUse event with its PostToolUse counterpart. */
   toolUseId?: string;
+  editStats?: {
+    added: number;
+    deleted: number;
+  };
   commitCommand?: string;
   transcriptPath?: string;
   model?: string;

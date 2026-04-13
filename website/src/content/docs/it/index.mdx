@@ -49,6 +49,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent codex
    ```
 
+   Per Cursor:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent cursor
+   ```
+
 2. Committa i file generati
 
    ```bash
@@ -58,8 +64,11 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    ```
 
    I repository Codex versionano `.codex/config.toml` e `.codex/hooks.json` al posto di `.claude/settings.json`.
+   I repository Cursor versionano `.cursor/hooks.json`.
 
-3. Scrivi codice con l'IA, committa normalmente — tutto viene tracciato in automatico
+3. Claude Code e Codex possono usare `git commit` normalmente.
+   Con i git hook generati, Cursor preview puo anche usare il normale `git commit`.
+   `agentnote commit -m "..."` resta il fallback quando i git hook non sono disponibili.
 </Steps>
 
 ## Guardalo in azione
@@ -107,5 +116,5 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 |---|---|---|
 | Claude Code | Supporto completo | Attribuzione riga per riga tramite coppie di blob catturate dagli hook |
 | Codex CLI | Preview | Basato su transcript; sale al livello di riga quando i conteggi di patch coincidono con il commit |
-| Cursor | Prossimamente | |
+| Cursor | Preview | Attribuzione basata su `afterFileEdit` / `afterTabFileEdit`, con upgrade sicuro al livello di riga quando il blob finale coincide ancora con l'edit dell'IA |
 | Gemini CLI | Prossimamente | |

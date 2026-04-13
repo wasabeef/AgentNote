@@ -32,6 +32,12 @@ For Codex CLI:
 npx @wasabeef/agentnote init --agent codex
 ```
 
+For Cursor:
+
+```bash
+npx @wasabeef/agentnote init --agent cursor
+```
+
 Commit the generated files and push:
 
 ```bash
@@ -41,8 +47,31 @@ git push
 ```
 
 Codex repositories commit `.codex/config.toml` and `.codex/hooks.json` instead of `.claude/settings.json`.
+Cursor repositories commit `.cursor/hooks.json` instead of `.claude/settings.json`.
 
 Each developer runs `init` after cloning to install local git hooks.
+
+Cursor support is currently preview-only: attribution comes from `afterFileEdit` / `afterTabFileEdit` hooks, prompt / response pairs are restored from Cursor response hooks or local transcripts when available, and the default git hooks track plain `git commit` normally. When Cursor edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to line-level attribution. `agentnote commit -m "..."` remains a useful fallback wrapper when git hooks are unavailable.
+
+## Check Your Setup
+
+```bash
+agentnote status
+```
+
+```text
+agentnote v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` shows which agent adapters are enabled. `capture:` summarizes what the active agent hooks collect. `git:` shows whether the managed repo-local git hooks are installed. `commit:` tells you the primary tracking path: normal `git commit` when git hooks are active, or fallback mode when you should prefer `agentnote commit`.
 
 ## What You Get
 
@@ -129,8 +158,18 @@ You git push
 | --- | --- | --- |
 | Claude Code | Full support | Line-level |
 | Codex CLI | Preview | File-level by default, line-level when transcript patch counts match the commit |
-| Cursor | Coming soon | — |
+| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit |
 | Gemini CLI | Coming soon | — |
+
+## Capability Matrix
+
+| Capability | Claude Code | Codex CLI | Cursor |
+| --- | --- | --- | --- |
+| Plain `git commit` with generated git hooks | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes |
+| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts |
+| Default attribution | Line-level | File-level | File-level |
+| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit |
 
 ## GitHub Action
 
