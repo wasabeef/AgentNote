@@ -1,0 +1,86 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import {
+  COMMENT_MARKER,
+  DESCRIPTION_BEGIN,
+  DESCRIPTION_END,
+  resolveOutputMode,
+  upsertDescription,
+} from "./helpers.js";
+
+describe("resolveOutputMode", () => {
+  it('returns "description" when output is "description"', () => {
+    assert.equal(resolveOutputMode("description", ""), "description");
+  });
+
+  it('returns "comment" when output is "comment"', () => {
+    assert.equal(resolveOutputMode("comment", ""), "comment");
+  });
+
+  it('returns "description" when output is unset and comment is "false"', () => {
+    assert.equal(resolveOutputMode("", "false"), "description");
+  });
+
+  it('returns "description" by default when both inputs are empty', () => {
+    assert.equal(resolveOutputMode("", ""), "description");
+  });
+
+  it("ignores comment input when output is explicitly set", () => {
+    assert.equal(resolveOutputMode("comment", "false"), "comment");
+  });
+});
+
+describe("upsertDescription — append when no existing section", () => {
+  it("appends section to empty body", () => {
+    const result = upsertDescription("", "## AI Report");
+    assert.ok(result.includes(DESCRIPTION_BEGIN));
+    assert.ok(result.includes(DESCRIPTION_END));
+    assert.ok(result.includes("## AI Report"));
+  });
+
+  it("appends section after existing content", () => {
+    const existing = "This is the PR description.";
+    const result = upsertDescription(existing, "## AI Report");
+    assert.ok(result.startsWith("This is the PR description."));
+    assert.ok(result.includes(DESCRIPTION_BEGIN));
+    assert.ok(result.includes("## AI Report"));
+    assert.ok(result.includes(DESCRIPTION_END));
+  });
+});
+
+describe("upsertDescription — replace when section already present", () => {
+  it("replaces existing section content", () => {
+    const existing = `Some intro\n\n${DESCRIPTION_BEGIN}\nold content\n${DESCRIPTION_END}\n\nSome outro`;
+    const result = upsertDescription(existing, "new content");
+    assert.ok(result.includes("new content"));
+    assert.ok(!result.includes("old content"));
+    assert.ok(result.includes("Some outro"));
+  });
+
+  it("preserves text before existing section", () => {
+    const existing = `Intro text\n\n${DESCRIPTION_BEGIN}\nold\n${DESCRIPTION_END}`;
+    const result = upsertDescription(existing, "new");
+    assert.ok(result.startsWith("Intro text"));
+  });
+
+  it("handles missing end marker gracefully", () => {
+    const existing = `Intro\n\n${DESCRIPTION_BEGIN}\norphaned content`;
+    const result = upsertDescription(existing, "new content");
+    assert.ok(result.includes("new content"));
+    assert.ok(result.includes(DESCRIPTION_END));
+  });
+});
+
+describe("constants", () => {
+  it("COMMENT_MARKER is the expected string", () => {
+    assert.equal(COMMENT_MARKER, "<!-- agentnote-pr-report -->");
+  });
+
+  it("DESCRIPTION_BEGIN is the expected string", () => {
+    assert.equal(DESCRIPTION_BEGIN, "<!-- agentnote-begin -->");
+  });
+
+  it("DESCRIPTION_END is the expected string", () => {
+    assert.equal(DESCRIPTION_END, "<!-- agentnote-end -->");
+  });
+});
