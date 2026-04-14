@@ -113,7 +113,7 @@ Stop        Prompt    (Edit/Write)        │                       │
 session       .jsonl     .jsonl
 ```
 
-AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, and Cursor, this means plain `git commit` works when the repo-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repo-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
 ### Storage: two layers
 
@@ -314,7 +314,7 @@ agentnote record <session-id> record git note for HEAD (internal, used by post-c
 
 `agentnote init` does four things by default:
 
-1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, or `.cursor/hooks.json`). Commit the generated repo-local files to share with the team.
+1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repo-local files to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
 3. **GitHub Actions workflow** — creates `.github/workflows/agentnote.yml` for PR reports. Commit this file.
 4. **Auto-fetch config** — adds `refs/notes/agentnote` to `remote.origin.fetch` so `git pull` fetches notes automatically.
@@ -565,17 +565,17 @@ If multiple Claude Code sessions run in the same repo simultaneously, `.git/agen
 
 ## Multi-agent extensibility
 
-Agent Note supports Claude Code, Codex CLI, and Cursor preview today, and the `agents/` + `core/` split makes adding more agents straightforward.
+Agent Note supports Claude Code, Codex CLI, Cursor preview, and Gemini CLI preview today, and the `agents/` + `core/` split makes adding more agents straightforward.
 
 ### What varies per agent
 
-| Concern | Claude Code | Codex CLI | Cursor | Future agents |
+| Concern | Claude Code | Codex CLI | Cursor | Gemini CLI |
 |---|---|---|---|---|
-| Config files | `.claude/settings.json` | `.codex/config.toml` + `.codex/hooks.json` | `.cursor/hooks.json` | Varies |
-| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `SessionStart`, `UserPromptSubmit`, `Stop` | `beforeSubmitPrompt`, `afterAgentResponse`, `afterFileEdit`, `afterTabFileEdit`, `beforeShellExecution`, `afterShellExecution`, `stop` | Varies |
-| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.codex/sessions/.../*.jsonl` | `~/.cursor/projects/<project>/agent-transcripts/...` when available | Varies |
-| Attribution strategy | Hook-captured blob pairs + transcript | Transcript-driven, with safe line-level upgrade when patch counts match | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit, plus response recovery from hooks / transcripts | Varies |
-| Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** by default, plus `beforeShellExecution` / `afterShellExecution` fallback in preview | Varies |
+| Config files | `.claude/settings.json` | `.codex/config.toml` + `.codex/hooks.json` | `.cursor/hooks.json` | `.gemini/settings.json` |
+| Hook events | `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit` | `SessionStart`, `UserPromptSubmit`, `Stop` | `beforeSubmitPrompt`, `afterAgentResponse`, `afterFileEdit`, `afterTabFileEdit`, `beforeShellExecution`, `afterShellExecution`, `stop` | `SessionStart`, `SessionEnd`, `BeforeAgent`, `AfterAgent`, `BeforeTool`, `AfterTool` |
+| Transcript location | `~/.claude/projects/<hash>/sessions/<uuid>.jsonl` | `~/.codex/sessions/.../*.jsonl` | `~/.cursor/projects/<project>/agent-transcripts/...` when available | `~/.gemini/tmp/<project_hash>/chats/*.jsonl` |
+| Attribution strategy | Hook-captured blob pairs + transcript | Transcript-driven, with safe line-level upgrade when patch counts match | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit, plus response recovery from hooks / transcripts | `BeforeTool`/`AfterTool`-driven file-level attribution via `write_file` and `replace` hooks |
+| Commit detection | **Git hooks** (agent-agnostic) | **Git hooks** (agent-agnostic) | **Git hooks** by default, plus `beforeShellExecution` / `afterShellExecution` fallback in preview | **Git hooks** (agent-agnostic), pending-commit pattern via `BeforeTool`/`AfterTool` on `run_shell_command` |
 
 ### What stays the same (`core/` + git hooks)
 
