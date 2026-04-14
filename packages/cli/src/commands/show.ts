@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
-import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
+import { getAgent, hasAgent } from "../agents/index.js";
 import {
   BAR_WIDTH_FULL,
   SESSIONS_DIR,
@@ -102,9 +102,8 @@ export async function show(commitRef?: string): Promise<void> {
 
   // Show transcript location only if available locally.
   const sessionDir = join(await agentnoteDir(), SESSIONS_DIR, sessionId);
-  const sessionAgent =
-    (await readSessionAgent(sessionDir)) ?? entry.agent ?? getDefaultAgent().name;
-  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getDefaultAgent();
+  const sessionAgent = (await readSessionAgent(sessionDir)) ?? entry.agent ?? "claude";
+  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent("claude");
   const transcriptPath =
     (await readSessionTranscriptPath(sessionDir)) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {

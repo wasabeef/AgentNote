@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
-import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
+import { getAgent, hasAgent, listAgents } from "../agents/index.js";
 import {
   AGENTNOTE_HOOK_MARKER,
   NOTES_FETCH_REFSPEC,
@@ -96,14 +96,12 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 `;
 
 export async function init(args: string[]): Promise<void> {
-  const agentArgIndex = args.indexOf("--agent");
-  const agentName =
-    agentArgIndex >= 0 && args[agentArgIndex + 1]
-      ? args[agentArgIndex + 1]
-      : getDefaultAgent().name;
-  if (!hasAgent(agentName)) {
-    console.error(`error: unknown agent '${agentName}'`);
-    process.exit(1);
+  const agents: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--agent" && args[i + 1]) {
+      agents.push(args[i + 1]);
+      i++; // skip value
+    }
   }
 
   const skipHooks = args.includes("--no-hooks");
@@ -113,8 +111,19 @@ export async function init(args: string[]): Promise<void> {
   const hooksOnly = args.includes("--hooks");
   const actionOnly = args.includes("--action");
 
+  if (agents.length === 0 && !actionOnly) {
+    console.error(`error: --agent is required. Available agents: ${listAgents().join(", ")}`);
+    process.exit(1);
+  }
+
+  for (const agentName of agents) {
+    if (!hasAgent(agentName)) {
+      console.error(`error: unknown agent '${agentName}'`);
+      process.exit(1);
+    }
+  }
+
   const repoRoot = await root();
-  const adapter = getAgent(agentName);
   const results: string[] = [];
 
   // Always create the data directory.
@@ -122,13 +131,16 @@ export async function init(args: string[]): Promise<void> {
 
   // Agent hooks
   if (!skipHooks && !actionOnly) {
-    if (await adapter.isEnabled(repoRoot)) {
-      results.push("  · hooks already configured");
-    } else {
-      await adapter.installHooks(repoRoot);
-      results.push(`  ✓ hooks added for ${adapter.name}`);
-      for (const relPath of await adapter.managedPaths(repoRoot)) {
-        results.push(`    ${relPath}`);
+    for (const agentName of agents) {
+      const adapter = getAgent(agentName);
+      if (await adapter.isEnabled(repoRoot)) {
+        results.push(`  · hooks already configured for ${adapter.name}`);
+      } else {
+        await adapter.installHooks(repoRoot);
+        results.push(`  ✓ hooks added for ${adapter.name}`);
+        for (const relPath of await adapter.managedPaths(repoRoot)) {
+          results.push(`    ${relPath}`);
+        }
       }
     }
   }
@@ -194,7 +206,10 @@ export async function init(args: string[]): Promise<void> {
   // Determine what needs to be committed
   const toCommit: string[] = [];
   if (!skipHooks && !actionOnly) {
-    toCommit.push(...(await adapter.managedPaths(repoRoot)));
+    for (const agentName of agents) {
+      const adapter = getAgent(agentName);
+      toCommit.push(...(await adapter.managedPaths(repoRoot)));
+    }
   }
   if (!skipAction && !hooksOnly) {
     const workflowPath = join(repoRoot, ".github", "workflows", "agentnote.yml");
@@ -208,7 +223,7 @@ export async function init(args: string[]): Promise<void> {
     console.log(`    git add ${uniqueToCommit.join(" ")}`);
     console.log('    git commit -m "chore: enable agentnote session tracking"');
     console.log("    git push");
-    if (adapter.name === "cursor") {
+    if (agents.includes("cursor")) {
       console.log("");
       console.log("  Cursor note");
       console.log("    With the default git hooks, plain `git commit` is tracked normally.");

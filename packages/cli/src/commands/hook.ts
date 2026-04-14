@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
-import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
+import { getAgent, hasAgent } from "../agents/index.js";
 import type { HookInput } from "../agents/types.js";
 import {
   CHANGES_FILE,
@@ -25,16 +25,6 @@ import { agentnoteDir } from "../paths.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function looksLikeCodexPayload(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const hookEventName = value.hook_event_name;
-  const sessionId = value.session_id;
-  const hasTranscriptPath =
-    typeof value.transcript_path === "string" || value.transcript_path === null;
-  if (typeof hookEventName !== "string" || typeof sessionId !== "string") return false;
-  return hasTranscriptPath && ["SessionStart", "UserPromptSubmit", "Stop"].includes(hookEventName);
 }
 
 export function isSynchronousHookEvent(value: unknown): boolean {
@@ -116,16 +106,8 @@ export async function hook(args: string[] = []): Promise<void> {
   }
 
   const agentArgIndex = args.indexOf("--agent");
-  const explicitAgent = agentArgIndex >= 0 && Boolean(args[agentArgIndex + 1]);
-  const agentName =
-    explicitAgent && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : getDefaultAgent().name;
-  if (!hasAgent(agentName)) return;
-
-  if (!explicitAgent && looksLikeCodexPayload(peek)) {
-    console.error("agentnote: Codex hook payload detected; run `agentnote hook --agent codex`");
-    process.exitCode = 1;
-    return;
-  }
+  const agentName = agentArgIndex >= 0 && args[agentArgIndex + 1] ? args[agentArgIndex + 1] : null;
+  if (!agentName || !hasAgent(agentName)) return;
 
   const adapter = getAgent(agentName);
   const input: HookInput = { raw, sync };

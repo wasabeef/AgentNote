@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getAgent, getDefaultAgent, hasAgent } from "../agents/index.js";
+import { getAgent, hasAgent } from "../agents/index.js";
 import type { TranscriptInteraction } from "../agents/types.js";
 import { git, gitSafe } from "../git.js";
 import { computePositionAttribution, countLines, parseUnifiedHunks } from "./attribution.js";
@@ -30,7 +30,7 @@ export async function recordCommitEntry(opts: {
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, "sessions", opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
-  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : getDefaultAgent().name;
+  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : "claude";
   const adapter = getAgent(agentName);
   const commitSha = await git(["rev-parse", "HEAD"]);
 
