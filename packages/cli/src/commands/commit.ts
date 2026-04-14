@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { HEARTBEAT_FILE, TRAILER_KEY } from "../core/constants.js";
 import { recordCommitEntry } from "../core/record.js";
+import { readSessionAgent } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 
 export async function commit(args: string[]): Promise<void> {
@@ -21,7 +22,11 @@ export async function commit(args: string[]): Promise<void> {
         const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
         if (hb === 0) sessionId = ""; // explicitly stopped
       } catch {
-        // No heartbeat file — session may predate heartbeat tracking. Allow it.
+        // No heartbeat file. For agents that delete heartbeat on session end
+        // (e.g. Gemini SessionEnd), treat as expired. For older sessions that
+        // predate heartbeat tracking, allow if agent is not gemini.
+        const agent = await readSessionAgent(join(dir, "sessions", sessionId));
+        if (agent === "gemini") sessionId = "";
       }
     }
   }
