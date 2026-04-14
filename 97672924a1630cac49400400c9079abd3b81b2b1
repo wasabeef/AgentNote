@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T12:27:31.723Z",
+  "model": null,
+  "interactions": [
+    {
+      "prompt": "まって、それぞれの設定いいんだけど\n\nこのリポジトリでは特別に dist の js を直接呼ぶようにしたい。\nなぜなら開発中に publish しないでも動作確認できるからだ",
+      "response": null,
+      "files_touched": [
+        ".claude/settings.json",
+        ".gemini/settings.json",
+        ".cursor/hooks.json",
+        ".codex/hooks.json"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".claude/settings.json",
+      "by_ai": true
+    },
+    {
+      "path": ".codex/config.toml",
+      "by_ai": false
+    },
+    {
+      "path": ".codex/hooks.json",
+      "by_ai": true
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "by_ai": true
+    },
+    {
+      "path": ".gemini/settings.json",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 11,
+    "method": "line",
+    "lines": {
+      "ai_added": 24,
+      "total_added": 222,
+      "deleted": 28
+    }
+  }
+}
