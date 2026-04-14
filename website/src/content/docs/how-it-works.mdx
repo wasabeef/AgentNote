@@ -87,6 +87,8 @@ Codex CLI uses transcript-driven attribution. When transcript patch counts match
 
 Cursor preview uses `afterFileEdit` and `afterTabFileEdit` hooks for attribution. When their edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to `method: "line"`. Otherwise it falls back to `method: "file"`, while still recovering prompt / response pairs from Cursor response hooks or local transcripts when they are available.
 
+Gemini CLI preview uses `BeforeTool`/`AfterTool` hooks on `write_file` and `replace` tools for file-level attribution. Commit detection uses the pending-commit pattern via `BeforeTool`/`AfterTool` on `run_shell_command`. Prompt and response recovery comes from `BeforeAgent`/`AfterAgent` hooks and JSONL transcript parsing.
+
 ## Session Lifecycle
 
 | Event | What happens |
