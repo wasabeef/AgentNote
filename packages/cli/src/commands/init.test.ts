@@ -26,7 +26,7 @@ describe("agentnote init", () => {
   });
 
   it("creates hooks, workflow, and configures notes fetch", () => {
-    const output = execSync(`node ${cliPath} init`, {
+    const output = execSync(`node ${cliPath} init --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -63,7 +63,7 @@ describe("agentnote init", () => {
   });
 
   it("creates a deterministic repo-local shim for git hooks", () => {
-    execSync(`node ${cliPath} init --agent claude-code --no-action`, {
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -88,8 +88,8 @@ describe("agentnote init", () => {
   });
 
   it("is idempotent", () => {
-    execSync(`node ${cliPath} init`, { cwd: testDir });
-    const output = execSync(`node ${cliPath} init`, {
+    execSync(`node ${cliPath} init --agent claude`, { cwd: testDir });
+    const output = execSync(`node ${cliPath} init --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -123,14 +123,14 @@ describe("agentnote init", () => {
       )}\n`,
     );
 
-    execSync(`node ${cliPath} init --hooks --no-git-hooks`, {
+    execSync(`node ${cliPath} init --agent claude --hooks --no-git-hooks`, {
       cwd: testDir,
       encoding: "utf-8",
     });
 
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     const raw = JSON.stringify(settings);
-    assert.ok(raw.includes("--agent claude-code"), "should migrate to explicit Claude hook");
+    assert.ok(raw.includes("--agent claude"), "should migrate to explicit Claude hook");
   });
 
   it("--hooks creates only hooks", () => {
@@ -140,7 +140,7 @@ describe("agentnote init", () => {
     execSync("git config user.name Test", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --hooks`, { cwd: dir });
+    execSync(`node ${cliPath} init --agent claude --hooks`, { cwd: dir });
 
     assert.ok(existsSync(join(dir, ".claude", "settings.json")), "hooks should exist");
     assert.ok(

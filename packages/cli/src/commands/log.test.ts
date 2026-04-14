@@ -26,7 +26,7 @@ describe("agentnote log", () => {
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
 
     // agentnote commit
-    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --agent claude --hooks`, { cwd: testDir });
     const sessionId = "a1b2c3d4-2222-2222-2222-222222222222";
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);

@@ -23,7 +23,7 @@ describe("agentnote session", () => {
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
-    execSync(`node ${cliPath} init --hooks`, { cwd: testDir });
+    execSync(`node ${cliPath} init --agent claude --hooks`, { cwd: testDir });
 
     // Create two commits with the same session, each with an agentnote note.
     for (let i = 1; i <= 2; i++) {

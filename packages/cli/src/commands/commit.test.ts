@@ -34,7 +34,7 @@ describe("agentnote commit", () => {
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
-    execSync(`node ${cliPath} init --hooks --no-git-hooks`, {
+    execSync(`node ${cliPath} init --agent claude --hooks --no-git-hooks`, {
       cwd: testDir,
       env: { ...process.env, HOME: testHome },
     });
@@ -351,7 +351,7 @@ describe("agentnote commit", () => {
       execSync("git config user.email test@test.com", { cwd: dir });
       execSync("git config user.name Test", { cwd: dir });
       execSync("git commit --allow-empty -m 'init'", { cwd: dir });
-      execSync(`node ${cliPath} init --agent claude-code --no-action`, {
+      execSync(`node ${cliPath} init --agent claude --no-action`, {
         cwd: dir,
         env: { ...process.env, HOME: home },
         encoding: "utf-8",
@@ -363,7 +363,7 @@ describe("agentnote commit", () => {
           hook_event_name: "SessionStart",
           session_id: sessionId,
           model: "claude-opus-4-6",
-        })}' | node ${cliPath} hook`,
+        })}' | node ${cliPath} hook --agent claude`,
         {
           cwd: dir,
           env: { ...process.env, HOME: home },
@@ -376,7 +376,7 @@ describe("agentnote commit", () => {
           hook_event_name: "UserPromptSubmit",
           session_id: sessionId,
           prompt: "Create claude-git-hook.txt",
-        })}' | node ${cliPath} hook`,
+        })}' | node ${cliPath} hook --agent claude`,
         {
           cwd: dir,
           env: { ...process.env, HOME: home },
@@ -391,7 +391,7 @@ describe("agentnote commit", () => {
           session_id: sessionId,
           tool_name: "Write",
           tool_input: { file_path: join(dir, "claude-git-hook.txt") },
-        })}' | node ${cliPath} hook`,
+        })}' | node ${cliPath} hook --agent claude`,
         {
           cwd: dir,
           env: { ...process.env, HOME: home },
@@ -413,7 +413,7 @@ describe("agentnote commit", () => {
         }),
       );
       assert.equal(note.session_id, sessionId);
-      assert.equal(note.agent, "claude-code");
+      assert.equal(note.agent, "claude");
       assert.equal(note.interactions[0].prompt, "Create claude-git-hook.txt");
 
       const commitMessage = execSync("git log -1 --format=%B", {

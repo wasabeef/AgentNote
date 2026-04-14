@@ -37,7 +37,7 @@ describe("agentnote hook", () => {
       model: "claude-opus-4-6",
     });
 
-    execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
 
     const sessionFile = join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE);
     assert.ok(existsSync(sessionFile), "session file should exist");
@@ -64,7 +64,7 @@ describe("agentnote hook", () => {
       prompt: "implement auth middleware",
     });
 
-    execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
 
     const promptsFile = join(
       testDir,
@@ -89,7 +89,7 @@ describe("agentnote hook", () => {
       tool_input: { file_path: absPath },
     });
 
-    execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
 
     const changesFile = join(
       testDir,
@@ -113,7 +113,7 @@ describe("agentnote hook", () => {
       tool_input: { command: "npm test" },
     });
 
-    execSync(`echo '${event}' | node ${cliPath} hook`, { cwd: testDir });
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
 
     const changesFile = join(
       testDir,
@@ -134,7 +134,7 @@ describe("agentnote hook", () => {
       tool_input: { command: "git commit -m 'test'" },
     });
 
-    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+    const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -158,7 +158,7 @@ describe("agentnote hook", () => {
       tool_input: { command: "git add file.ts && git commit -m 'chained'" },
     });
 
-    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+    const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -177,7 +177,7 @@ describe("agentnote hook", () => {
       tool_input: { command: "npm test" },
     });
 
-    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+    const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -193,7 +193,7 @@ describe("agentnote hook", () => {
       tool_input: { command: "git commit --amend -m 'amend'" },
     });
 
-    const out = execSync(`echo '${event}' | node ${cliPath} hook`, {
+    const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -203,14 +203,13 @@ describe("agentnote hook", () => {
 
   it("handles invalid JSON gracefully", () => {
     // should not throw
-    execSync(`echo 'not json' | node ${cliPath} hook`, { cwd: testDir });
+    execSync(`echo 'not json' | node ${cliPath} hook --agent claude`, { cwd: testDir });
   });
 
-  it("fails fast for Codex payloads when --agent codex is omitted", () => {
+  it("silently ignores hook events when --agent is omitted", () => {
     const event = JSON.stringify({
       hook_event_name: "SessionStart",
-      session_id: "codex-session-guard",
-      transcript_path: "/tmp/codex/rollout.jsonl",
+      session_id: "a1b2c3d4-0099-0099-0099-000000000099",
       model: "gpt-5-codex",
     });
 
@@ -219,6 +218,6 @@ describe("agentnote hook", () => {
       encoding: "utf-8",
     });
 
-    assert.notEqual(result.status, 0, "should return a non-zero exit code");
+    assert.equal(result.status, 0, "should exit 0 (early return) when --agent is omitted");
   });
 });
