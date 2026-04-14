@@ -128,6 +128,24 @@ linked:  3/20 recent commits
   `agent:` shows which adapters are enabled, `capture:` summarizes what the active agent hooks collect, `git:` shows whether the managed repo-local git hooks are installed, and `commit:` shows the primary tracking path. If `commit:` shows fallback mode, prefer `agentnote commit`.
 </Aside>
 
+## agentnote deinit
+
+Remove Agent Note hooks and configuration from the current repository.
+
+```bash
+npx @wasabeef/agentnote deinit --agent claude
+```
+
+| Flag | Description |
+|---|---|
+| `--agent <name>` | **Required.** Agent to remove: `claude`, `codex`, `cursor`, or `gemini`. Repeat for multiple agents |
+| `--remove-workflow` | Also delete `.github/workflows/agentnote.yml` (preserved by default) |
+| `--keep-notes` | Keep the notes auto-fetch configuration |
+
+<Aside>
+  Shared infrastructure (git hooks, notes config) is preserved when other agents are still enabled.
+</Aside>
+
 ## agentnote commit
 
 Convenience wrapper for `git commit` with session trailer and note recording.

@@ -147,6 +147,7 @@ You git push
 | Command | What it does |
 | --- | --- |
 | `agentnote init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
+| `agentnote deinit` | Remove hooks and config for an agent |
 | `agentnote show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
 | `agentnote log [n]` | List recent commits with AI ratio |
 | `agentnote pr [base]` | Generate PR report (markdown or JSON) |

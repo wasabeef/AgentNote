@@ -151,3 +151,11 @@ linked:  3/20 recent commits
 | Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
 | Default attribution | Line-level | File-level | File-level | File-level |
 | Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
+
+## Uninstall
+
+```bash
+npx @wasabeef/agentnote deinit --agent claude
+```
+
+This removes agent hooks and git hooks. Add `--remove-workflow` to also delete the GitHub Action workflow.

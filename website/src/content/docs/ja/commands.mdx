@@ -101,6 +101,24 @@ linked:  3/20 recent commits
   `agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は実際の主経路を示します。`commit:` が fallback mode のときは `agentnote commit` を使うのが安全です。
 </Aside>
 
+## agentnote deinit
+
+リポジトリから Agent Note のフックと設定を除去します。
+
+```bash
+npx @wasabeef/agentnote deinit --agent claude
+```
+
+| フラグ | 説明 |
+|---|---|
+| `--agent <name>` | **必須。** 除去するエージェント: `claude`、`codex`、`cursor`、`gemini`。複数指定可 |
+| `--remove-workflow` | `.github/workflows/agentnote.yml` も削除（デフォルトでは温存） |
+| `--keep-notes` | notes の自動 fetch 設定を維持 |
+
+<Aside>
+  他のエージェントがまだ有効な場合、共有インフラ（git フック、notes 設定）は温存されます。
+</Aside>
+
 ## agentnote commit
 
 セッショントレーラーと note 記録を含む `git commit` のラッパーです。
