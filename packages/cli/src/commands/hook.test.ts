@@ -213,7 +213,7 @@ describe("agentnote hook", () => {
       model: "gpt-5-codex",
     });
 
-    const result = spawnSync("bash", ["-c", `echo '${event}' | node ${cliPath} hook`], {
+    const result = spawnSync("sh", ["-c", `echo '${event}' | node ${cliPath} hook`], {
       cwd: testDir,
       encoding: "utf-8",
     });
