@@ -180,6 +180,22 @@ export async function hook(args: string[] = []): Promise<void> {
       // finishes responding, NOT when the session ends. The session remains active
       // for subsequent prompts. SessionStart from the next session overwrites the
       // session pointer and heartbeat naturally.
+      //
+      // Gemini SessionEnd is a true session termination. Invalidate heartbeat and
+      // clear the session pointer so prepare-commit-msg does not inject a stale
+      // trailer into subsequent plain git commits.
+      if (adapter.name === "gemini") {
+        try {
+          await unlink(join(sessionDir, HEARTBEAT_FILE));
+        } catch {
+          // already removed or never created
+        }
+        try {
+          await unlink(join(agentnoteDirPath, SESSION_FILE));
+        } catch {
+          // already removed
+        }
+      }
       break;
     }
 
