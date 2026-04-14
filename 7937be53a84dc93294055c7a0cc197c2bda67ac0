@@ -1,0 +1,39 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T04:35:48.480Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "packages/cli/src/commands/commit.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/log.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/pr.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/session.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/show.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 28,
+      "total_added": 28,
+      "deleted": 6
+    }
+  }
+}
