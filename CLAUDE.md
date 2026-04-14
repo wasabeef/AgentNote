@@ -36,7 +36,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote show`, `agentnote log`, `agentnote session`, `agentnote pr`, `agentnote status`, `agentnote commit`, `agentnote record`. Run by users and CI.
+1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote deinit`, `agentnote show`, `agentnote log`, `agentnote session`, `agentnote pr`, `agentnote status`, `agentnote commit`, `agentnote record`. Run by users and CI.
 2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by agent hooks via stdin JSON. All data collection. Agent-agnostic via adapter pattern.
 
 ### Data flow

@@ -238,7 +238,7 @@ export async function init(args: string[]): Promise<void> {
 // ─── Git hook helpers ───
 
 /** Resolve the git hooks directory (respects core.hooksPath). */
-async function resolveHookDir(repoRoot: string): Promise<string> {
+export async function resolveHookDir(repoRoot: string): Promise<string> {
   try {
     const hooksPath = await git(["config", "--get", "core.hooksPath"]);
     if (hooksPath) return isAbsolute(hooksPath) ? hooksPath : join(repoRoot, hooksPath);

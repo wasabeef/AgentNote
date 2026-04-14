@@ -131,3 +131,11 @@ linked:  3/20 recent commits
 | Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
 | 既定の attribution | Line-level | File-level | File-level | File-level |
 | 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |
+
+## アンインストール
+
+```bash
+npx @wasabeef/agentnote deinit --agent claude
+```
+
+エージェントフックと git フックを除去します。`--remove-workflow` を付けると GitHub Action ワークフローも削除します。

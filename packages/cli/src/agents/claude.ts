@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
@@ -31,15 +31,21 @@ const HOOKS_CONFIG = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Resolve the Claude data directory (defaults to ~/.claude/). */
+function claudeHome(): string {
+  return process.env.AGENTNOTE_CLAUDE_HOME ?? join(homedir(), ".claude");
+}
+
 /** Validate that a session ID looks like a UUID. */
 function isValidSessionId(id: string): boolean {
   return UUID_PATTERN.test(id);
 }
 
-/** Validate that a transcript path is under ~/.claude/. */
+/** Validate that a transcript path is under the Claude data directory. */
 function isValidTranscriptPath(p: string): boolean {
-  const claudeBase = join(homedir(), ".claude");
-  return p.startsWith(claudeBase);
+  const base = resolve(claudeHome());
+  const normalized = resolve(p);
+  return normalized === base || normalized.startsWith(`${base}${sep}`);
 }
 
 interface ClaudeEvent {
@@ -228,7 +234,7 @@ export const claude: AgentAdapter = {
 
   findTranscript(sessionId: string): string | null {
     if (!isValidSessionId(sessionId)) return null;
-    const claudeDir = join(homedir(), ".claude", "projects");
+    const claudeDir = join(claudeHome(), "projects");
     if (!existsSync(claudeDir)) return null;
 
     // Walk project dirs to find the transcript (compatible with Node 18+).
