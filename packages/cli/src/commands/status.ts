@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { getAgent, listAgents } from "../agents/index.js";
-import { AGENTNOTE_HOOK_MARKER, TRAILER_KEY } from "../core/constants.js";
+import { AGENTNOTE_HOOK_MARKER, HEARTBEAT_FILE, TRAILER_KEY } from "../core/constants.js";
 import { readSessionAgent } from "../core/session.js";
 import { readNote } from "../core/storage.js";
 import { gitSafe } from "../git.js";
@@ -53,14 +53,33 @@ export async function status(): Promise<void> {
   }
 
   const sessionPath = await sessionFile();
+  let sessionActive = false;
   if (existsSync(sessionPath)) {
     const sid = (await readFile(sessionPath, "utf-8")).trim();
-    console.log(`session: ${sid.slice(0, 8)}…`);
-    const agent = await readSessionAgent(join(await agentnoteDir(), "sessions", sid));
-    if (agent) {
-      console.log(`agent:   ${agent}`);
+    if (sid) {
+      const dir = await agentnoteDir();
+      const sessionDir = join(dir, "sessions", sid);
+      const hbPath = join(sessionDir, HEARTBEAT_FILE);
+      // Check heartbeat freshness (< 1 hour, matching prepare-commit-msg).
+      if (existsSync(hbPath)) {
+        try {
+          const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
+          const ageSeconds = Math.floor(Date.now() / 1000) - Math.floor(hb / 1000);
+          if (hb > 0 && ageSeconds < 3600) {
+            sessionActive = true;
+            console.log(`session: ${sid.slice(0, 8)}…`);
+            const agent = await readSessionAgent(sessionDir);
+            if (agent) {
+              console.log(`agent:   ${agent}`);
+            }
+          }
+        } catch {
+          // unreadable heartbeat — treat as inactive
+        }
+      }
     }
-  } else {
+  }
+  if (!sessionActive) {
     console.log("session: none");
   }
 

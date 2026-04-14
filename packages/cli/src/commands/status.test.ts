@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AGENTNOTE_DIR, SESSION_FILE } from "../core/constants.js";
+import { AGENTNOTE_DIR, HEARTBEAT_FILE, SESSION_FILE } from "../core/constants.js";
 
 describe("agentnote status", () => {
   let testDir: string;
@@ -71,10 +71,13 @@ describe("agentnote status", () => {
   });
 
   it("shows session ID when session is active", () => {
-    writeFileSync(
-      join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE),
-      "a1b2c3d4-3333-3333-3333-333333333333",
-    );
+    const sid = "a1b2c3d4-3333-3333-3333-333333333333";
+    const agentnotePath = join(testDir, ".git", AGENTNOTE_DIR);
+    writeFileSync(join(agentnotePath, SESSION_FILE), sid);
+    // Write a fresh heartbeat so status treats the session as active.
+    const sessionDir = join(agentnotePath, "sessions", sid);
+    execSync(`mkdir -p "${sessionDir}"`);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
 
     const output = execSync(`node ${cliPath} status`, {
       cwd: testDir,
