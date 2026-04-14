@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T02:57:20.830Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "packages/cli/src/commands/hook.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 13,
+      "total_added": 13,
+      "deleted": 2
+    }
+  }
+}
