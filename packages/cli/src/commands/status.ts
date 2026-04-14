@@ -119,6 +119,13 @@ async function readAgentCaptureDetails(
     }
   }
 
+  if (enabledAgents.includes("gemini")) {
+    const geminiCapabilities = await readGeminiCaptureCapabilities(repoRoot);
+    if (geminiCapabilities.length > 0) {
+      details.push(`gemini(${geminiCapabilities.join(", ")})`);
+    }
+  }
+
   return details;
 }
 
@@ -147,6 +154,35 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
     }
     if (hasAgentnoteHook("beforeShellExecution") || hasAgentnoteHook("afterShellExecution")) {
       capabilities.push("shell");
+    }
+    return capabilities;
+  } catch {
+    return [];
+  }
+}
+
+type GeminiHooksConfig = {
+  hooks?: Record<string, Array<{ hooks?: Array<{ command?: string }> }>>;
+};
+
+async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]> {
+  const settingsPath = join(repoRoot, ".gemini", "settings.json");
+  if (!existsSync(settingsPath)) return [];
+
+  try {
+    const content = await readFile(settingsPath, "utf-8");
+    const parsed = JSON.parse(content) as GeminiHooksConfig;
+    const hooks = parsed.hooks ?? {};
+    const hasAgentnoteHook = (eventName: string): boolean =>
+      (hooks[eventName] ?? []).some((group) =>
+        (group.hooks ?? []).some((h) => h.command?.includes("agentnote hook")),
+      );
+
+    const capabilities: string[] = [];
+    if (hasAgentnoteHook("BeforeAgent")) capabilities.push("prompt");
+    if (hasAgentnoteHook("AfterAgent")) capabilities.push("response");
+    if (hasAgentnoteHook("BeforeTool") || hasAgentnoteHook("AfterTool")) {
+      capabilities.push("edits", "shell");
     }
     return capabilities;
   } catch {
