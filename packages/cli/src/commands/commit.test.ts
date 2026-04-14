@@ -7,12 +7,19 @@ import { after, before, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
+  HEARTBEAT_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
   TRAILER_KEY,
   TRANSCRIPT_PATH_FILE,
 } from "../core/constants.js";
+
+/** Write a fresh heartbeat so agentnote commit treats the session as active. */
+function ensureHeartbeat(sessionDir: string): void {
+  mkdirSync(sessionDir, { recursive: true });
+  writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+}
 
 describe("agentnote commit", () => {
   let testDir: string;
@@ -39,7 +46,9 @@ describe("agentnote commit", () => {
 
   it("adds Agentnote-Session trailer to commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    ensureHeartbeat(sessionDir);
 
     writeFileSync(join(testDir, "hello.txt"), "hello");
     execSync("git add hello.txt", { cwd: testDir });
@@ -59,7 +68,7 @@ describe("agentnote commit", () => {
   it("records entry as git note with prompts and AI ratio", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    ensureHeartbeat(sessionDir);
 
     // simulate prompts
     writeFileSync(
@@ -123,7 +132,7 @@ describe("agentnote commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    ensureHeartbeat(sessionDir);
 
     // Create a transcript file under ~/.claude/ (valid path)
     const transcriptDir = join(testHome, ".claude", "projects", "commit-test", "sessions");
@@ -173,7 +182,7 @@ describe("agentnote commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    ensureHeartbeat(sessionDir);
 
     // Simulate already-rotated data (previous turn — archived with an arbitrary prefix).
     // File path must be repo-relative, matching what the hook normalizes to.
@@ -236,7 +245,7 @@ describe("agentnote commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    ensureHeartbeat(sessionDir);
 
     // Turn 1: AI edits multi-gap.ts. Rotated at turn 2.
     const archiveId = Date.now().toString(36);
@@ -285,7 +294,7 @@ describe("agentnote commit", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    ensureHeartbeat(sessionDir);
 
     // Turn 1: AI edits split-a.ts
     writeFileSync(
