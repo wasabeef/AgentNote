@@ -1,0 +1,27 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T01:37:15.214Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 26,
+      "total_added": 26,
+      "deleted": 4
+    }
+  }
+}
