@@ -5,7 +5,8 @@
   "description": "GitHub Action for agentnote PR reports",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.ts -o dist"
+    "build": "ncc build src/index.ts -o dist",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@actions/core": "^1.11.0",
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@types/node": "^25.5.2",
     "@vercel/ncc": "^0.38.0",
+    "tsx": "^4.19.0",
     "typescript": "^6.0.2"
   }
 }
