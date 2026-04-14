@@ -746,6 +746,189 @@ describe("gemini adapter", () => {
       const interactions = await gemini.extractInteractions("/etc/passwd");
       assert.deepEqual(interactions, []);
     });
+
+    it("joins multiple content parts with newline", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "part1" }, { text: "part2" }],
+        }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "resp1" }, { text: "resp2" }],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "part1\npart2");
+      assert.equal(interactions[0].response, "resp1\nresp2");
+    });
+
+    it("includes files from failed toolCalls (status is not checked)", async () => {
+      // extractInteractions is status-agnostic by design: it records all
+      // write_file/replace calls regardless of their status field.
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Edit the file" }],
+        }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "Attempted." }],
+          toolCalls: [
+            {
+              id: "tc1",
+              name: "write_file",
+              args: { file_path: "src/broken.ts", content: "bad" },
+              status: "failed",
+              timestamp: "t3",
+            },
+          ],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.deepEqual(interactions[0].files_touched, ["src/broken.ts"]);
+    });
+
+    it("skips user message with empty content array", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 0);
+    });
+
+    it("does not add non-edit tool calls to files_touched", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Search for usages" }],
+        }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "Found results." }],
+          toolCalls: [
+            {
+              id: "tc1",
+              name: "grep_search",
+              args: { pattern: "foo" },
+              status: "completed",
+              timestamp: "t3",
+            },
+            {
+              id: "tc2",
+              name: "read_file",
+              args: { file_path: "src/main.ts" },
+              status: "completed",
+              timestamp: "t4",
+            },
+          ],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].files_touched, undefined);
+    });
+
+    it("records files_touched when gemini message has toolCalls but no text content", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Create the file silently" }],
+        }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [],
+          toolCalls: [
+            {
+              id: "tc1",
+              name: "write_file",
+              args: { file_path: "src/silent.ts", content: "export {}" },
+              status: "completed",
+              timestamp: "t3",
+            },
+          ],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].response, null);
+      assert.deepEqual(interactions[0].files_touched, ["src/silent.ts"]);
+    });
+
+    it("processes messages after $rewindTo as a normal interaction", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "First" }] }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "First response" }],
+        }),
+        // Rewind discards the previous pair in Gemini's own UI, but our extractor
+        // has no context for rewinding — the $rewindTo record has no "type" field
+        // and is skipped. The subsequent user/gemini pair is processed normally.
+        JSON.stringify({ $rewindTo: "m1" }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t3", content: [{ text: "Retry" }] }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m3",
+          timestamp: "t4",
+          content: [{ text: "Retried response" }],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      // The last pair after $rewindTo is correctly captured.
+      const last = interactions[interactions.length - 1];
+      assert.equal(last.prompt, "Retry");
+      assert.equal(last.response, "Retried response");
+    });
   });
 
   // ---------------------------------------------------------------------------

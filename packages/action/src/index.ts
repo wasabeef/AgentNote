@@ -3,10 +3,7 @@ import * as github from "@actions/github";
 import { execSync } from "child_process";
 import { existsSync } from "fs";
 import { resolve } from "path";
-
-const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
-const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
-const DESCRIPTION_END = "<!-- agentnote-end -->";
+import { COMMENT_MARKER, DESCRIPTION_BEGIN, DESCRIPTION_END, resolveOutputMode, upsertDescription } from "./helpers.js";
 
 /**
  * Resolve the agentnote CLI command.
@@ -34,14 +31,7 @@ async function run(): Promise<void> {
     // Resolve output mode from action inputs.
     const outputInput = core.getInput("output");
     const commentInput = core.getInput("comment");
-    let outputMode: "description" | "comment";
-    if (outputInput === "description" || outputInput === "comment") {
-      outputMode = outputInput;
-    } else if (commentInput === "false") {
-      outputMode = "description";
-    } else {
-      outputMode = "description"; // default
-    }
+    const outputMode = resolveOutputMode(outputInput, commentInput);
 
     // Fetch agentnote notes.
     try {
@@ -107,18 +97,7 @@ async function run(): Promise<void> {
       // Upsert into PR description.
       const { data: pr } = await octokit.rest.pulls.get({ owner, repo, pull_number: issueNumber });
       const existingBody = pr.body ?? "";
-      const section = `${DESCRIPTION_BEGIN}\n${markdown}\n${DESCRIPTION_END}`;
-
-      let newBody: string;
-      if (existingBody.includes(DESCRIPTION_BEGIN)) {
-        const before = existingBody.slice(0, existingBody.indexOf(DESCRIPTION_BEGIN));
-        const after = existingBody.includes(DESCRIPTION_END)
-          ? existingBody.slice(existingBody.indexOf(DESCRIPTION_END) + DESCRIPTION_END.length)
-          : "";
-        newBody = `${before.trimEnd()}\n\n${section}${after}`;
-      } else {
-        newBody = `${existingBody.trimEnd()}\n\n${section}`;
-      }
+      const newBody = upsertDescription(existingBody, markdown);
 
       await octokit.rest.pulls.update({ owner, repo, pull_number: issueNumber, body: newBody });
       core.info("Agentnote report added to PR description.");
