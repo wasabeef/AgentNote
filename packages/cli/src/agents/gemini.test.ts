@@ -556,11 +556,21 @@ describe("gemini adapter", () => {
   // ---------------------------------------------------------------------------
 
   describe("findTranscript", () => {
-    it("finds transcript file containing matching session_id", () => {
+    it("finds transcript file containing matching sessionId", () => {
+      const tmpDir = join(geminiHome, "tmp");
+      mkdirSync(tmpDir, { recursive: true });
+      const transcriptPath = join(tmpDir, "session.jsonl");
+      writeFileSync(transcriptPath, JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }));
+
+      const result = gemini.findTranscript(VALID_SESSION_ID);
+      assert.equal(result, transcriptPath);
+    });
+
+    it("finds legacy .json transcript", () => {
       const tmpDir = join(geminiHome, "tmp");
       mkdirSync(tmpDir, { recursive: true });
       const transcriptPath = join(tmpDir, "session.json");
-      writeFileSync(transcriptPath, JSON.stringify({ session_id: VALID_SESSION_ID, data: [] }));
+      writeFileSync(transcriptPath, JSON.stringify({ sessionId: VALID_SESSION_ID }));
 
       const result = gemini.findTranscript(VALID_SESSION_ID);
       assert.equal(result, transcriptPath);
@@ -570,7 +580,7 @@ describe("gemini adapter", () => {
       const tmpDir = join(geminiHome, "tmp");
       mkdirSync(tmpDir, { recursive: true });
       const otherSessionId = "b1111111-1111-4111-9111-111111111111";
-      writeFileSync(join(tmpDir, "session.json"), JSON.stringify({ session_id: otherSessionId }));
+      writeFileSync(join(tmpDir, "session.jsonl"), JSON.stringify({ sessionId: otherSessionId }));
 
       const result = gemini.findTranscript(VALID_SESSION_ID);
       assert.equal(result, null);
@@ -593,16 +603,97 @@ describe("gemini adapter", () => {
   // ---------------------------------------------------------------------------
 
   describe("extractInteractions", () => {
-    it("returns empty array as safe fallback", async () => {
-      const transcriptPath = join(geminiHome, "session.json");
-      writeFileSync(transcriptPath, JSON.stringify({ session_id: VALID_SESSION_ID }));
+    it("extracts user/gemini prompt-response pairs from JSONL transcript", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc", startTime: "2026-01-01" }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Add auth middleware" }] }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "I'll create the auth middleware." }],
+          toolCalls: [
+            { id: "tc1", name: "write_file", args: { file_path: "src/auth.ts", content: "export {}" }, status: "completed", timestamp: "t3" },
+          ],
+        }),
+        JSON.stringify({ type: "user", id: "m3", timestamp: "t4", content: [{ text: "Add tests" }] }),
+        JSON.stringify({ type: "gemini", id: "m4", timestamp: "t5", content: [{ text: "Done." }] }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
 
       const interactions = await gemini.extractInteractions(transcriptPath);
-      assert.deepEqual(interactions, []);
+      assert.equal(interactions.length, 2);
+      assert.equal(interactions[0].prompt, "Add auth middleware");
+      assert.equal(interactions[0].response, "I'll create the auth middleware.");
+      assert.deepEqual(interactions[0].files_touched, ["src/auth.ts"]);
+      assert.equal(interactions[1].prompt, "Add tests");
+      assert.equal(interactions[1].response, "Done.");
+    });
+
+    it("extracts files_touched from replace tool calls", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Fix the bug" }] }),
+        JSON.stringify({
+          type: "gemini",
+          id: "m2",
+          timestamp: "t2",
+          content: [{ text: "Fixed." }],
+          toolCalls: [
+            { id: "tc1", name: "replace", args: { file_path: "src/main.ts", old_string: "a", new_string: "b" }, status: "completed", timestamp: "t3" },
+            { id: "tc2", name: "replace", args: { file_path: "src/util.ts", old_string: "x", new_string: "y" }, status: "completed", timestamp: "t4" },
+          ],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.deepEqual(interactions[0].files_touched, ["src/main.ts", "src/util.ts"]);
+    });
+
+    it("skips metadata and non-message lines", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }),
+        JSON.stringify({ $rewindTo: "m1" }),
+        JSON.stringify({ $set: { summary: "test" } }),
+        JSON.stringify({ type: "info", id: "i1", timestamp: "t1", content: [{ text: "info msg" }] }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t2", content: [{ text: "Hello" }] }),
+        JSON.stringify({ type: "warning", id: "w1", timestamp: "t3", content: [{ text: "warn" }] }),
+        JSON.stringify({ type: "gemini", id: "m2", timestamp: "t4", content: [{ text: "Hi!" }] }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Hello");
+      assert.equal(interactions[0].response, "Hi!");
+    });
+
+    it("handles user prompt without response", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Unanswered" }] }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Unanswered");
+      assert.equal(interactions[0].response, null);
     });
 
     it("returns empty array for non-existent transcript path", async () => {
       const interactions = await gemini.extractInteractions(join(geminiHome, "nonexistent.json"));
+      assert.deepEqual(interactions, []);
+    });
+
+    it("returns empty array for path outside geminiHome", async () => {
+      const interactions = await gemini.extractInteractions("/etc/passwd");
       assert.deepEqual(interactions, []);
     });
   });

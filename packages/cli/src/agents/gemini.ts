@@ -177,6 +177,26 @@ function isGitCommit(cmd: string): boolean {
   return cmd.includes("git commit") && !cmd.includes("--amend");
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Extract text from Gemini PartListUnion content.
+ * Content is typically an array of Part objects with { text: string }.
+ */
+function extractPartText(content: unknown): string {
+  if (typeof content === "string") return content.trim();
+  if (!Array.isArray(content)) return "";
+  const texts: string[] = [];
+  for (const part of content) {
+    if (isRecord(part) && typeof part.text === "string" && part.text.trim()) {
+      texts.push(part.text.trim());
+    }
+  }
+  return texts.join("\n");
+}
+
 function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
   return groups
     .map((group) => ({
@@ -189,7 +209,8 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
 function readTranscriptSessionId(candidate: string): string | null {
   try {
     const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
-    const match = preview.match(/"session_id"\s*:\s*"([^"]+)"/);
+    // Gemini uses camelCase "sessionId" in ConversationRecord metadata.
+    const match = preview.match(/"sessionId"\s*:\s*"([^"]+)"/);
     return match?.[1] ?? null;
   } catch {
     return null;
@@ -221,7 +242,8 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
         continue;
       }
 
-      if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+      if (!entry.isFile() || !(entry.name.endsWith(".json") || entry.name.endsWith(".jsonl")))
+        continue;
       scanned += 1;
 
       if (readTranscriptSessionId(candidate) === sessionId) {
@@ -392,9 +414,65 @@ export const gemini: AgentAdapter = {
     return findTranscriptCandidate(tmpDir, sessionId);
   },
 
-  async extractInteractions(_transcriptPath: string): Promise<TranscriptInteraction[]> {
-    // Gemini transcript JSON schema is unconfirmed. Return empty as safe fallback.
-    // Will be implemented once actual transcript files are available for inspection.
-    return [];
+  async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
+    if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
+
+    let content: string;
+    try {
+      content = await readFile(transcriptPath, "utf-8");
+    } catch {
+      return [];
+    }
+
+    // Gemini transcripts are JSONL: first line is ConversationRecord metadata,
+    // subsequent lines are MessageRecord entries with type "user" | "gemini" | etc.
+    const interactions: TranscriptInteraction[] = [];
+    let current: TranscriptInteraction | null = null;
+
+    for (const rawLine of content.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      let record: Record<string, unknown>;
+      try {
+        record = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      const type = typeof record.type === "string" ? record.type : undefined;
+      if (!type) continue; // skip metadata lines (ConversationRecord, $rewindTo, $set)
+
+      if (type === "user") {
+        const prompt = extractPartText(record.content);
+        if (!prompt) continue;
+        if (current) interactions.push(current);
+        current = { prompt, response: null };
+        continue;
+      }
+
+      if (type === "gemini" && current) {
+        const response = extractPartText(record.content);
+        if (response) {
+          current.response = current.response ? `${current.response}\n${response}` : response;
+        }
+
+        // Extract files_touched from toolCalls (write_file, replace).
+        const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
+        for (const call of toolCalls) {
+          if (!isRecord(call)) continue;
+          const toolName = typeof call.name === "string" ? call.name : undefined;
+          if (!toolName || !EDIT_TOOLS.has(toolName)) continue;
+          const args = isRecord(call.args) ? call.args : undefined;
+          const filePath = typeof args?.file_path === "string" ? args.file_path : undefined;
+          if (filePath) {
+            current.files_touched = [...new Set([...(current.files_touched ?? []), filePath])];
+          }
+        }
+      }
+    }
+
+    if (current) interactions.push(current);
+    return interactions;
   },
 };
