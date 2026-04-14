@@ -40,7 +40,7 @@ export interface NormalizedEvent {
 }
 
 export interface AgentAdapter {
-  /** Agent identifier (e.g., "claude-code", "cursor"). */
+  /** Agent identifier (e.g., "claude", "cursor"). */
   name: string;
 
   /** Config file path relative to repo root (e.g., ".claude/settings.json"). */

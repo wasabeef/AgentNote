@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook";
-const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude-code`;
+const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
 
 const HOOKS_CONFIG = {
   SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
@@ -59,8 +59,8 @@ function isGitCommit(cmd: string): boolean {
   return cmd.includes("git commit") && !cmd.includes("--amend");
 }
 
-export const claudeCode: AgentAdapter = {
-  name: "claude-code",
+export const claude: AgentAdapter = {
+  name: "claude",
   settingsRelPath: ".claude/settings.json",
 
   async managedPaths(): Promise<string[]> {
