@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T05:44:25.712Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 9,
+      "total_added": 9,
+      "deleted": 9
+    }
+  }
+}
