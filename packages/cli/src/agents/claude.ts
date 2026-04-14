@@ -177,9 +177,18 @@ export const claude: AgentAdapter = {
       case "Stop":
         return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
       case "UserPromptSubmit":
-        return e.prompt
-          ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt }
-          : null;
+        // Claude Code fires UserPromptSubmit for system-injected messages
+        // (task notifications, reminders, teammate messages) that are not
+        // real user prompts. Skip them to keep turn attribution correct.
+        if (
+          !e.prompt ||
+          e.prompt.startsWith("<task-notification") ||
+          e.prompt.startsWith("<system-reminder") ||
+          e.prompt.startsWith("<teammate-message")
+        ) {
+          return null;
+        }
+        return { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt };
       case "PreToolUse": {
         const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";

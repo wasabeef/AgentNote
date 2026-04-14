@@ -92,6 +92,42 @@ describe("claude adapter", () => {
       assert.equal(event, null);
     });
 
+    it("returns null for system-injected task-notification prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<task-notification>\n<task-id>abc123</task-id>\n</task-notification>",
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
+    it("returns null for system-injected system-reminder prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<system-reminder>\nAuto mode active.\n</system-reminder>",
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
+    it("returns null for system-injected teammate-message prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: '<teammate-message teammate_id="planner">Done.</teammate-message>',
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
     it("parses PreToolUse Edit as pre_edit", () => {
       const event = claude.parseEvent({
         raw: JSON.stringify({

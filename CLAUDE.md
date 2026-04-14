@@ -63,7 +63,7 @@ Agent Note supports multiple coding agents via an adapter pattern:
 
 - **SessionStart**: Create session directory, write heartbeat, store agent name via `writeSessionAgent()`
 - **Stop**: Log stop event only — does **not** invalidate heartbeat (Stop = AI response end, not session end)
-- **UserPromptSubmit**: Append prompt to `prompts.jsonl`, increment turn counter in `turn` file, capture human snapshot via `git diff HEAD --numstat`
+- **UserPromptSubmit**: Append prompt to `prompts.jsonl`, increment turn counter in `turn` file. System-injected messages (`<task-notification>`, `<system-reminder>`, `<teammate-message>`) are filtered by the Claude adapter to prevent turn pollution
 - **PreToolUse (Edit/Write/MultiEdit/NotebookEdit)**: Capture pre-edit blob hash via `git hash-object -w` for line-level attribution (synchronous)
 - **PreToolUse (Bash, git commit)**: Inject `--trailer` into the `git commit` segment only via regex replace (`cmd.replace(/(git\s+commit)/, ...)`) to handle chained commands like `git commit && git push` (synchronous, must write to stdout)
 - **PostToolUse (Edit/Write/MultiEdit/NotebookEdit)**: Track file changes in `changes.jsonl` with current turn number and post-edit blob hash
