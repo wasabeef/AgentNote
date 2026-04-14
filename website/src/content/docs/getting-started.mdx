@@ -26,8 +26,14 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    npx @wasabeef/agentnote init --agent cursor
    ```
 
+   For Gemini CLI:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent gemini
+   ```
+
    This configures:
-   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor)
+   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI)
    - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Action workflow (`.github/workflows/agentnote.yml`)
    - Auto-fetch for git notes on pull
@@ -42,6 +48,7 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
    Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote.yml`.
    Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote.yml`.
+   Gemini CLI repositories commit `.gemini/settings.json` and `.github/workflows/agentnote.yml`.
 
 3. **Done.** Start coding with your agent.
    Claude Code and Codex can use normal `git commit`.
@@ -127,14 +134,14 @@ linked:  3/20 recent commits
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Choose the agent adapter, for example `claude-code`, `codex`, or `cursor` |
+| `--agent <name>` | Choose the agent adapter, for example `claude-code`, `codex`, `cursor`, or `gemini` |
 
 ## Agent Capabilities
 
-| Capability | Claude Code | Codex CLI | Cursor |
-|---|---|---|---|
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts |
-| Default attribution | Line-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit |
+| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
+|---|---|---|---|---|
+| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
+| Default attribution | Line-level | File-level | File-level | File-level |
+| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |

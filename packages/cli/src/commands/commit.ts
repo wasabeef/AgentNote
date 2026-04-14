@@ -12,16 +12,22 @@ export async function commit(args: string[]): Promise<void> {
 
   if (existsSync(sf)) {
     sessionId = (await readFile(sf, "utf-8")).trim();
-    // Verify session is not explicitly stopped (heartbeat = 0).
-    // Missing heartbeat is allowed (backward compat with older sessions).
+    // Check heartbeat validity — must match prepare-commit-msg and status logic:
+    // heartbeat must exist, be non-zero, and be at most 1 hour old.
     if (sessionId) {
       const dir = await agentnoteDir();
       const hbPath = join(dir, "sessions", sessionId, HEARTBEAT_FILE);
       try {
         const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
-        if (hb === 0) sessionId = ""; // explicitly stopped
+        if (hb === 0 || Number.isNaN(hb)) {
+          sessionId = ""; // explicitly stopped or corrupt heartbeat
+        } else {
+          const ageSeconds = Math.floor(Date.now() / 1000) - Math.floor(hb / 1000);
+          if (ageSeconds > 3600) sessionId = "";
+        }
       } catch {
-        // No heartbeat file — session may predate heartbeat tracking. Allow it.
+        // No heartbeat file — treat as expired (matches status behavior).
+        sessionId = "";
       }
     }
   }

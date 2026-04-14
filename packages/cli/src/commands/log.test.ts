@@ -4,7 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AGENTNOTE_DIR, PROMPTS_FILE, SESSION_FILE, SESSIONS_DIR } from "../core/constants.js";
+import {
+  AGENTNOTE_DIR,
+  HEARTBEAT_FILE,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+} from "../core/constants.js";
 
 describe("agentnote log", () => {
   let testDir: string;
@@ -25,6 +31,7 @@ describe("agentnote log", () => {
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"test"}\n',

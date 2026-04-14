@@ -54,6 +54,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
    For Codex CLI, run `npx @wasabeef/agentnote init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
    For Cursor, run `npx @wasabeef/agentnote init --agent cursor` and commit `.cursor/hooks.json`.
+   For Gemini CLI, run `npx @wasabeef/agentnote init --agent gemini` and commit `.gemini/settings.json`.
 
 3. Code with AI.
    Plain `git commit` works when the generated git hooks are installed.
@@ -126,14 +127,14 @@ linked:  3/20 recent commits
 | Claude Code | Full support | Line-level attribution via hook-captured blob pairs |
 | Codex CLI | Preview | Transcript-driven attribution, with line-level upgrade when patch counts match the commit |
 | Cursor | Preview | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit |
-| Gemini CLI | Coming soon | |
+| Gemini CLI | Preview | `BeforeTool`/`AfterTool`-driven file attribution via `.gemini/settings.json` hooks |
 
 ## Capability Snapshot
 
-| Capability | Claude Code | Codex CLI | Cursor |
-|---|---|---|---|
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts |
-| Default attribution | Line-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit |
+| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
+|---|---|---|---|---|
+| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
+| Default attribution | Line-level | File-level | File-level | File-level |
+| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |

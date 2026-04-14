@@ -55,6 +55,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent cursor
    ```
 
+   Gemini CLI 請執行：
+
+   ```bash
+   npx @wasabeef/agentnote init --agent gemini
+   ```
+
 2. 提交產生的檔案
 
    ```bash
@@ -65,6 +71,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
    Codex 儲存庫需要提交 `.codex/config.toml` 與 `.codex/hooks.json`，而不是 `.claude/settings.json`。
    Cursor 儲存庫需要提交 `.cursor/hooks.json`。
+   Gemini CLI 儲存庫提交 `.gemini/settings.json`。
 
 3. Claude Code 與 Codex 可以照常使用 `git commit`。
    如果已安裝產生的 git hook，Cursor preview 也可以直接使用一般 `git commit`。
@@ -117,4 +124,4 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | Claude Code | 完整支援 | 透過 hook 擷取的 blob 配對實現行級歸因 |
 | Codex CLI | Preview | 以 transcript 為基礎；當 patch 行數與 commit 一致時提升到行級 |
 | Cursor | Preview | 以 `afterFileEdit` / `afterTabFileEdit` 為基礎；只有最終 blob 仍與 AI edit 一致時才安全升級為行級歸因 |
-| Gemini CLI | 即將支援 | |
+| Gemini CLI | Preview | 透過 `.gemini/settings.json` 中的 `BeforeTool`/`AfterTool` 鉤子進行檔案級歸屬判定 |

@@ -57,6 +57,7 @@ Agent Note supports multiple coding agents via an adapter pattern:
 - **`claude-code.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.
 - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.
 - **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.
+- **`gemini.ts`**: Gemini CLI adapter. Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern).
 
 ### Hook event handling (`packages/cli/src/commands/hook.ts`)
 
@@ -67,6 +68,16 @@ Agent Note supports multiple coding agents via an adapter pattern:
 - **PreToolUse (Bash, git commit)**: Inject `--trailer` into the `git commit` segment only via regex replace (`cmd.replace(/(git\s+commit)/, ...)`) to handle chained commands like `git commit && git push` (synchronous, must write to stdout)
 - **PostToolUse (Edit/Write/MultiEdit/NotebookEdit)**: Track file changes in `changes.jsonl` with current turn number and post-edit blob hash
 - **PostToolUse (Bash, git commit)**: Call `recordCommitEntry()` to write git note, then rotate logs
+
+Gemini-specific event handling:
+- **BeforeTool (`write_file`, `replace`)**: Maps to `pre_edit`; writes `{"decision": "allow"}` to stdout (synchronous requirement)
+- **BeforeTool (shell, git commit)**: Maps to `pre_commit`; writes pending-commit state to `PENDING_COMMIT_FILE` and `{"decision": "allow"}` to stdout
+- **AfterTool (`write_file`, `replace`)**: Maps to `file_change` (standard)
+- **AfterTool (shell, git commit)**: Maps to `post_commit`; reads `PENDING_COMMIT_FILE` to detect HEAD change, then calls `recordCommitEntry()`
+- **BeforeAgent**: Maps to `prompt` (increments turn, appends to `prompts.jsonl`)
+- **AfterAgent**: Maps to `response`
+- **SessionStart / SessionEnd**: Standard session lifecycle events
+- **BeforeTool (unrecognized tool)**: Null fallback — still writes `{"decision": "allow"}` to stdout to avoid blocking Gemini CLI
 
 ### Git hooks (`agentnote init`)
 
@@ -101,7 +112,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 ### init vs hook
 
-- `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex, `.cursor/hooks.json` for Cursor) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
+- `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
 - `hook` is called by the coding agent at runtime. It never modifies config files.
 
 ### Harness hooks
@@ -130,7 +141,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Never break git commit.** All agentnote recording is wrapped in try/catch. If agentnote fails, the commit must still succeed.
 - **All source code in English.** Comments, variable names, CLI output, test descriptions — everything in English.
 - **PreToolUse hooks are synchronous.** Must write JSON to stdout, must not be marked `async: true`.
-- **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under `~/.claude/`.
+- **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
 - **Git notes for persistent storage.** Entry data goes to `refs/notes/agentnote`, not to files.
 - **Biome for lint + format.** Run `npm run lint` (biome check) and `npm run typecheck` (tsc) separately. Both must pass in CI.
 

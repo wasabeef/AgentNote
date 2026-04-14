@@ -7,6 +7,7 @@ import { after, before, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
+  HEARTBEAT_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
@@ -28,6 +29,7 @@ describe("agentnote show", () => {
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
 
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),

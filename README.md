@@ -159,17 +159,17 @@ You git push
 | Claude Code | Full support | Line-level |
 | Codex CLI | Preview | File-level by default, line-level when transcript patch counts match the commit |
 | Cursor | Preview | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit |
-| Gemini CLI | Coming soon | — |
+| Gemini CLI | Preview | File-level via `BeforeTool`/`AfterTool` hooks; pending-commit pattern for trailer injection |
 
 ## Capability Matrix
 
-| Capability | Claude Code | Codex CLI | Cursor |
-| --- | --- | --- | --- |
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts |
-| Default attribution | Line-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit |
+| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
+| --- | --- | --- | --- | --- |
+| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
+| Default attribution | Line-level | File-level | File-level | File-level |
+| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
 
 ## GitHub Action
 
