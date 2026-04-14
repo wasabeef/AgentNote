@@ -55,6 +55,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx @wasabeef/agentnote init --agent cursor
    ```
 
+   Pour Gemini CLI :
+
+   ```bash
+   npx @wasabeef/agentnote init --agent gemini
+   ```
+
 2. Committez les fichiers générés
 
    ```bash
@@ -65,6 +71,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
    Les dépôts Codex versionnent `.codex/config.toml` et `.codex/hooks.json` à la place de `.claude/settings.json`.
    Les dépôts Cursor versionnent `.cursor/hooks.json`.
+   Les dépôts Gemini CLI commitent `.gemini/settings.json`.
 
 3. Claude Code et Codex peuvent utiliser `git commit` normalement.
    Avec les git hooks générés, Cursor preview peut aussi utiliser `git commit` normalement.
@@ -117,4 +124,4 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | Claude Code | Support complet | Attribution ligne par ligne via des paires de blobs capturées par hook |
 | Codex CLI | Preview | Basé sur le transcript ; passe au niveau ligne quand les compteurs de patch correspondent au commit |
 | Cursor | Preview | Attribution via `afterFileEdit` / `afterTabFileEdit`, avec passage sûr au niveau ligne quand le blob final correspond encore à l'édition IA |
-| Gemini CLI | Bientôt | |
+| Gemini CLI | Preview | Attribution par fichier via les hooks `BeforeTool`/`AfterTool` dans `.gemini/settings.json` |

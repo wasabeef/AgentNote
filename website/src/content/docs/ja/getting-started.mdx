@@ -26,8 +26,14 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    npx @wasabeef/agentnote init --agent cursor
    ```
 
+   Gemini CLI の場合:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent gemini
+   ```
+
    以下が設定されます:
-   - エージェントフック (`.claude/settings.json`、Codex CLI では `.codex/config.toml` と `.codex/hooks.json`、Cursor では `.cursor/hooks.json`)
+   - エージェントフック (`.claude/settings.json`、Codex CLI では `.codex/config.toml` と `.codex/hooks.json`、Cursor では `.cursor/hooks.json`、Gemini CLI では `.gemini/settings.json`)
    - Git フック (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Actions ワークフロー (`.github/workflows/agentnote.yml`)
    - notes の自動 fetch 設定
@@ -42,6 +48,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 
    Codex CLI では `.codex/config.toml` と `.codex/hooks.json` をコミットします。
    Cursor では `.cursor/hooks.json` をコミットします。
+   Gemini CLI では `.gemini/settings.json` をコミットします。
 
 3. **完了。** 生成された git hook が入っていれば、Cursor preview を含めて通常の `git commit` で追跡されます。
    git hook が使えない環境では `agentnote commit -m "..."` を fallback として使えます。
@@ -111,10 +118,10 @@ linked:  3/20 recent commits
 
 ## エージェント別 capability
 
-| Capability | Claude Code | Codex CLI | Cursor |
-|---|---|---|---|
-| 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes |
-| Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript |
-| 既定の attribution | Line-level | File-level | File-level |
-| 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき |
+| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
+|---|---|---|---|---|
+| 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes | Yes |
+| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
+| 既定の attribution | Line-level | File-level | File-level | File-level |
+| 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |
