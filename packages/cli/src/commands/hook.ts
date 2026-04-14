@@ -37,9 +37,9 @@ function looksLikeCodexPayload(value: unknown): boolean {
   return hasTranscriptPath && ["SessionStart", "UserPromptSubmit", "Stop"].includes(hookEventName);
 }
 
-function isSynchronousHookEvent(value: unknown): boolean {
+export function isSynchronousHookEvent(value: unknown): boolean {
   if (!isRecord(value) || typeof value.hook_event_name !== "string") return false;
-  return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution"].includes(
+  return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution", "BeforeTool"].includes(
     value.hook_event_name,
   );
 }
@@ -130,7 +130,16 @@ export async function hook(args: string[] = []): Promise<void> {
   const adapter = getAgent(agentName);
   const input: HookInput = { raw, sync };
   const event = adapter.parseEvent(input);
-  if (!event) return;
+  if (!event) {
+    // Gemini BeforeTool requires {"decision": "allow"} even for unrecognized tools.
+    if (adapter.name === "gemini" && input.sync) {
+      // Reuse already-parsed peek to avoid double JSON.parse.
+      if (isRecord(peek) && peek.hook_event_name === "BeforeTool") {
+        process.stdout.write(JSON.stringify({ decision: "allow" }));
+      }
+    }
+    return;
+  }
 
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
@@ -254,6 +263,11 @@ export async function hook(args: string[] = []): Promise<void> {
         // enabling correct pairing even when async hooks fire out of order.
         tool_use_id: event.toolUseId ?? null,
       });
+
+      // Gemini BeforeTool requires {"decision": "allow"} on stdout.
+      if (adapter.name === "gemini") {
+        process.stdout.write(JSON.stringify({ decision: "allow" }));
+      }
       break;
     }
 
@@ -293,6 +307,24 @@ export async function hook(args: string[] = []): Promise<void> {
     }
 
     case "pre_commit": {
+      if (adapter.name === "gemini") {
+        const headBefore = await readCurrentHead();
+        await writeFile(
+          join(sessionDir, PENDING_COMMIT_FILE),
+          `${JSON.stringify(
+            {
+              command: event.commitCommand ?? "",
+              head_before: headBefore,
+              timestamp: event.timestamp,
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        break;
+      }
+
       if (adapter.name === "cursor") {
         const headBefore = await readCurrentHead();
         await writeFile(
@@ -335,7 +367,7 @@ export async function hook(args: string[] = []): Promise<void> {
     }
 
     case "post_commit": {
-      if (adapter.name === "cursor") {
+      if (adapter.name === "cursor" || adapter.name === "gemini") {
         const pendingPath = join(sessionDir, PENDING_COMMIT_FILE);
         if (!existsSync(pendingPath)) break;
 
