@@ -1,0 +1,83 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T02:18:07.649Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 93,
+    "method": "line",
+    "lines": {
+      "ai_added": 127,
+      "total_added": 137,
+      "deleted": 45
+    }
+  }
+}
