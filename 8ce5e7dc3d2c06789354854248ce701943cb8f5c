@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "agent": "claude-code",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-14T01:36:37.727Z",
+  "model": null,
+  "interactions": [],
+  "files": [
+    {
+      "path": "packages/cli/src/agents/gemini.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 98,
+    "method": "line",
+    "lines": {
+      "ai_added": 638,
+      "total_added": 649,
+      "deleted": 0
+    }
+  }
+}
