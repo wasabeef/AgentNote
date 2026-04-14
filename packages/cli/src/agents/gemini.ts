@@ -8,7 +8,13 @@ const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook --agent gemini";
 const SETTINGS_REL_PATH = ".gemini/settings.json";
 
 const EDIT_TOOLS = new Set(["write_file", "replace"]);
-const SHELL_TOOLS = new Set(["shell", "bash", "run_command", "execute_command"]);
+const SHELL_TOOLS = new Set([
+  "run_shell_command",
+  "shell",
+  "bash",
+  "run_command",
+  "execute_command",
+]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -116,7 +122,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
     {
-      matcher: "shell|bash|run_command|execute_command",
+      matcher: "run_shell_command|shell|bash|run_command|execute_command",
       hooks: [
         {
           name: "agentnote-before-shell",
@@ -140,7 +146,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
     {
-      matcher: "shell|bash|run_command|execute_command",
+      matcher: "run_shell_command|shell|bash|run_command|execute_command",
       hooks: [
         {
           name: "agentnote-after-shell",

@@ -156,12 +156,12 @@ describe("gemini adapter", () => {
       assert.equal(event.file, "/project/src/main.ts");
     });
 
-    it("parses BeforeTool shell with git commit as pre_commit", () => {
+    it("parses BeforeTool run_shell_command with git commit as pre_commit", () => {
       const event = gemini.parseEvent({
         raw: JSON.stringify({
           hook_event_name: "BeforeTool",
           session_id: VALID_SESSION_ID,
-          tool_name: "shell",
+          tool_name: "run_shell_command",
           tool_input: { command: "git commit -m 'fix: resolve issue'" },
         }),
         sync: true,
@@ -172,7 +172,7 @@ describe("gemini adapter", () => {
       assert.equal(event.commitCommand, "git commit -m 'fix: resolve issue'");
     });
 
-    for (const toolName of ["bash", "run_command", "execute_command"]) {
+    for (const toolName of ["shell", "bash", "run_command", "execute_command"]) {
       it(`parses BeforeTool ${toolName} with git commit as pre_commit`, () => {
         const event = gemini.parseEvent({
           raw: JSON.stringify({
@@ -188,7 +188,7 @@ describe("gemini adapter", () => {
       });
     }
 
-    for (const toolName of ["bash", "run_command", "execute_command"]) {
+    for (const toolName of ["shell", "bash", "run_command", "execute_command"]) {
       it(`parses AfterTool ${toolName} with git commit as post_commit`, () => {
         const event = gemini.parseEvent({
           raw: JSON.stringify({
@@ -204,12 +204,12 @@ describe("gemini adapter", () => {
       });
     }
 
-    it("returns null for BeforeTool shell with git commit --amend", () => {
+    it("returns null for BeforeTool run_shell_command with git commit --amend", () => {
       const event = gemini.parseEvent({
         raw: JSON.stringify({
           hook_event_name: "BeforeTool",
           session_id: VALID_SESSION_ID,
-          tool_name: "shell",
+          tool_name: "run_shell_command",
           tool_input: { command: "git commit --amend --no-edit" },
         }),
         sync: true,
