@@ -16,16 +16,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Debug notes
-        run: |
-          echo "=== fetch notes ==="
-          git fetch origin refs/notes/agentnote:refs/notes/agentnote || echo "FETCH FAILED"
-          echo "=== notes list ==="
-          git notes --ref=agentnote list | head -10 || echo "NO NOTES"
-          echo "=== PR commits ==="
-          git log --oneline origin/${{ github.event.pull_request.base.ref }}..HEAD | head -10
-          echo "=== check note on HEAD~1 ==="
-          git notes --ref=agentnote show HEAD~1 2>/dev/null | head -5 || echo "NO NOTE ON HEAD~1"
-          echo "=== agentnote pr ==="
-          node packages/cli/dist/cli.js pr "origin/${{ github.event.pull_request.base.ref }}" --json 2>&1 | head -20 || echo "PR CMD FAILED"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci && npm -w packages/cli run build
       - uses: wasabeef/AgentNote@main
