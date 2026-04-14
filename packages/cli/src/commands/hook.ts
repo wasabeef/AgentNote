@@ -184,16 +184,27 @@ export async function hook(args: string[] = []): Promise<void> {
       // Gemini SessionEnd is a true session termination. Invalidate heartbeat and
       // clear the session pointer so prepare-commit-msg does not inject a stale
       // trailer into subsequent plain git commits.
+      //
+      // NOTE: Gemini's SessionEnd hook is best-effort — the CLI does not wait for
+      // it to complete. This cleanup may not run before the process exits. The
+      // prepare-commit-msg 1-hour heartbeat check remains the ultimate safeguard.
       if (adapter.name === "gemini") {
         try {
           await unlink(join(sessionDir, HEARTBEAT_FILE));
         } catch {
           // already removed or never created
         }
+        // Only clear the global session pointer if it still points to *this*
+        // session. A newer SessionStart (/clear, new terminal) may have already
+        // overwritten it, and blindly deleting would break the active session.
         try {
-          await unlink(join(agentnoteDirPath, SESSION_FILE));
+          const sessionFilePath = join(agentnoteDirPath, SESSION_FILE);
+          const currentPointer = (await readFile(sessionFilePath, "utf-8")).trim();
+          if (currentPointer === event.sessionId) {
+            await unlink(sessionFilePath);
+          }
         } catch {
-          // already removed
+          // missing or unreadable — nothing to clean up
         }
       }
       break;
