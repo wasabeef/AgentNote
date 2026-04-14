@@ -11,7 +11,7 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 1. **Run init** in your repository
 
    ```bash
-   npx @wasabeef/agentnote init
+   npx @wasabeef/agentnote init --agent claude
    ```
 
    For Codex CLI:
@@ -30,6 +30,12 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
    ```bash
    npx @wasabeef/agentnote init --agent gemini
+   ```
+
+   Multiple agents at once:
+
+   ```bash
+   npx @wasabeef/agentnote init --agent claude --agent cursor
    ```
 
    This configures:
@@ -62,7 +68,7 @@ Each developer runs init after cloning to install local git hooks:
 
 ```bash
 git clone <repo> && cd <repo>
-npx @wasabeef/agentnote init
+npx @wasabeef/agentnote init --agent claude
 ```
 
 <Aside>
@@ -134,7 +140,7 @@ linked:  3/20 recent commits
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Choose the agent adapter, for example `claude-code`, `codex`, `cursor`, or `gemini` |
+| `--agent <name>` | Choose the agent adapter, for example `claude`, `codex`, `cursor`, or `gemini` |
 
 ## Agent Capabilities
 

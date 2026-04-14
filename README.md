@@ -23,7 +23,7 @@ Agent Note records each prompt, response, and AI-attributed file, then attaches 
 ## Setup
 
 ```bash
-npx @wasabeef/agentnote init
+npx @wasabeef/agentnote init --agent claude
 ```
 
 For Codex CLI:
@@ -85,7 +85,7 @@ session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
-agent:   claude-code
+agent:   claude
 files:   5 changed, 3 by AI
 
   src/middleware/auth.ts  🤖
@@ -202,7 +202,7 @@ $ git notes --ref=agentnote show ce941f7
 ```json
 {
   "v": 1,
-  "agent": "claude-code",
+  "agent": "claude",
   "session_id": "a1b2c3d4-...",
   "model": "claude-sonnet-4-20250514",
   "interactions": [

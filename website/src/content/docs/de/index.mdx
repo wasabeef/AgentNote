@@ -40,26 +40,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Führe init in deinem Repository aus
 
    ```bash
-   npx @wasabeef/agentnote init
+   npx @wasabeef/agentnote init --agent claude
    ```
 
-   Für Codex CLI:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent codex
-   ```
-
-   Für Cursor:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent cursor
-   ```
-
-   Für Gemini CLI:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent gemini
-   ```
+   Für Codex CLI: `npx @wasabeef/agentnote init --agent codex`
+   Für Cursor: `npx @wasabeef/agentnote init --agent cursor`
+   Für Gemini CLI: `npx @wasabeef/agentnote init --agent gemini`
+   Mehrere Agenten gleichzeitig: `npx @wasabeef/agentnote init --agent claude --agent cursor`
 
 2. Committe die generierten Dateien
 
@@ -88,7 +75,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
-  agent:   claude-code
+  agent:   claude
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖

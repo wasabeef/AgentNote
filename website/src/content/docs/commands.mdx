@@ -10,7 +10,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 Set up Agent Note in the current repository.
 
 ```bash
-npx @wasabeef/agentnote init
+npx @wasabeef/agentnote init --agent claude
 ```
 
 | Flag | Description |
@@ -21,7 +21,7 @@ npx @wasabeef/agentnote init
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Select the agent adapter, such as `claude-code`, `codex`, `cursor`, or `gemini` |
+| `--agent <name>` | **Required.** Choose the agent adapter: `claude`, `codex`, `cursor`, or `gemini`. Repeat for multiple agents |
 
 ## agentnote show
 
@@ -38,7 +38,7 @@ session: a1b2c3d4-5678-90ab-cdef-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
-agent:   claude-code
+agent:   claude
 files:   5 changed, 3 by AI
 
   src/middleware/auth.ts  🤖

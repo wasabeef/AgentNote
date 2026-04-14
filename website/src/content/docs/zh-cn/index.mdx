@@ -40,26 +40,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. 在仓库中运行 init
 
    ```bash
-   npx @wasabeef/agentnote init
+   npx @wasabeef/agentnote init --agent claude
    ```
 
-   如果你使用 Codex CLI：
-
-   ```bash
-   npx @wasabeef/agentnote init --agent codex
-   ```
-
-   如果你使用 Cursor：
-
-   ```bash
-   npx @wasabeef/agentnote init --agent cursor
-   ```
-
-   Gemini CLI 请运行：
-
-   ```bash
-   npx @wasabeef/agentnote init --agent gemini
-   ```
+   如果你使用 Codex CLI：`npx @wasabeef/agentnote init --agent codex`
+   如果你使用 Cursor：`npx @wasabeef/agentnote init --agent cursor`
+   Gemini CLI 请运行：`npx @wasabeef/agentnote init --agent gemini`
+   同时使用多个 agent：`npx @wasabeef/agentnote init --agent claude --agent cursor`
 
 2. 提交生成的文件
 
@@ -88,7 +75,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
-  agent:   claude-code
+  agent:   claude
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖

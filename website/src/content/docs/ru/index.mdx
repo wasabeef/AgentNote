@@ -40,26 +40,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Запустите init в вашем репозитории
 
    ```bash
-   npx @wasabeef/agentnote init
+   npx @wasabeef/agentnote init --agent claude
    ```
 
-   Для Codex CLI:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent codex
-   ```
-
-   Для Cursor:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent cursor
-   ```
-
-   Для Gemini CLI:
-
-   ```bash
-   npx @wasabeef/agentnote init --agent gemini
-   ```
+   Для Codex CLI: `npx @wasabeef/agentnote init --agent codex`
+   Для Cursor: `npx @wasabeef/agentnote init --agent cursor`
+   Для Gemini CLI: `npx @wasabeef/agentnote init --agent gemini`
+   Несколько агентов одновременно: `npx @wasabeef/agentnote init --agent claude --agent cursor`
 
 2. Закоммитьте сгенерированные файлы
 
@@ -88,7 +75,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
-  agent:   claude-code
+  agent:   claude
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖

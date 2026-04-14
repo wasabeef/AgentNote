@@ -34,7 +34,7 @@ wasabeef/AgentNote/
 │   │   │   │   └── storage.ts      # git notes read/write
 │   │   │   ├── agents/             # one file per agent
 │   │   │   │   ├── types.ts        # AgentAdapter interface + NormalizedEvent
-│   │   │   │   └── claude-code.ts  # Claude Code adapter
+│   │   │   │   └── claude.ts       # Claude Code adapter
 │   │   │   └── commands/           # user-facing, delegates to agents/ + core/
 │   │   │       ├── init.ts
 │   │   │       ├── hook.ts
@@ -96,7 +96,7 @@ This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/act
 ### Two execution paths
 
 1. **CLI** (`packages/cli/`) — `agentnote init`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
-2. **Hook handler** — `agentnote hook`, called by agent-specific hooks via stdin JSON (`--agent claude-code` or `--agent codex`). All data collection.
+2. **Hook handler** — `agentnote hook`, called by agent-specific hooks via stdin JSON (`--agent claude` or `--agent codex`). All data collection.
 
 ### Data flow
 

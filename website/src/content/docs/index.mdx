@@ -41,8 +41,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Run init in your repository
 
    ```bash
-   npx @wasabeef/agentnote init
+   npx @wasabeef/agentnote init --agent claude
    ```
+
+   For Codex CLI: `npx @wasabeef/agentnote init --agent codex`
+   For Cursor: `npx @wasabeef/agentnote init --agent cursor`
+   For Gemini CLI: `npx @wasabeef/agentnote init --agent gemini`
+   Multiple agents at once: `npx @wasabeef/agentnote init --agent claude --agent cursor`
 
 2. Commit the generated files
 
@@ -91,7 +96,7 @@ linked:  3/20 recent commits
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
-  agent:   claude-code
+  agent:   claude
   files:   5 changed, 3 by AI
 
     src/middleware/auth.ts  🤖

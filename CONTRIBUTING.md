@@ -115,7 +115,7 @@ packages/
 │   │   │   └── storage.ts         # Git notes read/write
 │   │   ├── agents/                # One file per agent
 │   │   │   ├── types.ts           # AgentAdapter interface
-│   │   │   └── claude-code.ts     # Claude Code adapter
+│   │   │   └── claude.ts          # Claude Code adapter
 │   │   └── commands/              # User-facing, delegates to agents/ + core/
 │   │       ├── init.ts
 │   │       ├── hook.ts
