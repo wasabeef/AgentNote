@@ -560,7 +560,10 @@ describe("gemini adapter", () => {
       const tmpDir = join(geminiHome, "tmp");
       mkdirSync(tmpDir, { recursive: true });
       const transcriptPath = join(tmpDir, "session.jsonl");
-      writeFileSync(transcriptPath, JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }));
+      writeFileSync(
+        transcriptPath,
+        JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }),
+      );
 
       const result = gemini.findTranscript(VALID_SESSION_ID);
       assert.equal(result, transcriptPath);
@@ -606,18 +609,38 @@ describe("gemini adapter", () => {
     it("extracts user/gemini prompt-response pairs from JSONL transcript", async () => {
       const transcriptPath = join(geminiHome, "session.jsonl");
       const lines = [
-        JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc", startTime: "2026-01-01" }),
-        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Add auth middleware" }] }),
+        JSON.stringify({
+          sessionId: VALID_SESSION_ID,
+          projectHash: "abc",
+          startTime: "2026-01-01",
+        }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Add auth middleware" }],
+        }),
         JSON.stringify({
           type: "gemini",
           id: "m2",
           timestamp: "t2",
           content: [{ text: "I'll create the auth middleware." }],
           toolCalls: [
-            { id: "tc1", name: "write_file", args: { file_path: "src/auth.ts", content: "export {}" }, status: "completed", timestamp: "t3" },
+            {
+              id: "tc1",
+              name: "write_file",
+              args: { file_path: "src/auth.ts", content: "export {}" },
+              status: "completed",
+              timestamp: "t3",
+            },
           ],
         }),
-        JSON.stringify({ type: "user", id: "m3", timestamp: "t4", content: [{ text: "Add tests" }] }),
+        JSON.stringify({
+          type: "user",
+          id: "m3",
+          timestamp: "t4",
+          content: [{ text: "Add tests" }],
+        }),
         JSON.stringify({ type: "gemini", id: "m4", timestamp: "t5", content: [{ text: "Done." }] }),
       ];
       writeFileSync(transcriptPath, lines.join("\n"));
@@ -635,15 +658,32 @@ describe("gemini adapter", () => {
       const transcriptPath = join(geminiHome, "session.jsonl");
       const lines = [
         JSON.stringify({ sessionId: VALID_SESSION_ID }),
-        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Fix the bug" }] }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Fix the bug" }],
+        }),
         JSON.stringify({
           type: "gemini",
           id: "m2",
           timestamp: "t2",
           content: [{ text: "Fixed." }],
           toolCalls: [
-            { id: "tc1", name: "replace", args: { file_path: "src/main.ts", old_string: "a", new_string: "b" }, status: "completed", timestamp: "t3" },
-            { id: "tc2", name: "replace", args: { file_path: "src/util.ts", old_string: "x", new_string: "y" }, status: "completed", timestamp: "t4" },
+            {
+              id: "tc1",
+              name: "replace",
+              args: { file_path: "src/main.ts", old_string: "a", new_string: "b" },
+              status: "completed",
+              timestamp: "t3",
+            },
+            {
+              id: "tc2",
+              name: "replace",
+              args: { file_path: "src/util.ts", old_string: "x", new_string: "y" },
+              status: "completed",
+              timestamp: "t4",
+            },
           ],
         }),
       ];
@@ -660,7 +700,12 @@ describe("gemini adapter", () => {
         JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }),
         JSON.stringify({ $rewindTo: "m1" }),
         JSON.stringify({ $set: { summary: "test" } }),
-        JSON.stringify({ type: "info", id: "i1", timestamp: "t1", content: [{ text: "info msg" }] }),
+        JSON.stringify({
+          type: "info",
+          id: "i1",
+          timestamp: "t1",
+          content: [{ text: "info msg" }],
+        }),
         JSON.stringify({ type: "user", id: "m1", timestamp: "t2", content: [{ text: "Hello" }] }),
         JSON.stringify({ type: "warning", id: "w1", timestamp: "t3", content: [{ text: "warn" }] }),
         JSON.stringify({ type: "gemini", id: "m2", timestamp: "t4", content: [{ text: "Hi!" }] }),
@@ -677,7 +722,12 @@ describe("gemini adapter", () => {
       const transcriptPath = join(geminiHome, "session.jsonl");
       const lines = [
         JSON.stringify({ sessionId: VALID_SESSION_ID }),
-        JSON.stringify({ type: "user", id: "m1", timestamp: "t1", content: [{ text: "Unanswered" }] }),
+        JSON.stringify({
+          type: "user",
+          id: "m1",
+          timestamp: "t1",
+          content: [{ text: "Unanswered" }],
+        }),
       ];
       writeFileSync(transcriptPath, lines.join("\n"));
 

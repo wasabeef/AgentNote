@@ -65,7 +65,7 @@ export async function status(): Promise<void> {
         try {
           const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
           const ageSeconds = Math.floor(Date.now() / 1000) - Math.floor(hb / 1000);
-          if (hb > 0 && ageSeconds < 3600) {
+          if (hb > 0 && ageSeconds <= 3600) {
             sessionActive = true;
             console.log(`session: ${sid.slice(0, 8)}…`);
             const agent = await readSessionAgent(sessionDir);

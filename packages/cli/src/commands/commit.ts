@@ -13,14 +13,22 @@ export async function commit(args: string[]): Promise<void> {
 
   if (existsSync(sf)) {
     sessionId = (await readFile(sf, "utf-8")).trim();
-    // Verify session is not explicitly stopped (heartbeat = 0).
-    // Missing heartbeat is allowed (backward compat with older sessions).
+    // Check heartbeat validity — must match prepare-commit-msg logic:
+    // heartbeat must exist, be non-zero, and be less than 1 hour old.
+    // Missing heartbeat is allowed for backward compat with older sessions,
+    // except for agents that delete heartbeat on session end (e.g. Gemini).
     if (sessionId) {
       const dir = await agentnoteDir();
       const hbPath = join(dir, "sessions", sessionId, HEARTBEAT_FILE);
       try {
         const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
-        if (hb === 0) sessionId = ""; // explicitly stopped
+        if (hb === 0 || Number.isNaN(hb)) {
+          sessionId = ""; // explicitly stopped or corrupt heartbeat
+        } else {
+          // Stale check: mirror prepare-commit-msg AGE > 3600 logic.
+          const ageSeconds = Math.floor(Date.now() / 1000) - Math.floor(hb / 1000);
+          if (ageSeconds > 3600) sessionId = "";
+        }
       } catch {
         // No heartbeat file. For agents that delete heartbeat on session end
         // (e.g. Gemini SessionEnd), treat as expired. For older sessions that
