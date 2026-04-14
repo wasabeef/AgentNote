@@ -113,9 +113,21 @@ export async function hook(args: string[] = []): Promise<void> {
   const input: HookInput = { raw, sync };
   const event = adapter.parseEvent(input);
   if (!event) {
+    // Even when the adapter filters an event (e.g. system-injected messages),
+    // refresh the heartbeat to prevent session expiry during long idle periods.
+    if (isRecord(peek) && typeof peek.session_id === "string" && peek.session_id) {
+      try {
+        const dir = await agentnoteDir();
+        const hbPath = join(dir, SESSIONS_DIR, peek.session_id as string, HEARTBEAT_FILE);
+        if (existsSync(hbPath)) {
+          await writeFile(hbPath, String(Date.now()));
+        }
+      } catch {
+        // Never break the agent workflow for heartbeat refresh.
+      }
+    }
     // Gemini BeforeTool requires {"decision": "allow"} even for unrecognized tools.
     if (adapter.name === "gemini" && input.sync) {
-      // Reuse already-parsed peek to avoid double JSON.parse.
       if (isRecord(peek) && peek.hook_event_name === "BeforeTool") {
         process.stdout.write(JSON.stringify({ decision: "allow" }));
       }

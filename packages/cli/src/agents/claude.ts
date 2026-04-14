@@ -60,6 +60,22 @@ interface ClaudeEvent {
   transcript_path?: string;
 }
 
+/** Known system-injected message prefixes. Match `<tag>` or `<tag ` (with attributes). */
+const SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
+
+function isSystemInjectedPrompt(prompt: string): boolean {
+  for (const prefix of SYSTEM_PROMPT_PREFIXES) {
+    if (prompt.startsWith(prefix)) {
+      const next = prompt[prefix.length];
+      // Must be followed by '>' or ' ' (attributes) to be a real tag.
+      if (next === ">" || next === " " || next === "\n" || next === undefined) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function isGitCommit(cmd: string): boolean {
   // Support chained commands like "git add ... && git commit ..."
   return cmd.includes("git commit") && !cmd.includes("--amend");
@@ -180,12 +196,8 @@ export const claude: AgentAdapter = {
         // Claude Code fires UserPromptSubmit for system-injected messages
         // (task notifications, reminders, teammate messages) that are not
         // real user prompts. Skip them to keep turn attribution correct.
-        if (
-          !e.prompt ||
-          e.prompt.startsWith("<task-notification") ||
-          e.prompt.startsWith("<system-reminder") ||
-          e.prompt.startsWith("<teammate-message")
-        ) {
+        // Heartbeat is still refreshed by hook.ts's null-event path.
+        if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
           return null;
         }
         return { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt };

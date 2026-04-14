@@ -128,6 +128,32 @@ describe("claude adapter", () => {
       assert.equal(event, null);
     });
 
+    it("does NOT filter prompts that merely contain system tag names", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "Please check the <task-notification> handler in hook.ts",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null, "prompt containing system tag as substring should not be filtered");
+      assert.equal(event.kind, "prompt");
+    });
+
+    it("does NOT filter prompts starting with similar but non-matching tags", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<task-notifications-are-cool>test</task-notifications-are-cool>",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null, "tag with extra suffix should not be filtered");
+      assert.equal(event.kind, "prompt");
+    });
+
     it("parses PreToolUse Edit as pre_edit", () => {
       const event = claude.parseEvent({
         raw: JSON.stringify({
