@@ -115,10 +115,14 @@ export async function hook(args: string[] = []): Promise<void> {
   if (!event) {
     // Even when the adapter filters an event (e.g. system-injected messages),
     // refresh the heartbeat to prevent session expiry during long idle periods.
-    if (isRecord(peek) && typeof peek.session_id === "string" && peek.session_id) {
+    const peekSid = isRecord(peek) && typeof peek.session_id === "string" ? peek.session_id : "";
+    if (
+      peekSid &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(peekSid)
+    ) {
       try {
         const dir = await agentnoteDir();
-        const hbPath = join(dir, SESSIONS_DIR, peek.session_id as string, HEARTBEAT_FILE);
+        const hbPath = join(dir, SESSIONS_DIR, peekSid, HEARTBEAT_FILE);
         if (existsSync(hbPath)) {
           await writeFile(hbPath, String(Date.now()));
         }
