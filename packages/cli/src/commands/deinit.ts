@@ -54,7 +54,7 @@ export async function deinit(args: string[]): Promise<void> {
     }
   }
 
-  const keepWorkflow = args.includes("--keep-workflow");
+  const removeWorkflow = args.includes("--remove-workflow");
   const keepNotes = args.includes("--keep-notes");
 
   if (agents.length === 0) {
@@ -103,8 +103,10 @@ export async function deinit(args: string[]): Promise<void> {
       results.push("  ✓ removed local CLI shim");
     }
 
-    // GitHub Action workflow
-    if (!keepWorkflow) {
+    // GitHub Action workflow — only remove when explicitly requested, because
+    // init skips creation if the file already exists. Removing a pre-existing
+    // user-owned workflow would be destructive.
+    if (removeWorkflow) {
       const workflowPath = join(repoRoot, ".github", "workflows", "agentnote.yml");
       if (existsSync(workflowPath)) {
         await unlink(workflowPath);

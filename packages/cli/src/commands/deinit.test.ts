@@ -68,8 +68,8 @@ describe("agentnote deinit", () => {
     });
     assert.ok(fetchBefore.includes(NOTES_REF_FULL), "notes fetch should be configured after init");
 
-    // Now deinit
-    const output = execSync(`node ${cliPath} deinit --agent claude`, {
+    // Now deinit (with --remove-workflow to opt into workflow deletion)
+    const output = execSync(`node ${cliPath} deinit --agent claude --remove-workflow`, {
       cwd: testDir,
       encoding: "utf-8",
     });
@@ -158,7 +158,7 @@ describe("agentnote deinit", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("--keep-workflow skips workflow deletion", () => {
+  it("preserves workflow by default (requires --remove-workflow to delete)", () => {
     const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-kwf-"));
     execSync("git init", { cwd: dir });
     execSync("git config user.email test@test.com", { cwd: dir });
@@ -170,9 +170,9 @@ describe("agentnote deinit", () => {
     const workflowPath = join(dir, ".github", "workflows", "agentnote.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist after init");
 
-    execSync(`node ${cliPath} deinit --agent claude --keep-workflow`, { cwd: dir });
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
 
-    assert.ok(existsSync(workflowPath), "workflow should still exist with --keep-workflow");
+    assert.ok(existsSync(workflowPath), "workflow should be preserved without --remove-workflow");
 
     rmSync(dir, { recursive: true, force: true });
   });

@@ -16,7 +16,7 @@ agentnote v${VERSION} — remember why your code changed
 
 usage:
   agentnote init --agent <name>    set up hooks, workflow, and notes auto-fetch (agents: claude, codex, cursor, gemini)
-  agentnote deinit --agent <name>  remove hooks and config
+  agentnote deinit --agent <name>  remove hooks and config [--remove-workflow] [--keep-notes]
   agentnote show [commit]          show session details for a commit
   agentnote log [n]                list recent commits with session info
   agentnote pr [base] [--json]     generate PR report
