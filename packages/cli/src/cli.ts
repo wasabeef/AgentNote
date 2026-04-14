@@ -1,4 +1,5 @@
 import { commit } from "./commands/commit.js";
+import { deinit } from "./commands/deinit.js";
 import { hook } from "./commands/hook.js";
 import { init } from "./commands/init.js";
 import { log } from "./commands/log.js";
@@ -14,15 +15,16 @@ const HELP = `
 agentnote v${VERSION} — remember why your code changed
 
 usage:
-  agentnote init [--agent name]  set up hooks, workflow, and notes auto-fetch
-  agentnote show [commit]        show session details for a commit
-  agentnote log [n]              list recent commits with session info
-  agentnote pr [base] [--json]   generate PR report
-  agentnote session <id>         show commits for a session
-  agentnote commit [args]        git commit with session tracking
-  agentnote status               show current tracking state
-  agentnote version              print version
-  agentnote help                 show this help
+  agentnote init --agent <name>    set up hooks, workflow, and notes auto-fetch (agents: claude, codex, cursor, gemini)
+  agentnote deinit --agent <name>  remove hooks and config
+  agentnote show [commit]          show session details for a commit
+  agentnote log [n]                list recent commits with session info
+  agentnote pr [base] [--json]     generate PR report
+  agentnote session <id>           show commits for a session
+  agentnote commit [args]          git commit with session tracking
+  agentnote status                 show current tracking state
+  agentnote version                print version
+  agentnote help                   show this help
 `.trim();
 
 const command = process.argv[2];
@@ -31,6 +33,9 @@ const args = process.argv.slice(3);
 switch (command) {
   case "init":
     await init(args);
+    break;
+  case "deinit":
+    await deinit(args);
     break;
   case "commit":
     await commit(args);

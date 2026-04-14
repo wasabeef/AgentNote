@@ -1,0 +1,244 @@
+import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, describe, it } from "node:test";
+import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+
+describe("agentnote deinit", () => {
+  let testDir: string;
+  const cliPath = join(process.cwd(), "dist", "cli.js");
+
+  before(() => {
+    testDir = mkdtempSync(join(tmpdir(), "agentnote-deinit-"));
+    execSync("git init", { cwd: testDir });
+    execSync("git config user.email test@test.com", { cwd: testDir });
+    execSync("git config user.name Test", { cwd: testDir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: testDir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
+  });
+
+  after(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it("requires --agent flag", () => {
+    let threw = false;
+    try {
+      execSync(`node ${cliPath} deinit`, { cwd: testDir, encoding: "utf-8", stdio: "pipe" });
+    } catch (err: unknown) {
+      threw = true;
+      const e = err as { stderr: string };
+      assert.ok(e.stderr.includes("--agent is required"), "should show --agent required error");
+    }
+    assert.ok(threw, "should exit with error");
+  });
+
+  it("rejects unknown agent", () => {
+    let threw = false;
+    try {
+      execSync(`node ${cliPath} deinit --agent unknownagent`, {
+        cwd: testDir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    } catch (err: unknown) {
+      threw = true;
+      const e = err as { stderr: string };
+      assert.ok(e.stderr.includes("unknown agent"), "should show unknown agent error");
+    }
+    assert.ok(threw, "should exit with error");
+  });
+
+  it("removes agent hooks, git hooks, workflow, and notes config after init", () => {
+    // First, init
+    execSync(`node ${cliPath} init --agent claude`, { cwd: testDir });
+
+    const settingsPath = join(testDir, ".claude", "settings.json");
+    assert.ok(existsSync(settingsPath), "settings.json should exist after init");
+
+    const workflowPath = join(testDir, ".github", "workflows", "agentnote.yml");
+    assert.ok(existsSync(workflowPath), "workflow should exist after init");
+
+    // Verify notes config is set
+    const fetchBefore = execSync("git config --get-all remote.origin.fetch", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.ok(fetchBefore.includes(NOTES_REF_FULL), "notes fetch should be configured after init");
+
+    // Now deinit
+    const output = execSync(`node ${cliPath} deinit --agent claude`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(output.includes("✓"), "should show success markers");
+
+    // Agent hooks removed
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    assert.equal(
+      Object.keys(settings.hooks ?? {}).length,
+      0,
+      "agentnote hooks should be removed from settings.json",
+    );
+
+    // Git hooks removed
+    const hookDir = join(testDir, ".git", "hooks");
+    assert.ok(
+      !existsSync(join(hookDir, "prepare-commit-msg")),
+      "prepare-commit-msg should be removed",
+    );
+    assert.ok(!existsSync(join(hookDir, "post-commit")), "post-commit should be removed");
+    assert.ok(!existsSync(join(hookDir, "pre-push")), "pre-push should be removed");
+
+    // Workflow removed
+    assert.ok(!existsSync(workflowPath), "workflow should be removed after deinit");
+
+    // Notes fetch config removed
+    const fetchResult = execSync("git config --get-all remote.origin.fetch || true", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.ok(
+      !fetchResult.includes(NOTES_REF_FULL),
+      "notes fetch config should be removed after deinit",
+    );
+  });
+
+  it("restores backup git hooks when they exist", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-backup-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    // Create a pre-existing post-commit hook
+    const hookDir = join(dir, ".git", "hooks");
+    mkdirSync(hookDir, { recursive: true });
+    const originalHookContent = "#!/bin/sh\necho original-hook\n";
+    writeFileSync(join(hookDir, "post-commit"), originalHookContent, { mode: 0o755 });
+
+    // init should chain: backup original and install agentnote hook
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+
+    const backupPath = join(hookDir, "post-commit.agentnote-backup");
+    assert.ok(existsSync(backupPath), "backup should exist after init");
+
+    // deinit should restore the original hook
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+
+    assert.ok(existsSync(join(hookDir, "post-commit")), "post-commit should be restored");
+    const restoredContent = readFileSync(join(hookDir, "post-commit"), "utf-8");
+    assert.equal(restoredContent, originalHookContent, "original hook content should be restored");
+    assert.ok(!existsSync(backupPath), "backup should be removed after restore");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("removes local CLI shim", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-shim-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+    const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    assert.ok(existsSync(shimPath), "shim should exist after init");
+
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+
+    assert.ok(!existsSync(shimPath), "shim should be removed after deinit");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("--keep-workflow skips workflow deletion", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-kwf-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    const workflowPath = join(dir, ".github", "workflows", "agentnote.yml");
+    assert.ok(existsSync(workflowPath), "workflow should exist after init");
+
+    execSync(`node ${cliPath} deinit --agent claude --keep-workflow`, { cwd: dir });
+
+    assert.ok(existsSync(workflowPath), "workflow should still exist with --keep-workflow");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("--keep-notes skips notes fetch config removal", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-kn-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+
+    execSync(`node ${cliPath} deinit --agent claude --keep-notes`, { cwd: dir });
+
+    const fetchResult = execSync("git config --get-all remote.origin.fetch", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    assert.ok(
+      fetchResult.includes(NOTES_REF_FULL),
+      "notes fetch config should remain with --keep-notes",
+    );
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("is idempotent (deinit twice does not error)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-idem-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    // Second deinit should not throw
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("init → deinit → init round-trip works", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-roundtrip-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+
+    // Re-init should succeed and install hooks again
+    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+
+    const settingsPath = join(dir, ".claude", "settings.json");
+    assert.ok(existsSync(settingsPath), "settings.json should exist after re-init");
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    assert.ok(settings.hooks?.SessionStart, "SessionStart hook should be reinstalled");
+
+    const workflowPath = join(dir, ".github", "workflows", "agentnote.yml");
+    assert.ok(existsSync(workflowPath), "workflow should be recreated after re-init");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
