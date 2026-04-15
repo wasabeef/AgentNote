@@ -1,0 +1,104 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agentnote-session-start",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agentnote-session-end",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agentnote-before-agent",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agentnote-after-agent",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "agentnote-before-edit",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "run_shell_command|shell|bash|run_command|execute_command",
+        "hooks": [
+          {
+            "name": "agentnote-before-shell",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "agentnote-after-edit",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "run_shell_command|shell|bash|run_command|execute_command",
+        "hooks": [
+          {
+            "name": "agentnote-after-shell",
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
+}

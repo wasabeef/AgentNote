@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "afterAgentResponse": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "afterTabFileEdit": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ],
+    "stop": [
+      {
+        "command": "node packages/cli/dist/cli.js hook --agent cursor"
+      }
+    ]
+  }
+}

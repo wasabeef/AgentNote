@@ -1,18 +1,6 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
-        ]
-      }
-    ],
     "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
-        ]
-      },
       {
         "hooks": [
           {
@@ -21,12 +9,58 @@
             "async": true
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent claude",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd packages/cli && npx biome check src/",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent claude",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent claude",
+            "async": true
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
+          {
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent claude",
+            "async": true
+          }
         ]
       }
     ],
@@ -34,7 +68,10 @@
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [
-          { "type": "command", "command": "node packages/cli/dist/cli.js hook" }
+          {
+            "type": "command",
+            "command": "node packages/cli/dist/cli.js hook --agent claude"
+          }
         ]
       },
       {
@@ -43,30 +80,7 @@
           {
             "type": "command",
             "if": "Bash(*git commit*)",
-            "command": "node packages/cli/dist/cli.js hook"
-          },
-          {
-            "type": "command",
-            "if": "Bash(*git commit*)",
-            "command": "cd packages/cli && npx tsc --noEmit"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
-        "hooks": [
-          { "type": "command", "command": "node packages/cli/dist/cli.js hook", "async": true }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd packages/cli && npx biome check src/",
-            "async": true
+            "command": "node packages/cli/dist/cli.js hook --agent claude"
           }
         ]
       }
