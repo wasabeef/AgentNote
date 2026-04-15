@@ -40,13 +40,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. リポジトリで init を実行
 
    ```bash
-   npx @wasabeef/agentnote init --agent claude
+   npx agentnote init --agent claude
    ```
 
-   Codex CLI の場合: `npx @wasabeef/agentnote init --agent codex`
-   Cursor の場合: `npx @wasabeef/agentnote init --agent cursor`
-   Gemini CLI の場合: `npx @wasabeef/agentnote init --agent gemini`
-   複数エージェントを同時に: `npx @wasabeef/agentnote init --agent claude --agent cursor`
+   Codex CLI の場合: `npx agentnote init --agent codex`
+   Cursor の場合: `npx agentnote init --agent cursor`
+   Gemini CLI の場合: `npx agentnote init --agent gemini`
+   複数エージェントを同時に: `npx agentnote init --agent claude --agent cursor`
 
 2. 生成されたファイルをコミット
 
@@ -67,7 +67,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## セットアップ確認
 
 ```bash
-agentnote status
+npx agentnote status
 ```
 
 ```text

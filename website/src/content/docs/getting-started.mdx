@@ -11,31 +11,31 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 1. **Run init** in your repository
 
    ```bash
-   npx @wasabeef/agentnote init --agent claude
+   npx agentnote init --agent claude
    ```
 
    For Codex CLI:
 
    ```bash
-   npx @wasabeef/agentnote init --agent codex
+   npx agentnote init --agent codex
    ```
 
    For Cursor:
 
    ```bash
-   npx @wasabeef/agentnote init --agent cursor
+   npx agentnote init --agent cursor
    ```
 
    For Gemini CLI:
 
    ```bash
-   npx @wasabeef/agentnote init --agent gemini
+   npx agentnote init --agent gemini
    ```
 
    Multiple agents at once:
 
    ```bash
-   npx @wasabeef/agentnote init --agent claude --agent cursor
+   npx agentnote init --agent claude --agent cursor
    ```
 
    This configures:
@@ -68,7 +68,7 @@ Each developer runs init after cloning to install local git hooks:
 
 ```bash
 git clone <repo> && cd <repo>
-npx @wasabeef/agentnote init --agent claude
+npx agentnote init --agent claude
 ```
 
 <Aside>
@@ -89,7 +89,7 @@ If git hooks are unavailable, `agentnote commit` remains the fallback wrapper.
 ## Verify It Works
 
 ```bash
-agentnote show
+npx agentnote show
 ```
 
 ```
@@ -113,7 +113,7 @@ prompts: 2
 ```
 
 ```bash
-agentnote status
+npx agentnote status
 ```
 
 ```text
@@ -155,7 +155,7 @@ linked:  3/20 recent commits
 ## Uninstall
 
 ```bash
-npx @wasabeef/agentnote deinit --agent claude
+npx agentnote deinit --agent claude
 ```
 
 This removes agent hooks and git hooks. Add `--remove-workflow` to also delete the GitHub Action workflow.

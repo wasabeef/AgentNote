@@ -41,13 +41,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Run init in your repository
 
    ```bash
-   npx @wasabeef/agentnote init --agent claude
+   npx agentnote init --agent claude
    ```
 
-   For Codex CLI: `npx @wasabeef/agentnote init --agent codex`
-   For Cursor: `npx @wasabeef/agentnote init --agent cursor`
-   For Gemini CLI: `npx @wasabeef/agentnote init --agent gemini`
-   Multiple agents at once: `npx @wasabeef/agentnote init --agent claude --agent cursor`
+   For Codex CLI: `npx agentnote init --agent codex`
+   For Cursor: `npx agentnote init --agent cursor`
+   For Gemini CLI: `npx agentnote init --agent gemini`
+   Multiple agents at once: `npx agentnote init --agent claude --agent cursor`
 
 2. Commit the generated files
 
@@ -57,9 +57,9 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   For Codex CLI, run `npx @wasabeef/agentnote init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
-   For Cursor, run `npx @wasabeef/agentnote init --agent cursor` and commit `.cursor/hooks.json`.
-   For Gemini CLI, run `npx @wasabeef/agentnote init --agent gemini` and commit `.gemini/settings.json`.
+   For Codex CLI, run `npx agentnote init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
+   For Cursor, run `npx agentnote init --agent cursor` and commit `.cursor/hooks.json`.
+   For Gemini CLI, run `npx agentnote init --agent gemini` and commit `.gemini/settings.json`.
 
 3. Code with AI.
    Plain `git commit` works when the generated git hooks are installed.
@@ -69,7 +69,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## Check Your Setup
 
 ```bash
-agentnote status
+npx agentnote status
 ```
 
 ```text
