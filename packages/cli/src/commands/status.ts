@@ -112,6 +112,13 @@ async function readAgentCaptureDetails(
 ): Promise<string[]> {
   const details: string[] = [];
 
+  if (enabledAgents.includes("codex")) {
+    const codexCapabilities = await readCodexCaptureCapabilities(repoRoot);
+    if (codexCapabilities.length > 0) {
+      details.push(`codex(${codexCapabilities.join(", ")})`);
+    }
+  }
+
   if (enabledAgents.includes("cursor")) {
     const cursorCapabilities = await readCursorCaptureCapabilities(repoRoot);
     if (cursorCapabilities.length > 0) {
@@ -127,6 +134,33 @@ async function readAgentCaptureDetails(
   }
 
   return details;
+}
+
+type CodexHooksConfig = {
+  hooks?: Record<string, Array<{ hooks?: Array<{ command?: string }> }>>;
+};
+
+async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]> {
+  const hooksPath = join(repoRoot, ".codex", "hooks.json");
+  if (!existsSync(hooksPath)) return [];
+
+  try {
+    const content = await readFile(hooksPath, "utf-8");
+    const parsed = JSON.parse(content) as CodexHooksConfig;
+    const hooks = parsed.hooks ?? {};
+    const hasAgentnoteHook = (eventName: string): boolean =>
+      (hooks[eventName] ?? []).some((group) =>
+        (group.hooks ?? []).some((hook) => hook.command?.includes("agentnote hook")),
+      );
+
+    const capabilities: string[] = [];
+    if (hasAgentnoteHook("UserPromptSubmit")) capabilities.push("prompt");
+    if (hasAgentnoteHook("Stop")) capabilities.push("response");
+    if (hasAgentnoteHook("SessionStart")) capabilities.push("transcript");
+    return capabilities;
+  } catch {
+    return [];
+  }
 }
 
 type CursorHooksConfig = {

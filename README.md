@@ -51,6 +51,8 @@ Cursor repositories commit `.cursor/hooks.json` instead of `.claude/settings.jso
 
 Each developer runs `init` after cloning to install local git hooks.
 
+Codex support is currently preview-only: prompt / response recovery and `files_touched` come from local transcripts, and line-level attribution is only upgraded when transcript `apply_patch` counts match the final commit diff. Shell-only edits that do not produce transcript patch data stay on the safe side: Agent Note can still preserve the prompt / response pair and observed Codex tools, but it does not guess `files_touched` or AI-authored files from shell steps alone. Those commits therefore stay at `0%` AI attribution unless another primary signal ties files to the agent. If the Codex transcript cannot be read, `agentnote commit` warns and skips note creation instead of writing uncertain attribution data.
+
 Cursor support is currently preview-only: attribution comes from `afterFileEdit` / `afterTabFileEdit` hooks, prompt / response pairs are restored from Cursor response hooks or local transcripts when available, and the default git hooks track plain `git commit` normally. When Cursor edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to line-level attribution. `agentnote commit -m "..."` remains a useful fallback wrapper when git hooks are unavailable.
 
 ## Check Your Setup

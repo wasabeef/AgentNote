@@ -160,12 +160,9 @@ export async function recordCommitEntry(opts: {
     );
 
     if (transcriptMatched.length > 0) {
-      interactions = transcriptMatched.map((interaction) => ({
-        prompt: interaction.prompt,
-        response: interaction.response,
-        files_touched: interaction.files_touched?.filter((file) => commitFileSet.has(file)),
-        line_stats: interaction.line_stats,
-      }));
+      interactions = transcriptMatched.map((interaction) =>
+        toRecordedInteraction(interaction, commitFileSet),
+      );
       aiFiles = [
         ...new Set(
           interactions.flatMap((interaction) =>
@@ -175,9 +172,14 @@ export async function recordCommitEntry(opts: {
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
     } else if (prompts.length > 0 && interactionWindow.length > 0) {
-      interactions = interactionWindow;
+      interactions = interactionWindow.map((interaction) =>
+        toRecordedInteraction(interaction, commitFileSet),
+      );
     } else {
-      interactions = prompts.map((p) => ({ prompt: p, response: null }));
+      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
+      if (interactions.length === 0) {
+        interactions = prompts.map((p) => ({ prompt: p, response: null }));
+      }
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
@@ -256,6 +258,37 @@ function findTranscriptPromptWindow(
   }
 
   return interactions.slice(-prompts.length);
+}
+
+function toRecordedInteraction(
+  interaction: TranscriptInteraction,
+  commitFileSet: Set<string>,
+): Interaction {
+  const recorded: Interaction = {
+    prompt: interaction.prompt,
+    response: interaction.response,
+  };
+
+  const filesTouched = interaction.files_touched?.filter((file) => commitFileSet.has(file));
+  if (filesTouched && filesTouched.length > 0) {
+    recorded.files_touched = [...new Set(filesTouched)];
+  }
+
+  if (interaction.tools !== undefined) {
+    recorded.tools = interaction.tools;
+  }
+
+  return recorded;
+}
+
+function selectTranscriptFallbackInteractions(
+  interactions: TranscriptInteraction[],
+  commitFileSet: Set<string>,
+): Interaction[] {
+  const latestToolBacked = [...interactions]
+    .reverse()
+    .find((interaction) => (interaction.tools?.length ?? 0) > 0);
+  return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
 }
 
 async function fillInteractionResponsesFromEvents(

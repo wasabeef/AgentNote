@@ -1,7 +1,7 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
@@ -164,7 +164,9 @@ function codexHome(): string {
 }
 
 function isValidTranscriptPath(transcriptPath: string): boolean {
-  return transcriptPath.startsWith(codexHome());
+  const base = resolve(codexHome());
+  const normalized = resolve(transcriptPath);
+  return normalized === base || normalized.startsWith(`${base}${sep}`);
 }
 
 function normalizeTranscriptPath(value?: string | null): string | undefined {
@@ -278,6 +280,16 @@ function extractLineStatsFromApplyPatch(
   }
 
   return stats;
+}
+
+function appendInteractionTool(
+  interaction: TranscriptInteraction,
+  toolName: string | undefined,
+): void {
+  if (!toolName) return;
+  const tools = interaction.tools ?? [];
+  if (tools.includes(toolName)) return;
+  interaction.tools = [...tools, toolName];
 }
 
 export const codex: AgentAdapter = {
@@ -453,6 +465,15 @@ export const codex: AgentAdapter = {
           : typeof payload.call_name === "string"
             ? payload.call_name
             : undefined;
+
+      if (
+        (payloadType === "custom_tool_call" ||
+          payloadType === "function_call" ||
+          payloadType === "tool_use") &&
+        toolName
+      ) {
+        appendInteractionTool(current, toolName);
+      }
 
       if (
         (payloadType === "custom_tool_call" || payloadType === "function_call") &&
