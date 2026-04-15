@@ -102,7 +102,7 @@ This is a monorepo with two packages:
 
 ```
 packages/
-├── cli/                           # @wasabeef/agentnote — npm package
+├── cli/                           # agentnote — npm package
 │   ├── src/
 │   │   ├── cli.ts                 # Entry point and command routing
 │   │   ├── git.ts                 # Git CLI wrapper (execFile-based, no libraries)

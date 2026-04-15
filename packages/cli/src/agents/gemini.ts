@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
-const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook --agent gemini";
+const HOOK_COMMAND = "npx --yes agentnote hook --agent gemini";
 const SETTINGS_REL_PATH = ".gemini/settings.json";
 
 const EDIT_TOOLS = new Set(["write_file", "replace"]);

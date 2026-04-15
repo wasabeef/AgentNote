@@ -10,7 +10,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 Set up Agent Note in the current repository.
 
 ```bash
-npx @wasabeef/agentnote init --agent claude
+npx agentnote init --agent claude
 ```
 
 | Flag | Description |
@@ -28,8 +28,8 @@ npx @wasabeef/agentnote init --agent claude
 Show AI session details for a commit.
 
 ```bash
-agentnote show          # HEAD
-agentnote show abc1234  # commit SHA
+npx agentnote show          # HEAD
+npx agentnote show abc1234  # commit SHA
 ```
 
 ```
@@ -56,8 +56,8 @@ prompts: 2
 List recent commits with AI ratio.
 
 ```bash
-agentnote log      # last 10
-agentnote log 20   # last 20
+npx agentnote log      # last 10
+npx agentnote log 20   # last 20
 ```
 
 ```
@@ -73,21 +73,21 @@ Generate a PR report.
 <Tabs>
   <TabItem label="Markdown">
   ```bash
-  agentnote pr origin/main
+  npx agentnote pr origin/main
   ```
   </TabItem>
   <TabItem label="JSON">
   ```bash
-  agentnote pr origin/main --json
+  npx agentnote pr origin/main --json
   ```
   </TabItem>
   <TabItem label="Update PR">
   ```bash
   # Insert into PR description
-  agentnote pr origin/main --output description --update 42
+  npx agentnote pr origin/main --output description --update 42
 
   # Post as PR comment
-  agentnote pr origin/main --output comment --update 42
+  npx agentnote pr origin/main --output comment --update 42
   ```
   </TabItem>
 </Tabs>
@@ -101,7 +101,7 @@ Generate a PR report.
 Show all commits belonging to a session.
 
 ```bash
-agentnote session a1b2c3d4-5678-90ab-cdef-111122223333
+npx agentnote session a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
 ## agentnote status
@@ -109,7 +109,7 @@ agentnote session a1b2c3d4-5678-90ab-cdef-111122223333
 Show current tracking state.
 
 ```bash
-agentnote status
+npx agentnote status
 ```
 
 ```text
@@ -133,7 +133,7 @@ linked:  3/20 recent commits
 Remove Agent Note hooks and configuration from the current repository.
 
 ```bash
-npx @wasabeef/agentnote deinit --agent claude
+npx agentnote deinit --agent claude
 ```
 
 | Flag | Description |
@@ -151,7 +151,7 @@ npx @wasabeef/agentnote deinit --agent claude
 Convenience wrapper for `git commit` with session trailer and note recording.
 
 ```bash
-agentnote commit -m "feat: add auth"
+npx agentnote commit -m "feat: add auth"
 ```
 
 <Aside type="tip">

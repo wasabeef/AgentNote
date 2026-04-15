@@ -502,7 +502,7 @@ describe("gemini adapter", () => {
                     {
                       name: "agentnote-before-shell",
                       type: "command",
-                      command: "npx --yes @wasabeef/agentnote hook --agent gemini",
+                      command: "npx --yes agentnote hook --agent gemini",
                     },
                     { name: "my-custom-hook", type: "command", command: "echo hello" },
                   ],

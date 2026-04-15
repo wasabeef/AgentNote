@@ -18,7 +18,7 @@ function resolveCliCommand(): string {
   } catch {
     // ignore
   }
-  return "npx --yes @wasabeef/agentnote";
+  return "npx --yes agentnote";
 }
 
 async function run(): Promise<void> {

@@ -931,7 +931,7 @@ Codex の設定ファイルに次を入れる。
 hook command は必ず agent 指定付き:
 
 ```bash
-npx --yes @wasabeef/agentnote hook --agent codex
+npx --yes agentnote hook --agent codex
 ```
 
 加えて `.codex/config.toml` で `features.codex_hooks = true` を有効化する。

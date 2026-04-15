@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Agent Note (`@wasabeef/agentnote`) is a monorepo CLI + GitHub Action that links AI coding sessions to git commits. It records every prompt, AI response, file change, and AI authorship ratio so you can trace back to *why* code changed.
+Agent Note (`agentnote`) is a monorepo CLI + GitHub Action that links AI coding sessions to git commits. It records every prompt, AI response, file change, and AI authorship ratio so you can trace back to *why* code changed.
 
 ## Repository structure
 
 ```
-packages/cli/     # @wasabeef/agentnote — npm package (CLI)
+packages/cli/     # agentnote — npm package (CLI)
 packages/action/  # GitHub Action (Marketplace)
 action.yml        # root pointer to packages/action/dist/index.js
 website/          # Documentation site (Astro Starlight, 12 locales)
