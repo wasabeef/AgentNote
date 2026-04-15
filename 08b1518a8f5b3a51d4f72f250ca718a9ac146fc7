@@ -1,0 +1,192 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-15T04:29:14.556Z",
+  "model": null,
+  "interactions": [
+    {
+      "prompt": "はい、ブランチ切って実装",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/agents/claude.ts",
+        "packages/cli/src/agents/codex.ts",
+        "packages/cli/src/agents/cursor.ts",
+        "packages/cli/src/agents/gemini.ts",
+        "packages/cli/package.json",
+        "packages/action/package.json",
+        "website/package.json",
+        "packages/action/src/index.ts",
+        "packages/cli/src/commands/init.test.ts",
+        "packages/cli/src/agents/claude.test.ts",
+        "packages/cli/src/commands/cursor.test.ts",
+        "packages/cli/src/agents/gemini.test.ts",
+        "README.md",
+        "CLAUDE.md",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "docs/knowledge/DESIGN.md",
+        "docs/knowledge/CODEX_SUPPORT_PLAN.md",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx",
+        "packages/cli/src/agents/cursor.test.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "１",
+      "response": null,
+      "files_touched": [
+        "README.md"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/CODEX_SUPPORT_PLAN.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "package-lock.json",
+      "by_ai": false
+    },
+    {
+      "path": "packages/action/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/action/package.json",
+      "by_ai": true
+    },
+    {
+      "path": "packages/action/src/index.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/package.json",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/claude.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/claude.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/codex.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/cursor.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/cursor.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/gemini.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/gemini.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/cursor.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/package.json",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 14,
+    "method": "line",
+    "lines": {
+      "ai_added": 84,
+      "total_added": 586,
+      "deleted": 599
+    }
+  }
+}
