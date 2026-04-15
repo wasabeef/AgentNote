@@ -210,6 +210,14 @@ export async function recordCommitEntry(opts: {
     commitFileSet,
   );
 
+  // Skip writing an empty note. This happens when a rebased/cherry-picked commit
+  // triggers post-commit but session data has already been rotated. Writing an
+  // empty note would overwrite valuable data if notes are later copied from the
+  // original SHA.
+  if (interactions.length === 0 && aiFiles.length === 0) {
+    return { promptCount: 0, aiRatio: 0 };
+  }
+
   const entry = buildEntry({
     agent: agentName,
     sessionId: opts.sessionId,
