@@ -1,0 +1,70 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019d907b-0e67-7ba3-8e26-477f564e6188",
+  "timestamp": "2026-04-15T10:11:24.626Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "GitHub PR を作成して",
+      "response": "PR を作る前に、ローカル差分の状態と現在の branch を確認して、必要ならこの変更だけを意図的に commit してから GitHub に上げます。公開時に混ざり物が出ないように、まず scope をきれいに切ります。\nscope は見えました。PR には今回の Codex 関連差分だけを入れて、未追跡の `docs/knowledge/AGENT_SUPPORT_PROMOTION_PLAN.md` は外したまま進めます。\nいまから意図したファイルだけ stage して commit します。そのあと branch を push して、`draft PR` で開きます。",
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/agents/codex.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/agents/codex.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/agents/fixtures/codex-real-session-patch.jsonl",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/agents/fixtures/codex-real-session-shell.jsonl",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/agents/types.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/codex.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/status.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/status.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "file"
+  }
+}
