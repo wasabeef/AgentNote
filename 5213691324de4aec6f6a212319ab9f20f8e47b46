@@ -1,0 +1,39 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-15T03:21:27.149Z",
+  "model": null,
+  "interactions": [
+    {
+      "prompt": "軽微な指摘は修正しない？",
+      "response": null,
+      "files_touched": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 4,
+      "total_added": 4,
+      "deleted": 4
+    }
+  }
+}
