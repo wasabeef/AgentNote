@@ -1,0 +1,38 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019d907b-0e67-7ba3-8e26-477f564e6188",
+  "timestamp": "2026-04-15T12:25:53.607Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "y",
+      "response": "自己レビューまで反映した `notes sync` の差分だけを commit します。plan doc は含めず、shared hook の安全側変更だけで切ります。",
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/cli.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/init.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/push-notes.ts",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "file"
+  }
+}
