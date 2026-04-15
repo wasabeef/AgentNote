@@ -187,6 +187,21 @@ describe("codex adapter", () => {
     assert.equal(codex.findTranscript(sessionId), transcriptPath);
   });
 
+  it("prefers the session_meta payload id over unrelated ids in earlier transcript lines", () => {
+    const sessionId = "codex-session-meta-id";
+    const transcriptDir = join(codexHome, "sessions", "2026", "04", "11");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+
+    writeFileSync(
+      transcriptPath,
+      '{"type":"response_item","payload":{"type":"function_call","id":"call_unrelated"}}\n' +
+        '{"type":"session_meta","payload":{"id":"codex-session-meta-id","timestamp":"2026-04-11T00:00:00Z"}}\n',
+    );
+
+    assert.equal(codex.findTranscript(sessionId), transcriptPath);
+  });
+
   it("ignores unknown roles and unrelated payload types in transcripts", async () => {
     const transcriptDir = join(codexHome, "sessions", "roles");
     mkdirSync(transcriptDir, { recursive: true });

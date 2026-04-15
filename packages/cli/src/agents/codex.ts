@@ -111,8 +111,22 @@ function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[
 function readTranscriptSessionId(candidate: string): string | null {
   try {
     const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
-    const match = preview.match(/"id"\s*:\s*"([^"]+)"/);
-    return match?.[1] ?? null;
+    for (const rawLine of preview.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      try {
+        const entry = JSON.parse(line) as RolloutLine;
+        const sessionId = entry.type === "session_meta" ? entry.payload?.id : undefined;
+        if (typeof sessionId === "string" && sessionId.trim()) {
+          return sessionId;
+        }
+      } catch {
+        const match = line.match(/"type"\s*:\s*"session_meta"[\s\S]*?"id"\s*:\s*"([^"]+)"/);
+        if (match?.[1]) return match[1];
+      }
+    }
+    return null;
   } catch {
     return null;
   }
