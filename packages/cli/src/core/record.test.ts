@@ -130,12 +130,12 @@ describe("recordCommitEntry", () => {
     assert.ok(!paths.includes("not-committed.ts"), "uncommitted file should not be in note");
   });
 
-  it("records empty interactions when no prompts exist", async () => {
+  it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });
     execSync('git commit -m "no prompts"', { cwd: repoDir });
 
-    // No prompts.jsonl written
+    // No prompts.jsonl or changes.jsonl written — e.g. rebased commit.
     const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
 
     const commitSha = execSync("git rev-parse HEAD", {
@@ -143,8 +143,7 @@ describe("recordCommitEntry", () => {
       encoding: "utf-8",
     }).trim();
     const note = await readNote(commitSha);
-    assert.ok(note !== null);
-    assert.deepEqual(note.interactions, []);
+    assert.equal(note, null, "should not write note when no AI data exists");
     assert.equal(result.promptCount, 0);
   });
 });

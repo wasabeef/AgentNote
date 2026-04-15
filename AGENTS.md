@@ -57,7 +57,7 @@ Agent Note supports multiple coding agents via an adapter pattern:
 - **`claude.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.
 - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.
 - **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.
-- **`gemini.ts`**: Gemini CLI adapter. Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern).
+- **`gemini.ts`**: Gemini CLI adapter (Preview). Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern). `extractInteractions` parses JSONL transcripts from `~/.gemini/tmp/`; transcript schema may evolve with Gemini CLI updates.
 
 ### Hook event handling (`packages/cli/src/commands/hook.ts`)
 
@@ -95,7 +95,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 - **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, and `interactions[].tools`.
 - **`core/attribution.ts`**: 3-diff position algorithm for line-level AI attribution. Parses unified diff hunks, computes AI vs human line positions.
 - **`core/session.ts`**: `writeSessionAgent()` / `readSessionAgent()` / `writeSessionTranscriptPath()` / `readSessionTranscriptPath()`. Per-session agent metadata.
-- **`core/constants.ts`**: Shared constants — `TRAILER_KEY`, `SESSION_AGENT_FILE`, `HEARTBEAT_FILE`, etc.
+- **`core/constants.ts`**: Shared constants — `TRAILER_KEY`, `SESSION_AGENT_FILE`, `HEARTBEAT_FILE`, `PENDING_COMMIT_FILE`, etc.
 - **`core/jsonl.ts`**: `readJsonlField()` (deduplicated single field), `readJsonlEntries()` (full objects), `appendJsonl()`.
 - **`core/storage.ts`**: `writeNote()` and `readNote()` using `refs/notes/agentnote`.
 - **`core/rotate.ts`**: Rename JSONL files with commit SHA prefix after each commit.

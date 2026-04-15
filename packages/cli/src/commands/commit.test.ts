@@ -320,25 +320,18 @@ describe("agentnote commit", () => {
 
     // Second commit: human file only, but the old turn-1 archive still exists.
     // Without consumed pairs, the old (turn:1, split-a.ts) would leak into relevantTurns.
+    // With the empty-note skip, no note is written for a purely human commit.
     writeFileSync(join(testDir, "human-only.ts"), "export const h = 2;");
     execSync("git add human-only.ts", { cwd: testDir });
     execSync(`node ${cliPath} commit -m "feat: human-only"`, { cwd: testDir });
 
-    const note2 = execSync("git notes --ref=agentnote show HEAD", {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
-    const entry2 = JSON.parse(note2);
-    assert.equal(
-      entry2.attribution.ai_ratio,
-      0,
-      "second commit should have ai_ratio 0 — no AI files (consumed pairs filtered out)",
-    );
-    assert.equal(
-      entry2.files.filter((f: { by_ai: boolean }) => f.by_ai).length,
-      0,
-      "no files should be attributed to AI in the second commit",
-    );
+    let hasNote = true;
+    try {
+      execSync("git notes --ref=agentnote show HEAD", { cwd: testDir, stdio: "pipe" });
+    } catch {
+      hasNote = false;
+    }
+    assert.equal(hasNote, false, "second commit should have no note — purely human, no AI data");
   });
 
   it("tracks plain git commit with Claude git hooks after hook events", () => {
