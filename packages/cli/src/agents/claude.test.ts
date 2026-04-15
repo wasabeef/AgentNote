@@ -492,7 +492,7 @@ describe("claude adapter", () => {
                   hooks: [
                     {
                       type: "command",
-                      command: "npx --yes @wasabeef/agentnote hook --agent claude",
+                      command: "npx --yes agentnote hook --agent claude",
                       async: true,
                     },
                   ],
@@ -517,7 +517,7 @@ describe("claude adapter", () => {
       const allCommands =
         settings.hooks?.PostToolUse?.flatMap((g) => g.hooks).map((h) => h.command) ?? [];
       assert.ok(
-        !allCommands.some((c) => c?.includes("@wasabeef/agentnote")),
+        !allCommands.some((c) => c?.includes("agentnote hook")),
         "agentnote hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");

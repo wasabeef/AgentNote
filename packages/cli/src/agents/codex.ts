@@ -6,7 +6,7 @@ import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } 
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const HOOKS_REL_PATH = ".codex/hooks.json";
-const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook --agent codex";
+const HOOK_COMMAND = "npx --yes agentnote hook --agent codex";
 
 type CodexHookPayload = {
   session_id?: string;

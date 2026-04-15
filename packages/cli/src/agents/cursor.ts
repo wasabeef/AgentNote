@@ -6,7 +6,7 @@ import { join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOKS_REL_PATH = ".cursor/hooks.json";
-const HOOK_COMMAND = "npx --yes @wasabeef/agentnote hook --agent cursor";
+const HOOK_COMMAND = "npx --yes agentnote hook --agent cursor";
 const CURSOR_PROJECTS_DIR = join(homedir(), ".cursor", "projects");
 const CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
 const TRANSCRIPT_WAIT_MS = 1_500;

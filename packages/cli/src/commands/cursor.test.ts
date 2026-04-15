@@ -648,7 +648,7 @@ describe("agentnote cursor", () => {
       "post-commit should prefer the repo-local shim",
     );
     assert.ok(
-      !postCommitHook.includes("npx --yes @wasabeef/agentnote record"),
+      !postCommitHook.includes("npx --yes agentnote record"),
       "post-commit should not resolve an unpinned package at commit time",
     );
 

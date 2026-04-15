@@ -52,10 +52,7 @@ describe("cursor adapter", () => {
         {
           version: 1,
           hooks: {
-            beforeSubmitPrompt: [
-              { command: "npx --yes @wasabeef/agentnote hook" },
-              { command: "echo ok" },
-            ],
+            beforeSubmitPrompt: [{ command: "npx --yes agentnote hook" }, { command: "echo ok" }],
           },
         },
         null,

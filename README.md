@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/wasabeef/AgentNote/actions"><img src="https://img.shields.io/github/actions/workflow/status/wasabeef/AgentNote/ci.yml?branch=main" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://www.npmjs.com/package/@wasabeef/agentnote"><img src="https://img.shields.io/npm/v/@wasabeef/agentnote" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/agentnote"><img src="https://img.shields.io/npm/v/agentnote" alt="npm"></a>
 </p>
 
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
@@ -23,19 +23,19 @@ Agent Note records each prompt, response, and AI-attributed file, then attaches 
 ## Setup
 
 ```bash
-npx @wasabeef/agentnote init --agent claude
+npx agentnote init --agent claude
 ```
 
 For Codex CLI:
 
 ```bash
-npx @wasabeef/agentnote init --agent codex
+npx agentnote init --agent codex
 ```
 
 For Cursor:
 
 ```bash
-npx @wasabeef/agentnote init --agent cursor
+npx agentnote init --agent cursor
 ```
 
 Commit the generated files and push:
@@ -56,7 +56,7 @@ Cursor support is currently preview-only: attribution comes from `afterFileEdit`
 ## Check Your Setup
 
 ```bash
-agentnote status
+npx agentnote status
 ```
 
 ```text
@@ -78,7 +78,7 @@ linked:  3/20 recent commits
 ### Every commit tells its story
 
 ```
-$ agentnote show
+$ npx agentnote show
 
 commit:  ce941f7 feat: add JWT auth middleware
 session: a1b2c3d4-5678-90ab-cdef-111122223333
@@ -103,7 +103,7 @@ prompts: 2
 ### Scan your history at a glance
 
 ```
-$ agentnote log
+$ npx agentnote log
 
 ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 326a568 test: add auth tests          [a1b2c3d4… | 🤖100% | 1p]
@@ -113,7 +113,7 @@ ba091be fix: update dependencies
 ### PR reports
 
 ```
-$ agentnote pr --output description --update 42
+$ npx agentnote pr --output description --update 42
 ```
 
 Posts an AI session report to the PR description:

@@ -1,5 +1,5 @@
 {
-  "name": "@wasabeef/agentnote-action",
+  "name": "agentnote-action",
   "version": "0.1.0",
   "private": true,
   "description": "GitHub Action for agentnote PR reports",

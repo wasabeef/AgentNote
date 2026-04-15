@@ -19,7 +19,7 @@ wasabeef/AgentNote/
 ├── action.yml                      # root pointer → packages/action (for uses: wasabeef/AgentNote@v0)
 │
 ├── packages/
-│   ├── cli/                        # @wasabeef/agentnote — npm package
+│   ├── cli/                        # agentnote — npm package
 │   │   ├── src/
 │   │   │   ├── cli.ts              # entry point, command routing
 │   │   │   ├── git.ts              # git CLI wrapper
@@ -44,7 +44,7 @@ wasabeef/AgentNote/
 │   │   │       ├── log.ts
 │   │   │       ├── pr.ts
 │   │   │       └── status.ts
-│   │   ├── package.json            # name: @wasabeef/agentnote
+│   │   ├── package.json            # name: agentnote
 │   │   └── tsconfig.json
 │   │
 │   └── action/                     # GitHub Action (Marketplace)
@@ -53,7 +53,7 @@ wasabeef/AgentNote/
 │       │   └── index.ts            # calls CLI, sets outputs, posts to PR description/comment
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
-│       └── package.json            # name: @wasabeef/agentnote-action (private, not published)
+│       └── package.json            # name: agentnote-action (private, not published)
 │
 ├── docs/
 │   └── knowledge/
@@ -419,7 +419,7 @@ Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a 
 ## Distribution
 
 ```
-CLI:    npx @wasabeef/agentnote init          (or npm install --save-dev)
+CLI:    npx agentnote init          (or npm install --save-dev)
 Action: uses: wasabeef/AgentNote@v0             (Marketplace)
 ```
 
@@ -447,7 +447,7 @@ Important:
 
 ```bash
 # 1. Enable agentnote (one person, once)
-npx @wasabeef/agentnote init
+npx agentnote init
 git add .claude/settings.json .github/workflows/agentnote.yml
 git commit -m "chore: enable agentnote"
 git push
@@ -459,7 +459,7 @@ git push
 
 # 2. New clone setup (per developer, per clone)
 git clone <repo> && cd <repo>
-npx @wasabeef/agentnote init   # installs git hooks + agent config + auto-fetch
+npx agentnote init   # installs git hooks + agent config + auto-fetch
 
 # 3. Everyone works normally
 # hooks fire automatically — trailer injected, note recorded, notes auto-pushed on push
@@ -498,7 +498,7 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
 | GitHub Action markdown injection | PR report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
-| `npx --yes` supply chain | Claude Code agent hooks use `npx --yes @wasabeef/agentnote hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agentnote`), falling back to PATH. |
+| `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agentnote hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agentnote`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
 ### Recommendations for users
