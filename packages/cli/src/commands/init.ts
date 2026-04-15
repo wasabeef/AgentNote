@@ -87,12 +87,15 @@ fi
 
 const PRE_PUSH_SCRIPT = `#!/bin/sh
 ${AGENTNOTE_HOOK_MARKER}
-# Push agentnote notes alongside code. Non-blocking — failure is silent.
+# Push agentnote notes alongside code. Wait for completion so PR workflows
+# can fetch the latest notes ref, but never block the main code push on failure.
 # Use the actual remote ($1) passed by git, not hardcoded origin.
 # Guard against recursion with AGENTNOTE_PUSHING env var.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 REMOTE="\${1:-origin}"
-AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
+# Skip quietly until at least one note exists locally.
+if ! git rev-parse --verify refs/notes/agentnote >/dev/null 2>&1; then exit 0; fi
+AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote >/dev/null 2>&1 || true
 `;
 
 export async function init(args: string[]): Promise<void> {

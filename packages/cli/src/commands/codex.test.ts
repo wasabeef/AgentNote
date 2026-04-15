@@ -4,7 +4,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { fileURLToPath } from "node:url";
 import {
   AGENTNOTE_DIR,
   EVENTS_FILE,
@@ -14,14 +13,20 @@ import {
   SESSIONS_DIR,
 } from "../core/constants.js";
 
-const FIXTURES_DIR = fileURLToPath(new URL("../agents/fixtures/", import.meta.url));
-
-function loadFixture(name: string, replacements: Record<string, string>): string {
-  let content = readFileSync(join(FIXTURES_DIR, name), "utf-8");
-  for (const [token, value] of Object.entries(replacements)) {
-    content = content.replaceAll(token, value);
-  }
-  return content;
+function buildRealSessionPatchTranscript(opts: {
+  sessionId: string;
+  workdir: string;
+  prompt: string;
+  response: string;
+  patchPath: string;
+}): string {
+  return (
+    `{"timestamp":"2026-04-15T09:31:23.296Z","type":"session_meta","payload":{"id":"${opts.sessionId}","timestamp":"2026-04-15T09:31:16.968Z","cwd":"${opts.workdir}","originator":"codex-tui","cli_version":"0.120.0","source":"cli","model_provider":"openai"}}\n` +
+    `{"timestamp":"2026-04-15T09:31:23.296Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"${opts.prompt}"}]}}\n` +
+    `{"timestamp":"2026-04-15T09:31:35.585Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"${opts.response}"}],"phase":"commentary"}}\n` +
+    `{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\\"cmd\\":\\"git status --short\\",\\"workdir\\":\\"${opts.workdir}\\",\\"yield_time_ms\\":1000,\\"max_output_tokens\\":3000}","call_id":"call_exec_command"}}\n` +
+    `{"timestamp":"2026-04-15T09:46:45.780Z","type":"response_item","payload":{"type":"custom_tool_call","status":"completed","call_id":"call_apply_patch","name":"apply_patch","input":"*** Begin Patch\\n*** Add File: ${opts.patchPath}\\n+new status\\n*** End Patch\\n"}}\n`
+  );
 }
 
 describe("agentnote codex", () => {
@@ -68,12 +73,12 @@ describe("agentnote codex", () => {
     const transcriptPath = join(transcriptDir, "rollout.jsonl");
     writeFileSync(
       transcriptPath,
-      loadFixture("codex-real-session-patch.jsonl", {
-        __SESSION_ID__: sessionId,
-        __WORKDIR__: testDir,
-        __PATCH_PATH__: "hello.txt",
-        __PROMPT__: "Create hello.txt",
-        __RESPONSE__: "Creating the file.",
+      buildRealSessionPatchTranscript({
+        sessionId,
+        workdir: testDir,
+        patchPath: "hello.txt",
+        prompt: "Create hello.txt",
+        response: "Creating the file.",
       }),
     );
 
@@ -279,11 +284,10 @@ describe("agentnote codex", () => {
     const transcriptPath = join(transcriptDir, "shell-only.jsonl");
     writeFileSync(
       transcriptPath,
-      loadFixture("codex-real-session-shell.jsonl", {
-        __SESSION_ID__: sessionId,
-        __WORKDIR__: testDir,
-        __PATCH_PATH__: "shell-note.txt",
-      }),
+      `{"timestamp":"2026-04-15T09:31:23.296Z","type":"session_meta","payload":{"id":"${sessionId}","timestamp":"2026-04-15T09:31:16.968Z","cwd":"${testDir}","originator":"codex-tui","cli_version":"0.120.0","source":"cli","model_provider":"openai"}}\n` +
+        '{"timestamp":"2026-04-15T09:31:23.296Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Update shell-note.txt via shell."}]}}\n' +
+        '{"timestamp":"2026-04-15T09:31:35.585Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will update it with a shell command."}],"phase":"commentary"}}\n' +
+        `{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\\"cmd\\":\\"printf 'shell path\\\\n' > shell-note.txt\\",\\"workdir\\":\\"${testDir}\\",\\"yield_time_ms\\":1000,\\"max_output_tokens\\":3000}","call_id":"call_exec_command_shell"}}\n`,
     );
 
     const sessionStart = JSON.stringify({

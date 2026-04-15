@@ -1,5 +1,0 @@
-{"timestamp":"2026-04-15T09:31:23.296Z","type":"session_meta","payload":{"id":"__SESSION_ID__","timestamp":"2026-04-15T09:31:16.968Z","cwd":"__WORKDIR__","originator":"codex-tui","cli_version":"0.120.0","source":"cli","model_provider":"openai"}}
-{"timestamp":"2026-04-15T09:31:23.296Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"__PROMPT__"}]}}
-{"timestamp":"2026-04-15T09:31:35.585Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"__RESPONSE__"}],"phase":"commentary"}}
-{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"git status --short\",\"workdir\":\"__WORKDIR__\",\"yield_time_ms\":1000,\"max_output_tokens\":3000}","call_id":"call_exec_command"}}
-{"timestamp":"2026-04-15T09:46:45.780Z","type":"response_item","payload":{"type":"custom_tool_call","status":"completed","call_id":"call_apply_patch","name":"apply_patch","input":"*** Begin Patch\n*** Add File: __PATCH_PATH__\n+new status\n*** End Patch\n"}}

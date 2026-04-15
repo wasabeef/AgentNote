@@ -1,20 +1,26 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { fileURLToPath } from "node:url";
 import { codex } from "./codex.js";
 
 const VALID_SESSION_ID = "a0000000-0000-4000-8000-000000000001";
-const FIXTURES_DIR = fileURLToPath(new URL("./fixtures/", import.meta.url));
 
-function loadFixture(name: string, replacements: Record<string, string>): string {
-  let content = readFileSync(join(FIXTURES_DIR, name), "utf-8");
-  for (const [token, value] of Object.entries(replacements)) {
-    content = content.replaceAll(token, value);
-  }
-  return content;
+function buildRealSessionPatchTranscript(opts: {
+  sessionId: string;
+  workdir: string;
+  prompt: string;
+  response: string;
+  patchPath: string;
+}): string {
+  return (
+    `{"timestamp":"2026-04-15T09:31:23.296Z","type":"session_meta","payload":{"id":"${opts.sessionId}","timestamp":"2026-04-15T09:31:16.968Z","cwd":"${opts.workdir}","originator":"codex-tui","cli_version":"0.120.0","source":"cli","model_provider":"openai"}}\n` +
+    `{"timestamp":"2026-04-15T09:31:23.296Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"${opts.prompt}"}]}}\n` +
+    `{"timestamp":"2026-04-15T09:31:35.585Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"${opts.response}"}],"phase":"commentary"}}\n` +
+    `{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\\"cmd\\":\\"git status --short\\",\\"workdir\\":\\"${opts.workdir}\\",\\"yield_time_ms\\":1000,\\"max_output_tokens\\":3000}","call_id":"call_exec_command"}}\n` +
+    `{"timestamp":"2026-04-15T09:46:45.780Z","type":"response_item","payload":{"type":"custom_tool_call","status":"completed","call_id":"call_apply_patch","name":"apply_patch","input":"*** Begin Patch\\n*** Add File: ${opts.patchPath}\\n+new status\\n*** End Patch\\n"}}\n`
+  );
 }
 
 describe("codex adapter", () => {
@@ -123,12 +129,12 @@ describe("codex adapter", () => {
 
     writeFileSync(
       transcriptPath,
-      loadFixture("codex-real-session-patch.jsonl", {
-        __SESSION_ID__: VALID_SESSION_ID,
-        __WORKDIR__: "/repo",
-        __PATCH_PATH__: "src/status.ts",
-        __PROMPT__: "Review the status output.",
-        __RESPONSE__: "I will inspect the current state and update the status output.",
+      buildRealSessionPatchTranscript({
+        sessionId: VALID_SESSION_ID,
+        workdir: "/repo",
+        patchPath: "src/status.ts",
+        prompt: "Review the status output.",
+        response: "I will inspect the current state and update the status output.",
       }),
     );
 

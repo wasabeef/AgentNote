@@ -29931,6 +29931,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DESCRIPTION_END = exports.DESCRIPTION_BEGIN = exports.COMMENT_MARKER = void 0;
 exports.resolveOutputMode = resolveOutputMode;
 exports.upsertDescription = upsertDescription;
+exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -29961,6 +29962,14 @@ function upsertDescription(existingBody, markdown) {
         return `${before.trimEnd()}\n\n${section}${after}`;
     }
     return `${existingBody.trimEnd()}\n\n${section}`;
+}
+/**
+ * Retry notes fetch only when the PR clearly has commits but none of them
+ * resolved to Agent Note data yet. This is the common signature of a notes
+ * push race right after branch publication.
+ */
+function shouldRetryNotesFetch(report) {
+    return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
 
@@ -30027,6 +30036,19 @@ function resolveCliCommand() {
     }
     return "npx --yes agentnote";
 }
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function fetchAgentnoteNotes() {
+    try {
+        (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", {
+            stdio: "pipe",
+        });
+    }
+    catch {
+        core.info("No agentnote notes found on remote.");
+    }
+}
 async function run() {
     try {
         const base = core.getInput("base") ||
@@ -30036,30 +30058,36 @@ async function run() {
         const outputInput = core.getInput("output");
         const commentInput = core.getInput("comment");
         const outputMode = (0, helpers_js_1.resolveOutputMode)(outputInput, commentInput);
-        // Fetch agentnote notes.
-        try {
-            (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", { stdio: "pipe" });
+        let json = "";
+        let report = null;
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            fetchAgentnoteNotes();
+            try {
+                json = (0, child_process_1.execSync)(`${cliCmd} pr "${base}" --json`, {
+                    encoding: "utf-8",
+                    stdio: ["pipe", "pipe", "pipe"],
+                }).trim();
+            }
+            catch {
+                core.info("No agentnote data found for this PR.");
+                return;
+            }
+            if (!json || json === "{}") {
+                core.info("No agentnote data found for this PR.");
+                return;
+            }
+            report = JSON.parse(json);
+            if (!(0, helpers_js_1.shouldRetryNotesFetch)(report) || attempt === maxAttempts) {
+                break;
+            }
+            core.info(`Agentnote notes are not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
+            await sleep(attempt * 1000);
         }
-        catch {
-            core.info("No agentnote notes found on remote.");
-        }
-        // Generate JSON report.
-        let json;
-        try {
-            json = (0, child_process_1.execSync)(`${cliCmd} pr "${base}" --json`, {
-                encoding: "utf-8",
-                stdio: ["pipe", "pipe", "pipe"],
-            }).trim();
-        }
-        catch {
+        if (!report) {
             core.info("No agentnote data found for this PR.");
             return;
         }
-        if (!json || json === "{}") {
-            core.info("No agentnote data found for this PR.");
-            return;
-        }
-        const report = JSON.parse(json);
         // Set outputs.
         core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
         core.setOutput("overall_method", String(report.overall_method ?? "file"));
@@ -30094,10 +30122,19 @@ async function run() {
         const issueNumber = github.context.payload.pull_request.number;
         if (outputMode === "description") {
             // Upsert into PR description.
-            const { data: pr } = await octokit.rest.pulls.get({ owner, repo, pull_number: issueNumber });
+            const { data: pr } = await octokit.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: issueNumber,
+            });
             const existingBody = pr.body ?? "";
             const newBody = (0, helpers_js_1.upsertDescription)(existingBody, markdown);
-            await octokit.rest.pulls.update({ owner, repo, pull_number: issueNumber, body: newBody });
+            await octokit.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: issueNumber,
+                body: newBody,
+            });
             core.info("Agentnote report added to PR description.");
         }
         else {
@@ -30111,10 +30148,20 @@ async function run() {
             });
             const existing = comments.find((c) => c.body?.includes(marker));
             if (existing) {
-                await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                await octokit.rest.issues.updateComment({
+                    owner,
+                    repo,
+                    comment_id: existing.id,
+                    body,
+                });
             }
             else {
-                await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
+                await octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body,
+                });
             }
             core.info("Agentnote report posted as PR comment.");
         }

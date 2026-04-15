@@ -57,6 +57,18 @@ describe("agentnote init", () => {
     });
     assert.ok(fetchConfig.includes(NOTES_REF_FULL), "should configure notes auto-fetch");
 
+    const prePushHook = readFileSync(join(testDir, ".git", "hooks", "pre-push"), "utf-8");
+    assert.ok(
+      prePushHook.includes("git rev-parse --verify refs/notes/agentnote >/dev/null 2>&1"),
+      "pre-push should skip until a local notes ref exists",
+    );
+    assert.ok(
+      prePushHook.includes(
+        'AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote >/dev/null 2>&1 || true',
+      ),
+      "pre-push should wait for notes push completion without blocking code push",
+    );
+
     // Output messages
     assert.ok(output.includes("✓"), "should show success markers");
     assert.ok(output.includes("Next:"), "should show next steps");
