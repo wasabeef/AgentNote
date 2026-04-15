@@ -203,6 +203,69 @@ describe("agentnote codex", () => {
     assert.equal(note.attribution.ai_ratio, 100);
   });
 
+  it("matches absolute transcript patch paths against commit-relative files", () => {
+    const sessionId = "codex-session-absolute-path";
+    const transcriptDir = join(testHome, ".codex", "sessions");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout-absolute.jsonl");
+    writeFileSync(
+      transcriptPath,
+      buildRealSessionPatchTranscript({
+        sessionId,
+        workdir: testDir,
+        patchPath: join(testDir, "absolute.txt"),
+        prompt: "Create absolute.txt",
+        response: "Creating the file from an absolute patch path.",
+      }),
+    );
+
+    const sessionStart = JSON.stringify({
+      hook_event_name: "SessionStart",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    const promptEvent = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      prompt: "Create absolute.txt",
+      model: "gpt-5-codex",
+    });
+    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    writeFileSync(join(testDir, "absolute.txt"), "Absolute path\n");
+    execSync("git add absolute.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: codex absolute path"`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+    });
+
+    const note = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(note.attribution.method, "line");
+    assert.equal(note.attribution.ai_ratio, 100);
+    assert.deepEqual(note.interactions[0].files_touched, ["absolute.txt"]);
+    assert.deepEqual(
+      note.files
+        .filter((file: { by_ai: boolean }) => file.by_ai)
+        .map((file: { path: string }) => file.path),
+      ["absolute.txt"],
+    );
+  });
+
   it("records Codex transcripts that use function_call apply_patch payloads and non-session filenames", () => {
     const sessionId = "codex-session-3";
     const transcriptDir = join(testHome, ".codex", "sessions", "2026", "04", "10");

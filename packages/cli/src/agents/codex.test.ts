@@ -152,6 +152,27 @@ describe("codex adapter", () => {
     });
   });
 
+  it("normalizes absolute patch paths and ignores nested patch markers inside added code", async () => {
+    const transcriptDir = join(codexHome, "sessions", "normalized");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+
+    writeFileSync(
+      transcriptPath,
+      '{"type":"session_meta","payload":{"id":"normalized-session","cwd":"/repo"}}\n' +
+        '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Tighten Codex parser tests"}]}}\n' +
+        '{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Updating parser coverage."}]}}\n' +
+        '{"type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","input":"*** Begin Patch\\n*** Update File: /repo/src/codex.test.ts\\n@@\\n-const oldValue = 1;\\n+const embedded = `*** Begin Patch\\\\n*** Add File: fake.txt\\\\n+oops\\\\n*** End Patch\\\\n`;\\n*** End Patch\\n"}}\n',
+    );
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+    assert.equal(interactions.length, 1);
+    assert.deepEqual(interactions[0].files_touched, ["src/codex.test.ts"]);
+    assert.deepEqual(interactions[0].line_stats, {
+      "src/codex.test.ts": { added: 1, deleted: 1 },
+    });
+  });
+
   it("finds transcripts by embedded session id when the filename is not the session id", () => {
     const sessionId = "codex-session-fallback";
     const transcriptDir = join(codexHome, "sessions", "2026", "04", "10");
