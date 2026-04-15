@@ -92,6 +92,68 @@ describe("claude adapter", () => {
       assert.equal(event, null);
     });
 
+    it("returns null for system-injected task-notification prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<task-notification>\n<task-id>abc123</task-id>\n</task-notification>",
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
+    it("returns null for system-injected system-reminder prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<system-reminder>\nAuto mode active.\n</system-reminder>",
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
+    it("returns null for system-injected teammate-message prompt", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: '<teammate-message teammate_id="planner">Done.</teammate-message>',
+        }),
+        sync: false,
+      });
+      assert.equal(event, null);
+    });
+
+    it("does NOT filter prompts that merely contain system tag names", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "Please check the <task-notification> handler in hook.ts",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null, "prompt containing system tag as substring should not be filtered");
+      assert.equal(event.kind, "prompt");
+    });
+
+    it("does NOT filter prompts starting with similar but non-matching tags", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt: "<task-notifications-are-cool>test</task-notifications-are-cool>",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null, "tag with extra suffix should not be filtered");
+      assert.equal(event.kind, "prompt");
+    });
+
     it("parses PreToolUse Edit as pre_edit", () => {
       const event = claude.parseEvent({
         raw: JSON.stringify({
