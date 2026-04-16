@@ -1,7 +1,7 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
@@ -111,8 +111,22 @@ function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[
 function readTranscriptSessionId(candidate: string): string | null {
   try {
     const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
-    const match = preview.match(/"id"\s*:\s*"([^"]+)"/);
-    return match?.[1] ?? null;
+    for (const rawLine of preview.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      try {
+        const entry = JSON.parse(line) as RolloutLine;
+        const sessionId = entry.type === "session_meta" ? entry.payload?.id : undefined;
+        if (typeof sessionId === "string" && sessionId.trim()) {
+          return sessionId;
+        }
+      } catch {
+        const match = line.match(/"type"\s*:\s*"session_meta"[\s\S]*?"id"\s*:\s*"([^"]+)"/);
+        if (match?.[1]) return match[1];
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -164,7 +178,9 @@ function codexHome(): string {
 }
 
 function isValidTranscriptPath(transcriptPath: string): boolean {
-  return transcriptPath.startsWith(codexHome());
+  const base = resolve(codexHome());
+  const normalized = resolve(transcriptPath);
+  return normalized === base || normalized.startsWith(`${base}${sep}`);
 }
 
 function normalizeTranscriptPath(value?: string | null): string | undefined {
@@ -236,7 +252,7 @@ function mergeHooksConfig(existing: CodexHooksFile): CodexHooksFile {
 }
 
 function extractFilesFromApplyPatch(input: string): string[] {
-  const regex = /\*\*\* (?:Add|Update|Delete) File: (.+)/g;
+  const regex = /^\*\*\* (?:Add|Update|Delete) File: ([^\n]+)$/gm;
   const files: string[] = [];
   const seen = new Set<string>();
   for (const match of input.matchAll(regex)) {
@@ -278,6 +294,36 @@ function extractLineStatsFromApplyPatch(
   }
 
   return stats;
+}
+
+function normalizeInteractionFilePath(filePath: string, sessionCwd?: string): string | null {
+  const trimmed = filePath.trim();
+  if (!trimmed || trimmed.includes("\n") || trimmed.includes("\r")) return null;
+
+  if (!isAbsolute(trimmed)) {
+    return trimmed.replace(/\\/g, "/").replace(/^\.\//, "");
+  }
+
+  const normalized = resolve(trimmed);
+  if (!sessionCwd) return normalized;
+
+  const base = resolve(sessionCwd);
+  if (normalized === base) return ".";
+  if (normalized.startsWith(`${base}${sep}`)) {
+    return relative(base, normalized).split(sep).join("/");
+  }
+
+  return normalized;
+}
+
+function appendInteractionTool(
+  interaction: TranscriptInteraction,
+  toolName: string | undefined,
+): void {
+  if (!toolName) return;
+  const tools = interaction.tools ?? [];
+  if (tools.includes(toolName)) return;
+  interaction.tools = [...tools, toolName];
 }
 
 export const codex: AgentAdapter = {
@@ -412,6 +458,7 @@ export const codex: AgentAdapter = {
 
     const interactions: TranscriptInteraction[] = [];
     let current: TranscriptInteraction | null = null;
+    let sessionCwd: string | undefined;
 
     for (const rawLine of content.split("\n")) {
       const line = rawLine.trim();
@@ -421,6 +468,11 @@ export const codex: AgentAdapter = {
       try {
         entry = JSON.parse(line) as RolloutLine;
       } catch {
+        continue;
+      }
+
+      if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
+        sessionCwd = entry.payload.cwd;
         continue;
       }
 
@@ -455,6 +507,15 @@ export const codex: AgentAdapter = {
             : undefined;
 
       if (
+        (payloadType === "custom_tool_call" ||
+          payloadType === "function_call" ||
+          payloadType === "tool_use") &&
+        toolName
+      ) {
+        appendInteractionTool(current, toolName);
+      }
+
+      if (
         (payloadType === "custom_tool_call" || payloadType === "function_call") &&
         toolName === "apply_patch"
       ) {
@@ -468,13 +529,17 @@ export const codex: AgentAdapter = {
 
         for (const patchInput of patchInputs) {
           for (const file of extractFilesFromApplyPatch(patchInput)) {
-            appendUnique(files, fileSeen, file);
+            const normalized = normalizeInteractionFilePath(file, sessionCwd);
+            if (!normalized) continue;
+            appendUnique(files, fileSeen, normalized);
           }
 
           const lineStats = extractLineStatsFromApplyPatch(patchInput);
           for (const [file, stats] of Object.entries(lineStats)) {
-            const previous = current.line_stats[file] ?? { added: 0, deleted: 0 };
-            current.line_stats[file] = {
+            const normalized = normalizeInteractionFilePath(file, sessionCwd);
+            if (!normalized) continue;
+            const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
+            current.line_stats[normalized] = {
               added: previous.added + stats.added,
               deleted: previous.deleted + stats.deleted,
             };

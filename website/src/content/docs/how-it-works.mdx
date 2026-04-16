@@ -83,7 +83,7 @@ All three diffs target the committed blob, so positions are directly comparable.
   Deletions are tracked separately — not attributed to AI or human. Falls back to file-level binary attribution when blob data is unavailable.
 </Aside>
 
-Codex CLI uses transcript-driven attribution. When transcript patch counts match the final commit diff, Agent Note upgrades Codex commits to `method: "line"`. Otherwise it falls back to `method: "file"` to avoid false positives.
+Codex CLI uses transcript-driven attribution. When transcript patch counts match the final commit diff, Agent Note upgrades Codex commits to `method: "line"`. Otherwise it falls back to `method: "file"` to avoid false positives. Shell-only edits that never surface as transcript patch data stay on the safe side: Agent Note can still preserve the prompt / response pair and observed Codex tools, but it does not guess `files_touched` or AI-authored files from shell steps alone. Those commits therefore stay at `method: "file"` with `0%` AI attribution unless another primary signal ties files to the agent. If the transcript cannot be read at commit time, Agent Note warns and skips note creation rather than recording uncertain attribution data.
 
 Cursor preview uses `afterFileEdit` and `afterTabFileEdit` hooks for attribution. When their edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to `method: "line"`. Otherwise it falls back to `method: "file"`, while still recovering prompt / response pairs from Cursor response hooks or local transcripts when they are available.
 

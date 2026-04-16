@@ -4,6 +4,7 @@ import { hook } from "./commands/hook.js";
 import { init } from "./commands/init.js";
 import { log } from "./commands/log.js";
 import { pr } from "./commands/pr.js";
+import { pushNotes } from "./commands/push-notes.js";
 import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
@@ -78,6 +79,9 @@ switch (command) {
     }
     break;
   }
+  case "push-notes":
+    await pushNotes(args);
+    break;
   case "version":
   case "--version":
   case "-v":

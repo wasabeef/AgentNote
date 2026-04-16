@@ -10,6 +10,7 @@ export interface TranscriptInteraction {
   response: string | null;
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
+  tools?: string[] | null;
 }
 
 export interface NormalizedEvent {

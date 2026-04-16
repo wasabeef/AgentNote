@@ -57,6 +57,16 @@ describe("agentnote init", () => {
     });
     assert.ok(fetchConfig.includes(NOTES_REF_FULL), "should configure notes auto-fetch");
 
+    const prePushHook = readFileSync(join(testDir, ".git", "hooks", "pre-push"), "utf-8");
+    assert.ok(
+      prePushHook.includes('"$GIT_DIR/agentnote/bin/agentnote" push-notes "$1"'),
+      "pre-push should delegate notes sync to the repo-local shim",
+    );
+    assert.ok(
+      !prePushHook.includes('git push "$REMOTE" refs/notes/agentnote'),
+      "pre-push should not embed a stale inline notes push implementation",
+    );
+
     // Output messages
     assert.ok(output.includes("✓"), "should show success markers");
     assert.ok(output.includes("Next:"), "should show next steps");
@@ -100,6 +110,67 @@ describe("agentnote init", () => {
     const settingsPath = join(testDir, ".claude", "settings.json");
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     assert.equal(settings.hooks.SessionStart.length, 1, "should not duplicate hooks");
+  });
+
+  it("upgrades a legacy managed pre-push hook to the shim-based implementation", () => {
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const legacyPrePush = `#!/bin/sh
+# agentnote-managed
+if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
+REMOTE="\${1:-origin}"
+AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
+`;
+    const hookPath = join(testDir, ".git", "hooks", "pre-push");
+    writeFileSync(hookPath, legacyPrePush, { mode: 0o755 });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    const upgradedHook = readFileSync(hookPath, "utf-8");
+    assert.ok(
+      upgradedHook.includes('"$GIT_DIR/agentnote/bin/agentnote" push-notes "$1"'),
+      "init should upgrade legacy managed pre-push hooks to the shim-based implementation",
+    );
+    assert.ok(
+      !upgradedHook.includes('git push "$REMOTE" refs/notes/agentnote 2>/dev/null &'),
+      "legacy async notes push should be removed during upgrade",
+    );
+  });
+
+  it("pushes notes synchronously alongside the main branch push", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-pre-push-sync-"));
+    const remoteDir = mkdtempSync(join(tmpdir(), "agentnote-pre-push-remote-"));
+
+    execSync("git init --bare", { cwd: remoteDir });
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync(`git remote add origin ${remoteDir}`, { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+    writeFileSync(join(dir, "note.txt"), "tracked by note\n");
+    execSync("git add note.txt", { cwd: dir });
+    execSync("git commit -m 'feat: add note target'", { cwd: dir });
+    execSync("git notes --ref=agentnote add -m '{\"v\":1}' HEAD", { cwd: dir });
+
+    execSync("git push -u origin HEAD", { cwd: dir, encoding: "utf-8" });
+
+    const remoteNotesRef = execSync("git rev-parse --verify refs/notes/agentnote", {
+      cwd: remoteDir,
+      encoding: "utf-8",
+    }).trim();
+    assert.ok(remoteNotesRef.length > 0, "remote notes ref should exist immediately after push");
+
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(remoteDir, { recursive: true, force: true });
   });
 
   it("upgrades legacy Claude hook commands to --agent form", () => {

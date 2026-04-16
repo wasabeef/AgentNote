@@ -43,8 +43,25 @@ describe("agentnote status", () => {
 
     assert.ok(output.includes("agent:   active"), "should show agent hooks active");
     assert.ok(
-      output.includes("capture: cursor(prompt, response, edits, shell)"),
+      output.includes("cursor(prompt, response, edits, shell)"),
       "should show cursor capture capabilities",
+    );
+    assert.ok(output.includes("git:     not configured"), "should show git hooks missing");
+    assert.ok(output.includes("commit:  fallback mode"), "should show fallback mode");
+  });
+
+  it("shows Codex transcript-driven capture details", () => {
+    execSync(`node ${cliPath} init --agent codex --hooks --no-git-hooks`, { cwd: testDir });
+
+    const output = execSync(`node ${cliPath} status`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(output.includes("agent:   active"), "should show agent hooks active");
+    assert.ok(
+      output.includes("capture: codex(prompt, response, transcript)"),
+      "should show codex capture capabilities",
     );
     assert.ok(output.includes("git:     not configured"), "should show git hooks missing");
     assert.ok(output.includes("commit:  fallback mode"), "should show fallback mode");
@@ -60,7 +77,7 @@ describe("agentnote status", () => {
 
     assert.ok(output.includes("agent:   active"), "should show agent hooks active");
     assert.ok(
-      output.includes("capture: cursor(prompt, response, edits, shell)"),
+      output.includes("cursor(prompt, response, edits, shell)"),
       "should show cursor capture capabilities",
     );
     assert.ok(

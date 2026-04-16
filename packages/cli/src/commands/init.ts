@@ -87,12 +87,21 @@ fi
 
 const PRE_PUSH_SCRIPT = `#!/bin/sh
 ${AGENTNOTE_HOOK_MARKER}
-# Push agentnote notes alongside code. Non-blocking — failure is silent.
-# Use the actual remote ($1) passed by git, not hardcoded origin.
-# Guard against recursion with AGENTNOTE_PUSHING env var.
+# Push agentnote notes alongside code via the repo-local shim so hook behavior
+# tracks the current CLI implementation after upgrades. Wait for completion so
+# PR workflows can fetch the latest notes ref, but never block the main push on failure.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
-REMOTE="\${1:-origin}"
-AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+if [ -x "$GIT_DIR/agentnote/bin/agentnote" ]; then
+  "$GIT_DIR/agentnote/bin/agentnote" push-notes "$1" 2>/dev/null || true
+  exit 0
+fi
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -f "$REPO_ROOT/node_modules/.bin/agentnote" ]; then
+  "$REPO_ROOT/node_modules/.bin/agentnote" push-notes "$1" 2>/dev/null || true
+elif command -v agentnote >/dev/null 2>&1; then
+  agentnote push-notes "$1" 2>/dev/null || true
+fi
 `;
 
 export async function init(args: string[]): Promise<void> {
