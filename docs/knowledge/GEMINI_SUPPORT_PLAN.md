@@ -197,3 +197,4 @@ npm test            ✅ (140 tests, 0 fail)
 2. **`extractInteractions` 実装**: トランスクリプト JSON ファイルを入手後にパーサーを実装
 3. **Shell ツール名の確定**: 実際の BeforeTool イベントで `tool_name` を確認し `SHELL_TOOLS` を調整
 4. **tech debt**: `pre_commit` の Gemini/Cursor コード重複を shared helper に抽出（5 つ目の adapter 追加時に検討）
+// test response extraction 1776402132
