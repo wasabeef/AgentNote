@@ -6,7 +6,7 @@ If you discover a security vulnerability in Agent Note, please report it respons
 
 **Do not open a public issue for security vulnerabilities.**
 
-Instead, please send a report via [GitHub Security Advisories](https://github.com/wasabeef/agentnote/security/advisories/new) or email the maintainer directly.
+Instead, please send a report via [GitHub Security Advisories](https://github.com/wasabeef/AgentNote/security/advisories/new) or email the maintainer directly.
 
 ### What to Include
 
@@ -43,5 +43,5 @@ Security issues that are in scope:
 Issues that are out of scope:
 
 - Vulnerabilities in Claude Code itself
-- Issues requiring local machine access (agentnote's data is local by design)
+- Issues requiring local machine access (agent-note's data is local by design)
 - Social engineering attacks

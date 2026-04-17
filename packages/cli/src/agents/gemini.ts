@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
-const HOOK_COMMAND = "npx --yes agentnote hook --agent gemini";
+const HOOK_COMMAND = "npx --yes agent-note hook --agent gemini";
 const SETTINGS_REL_PATH = ".gemini/settings.json";
 
 const EDIT_TOOLS = new Set(["write_file", "replace"]);
@@ -201,7 +201,10 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      hooks: group.hooks.filter((hook) => !hook.command.includes("agentnote hook")),
+      hooks: group.hooks.filter(
+        (hook) =>
+          !hook.command.includes("agent-note hook") && !hook.command.includes("agentnote hook"),
+      ),
     }))
     .filter((group) => group.hooks.length > 0);
 }
@@ -317,7 +320,8 @@ export const gemini: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      return content.includes(HOOK_COMMAND);
+      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
+      return content.includes(HOOK_COMMAND) || content.includes("agentnote hook --agent gemini");
     } catch {
       return false;
     }

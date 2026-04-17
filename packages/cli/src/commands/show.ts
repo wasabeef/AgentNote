@@ -18,7 +18,7 @@ const COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
 
 export async function show(commitRef?: string): Promise<void> {
   if (commitRef && !COMMIT_REF_PATTERN.test(commitRef)) {
-    console.error("usage: agentnote show [commit]");
+    console.error("usage: agent-note show [commit]");
     console.error("commit must be HEAD or a 7-40 character commit SHA");
     process.exit(1);
   }
@@ -36,20 +36,20 @@ export async function show(commitRef?: string): Promise<void> {
   ).trim();
 
   if (!raw && !trailerSessionId) {
-    console.log("session: none (no agentnote data)");
+    console.log("session: none (no agent-note data)");
     return;
   }
 
   if (!raw) {
     console.log(`session: ${trailerSessionId}`);
-    console.log("entry:   no agentnote note found for this commit");
+    console.log("entry:   no agent-note note found for this commit");
     return;
   }
 
   const entry = normalizeEntry(raw);
   const sessionId = trailerSessionId || entry.session_id;
   if (!sessionId) {
-    console.log("session: none (no agentnote data)");
+    console.log("session: none (no agent-note data)");
     return;
   }
 

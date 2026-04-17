@@ -1,10 +1,10 @@
 {
-  "name": "agentnote",
+  "name": "agent-note",
   "version": "0.2.1",
   "description": "Remember why your code changed. Link AI agent sessions to git commits.",
   "type": "module",
   "bin": {
-    "agentnote": "./dist/cli.js"
+    "agent-note": "./dist/cli.js"
   },
   "scripts": {
     "build": "node build.mjs",
@@ -27,7 +27,7 @@
     "gemini",
     "git",
     "session",
-    "agentnote",
+    "agent-note",
     "ai",
     "traceability"
   ],

@@ -30034,7 +30034,7 @@ function resolveCliCommand() {
     catch {
         // ignore
     }
-    return "npx --yes agentnote";
+    return "npx --yes agent-note";
 }
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30046,7 +30046,7 @@ function fetchAgentnoteNotes() {
         });
     }
     catch {
-        core.info("No agentnote notes found on remote.");
+        core.info("No agent-note notes found on remote.");
     }
 }
 async function run() {
@@ -30070,22 +30070,22 @@ async function run() {
                 }).trim();
             }
             catch {
-                core.info("No agentnote data found for this PR.");
+                core.info("No agent-note data found for this PR.");
                 return;
             }
             if (!json || json === "{}") {
-                core.info("No agentnote data found for this PR.");
+                core.info("No agent-note data found for this PR.");
                 return;
             }
             report = JSON.parse(json);
             if (!(0, helpers_js_1.shouldRetryNotesFetch)(report) || attempt === maxAttempts) {
                 break;
             }
-            core.info(`Agentnote notes are not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
+            core.info(`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
             await sleep(attempt * 1000);
         }
         if (!report) {
-            core.info("No agentnote data found for this PR.");
+            core.info("No agent-note data found for this PR.");
             return;
         }
         // Set outputs.
@@ -30135,7 +30135,7 @@ async function run() {
                 pull_number: issueNumber,
                 body: newBody,
             });
-            core.info("Agentnote report added to PR description.");
+            core.info("Agent Note report added to PR description.");
         }
         else {
             // Post/update PR comment.
@@ -30163,7 +30163,7 @@ async function run() {
                     body,
                 });
             }
-            core.info("Agentnote report posted as PR comment.");
+            core.info("Agent Note report posted as PR comment.");
         }
     }
     catch (error) {

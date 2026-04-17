@@ -41,39 +41,39 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Run init in your repository
 
    ```bash
-   npx agentnote init --agent claude
+   npx agent-note init --agent claude
    ```
 
-   For Codex CLI: `npx agentnote init --agent codex`
-   For Cursor: `npx agentnote init --agent cursor`
-   For Gemini CLI: `npx agentnote init --agent gemini`
-   Multiple agents at once: `npx agentnote init --agent claude --agent cursor`
+   For Codex CLI: `npx agent-note init --agent codex`
+   For Cursor: `npx agent-note init --agent cursor`
+   For Gemini CLI: `npx agent-note init --agent gemini`
+   Multiple agents at once: `npx agent-note init --agent claude --agent cursor`
 
 2. Commit the generated files
 
    ```bash
    git add .claude/settings.json .github/workflows/agentnote.yml
-   git commit -m "chore: enable agentnote"
+   git commit -m "chore: enable agent-note"
    git push
    ```
 
-   For Codex CLI, run `npx agentnote init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
-   For Cursor, run `npx agentnote init --agent cursor` and commit `.cursor/hooks.json`.
-   For Gemini CLI, run `npx agentnote init --agent gemini` and commit `.gemini/settings.json`.
+   For Codex CLI, run `npx agent-note init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
+   For Cursor, run `npx agent-note init --agent cursor` and commit `.cursor/hooks.json`.
+   For Gemini CLI, run `npx agent-note init --agent gemini` and commit `.gemini/settings.json`.
 
 3. Code with AI.
    Plain `git commit` works when the generated git hooks are installed.
-   `agentnote commit -m "..."` remains the fallback wrapper if git hooks are unavailable.
+   `agent-note commit -m "..."` remains the fallback wrapper if git hooks are unavailable.
 </Steps>
 
 ## Check Your Setup
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -89,7 +89,7 @@ linked:  3/20 recent commits
 ## See It In Action
 
 <Tabs>
-  <TabItem label="agentnote show">
+  <TabItem label="agent-note show">
   ```
   commit:  ce941f7 feat: add JWT auth middleware
   session: a1b2c3d4-5678-90ab-cdef-111122223333
@@ -104,7 +104,7 @@ linked:  3/20 recent commits
     CHANGELOG.md  👤
   ```
   </TabItem>
-  <TabItem label="agentnote log">
+  <TabItem label="agent-note log">
   ```
   ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
   326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
@@ -139,7 +139,7 @@ linked:  3/20 recent commits
 | Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
 |---|---|---|---|---|
 | Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
 | Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
 | Default attribution | Line-level | File-level | File-level | File-level |
 | Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |

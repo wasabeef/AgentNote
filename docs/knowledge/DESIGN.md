@@ -1,4 +1,4 @@
-# agentnote — Design Document
+# agent-note — Design Document
 
 > Remember why your code changed. Minimal tooling, maximum traceability.
 
@@ -19,7 +19,7 @@ wasabeef/AgentNote/
 ├── action.yml                      # root pointer → packages/action (for uses: wasabeef/AgentNote@v0)
 │
 ├── packages/
-│   ├── cli/                        # agentnote — npm package
+│   ├── cli/                        # agent-note — npm package
 │   │   ├── src/
 │   │   │   ├── cli.ts              # entry point, command routing
 │   │   │   ├── git.ts              # git CLI wrapper
@@ -44,7 +44,7 @@ wasabeef/AgentNote/
 │   │   │       ├── log.ts
 │   │   │       ├── pr.ts
 │   │   │       └── status.ts
-│   │   ├── package.json            # name: agentnote
+│   │   ├── package.json            # name: agent-note
 │   │   └── tsconfig.json
 │   │
 │   └── action/                     # GitHub Action (Marketplace)
@@ -53,7 +53,7 @@ wasabeef/AgentNote/
 │       │   └── index.ts            # calls CLI, sets outputs, posts to PR description/comment
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
-│       └── package.json            # name: agentnote-action (private, not published)
+│       └── package.json            # name: agent-note-action (private, not published)
 │
 ├── docs/
 │   └── knowledge/
@@ -70,7 +70,7 @@ wasabeef/AgentNote/
 
 ### Why monorepo
 
-The action calls `agentnote pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
+The action calls `agent-note pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
 
 - A single PR can change CLI output + action parsing in lockstep
 - No cross-repo version coordination
@@ -95,8 +95,8 @@ This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/act
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/`) — `agentnote init`, `agentnote show`, `agentnote log`, `agentnote pr`. Run by users and CI.
-2. **Hook handler** — `agentnote hook`, called by agent-specific hooks via stdin JSON (`--agent claude` or `--agent codex`). All data collection.
+1. **CLI** (`packages/cli/`) — `agent-note init`, `agent-note show`, `agent-note log`, `agent-note pr`. Run by users and CI.
+2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude` or `--agent codex`). All data collection.
 
 ### Data flow
 
@@ -269,7 +269,7 @@ Injected via two parallel paths:
 1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session` and appends trailer to the commit message file.
 2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook rewrites the git commit command to inject `--trailer` directly.
 
-Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agentnote init`), the agent hook still injects the trailer.
+Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook still injects the trailer.
 
 ### Git hooks for commit integration
 
@@ -278,14 +278,14 @@ Three git hooks handle commit integration and notes sharing:
 | Git hook | When | What it does |
 |---|---|---|
 | `prepare-commit-msg` | Before commit message editor opens | Checks session freshness via heartbeat, appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
-| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agentnote record <session-id>` to write git note. Idempotent — skips if note already exists. |
+| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
 Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is updated on `SessionStart` and `UserPromptSubmit`. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Missing heartbeat in git hooks = skip (fail closed).
 
 ### Git hook installation
 
-`agentnote init` installs git hooks respecting the repository's hook directory:
+`agent-note init` installs git hooks respecting the repository's hook directory:
 
 ```bash
 # Determine hook directory
@@ -294,25 +294,25 @@ HOOK_DIR=$(git config get core.hooksPath || echo ".git/hooks")
 
 If `core.hooksPath` is set (e.g., by husky, lefthook, or custom configuration), hooks are installed there instead of `.git/hooks/`. This ensures compatibility with any hook manager.
 
-When an existing hook file is found, agentnote chains to it — the original hook runs first, then agentnote's logic runs. This avoids overwriting user or tool-managed hooks.
+When an existing hook file is found, agent-note chains to it — the original hook runs first, then agent-note's logic runs. This avoids overwriting user or tool-managed hooks.
 
 ## CLI commands
 
 ```
-agentnote init              add hooks to agent config (commit to share with team)
+agent-note init              add hooks to agent config (commit to share with team)
 
-agentnote commit [args]       git commit with session context (convenience wrapper)
-agentnote show [commit]       show session details for HEAD or a commit SHA
-agentnote log [n]             list recent commits with session info
-agentnote pr [base] [--json] [--output description|comment] [--update <PR#>]
-agentnote status              show current tracking state
-agentnote hook                handle agent hook events (internal, via stdin, agent-specific)
-agentnote record <session-id> record git note for HEAD (internal, used by post-commit hook)
+agent-note commit [args]       git commit with session context (convenience wrapper)
+agent-note show [commit]       show session details for HEAD or a commit SHA
+agent-note log [n]             list recent commits with session info
+agent-note pr [base] [--json] [--output description|comment] [--update <PR#>]
+agent-note status              show current tracking state
+agent-note hook                handle agent hook events (internal, via stdin, agent-specific)
+agent-note record <session-id> record git note for HEAD (internal, used by post-commit hook)
 ```
 
 ### init model
 
-`agentnote init` does four things by default:
+`agent-note init` does four things by default:
 
 1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repo-local files to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
@@ -323,13 +323,13 @@ Flags: `--no-hooks`, `--no-git-hooks`, `--no-action`, `--no-notes`, `--hooks`, `
 
 ### PR report
 
-`agentnote pr` produces markdown or structured JSON reports.
+`agent-note pr` produces markdown or structured JSON reports.
 
 ```bash
-agentnote pr                              # markdown report (table format)
-agentnote pr --json                       # structured JSON (for scripts/actions)
-agentnote pr --output description --update 42  # upsert into PR description
-agentnote pr --output comment --update 42      # post as PR comment
+agent-note pr                              # markdown report (table format)
+agent-note pr --json                       # structured JSON (for scripts/actions)
+agent-note pr --output description --update 42  # upsert into PR description
+agent-note pr --output comment --update 42      # post as PR comment
 ```
 
 Output: table format with summary header, per-commit rows, and collapsible prompts/responses section.
@@ -376,12 +376,12 @@ JSON output structure:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
-  id: agentnote
+  id: agent-note
   with:
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 ### Action inputs
@@ -398,7 +398,7 @@ JSON output structure:
 |---|---|---|
 | `overall_ai_ratio` | number | PR-wide AI ratio (0-100) |
 | `overall_method` | string | Attribution method: `line`, `file`, `mixed`, `none` |
-| `tracked_commits` | number | Commits with agentnote data |
+| `tracked_commits` | number | Commits with agent-note data |
 | `total_commits` | number | Total commits in PR |
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
@@ -409,8 +409,8 @@ JSON output structure:
 The action:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
-2. `agentnote pr --json` → parse outputs
-3. `agentnote pr` → markdown
+2. `agent-note pr --json` → parse outputs
+3. `agent-note pr` → markdown
 4. Set GitHub Actions outputs
 5. Post report to PR description (upsert between markers) or as a comment
 
@@ -419,7 +419,7 @@ Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a 
 ## Distribution
 
 ```
-CLI:    npx agentnote init          (or npm install --save-dev)
+CLI:    npx agent-note init          (or npm install --save-dev)
 Action: uses: wasabeef/AgentNote@v0             (Marketplace)
 ```
 
@@ -446,26 +446,26 @@ Important:
 ### Team workflow
 
 ```bash
-# 1. Enable agentnote (one person, once)
-npx agentnote init
+# 1. Enable agent-note (one person, once)
+npx agent-note init
 git add .claude/settings.json .github/workflows/agentnote.yml
-git commit -m "chore: enable agentnote"
+git commit -m "chore: enable agent-note"
 git push
 
 # Codex repositories commit `.codex/config.toml` + `.codex/hooks.json` instead.
 # Cursor repositories commit `.cursor/hooks.json` instead.
 # Plain `git commit` works when the generated git hooks are installed.
-# `agentnote commit -m "..."` remains a useful fallback wrapper.
+# `agent-note commit -m "..."` remains a useful fallback wrapper.
 
 # 2. New clone setup (per developer, per clone)
 git clone <repo> && cd <repo>
-npx agentnote init   # installs git hooks + agent config + auto-fetch
+npx agent-note init   # installs git hooks + agent config + auto-fetch
 
 # 3. Everyone works normally
 # hooks fire automatically — trailer injected, note recorded, notes auto-pushed on push
 ```
 
-Notes are automatically pushed to the remote via the `pre-push` git hook installed by `agentnote init`. No manual `git push origin refs/notes/agentnote` is needed.
+Notes are automatically pushed to the remote via the `pre-push` git hook installed by `agent-note init`. No manual `git push origin refs/notes/agentnote` is needed.
 
 ## Constraints
 
@@ -474,7 +474,7 @@ Notes are automatically pushed to the remote via the `pre-push` git hook install
 - **Never break git commit.** All recording wrapped in try/catch. Errors are logged to stderr, never block the commit.
 - **All source in English.** Comments, output, tests.
 - **Git hooks for commit ops.** Trailer injection (`prepare-commit-msg`) and note recording (`post-commit`) use git hooks, not agent hooks. Respects `core.hooksPath` and chains with existing hooks.
-- **No telemetry, no auth, no external services.** Data stays local until pushed. The `pre-push` git hook (installed by `agentnote init`) auto-pushes notes alongside code on every `git push`.
+- **No telemetry, no auth, no external services.** Data stays local until pushed. The `pre-push` git hook (installed by `agent-note init`) auto-pushes notes alongside code on every `git push`.
 - **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
 - **Full response storage.** AI responses are stored in full. Git notes blobs are compressed and well within GitHub limits.
 
@@ -498,14 +498,14 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
 | GitHub Action markdown injection | PR report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
-| `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agentnote hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agentnote`), falling back to PATH. |
+| `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agent-note hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agent-note`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
 ### Recommendations for users
 
-- **Be aware that `agentnote init` installs a `pre-push` hook that auto-pushes notes** on every `git push`. On public repositories, this means prompts and AI responses will be visible. Use `--no-git-hooks` to skip git hook installation if this is a concern.
-- Use `agentnote pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared.
-- Consider `agentnote init --no-responses` (future) to record prompts only, without AI responses.
+- **Be aware that `agent-note init` installs a `pre-push` hook that auto-pushes notes** on every `git push`. On public repositories, this means prompts and AI responses will be visible. Use `--no-git-hooks` to skip git hook installation if this is a concern.
+- Use `agent-note pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared.
+- Consider `agent-note init --no-responses` (future) to record prompts only, without AI responses.
 
 ## Known limitations
 
@@ -521,7 +521,7 @@ git config notes.rewrite.rebase true
 git config notes.rewrite.amend true
 ```
 
-`agentnote init` should set these automatically (planned).
+`agent-note init` should set these automatically (planned).
 
 ### Squash merge
 
@@ -619,10 +619,10 @@ interface AgentAdapter {
   name: string;
   settingsRelPath: string;
 
-  /** Add agentnote hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
+  /** Add agent-note hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
   installHooks(repoRoot: string): Promise<void>;
 
-  /** Remove agentnote hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
+  /** Remove agent-note hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
   removeHooks(repoRoot: string): Promise<void>;
 
   /** Check if current-format hooks are installed. Returns false for legacy-only installs. */
@@ -643,15 +643,15 @@ interface AgentAdapter {
 
 1. Create `packages/cli/src/agents/<agent-name>.ts` implementing `AgentAdapter`
 2. Register it in `agents/index.ts`
-3. `agentnote init --agent <name>` calls `adapter.installHooks()`
-4. `agentnote hook` is dispatched by `--agent <name>`; bare `agentnote hook` is retained only for legacy Claude compatibility and now fails fast for Codex payloads
+3. `agent-note init --agent <name>` calls `adapter.installHooks()`
+4. `agent-note hook` is dispatched by `--agent <name>`; bare `agent-note hook` is retained only for legacy Claude compatibility and now fails fast for Codex payloads
 5. All core logic and the GitHub Action work unchanged
 
 ## entire.io comparison
 
-| Aspect | entire.io | agentnote |
+| Aspect | entire.io | agent-note |
 |---|---|---|
-| Setup | CLI install + `entire enable` + login | `npx agentnote init` + commit settings |
+| Setup | CLI install + `entire enable` + login | `npx agent-note init` + commit settings |
 | Storage | Orphan branch `entire/checkpoints/v1` | **Git notes** `refs/notes/agentnote` |
 | Branch pollution | Shadow branches + checkpoint branch | **None** |
 | Transcript | Full copy per checkpoint (O(n²) bloat) | **Reference only** (pointer in note) |

@@ -72,16 +72,16 @@ SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD
 if [ -z "$SESSION_ID" ]; then exit 0; fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
-if [ -x "$GIT_DIR/agentnote/bin/agentnote" ]; then
-  "$GIT_DIR/agentnote/bin/agentnote" record "$SESSION_ID" 2>/dev/null || true
+if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
+  "$GIT_DIR/agentnote/bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
   exit 0
 fi
 # Fall back to stable local/global binaries only.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [ -f "$REPO_ROOT/node_modules/.bin/agentnote" ]; then
-  "$REPO_ROOT/node_modules/.bin/agentnote" record "$SESSION_ID" 2>/dev/null || true
-elif command -v agentnote >/dev/null 2>&1; then
-  agentnote record "$SESSION_ID" 2>/dev/null || true
+if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
+  "$REPO_ROOT/node_modules/.bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
+elif command -v agent-note >/dev/null 2>&1; then
+  agent-note record "$SESSION_ID" 2>/dev/null || true
 fi
 `;
 
@@ -92,15 +92,15 @@ ${AGENTNOTE_HOOK_MARKER}
 # PR workflows can fetch the latest notes ref, but never block the main push on failure.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
-if [ -x "$GIT_DIR/agentnote/bin/agentnote" ]; then
-  "$GIT_DIR/agentnote/bin/agentnote" push-notes "$1" 2>/dev/null || true
+if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
+  "$GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
   exit 0
 fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [ -f "$REPO_ROOT/node_modules/.bin/agentnote" ]; then
-  "$REPO_ROOT/node_modules/.bin/agentnote" push-notes "$1" 2>/dev/null || true
-elif command -v agentnote >/dev/null 2>&1; then
-  agentnote push-notes "$1" 2>/dev/null || true
+if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
+  "$REPO_ROOT/node_modules/.bin/agent-note" push-notes "$1" 2>/dev/null || true
+elif command -v agent-note >/dev/null 2>&1; then
+  agent-note push-notes "$1" 2>/dev/null || true
 fi
 `;
 
@@ -206,7 +206,7 @@ export async function init(args: string[]): Promise<void> {
 
   // Output
   console.log("");
-  console.log("agentnote init");
+  console.log("agent-note init");
   console.log("");
   for (const line of results) {
     console.log(line);
@@ -230,14 +230,14 @@ export async function init(args: string[]): Promise<void> {
     console.log("");
     console.log("  Next: commit and push these files");
     console.log(`    git add ${uniqueToCommit.join(" ")}`);
-    console.log('    git commit -m "chore: enable agentnote session tracking"');
+    console.log('    git commit -m "chore: enable agent-note session tracking"');
     console.log("    git push");
     if (agents.includes("cursor")) {
       console.log("");
       console.log("  Cursor note");
       console.log("    With the default git hooks, plain `git commit` is tracked normally.");
       console.log(
-        '    `agentnote commit -m "..."` is still useful as a fallback wrapper when git hooks are unavailable.',
+        '    `agent-note commit -m "..."` is still useful as a fallback wrapper when git hooks are unavailable.',
       );
     }
   }
@@ -266,7 +266,7 @@ async function installLocalCliShim(agentnoteDirPath: string): Promise<void> {
   if (!process.argv[1]) return;
 
   const shimDir = join(agentnoteDirPath, "bin");
-  const shimPath = join(shimDir, "agentnote");
+  const shimPath = join(shimDir, "agent-note");
   const cliPath = resolve(process.argv[1]);
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"

@@ -13,21 +13,21 @@ declare const __VERSION__: string;
 const VERSION = __VERSION__;
 
 const HELP = `
-agentnote v${VERSION} — remember why your code changed
+agent-note v${VERSION} — remember why your code changed
 
 usage:
-  agentnote init --agent <name>    set up hooks, workflow, and notes auto-fetch (agents: claude, codex, cursor, gemini)
-                                   [--no-hooks] [--no-action] [--no-notes] [--no-git-hooks] [--hooks] [--action]
-  agentnote deinit --agent <name>  remove hooks and config [--remove-workflow] [--keep-notes]
-  agentnote show [commit]          show session details for a commit
-  agentnote log [n]                list recent commits with session info
-  agentnote pr [base] [--json] [--update <PR#>] [--output description|comment]
-                                   generate PR report or update PR description/comment
-  agentnote session <id>           show commits for a session
-  agentnote commit [args]          git commit with session tracking
-  agentnote status                 show current tracking state
-  agentnote version                print version
-  agentnote help                   show this help
+  agent-note init --agent <name>    set up hooks, workflow, and notes auto-fetch (agents: claude, codex, cursor, gemini)
+                                    [--no-hooks] [--no-action] [--no-notes] [--no-git-hooks] [--hooks] [--action]
+  agent-note deinit --agent <name>  remove hooks and config [--remove-workflow] [--keep-notes]
+  agent-note show [commit]          show session details for a commit
+  agent-note log [n]                list recent commits with session info
+  agent-note pr [base] [--json] [--update <PR#>] [--output description|comment]
+                                    generate PR report or update PR description/comment
+  agent-note session <id>           show commits for a session
+  agent-note commit [args]          git commit with session tracking
+  agent-note status                 show current tracking state
+  agent-note version                print version
+  agent-note help                   show this help
 `.trim();
 
 const command = process.argv[2];
@@ -85,7 +85,7 @@ switch (command) {
   case "version":
   case "--version":
   case "-v":
-    console.log(`agentnote v${VERSION}`);
+    console.log(`agent-note v${VERSION}`);
     break;
   case "help":
   case "--help":

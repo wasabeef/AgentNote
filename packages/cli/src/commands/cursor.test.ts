@@ -54,7 +54,7 @@ describe("agentnote cursor", () => {
     assert.ok(hooks.includes("afterFileEdit"), "should include afterFileEdit");
     assert.ok(hooks.includes("afterTabFileEdit"), "should include afterTabFileEdit");
     assert.ok(hooks.includes("stop"), "should include stop");
-    assert.ok(hooks.includes("agentnote hook --agent cursor"), "should call cursor mode");
+    assert.ok(hooks.includes("agent-note hook --agent cursor"), "should call cursor mode");
   });
 
   it("records Cursor prompt and file edits and writes a note on commit", () => {
@@ -640,15 +640,15 @@ describe("agentnote cursor", () => {
       encoding: "utf-8",
     });
 
-    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
     assert.ok(existsSync(shimPath), "init should create a deterministic repo-local CLI shim");
     const postCommitHook = readFileSync(join(gitHookDir, "post-commit"), "utf-8");
     assert.ok(
-      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agentnote"'),
+      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agent-note"'),
       "post-commit should prefer the repo-local shim",
     );
     assert.ok(
-      !postCommitHook.includes("npx --yes agentnote record"),
+      !postCommitHook.includes("npx --yes agent-note record"),
       "post-commit should not resolve an unpinned package at commit time",
     );
 

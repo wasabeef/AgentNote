@@ -13,7 +13,7 @@ interface SessionCommit {
 /** Display all commits belonging to a given session. */
 export async function session(sessionId: string): Promise<void> {
   if (!sessionId) {
-    console.error("usage: agentnote session <session-id>");
+    console.error("usage: agent-note session <session-id>");
     process.exit(1);
   }
 

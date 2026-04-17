@@ -22,7 +22,7 @@ outputs:
   overall_method:
     description: "Attribution method: line, file, mixed, or none"
   tracked_commits:
-    description: "Number of commits with agentnote data"
+    description: "Number of commits with agent-note data"
   total_commits:
     description: "Total commits in PR"
   total_prompts:

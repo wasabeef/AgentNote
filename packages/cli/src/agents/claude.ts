@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
-const HOOK_COMMAND = "npx --yes agentnote hook";
+const HOOK_COMMAND = "npx --yes agent-note hook";
 const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
 
 const HOOKS_CONFIG = {
@@ -108,7 +108,11 @@ export const claude: AgentAdapter = {
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
         const text = JSON.stringify(entry);
-        return !text.includes("agentnote hook") && !text.includes("cli.js hook");
+        return (
+          !text.includes("agent-note hook") &&
+          !text.includes("agentnote hook") &&
+          !text.includes("cli.js hook")
+        );
       });
       if (hooks[event].length === 0) delete hooks[event];
     }
@@ -131,7 +135,11 @@ export const claude: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return !text.includes("agentnote hook") && !text.includes("cli.js hook");
+          return (
+            !text.includes("agent-note hook") &&
+            !text.includes("agentnote hook") &&
+            !text.includes("cli.js hook")
+          );
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -149,8 +157,11 @@ export const claude: AgentAdapter = {
       const content = await readFile(settingsPath, "utf-8");
       return (
         content.includes(CLAUDE_HOOK_COMMAND) ||
+        // Legacy package name (agentnote) — pre-rebrand installations.
+        content.includes("agentnote hook --agent claude") ||
         content.includes("agentnote hook --agent claude-code") ||
-        content.includes("cli.js hook --agent claude-code")
+        content.includes("cli.js hook --agent claude-code") ||
+        content.includes("cli.js hook --agent claude")
       );
     } catch {
       return false;
@@ -274,30 +285,52 @@ export const claude: AgentAdapter = {
       const lines = content.trim().split("\n");
       const interactions: Array<{ prompt: string; response: string | null }> = [];
       let pendingPrompt: string | null = null;
+      let pendingResponseTexts: string[] = [];
+
+      const flush = () => {
+        if (pendingPrompt === null) return;
+        const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
+        interactions.push({ prompt: pendingPrompt, response });
+        pendingPrompt = null;
+        pendingResponseTexts = [];
+      };
+
+      const extractUserText = (content: unknown): string | null => {
+        // Claude transcripts store user text either as a string or as content blocks.
+        // Join all text blocks when multiple are present (user messages can contain
+        // several text chunks, e.g. pasted content + question).
+        if (typeof content === "string") return content.trim() || null;
+        if (!Array.isArray(content)) return null;
+        const texts: string[] = [];
+        for (const block of content) {
+          if (block && typeof block === "object" && block.type === "text" && block.text) {
+            texts.push(block.text);
+          }
+        }
+        return texts.length > 0 ? texts.join("\n") : null;
+      };
 
       for (const line of lines) {
         try {
           const entry = JSON.parse(line);
 
           if (entry.type === "user" && entry.message?.content) {
-            for (const block of entry.message.content) {
-              if (block.type === "text" && block.text) {
-                if (pendingPrompt !== null) {
-                  interactions.push({ prompt: pendingPrompt, response: null });
-                }
-                pendingPrompt = block.text;
-              }
+            // Skip tool_result-only user messages (no actual text prompt).
+            const userText = extractUserText(entry.message.content);
+            if (userText) {
+              // New user prompt: flush previous pair first.
+              flush();
+              pendingPrompt = userText;
             }
           }
 
           if (entry.type === "assistant" && entry.message?.content && pendingPrompt !== null) {
-            const texts: string[] = [];
+            // Accumulate text blocks across multiple assistant messages until next user prompt.
+            // Skip thinking and tool_use blocks.
             for (const block of entry.message.content) {
-              if (block.type === "text" && block.text) texts.push(block.text);
-            }
-            if (texts.length > 0) {
-              interactions.push({ prompt: pendingPrompt, response: texts.join("\n") });
-              pendingPrompt = null;
+              if (block?.type === "text" && block.text) {
+                pendingResponseTexts.push(block.text);
+              }
             }
           }
         } catch {
@@ -305,9 +338,7 @@ export const claude: AgentAdapter = {
         }
       }
 
-      if (pendingPrompt !== null) {
-        interactions.push({ prompt: pendingPrompt, response: null });
-      }
+      flush();
 
       return interactions;
     } catch {
