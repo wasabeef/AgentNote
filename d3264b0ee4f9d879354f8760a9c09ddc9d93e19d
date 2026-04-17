@@ -1,0 +1,270 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-17T16:07:19.222Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "ブランチきって css だけで改善してみて。よかったら取り入れる",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "良くなったけど、\n対応状況・概要をもっとわかりやすくしたいかも",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css",
+        "website/src/content/docs/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "Codex CLI の場合: npx agent-note init --agent codex Cursor の場合: npx agent-note init --agent cursor Gemini CLI の場合: npx agent-note init --agent gemini 複数エージェントを同時に: npx agent-note init --agent claude --agent cursor\n\n\nこれが改行されていない",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/ko/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "Agent Note でできること\n\nでフォーカスあてたとき セッション記録とGit ネイティブが動きすぎ",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css",
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "画像設定してなかったっけ？トップ画面",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "４良いぞ",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "先に JA だけ",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "Agent Note\nGit Commit は「何が変わったか」を残す。 Agent Note は「なぜそう変わったか」を残す。\nはじめる\nGitHub\nAgent Note の立場\nコードは、もう一人では語れない。\n\nAI エージェントが 1 セッションで数百行書くようになった。 git log に残るのは最終的な diff だけ。 「なぜこの実装か」を聞けば、誰もが同じことを言う——\n\n「AI がそう書いた。賢そうだったから」\n\nこれが 6 か月続いたリポジトリの姿を、想像できますか？\n\n私たちが信じていること。\n\n✍️ コードより、コードが書かれた理由の方が価値がある\n🔍 レビューの仕事は「バグ探し」から**「意図の検証」**に変わった\n🧬 git log は人間同士のために作られた。エージェント時代には、足りない\n📦 だから、プロンプト・レスポンス・AI 比率を git commit に直接縫い付ける\nAgent Note は、そのために作った道具です。\n\nAgent Note でできること\nAI の行は、AI の行\n\ngit blame では届かない粒度で、誰が書いたかを残します。Claude Code は完全対応、他のエージェントは条件付きで行単位に昇格。\n\n「なぜこうした？」の答え、コミットに入ってます\n\nプロンプト・レスポンス・使ったモデル・ツール情報を、変更と一緒に保存。6 か月後も自分に説明できる。\n\nレビュアーが最初に見るべきは、コードじゃなくて文脈\n\nPR 冒頭に AI 比率と使用プロンプト数を自動投稿。「どこから見ればいい？」と迷わない。\n\ngit notes にだけ書く\n\nブランチも CI も汚さない。push / fetch でチーム共有。git が消えない限り、文脈も消えない。\n\n\n\nなんか AI が考えた文章っぽいな",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "なぜ作ったか\n半年前に AI に書いてもらったコードを読み返して、自分が書いたはずなのに「なんでこうした？」が答えられなくなっていたことがある。\n\ngit log に残っているのは diff だけ。そのとき投げていたプロンプトも、AI が返してきた説明も、ぜんぶ消えていた。\n\nコードは残る。理由は消える。\n\nPR レビューも同じ問題にぶつかる。400 行の AI 生成コードが並んでいて、何を見ればいいのか分からない。バグを探したいわけじゃなくて「なぜこの実装にしたか」を確かめたいのに、書いた本人 (AI) はもう覚えていない。\n\nだから、プロンプト・レスポンス・AI が書いた行を、コミットにくっつけて残すようにした。git notes に書くだけなので、ブランチも CI も汚れない。\n\nもう少しシンプルに",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "git notes に書くだけなので、ブランチも CI も汚れない。\n\nこの部分は下のカードで書いてあるからいらんかも",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "\n文章はいいけど\n\nなぜ作ったか\n半年前に AI に書いてもらったコードを読み返して、「なんでこうした？」が答えられなかった。git log に残っているのは diff だけ。プロンプトも返答も、ぜんぶ消えていた。\n\nだから、AI との会話をコミットに残すことにした。\n\n文字サイズレイアウト工夫したい\n\nデザインのプロにお願いして",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "[Image #6]\n\nなんか文字サイズがバランス悪いな",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "なぜ作ったか\n半年前に AI に書いてもらったコードを読み返して、「なんでこうした？」が答えられなかった。git log に残っているのは diff だけ。プロンプトも返答も、ぜんぶ消えていた。\n\n\n\nこっちがちっちゃくない？",
+      "response": null,
+      "files_touched": [
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "自分でWebページみてみ",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "Capability の概要\n\nをもっとわかりやすくできないか？\n\nhttps://shin-sibainu.github.io/ccmux/ の「他のターミナルツールとの違い。」セクションはわかりやすい",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/styles/custom.css"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    },
+    {
+      "prompt": "一旦よさそうなので、これで全ての言語も直して",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx"
+      ],
+      "tools": [
+        "Write"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/styles/custom.css",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 1666,
+      "total_added": 1666,
+      "deleted": 412
+    }
+  }
+}
