@@ -653,9 +653,7 @@ describe("claude adapter", () => {
         JSON.stringify({
           type: "assistant",
           message: {
-            content: [
-              { type: "tool_use", id: "tu1", name: "Read", input: { file_path: "a.ts" } },
-            ],
+            content: [{ type: "tool_use", id: "tu1", name: "Read", input: { file_path: "a.ts" } }],
           },
         }),
         // User message carries only tool_result (no actual prompt)
