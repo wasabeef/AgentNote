@@ -6,7 +6,7 @@ import { join, resolve, sep } from "node:path";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOKS_REL_PATH = ".cursor/hooks.json";
-const HOOK_COMMAND = "npx --yes agentnote hook --agent cursor";
+const HOOK_COMMAND = "npx --yes agent-note hook --agent cursor";
 const CURSOR_PROJECTS_DIR = join(homedir(), ".cursor", "projects");
 const CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
 const TRANSCRIPT_WAIT_MS = 1_500;
@@ -333,7 +333,10 @@ function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {
     Object.entries(config.hooks)
       .map(([event, entries]) => [
         event,
-        entries.filter((entry) => !entry.command.includes("agentnote hook")),
+        entries.filter(
+          (entry) =>
+            !entry.command.includes("agent-note hook") && !entry.command.includes("agentnote hook"),
+        ),
       ])
       .filter(([, entries]) => entries.length > 0),
   );

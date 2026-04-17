@@ -412,8 +412,8 @@ describe("claude adapter", () => {
 
       assert.ok(settings.hooks, "hooks key should be present");
       assert.ok(
-        content.includes("agentnote hook --agent claude"),
-        "should include agentnote hook command",
+        content.includes("agent-note hook --agent claude"),
+        "should include agent-note hook command",
       );
       assert.ok(settings.hooks.SessionStart, "SessionStart hooks should be present");
       assert.ok(settings.hooks.PreToolUse, "PreToolUse hooks should be present");
@@ -471,7 +471,7 @@ describe("claude adapter", () => {
       const sessionStartGroups = settings.hooks.SessionStart ?? [];
       const agentnoteCount = sessionStartGroups
         .flatMap((g) => g.hooks)
-        .filter((h) => h.command?.includes("agentnote hook --agent claude")).length;
+        .filter((h) => h.command?.includes("agent-note hook --agent claude")).length;
       assert.equal(agentnoteCount, 1, "should not duplicate hooks on second install");
     });
   });
@@ -492,7 +492,7 @@ describe("claude adapter", () => {
                   hooks: [
                     {
                       type: "command",
-                      command: "npx --yes agentnote hook --agent claude",
+                      command: "npx --yes agent-note hook --agent claude",
                       async: true,
                     },
                   ],
@@ -517,8 +517,8 @@ describe("claude adapter", () => {
       const allCommands =
         settings.hooks?.PostToolUse?.flatMap((g) => g.hooks).map((h) => h.command) ?? [];
       assert.ok(
-        !allCommands.some((c) => c?.includes("agentnote hook")),
-        "agentnote hook should be removed",
+        !allCommands.some((c) => c?.includes("agent-note hook") || c?.includes("agentnote hook")),
+        "agent-note hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");
     });

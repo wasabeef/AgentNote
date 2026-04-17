@@ -7,7 +7,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Quick Setup
 
-Add this workflow — created automatically by `agentnote init`:
+Add this workflow — created automatically by `agent-note init`:
 
 ```yaml
 # .github/workflows/agentnote.yml
@@ -54,7 +54,7 @@ That's it. Every PR gets an AI session report.
 |---|---|---|
 | `overall_ai_ratio` | number | PR-wide AI ratio (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed`, or `none` |
-| `tracked_commits` | number | Commits with agentnote data |
+| `tracked_commits` | number | Commits with agent-note data |
 | `total_commits` | number | Total commits in PR |
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report |
@@ -64,11 +64,11 @@ That's it. Every PR gets an AI session report.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
-  id: agentnote
+  id: agent-note
   with:
     base: main
 
-- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 ## Report Format
@@ -85,4 +85,4 @@ The PR report includes:
 
 ## Notes Sharing
 
-The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git hook installed by `agentnote init` auto-pushes notes on every `git push` — no manual push needed.
+The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git hook installed by `agent-note init` auto-pushes notes on every `git push` — no manual push needed.

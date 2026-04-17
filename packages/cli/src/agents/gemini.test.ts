@@ -422,8 +422,8 @@ describe("gemini adapter", () => {
 
       assert.ok(settings.hooks, "hooks key should be present");
       assert.ok(
-        content.includes("agentnote hook --agent gemini"),
-        "should include agentnote hook command",
+        content.includes("agent-note hook --agent gemini"),
+        "should include agent-note hook command",
       );
       assert.ok(settings.hooks.SessionStart, "SessionStart hooks should be present");
       assert.ok(settings.hooks.BeforeTool, "BeforeTool hooks should be present");

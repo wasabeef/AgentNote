@@ -56,10 +56,10 @@ export async function commit(args: string[]): Promise<void> {
     try {
       const agentnoteDirPath = await agentnoteDir();
       const result = await recordCommitEntry({ agentnoteDirPath, sessionId });
-      console.log(`agentnote: ${result.promptCount} prompts, AI ratio ${result.aiRatio}%`);
+      console.log(`agent-note: ${result.promptCount} prompts, AI ratio ${result.aiRatio}%`);
     } catch (err: unknown) {
       // Never let agentnote recording break a commit.
-      console.error(`agentnote: warning: ${(err as Error).message}`);
+      console.error(`agent-note: warning: ${(err as Error).message}`);
     }
   }
 }

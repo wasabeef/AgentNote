@@ -5,12 +5,12 @@ description: CLI command reference for Agent Note.
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## agentnote init
+## agent-note init
 
 Set up Agent Note in the current repository.
 
 ```bash
-npx agentnote init --agent claude
+npx agent-note init --agent claude
 ```
 
 | Flag | Description |
@@ -23,13 +23,13 @@ npx agentnote init --agent claude
 | `--action` | Only create workflow |
 | `--agent <name>` | **Required.** Choose the agent adapter: `claude`, `codex`, `cursor`, or `gemini`. Repeat for multiple agents |
 
-## agentnote show
+## agent-note show
 
 Show AI session details for a commit.
 
 ```bash
-npx agentnote show          # HEAD
-npx agentnote show abc1234  # commit SHA
+npx agent-note show          # HEAD
+npx agent-note show abc1234  # commit SHA
 ```
 
 ```
@@ -51,13 +51,13 @@ prompts: 2
   2. Add tests for expired token and invalid signature
 ```
 
-## agentnote log
+## agent-note log
 
 List recent commits with AI ratio.
 
 ```bash
-npx agentnote log      # last 10
-npx agentnote log 20   # last 20
+npx agent-note log      # last 10
+npx agent-note log 20   # last 20
 ```
 
 ```
@@ -66,28 +66,28 @@ ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update deps
 ```
 
-## agentnote pr
+## agent-note pr
 
 Generate a PR report.
 
 <Tabs>
   <TabItem label="Markdown">
   ```bash
-  npx agentnote pr origin/main
+  npx agent-note pr origin/main
   ```
   </TabItem>
   <TabItem label="JSON">
   ```bash
-  npx agentnote pr origin/main --json
+  npx agent-note pr origin/main --json
   ```
   </TabItem>
   <TabItem label="Update PR">
   ```bash
   # Insert into PR description
-  npx agentnote pr origin/main --output description --update 42
+  npx agent-note pr origin/main --output description --update 42
 
   # Post as PR comment
-  npx agentnote pr origin/main --output comment --update 42
+  npx agent-note pr origin/main --output comment --update 42
   ```
   </TabItem>
 </Tabs>
@@ -96,24 +96,24 @@ Generate a PR report.
   The default output destination is `description` (upserts between HTML markers in the PR body).
 </Aside>
 
-## agentnote session
+## agent-note session
 
 Show all commits belonging to a session.
 
 ```bash
-npx agentnote session a1b2c3d4-5678-90ab-cdef-111122223333
+npx agent-note session a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
-## agentnote status
+## agent-note status
 
 Show current tracking state.
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -125,15 +125,15 @@ linked:  3/20 recent commits
 ```
 
 <Aside>
-  `agent:` shows which adapters are enabled, `capture:` summarizes what the active agent hooks collect, `git:` shows whether the managed repo-local git hooks are installed, and `commit:` shows the primary tracking path. If `commit:` shows fallback mode, prefer `agentnote commit`.
+  `agent:` shows which adapters are enabled, `capture:` summarizes what the active agent hooks collect, `git:` shows whether the managed repo-local git hooks are installed, and `commit:` shows the primary tracking path. If `commit:` shows fallback mode, prefer `agent-note commit`.
 </Aside>
 
-## agentnote deinit
+## agent-note deinit
 
 Remove Agent Note hooks and configuration from the current repository.
 
 ```bash
-npx agentnote deinit --agent claude
+npx agent-note deinit --agent claude
 ```
 
 | Flag | Description |
@@ -146,12 +146,12 @@ npx agentnote deinit --agent claude
   Shared infrastructure (git hooks, notes config) is preserved when other agents are still enabled.
 </Aside>
 
-## agentnote commit
+## agent-note commit
 
 Convenience wrapper for `git commit` with session trailer and note recording.
 
 ```bash
-npx agentnote commit -m "feat: add auth"
+npx agent-note commit -m "feat: add auth"
 ```
 
 <Aside type="tip">
@@ -160,5 +160,5 @@ npx agentnote commit -m "feat: add auth"
 
 <Aside>
   Cursor preview tracks plain `git commit` normally when the generated git hooks are installed.
-  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed blob still matches the last AI edit. `agentnote commit` remains a useful fallback wrapper when git hooks are unavailable.
+  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed blob still matches the last AI edit. `agent-note commit` remains a useful fallback wrapper when git hooks are unavailable.
 </Aside>

@@ -25,7 +25,7 @@ function resolveCliCommand(): string {
 	} catch {
 		// ignore
 	}
-	return "npx --yes agentnote";
+	return "npx --yes agent-note";
 }
 
 function sleep(ms: number): Promise<void> {
@@ -38,7 +38,7 @@ function fetchAgentnoteNotes(): void {
 			stdio: "pipe",
 		});
 	} catch {
-		core.info("No agentnote notes found on remote.");
+		core.info("No agent-note notes found on remote.");
 	}
 }
 
@@ -67,12 +67,12 @@ async function run(): Promise<void> {
 					stdio: ["pipe", "pipe", "pipe"],
 				}).trim();
 			} catch {
-				core.info("No agentnote data found for this PR.");
+				core.info("No agent-note data found for this PR.");
 				return;
 			}
 
 			if (!json || json === "{}") {
-				core.info("No agentnote data found for this PR.");
+				core.info("No agent-note data found for this PR.");
 				return;
 			}
 
@@ -82,13 +82,13 @@ async function run(): Promise<void> {
 			}
 
 			core.info(
-				`Agentnote notes are not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`,
+				`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`,
 			);
 			await sleep(attempt * 1000);
 		}
 
 		if (!report) {
-			core.info("No agentnote data found for this PR.");
+			core.info("No agent-note data found for this PR.");
 			return;
 		}
 
@@ -142,7 +142,7 @@ async function run(): Promise<void> {
 				pull_number: issueNumber,
 				body: newBody,
 			});
-			core.info("Agentnote report added to PR description.");
+			core.info("Agent Note report added to PR description.");
 		} else {
 			// Post/update PR comment.
 			const marker = "<!-- agentnote-pr-report -->";
@@ -172,7 +172,7 @@ async function run(): Promise<void> {
 				});
 			}
 
-			core.info("Agentnote report posted as PR comment.");
+			core.info("Agent Note report posted as PR comment.");
 		}
 	} catch (error) {
 		if (error instanceof Error) {

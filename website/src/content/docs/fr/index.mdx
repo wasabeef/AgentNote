@@ -40,19 +40,19 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. Lancez init dans votre dépôt
 
    ```bash
-   npx agentnote init --agent claude
+   npx agent-note init --agent claude
    ```
 
-   Pour Codex CLI : `npx agentnote init --agent codex`
-   Pour Cursor : `npx agentnote init --agent cursor`
-   Pour Gemini CLI : `npx agentnote init --agent gemini`
-   Plusieurs agents à la fois : `npx agentnote init --agent claude --agent cursor`
+   Pour Codex CLI : `npx agent-note init --agent codex`
+   Pour Cursor : `npx agent-note init --agent cursor`
+   Pour Gemini CLI : `npx agent-note init --agent gemini`
+   Plusieurs agents à la fois : `npx agent-note init --agent claude --agent cursor`
 
 2. Committez les fichiers générés
 
    ```bash
    git add .claude/settings.json .github/workflows/agentnote.yml
-   git commit -m "chore: enable agentnote"
+   git commit -m "chore: enable agent-note"
    git push
    ```
 
@@ -62,13 +62,13 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 3. Claude Code et Codex peuvent utiliser `git commit` normalement.
    Avec les git hooks générés, Cursor preview peut aussi utiliser `git commit` normalement.
-   Utilisez `agentnote commit -m "..."` comme solution de secours si les git hooks ne sont pas disponibles.
+   Utilisez `agent-note commit -m "..."` comme solution de secours si les git hooks ne sont pas disponibles.
 </Steps>
 
 ## Voyez par vous-même
 
 <Tabs>
-  <TabItem label="agentnote show">
+  <TabItem label="agent-note show">
   ```
   commit:  ce941f7 feat: add JWT auth middleware
   session: a1b2c3d4-5678-90ab-cdef-111122223333
@@ -83,7 +83,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     CHANGELOG.md  👤
   ```
   </TabItem>
-  <TabItem label="agentnote log">
+  <TabItem label="agent-note log">
   ```
   ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
   326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]

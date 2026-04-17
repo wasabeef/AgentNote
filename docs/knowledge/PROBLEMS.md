@@ -1,10 +1,10 @@
 # entire.io 問題分析 & 回避設計
 
-> **注意: この文書は初期設計時 (agentnote プロジェクト) に作成されたもので、現在の agentnote 実装とは乖離があります。**
+> **注意: この文書は初期設計時 (agent-note プロジェクト) に作成されたもので、現在の agent-note 実装とは乖離があります。**
 > 特に git hooks の使用、notes の auto-push、multi-agent 対応方針は実装時に変更されました。
 > 最新の設計は `DESIGN.md` を参照してください。
 
-> entire CLI の既知の問題点を洗い出し、agentnote プロジェクトで引き継がない設計指針を定める。
+> entire CLI の既知の問題点を洗い出し、agent-note プロジェクトで引き継がない設計指針を定める。
 > 対象スコープ: **Claude Code のみ**。
 
 ## 目次
@@ -115,7 +115,7 @@ Negative refspecs, reftable, GPG signing, submodules, worktree extensions... 標
 
 ### 3.1 Git 操作
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-01 gc 破壊 | go-git loose objects + gc.auto 無効化 | **git CLI のみ使用**。go-git 不使用。shell script で全 Git 操作 |
 | P-02 checkout 誤削除 | go-git + CLI ラッパー | **git CLI のみ使用**。ライブラリ依存なし |
@@ -125,7 +125,7 @@ Negative refspecs, reftable, GPG signing, submodules, worktree extensions... 標
 
 ### 3.2 データ永続性
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-04 crash 孤立 | Stop hook 依存 | **多段防御**: SessionStart で前回未完了 session を検出・修復。定期的な WAL（Write-Ahead Log）で中間状態を保存 |
 | P-05 未 redact 一時データ | Shadow branch → condensation 時に redact | **書込前に redact**。一時ストレージにも redact 済みデータのみ保存 |
@@ -134,7 +134,7 @@ Negative refspecs, reftable, GPG signing, submodules, worktree extensions... 標
 
 ### 3.3 パフォーマンス
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-06 線形スケール | 全 session condensation | **active session のみ処理**。session ID で直接参照。全 session スキャン不要 |
 | P-07 packed-refs スキャン | go-git | **git CLI**。Git 本体のキャッシュ機構を利用 |
@@ -143,7 +143,7 @@ Negative refspecs, reftable, GPG signing, submodules, worktree extensions... 標
 
 ### 3.4 ストレージ
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-08 transcript 重複 | Full snapshot per checkpoint | **差分方式**: entry は前回からの delta のみ保存。full transcript は session 単位で 1 ファイルのみ |
 
@@ -177,7 +177,7 @@ Entry の中身:
 
 ### 3.5 セキュリティ
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-09, P-16 redaction | gitleaks + entropy（閾値 4.5 で AWS key 漏洩） | **書込前 redact**。既知パターン（`AKIA*` 等）を明示リスト化 + entropy。`.agentnoteignore` でユーザー定義除外 |
 | P-17 GPG signing | 無視 | Git の既存設定を尊重。metadata commit にもユーザーの signing 設定を継承 |
@@ -187,7 +187,7 @@ Entry の中身:
 
 ### 3.6 データ品質
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-30 token 二重計上 | 累積値を各 entry に保存 | **delta 方式**: `token_delta` で差分のみ |
 | P-31 file attribution なし | なし | PostToolUse hook で tool → file マッピング記録 |
@@ -196,15 +196,15 @@ Entry の中身:
 
 ### 3.7 副作用防止
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
-| P-10 git hooks 上書き | サイレント上書き | 既存 hooks をチェーン (backup + exit status 保持) 。`agentnote init` で `prepare-commit-msg`, `post-commit`, `pre-push` をインストール |
+| P-10 git hooks 上書き | サイレント上書き | 既存 hooks をチェーン (backup + exit status 保持) 。`agent-note init` で `prepare-commit-msg`, `post-commit`, `pre-push` をインストール |
 | P-24 CI/CD 破壊 | `entire@local` author | git notes は CI に不可視。trailer はコミットメッセージのみ |
 | P-25 GitHub バナー汚染 | metadata branch push | git notes は GitHub UI に表示されない。`pre-push` hook で自動 push |
 
 ### 3.8 設計簡素化
 
-| 問題 | entire の方式 | agentnote の方式 |
+| 問題 | entire の方式 | agent-note の方式 |
 |---|---|---|
 | P-39 multi-agent | 6 Agent 抽象化 | **Claude Code 専用**。抽象化ゼロ |
 | P-40 path 不整合 | os.Getwd vs repo root | `git rev-parse --show-toplevel` で常にルート基準 |
@@ -222,9 +222,9 @@ entire.io の 44 問題の根本原因分析から導出した設計原則。
 
 ### 用語マッピング
 
-| entire の用語 | agentnote の用語 | 理由 |
+| entire の用語 | agent-note の用語 | 理由 |
 |---|---|---|
-| checkpoint | **entry** | 「agentnote の 1 エントリ」。checkpoint はゲームセーブの暗喩で過剰 |
+| checkpoint | **entry** | 「agent-note の 1 エントリ」。checkpoint はゲームセーブの暗喩で過剰 |
 | shadow branch | — (使わない) | 一時 branch 自体を作らない設計 |
 | condensation | — (使わない) | 一時→永続の変換工程自体を排除 |
 | `entire/checkpoints/v1` | **`refs/notes/agentnote`** | orphan branch ではなく git notes namespace。branch 汚染なし |
@@ -232,7 +232,7 @@ entire.io の 44 問題の根本原因分析から導出した設計原則。
 | session | **session** | そのまま（Claude Code の概念と一致） |
 | session state machine | **ファイルベース状態管理** | State machine は過剰。JSON ファイルの有無で状態判定 |
 | `entire enable/disable` | **`.claude/settings.json` 直接編集** | 専用コマンド不要。hooks 定義を直接管理 |
-| `.entireignore` | **`.agentnoteignore`** | agentnote 固有の除外パターン定義 |
+| `.entireignore` | **`.agentnoteignore`** | agent-note 固有の除外パターン定義 |
 | `entire@local` author | — (使わない) | ユーザーの git config をそのまま継承 |
 
 ### 原則一覧
@@ -292,7 +292,7 @@ entire.io の 44 問題の根本原因分析から導出した設計原則。
 > 既存の git hooks を壊さない。git config、CI/CD への影響を最小化。
 
 **回避**: P-03, P-10, P-17, P-24, P-25（git config 破壊・hooks 上書き・CI 破壊）
-**実現方法**: `agentnote init` で git hooks をインストール。既存 hooks はチェーン (backup + exit status 保持) 。agent hooks (`.claude/settings.json`) も並行利用。
+**実現方法**: `agent-note init` で git hooks をインストール。既存 hooks はチェーン (backup + exit status 保持) 。agent hooks (`.claude/settings.json`) も並行利用。
 
 #### 原則 10: Repository-Root Anchored
 

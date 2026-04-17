@@ -97,7 +97,7 @@ export async function deinit(args: string[]): Promise<void> {
     }
 
     // Local CLI shim
-    const shimPath = join(await agentnoteDir(), "bin", "agentnote");
+    const shimPath = join(await agentnoteDir(), "bin", "agent-note");
     if (existsSync(shimPath)) {
       await unlink(shimPath);
       results.push("  ✓ removed local CLI shim");
@@ -131,7 +131,7 @@ export async function deinit(args: string[]): Promise<void> {
 
   // Output
   console.log("");
-  console.log("agentnote deinit");
+  console.log("agent-note deinit");
   console.log("");
   for (const line of results) {
     console.log(line);

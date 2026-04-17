@@ -6,7 +6,7 @@ import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } 
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const HOOKS_REL_PATH = ".codex/hooks.json";
-const HOOK_COMMAND = "npx --yes agentnote hook --agent codex";
+const HOOK_COMMAND = "npx --yes agent-note hook --agent codex";
 
 type CodexHookPayload = {
   session_id?: string;
@@ -230,7 +230,11 @@ function stripAgentnoteHooks(config: CodexHooksFile): CodexHooksFile {
         const filteredGroups = groups
           .map((group) => ({
             ...group,
-            hooks: group.hooks.filter((hook) => !hook.command.includes("agentnote hook")),
+            hooks: group.hooks.filter(
+              (hook) =>
+                !hook.command.includes("agent-note hook") &&
+                !hook.command.includes("agentnote hook"),
+            ),
           }))
           .filter((group) => group.hooks.length > 0);
         return [event, filteredGroups];

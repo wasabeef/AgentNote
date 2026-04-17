@@ -47,11 +47,11 @@ We welcome various types of contributions:
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/agentnote.git
-cd agentnote
+git clone https://github.com/your-username/AgentNote.git
+cd AgentNote
 
 # Add upstream remote
-git remote add upstream https://github.com/wasabeef/agentnote.git
+git remote add upstream https://github.com/wasabeef/AgentNote.git
 
 # Install CLI dependencies
 cd packages/cli
@@ -102,7 +102,7 @@ This is a monorepo with two packages:
 
 ```
 packages/
-├── cli/                           # agentnote — npm package
+├── cli/                           # agent-note — npm package
 │   ├── src/
 │   │   ├── cli.ts                 # Entry point and command routing
 │   │   ├── git.ts                 # Git CLI wrapper (execFile-based, no libraries)
@@ -149,9 +149,9 @@ action.yml                         # Root pointer → packages/action/dist/index
 ### Data Flow
 
 ```
-Claude Code hooks → agentnote hook (stdin JSON) → .git/agentnote/sessions/
+Claude Code hooks → agent-note hook (stdin JSON) → .git/agentnote/sessions/
 git commit → PreToolUse injects --trailer → PostToolUse records entry to git notes
-agentnote show/log → reads git notes --ref=agentnote
+agent-note show/log → reads git notes --ref=agentnote
 ```
 
 ## Coding Standards
@@ -173,7 +173,7 @@ agentnote show/log → reads git notes --ref=agentnote
 
 ### Error Handling
 
-- Never let agentnote errors break a git commit
+- Never let agent-note errors break a git commit
 - Use try/catch at command boundaries
 - Return early for missing/invalid data instead of throwing
 
@@ -184,11 +184,11 @@ if (!existsSync(entryFile)) {
   return;
 }
 
-// Good: commit must succeed even if agentnote fails
+// Good: commit must succeed even if agent-note fails
 try {
   await writeNote(commitSha, entry);
 } catch (err: any) {
-  console.error(`agentnote: warning: ${err.message}`);
+  console.error(`agent-note: warning: ${err.message}`);
 }
 ```
 
@@ -235,7 +235,7 @@ packages/cli/src/
 ├── git.test.ts               # Unit tests for git wrapper
 └── commands/
     ├── init.ts
-    ├── init.test.ts         # Integration tests for agentnote init
+    ├── init.test.ts         # Integration tests for agent-note init
     ├── hook.ts
     └── hook.test.ts           # Tests for hook event handling
 ```
@@ -253,7 +253,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 
-describe("agentnote init", () => {
+describe("agent-note init", () => {
   let testDir: string;
 
   before(() => {

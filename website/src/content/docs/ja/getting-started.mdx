@@ -11,31 +11,31 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 1. **init を実行**
 
    ```bash
-   npx agentnote init --agent claude
+   npx agent-note init --agent claude
    ```
 
    Codex CLI の場合:
 
    ```bash
-   npx agentnote init --agent codex
+   npx agent-note init --agent codex
    ```
 
    Cursor の場合:
 
    ```bash
-   npx agentnote init --agent cursor
+   npx agent-note init --agent cursor
    ```
 
    Gemini CLI の場合:
 
    ```bash
-   npx agentnote init --agent gemini
+   npx agent-note init --agent gemini
    ```
 
    複数エージェントを同時に:
 
    ```bash
-   npx agentnote init --agent claude --agent cursor
+   npx agent-note init --agent claude --agent cursor
    ```
 
    以下が設定されます:
@@ -48,7 +48,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 
    ```bash
    git add .claude/settings.json .github/workflows/agentnote.yml
-   git commit -m "chore: enable agentnote"
+   git commit -m "chore: enable agent-note"
    git push
    ```
 
@@ -57,7 +57,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    Gemini CLI では `.gemini/settings.json` をコミットします。
 
 3. **完了。** 生成された git hook が入っていれば、Cursor preview を含めて通常の `git commit` で追跡されます。
-   git hook が使えない環境では `agentnote commit -m "..."` を fallback として使えます。
+   git hook が使えない環境では `agent-note commit -m "..."` を fallback として使えます。
 </Steps>
 
 ## 新しいクローン
@@ -66,7 +66,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 
 ```bash
 git clone <repo> && cd <repo>
-npx agentnote init --agent claude
+npx agent-note init --agent claude
 ```
 
 <Aside>
@@ -82,12 +82,12 @@ init 後は通常の `git commit` で:
 3. **Push** `git push` 時に notes も自動で送信
 
 Cursor preview では response hook または local transcript による prompt / response 復元も行われます。
-git hook が使えない環境では `agentnote commit` が fallback です。
+git hook が使えない環境では `agent-note commit` が fallback です。
 
 ## 動作確認
 
 ```bash
-npx agentnote show
+npx agent-note show
 ```
 
 ```
@@ -105,11 +105,11 @@ files:   5 changed, 3 by AI
 ```
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -127,7 +127,7 @@ linked:  3/20 recent commits
 | Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
 |---|---|---|---|---|
 | 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
 | Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
 | 既定の attribution | Line-level | File-level | File-level | File-level |
 | 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |
@@ -135,7 +135,7 @@ linked:  3/20 recent commits
 ## アンインストール
 
 ```bash
-npx agentnote deinit --agent claude
+npx agent-note deinit --agent claude
 ```
 
 エージェントフックと git フックを除去します。`--remove-workflow` を付けると GitHub Action ワークフローも削除します。

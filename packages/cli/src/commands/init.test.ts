@@ -59,7 +59,7 @@ describe("agentnote init", () => {
 
     const prePushHook = readFileSync(join(testDir, ".git", "hooks", "pre-push"), "utf-8");
     assert.ok(
-      prePushHook.includes('"$GIT_DIR/agentnote/bin/agentnote" push-notes "$1"'),
+      prePushHook.includes('"$GIT_DIR/agentnote/bin/agent-note" push-notes "$1"'),
       "pre-push should delegate notes sync to the repo-local shim",
     );
     assert.ok(
@@ -78,7 +78,7 @@ describe("agentnote init", () => {
       encoding: "utf-8",
     });
 
-    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    const shimPath = join(testDir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
     assert.ok(existsSync(shimPath), "repo-local agentnote shim should exist");
 
     const shim = readFileSync(shimPath, "utf-8");
@@ -88,11 +88,11 @@ describe("agentnote init", () => {
 
     const postCommitHook = readFileSync(join(testDir, ".git", "hooks", "post-commit"), "utf-8");
     assert.ok(
-      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agentnote"'),
+      postCommitHook.includes('"$GIT_DIR/agentnote/bin/agent-note"'),
       "post-commit should prefer the repo-local shim",
     );
     assert.ok(
-      !postCommitHook.includes("npx --yes agentnote record"),
+      !postCommitHook.includes("npx --yes agent-note record"),
       "post-commit should not resolve an unpinned package at commit time",
     );
   });
@@ -134,7 +134,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     const upgradedHook = readFileSync(hookPath, "utf-8");
     assert.ok(
-      upgradedHook.includes('"$GIT_DIR/agentnote/bin/agentnote" push-notes "$1"'),
+      upgradedHook.includes('"$GIT_DIR/agentnote/bin/agent-note" push-notes "$1"'),
       "init should upgrade legacy managed pre-push hooks to the shim-based implementation",
     );
     assert.ok(
@@ -182,7 +182,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
           hooks: {
             SessionStart: [
               {
-                hooks: [{ type: "command", command: "npx --yes agentnote hook", async: true }],
+                hooks: [{ type: "command", command: "npx --yes agent-note hook", async: true }],
               },
             ],
           },

@@ -40,7 +40,7 @@ describe("cursor adapter", () => {
     assert.match(content, /afterTabFileEdit/);
     assert.match(content, /afterShellExecution/);
     assert.match(content, /stop/);
-    assert.match(content, /agentnote hook --agent cursor/);
+    assert.match(content, /agent-note hook --agent cursor/);
   });
 
   it("replaces legacy agentnote hooks without removing unrelated hooks", async () => {
@@ -67,7 +67,7 @@ describe("cursor adapter", () => {
     };
     assert.equal(parsed.hooks.beforeSubmitPrompt.length, 2);
     assert.equal(
-      parsed.hooks.beforeSubmitPrompt.filter((entry) => entry.command.includes("agentnote hook"))
+      parsed.hooks.beforeSubmitPrompt.filter((entry) => entry.command.includes("agent-note hook"))
         .length,
       1,
       "should keep a single Cursor hook command for beforeSubmitPrompt",

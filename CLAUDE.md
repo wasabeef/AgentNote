@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Agent Note (`agentnote`) is a monorepo CLI + GitHub Action that links AI coding sessions to git commits. It records every prompt, AI response, file change, and AI authorship ratio so you can trace back to *why* code changed.
+Agent Note (`agent-note`) is a monorepo CLI + GitHub Action that links AI coding sessions to git commits. It records every prompt, AI response, file change, and AI authorship ratio so you can trace back to *why* code changed.
 
 ## Repository structure
 
 ```
-packages/cli/     # agentnote — npm package (CLI)
+packages/cli/     # agent-note — npm package (CLI)
 packages/action/  # GitHub Action (Marketplace)
 action.yml        # root pointer to packages/action/dist/index.js
 website/          # Documentation site (Astro Starlight, 12 locales)
@@ -36,16 +36,16 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/src/cli.ts` → commands): `agentnote init`, `agentnote deinit`, `agentnote show`, `agentnote log`, `agentnote session`, `agentnote pr`, `agentnote status`, `agentnote commit`, `agentnote record`. Run by users and CI.
+1. **CLI** (`packages/cli/src/cli.ts` → commands): `agent-note init`, `agent-note deinit`, `agent-note show`, `agent-note log`, `agent-note session`, `agent-note pr`, `agent-note status`, `agent-note commit`, `agent-note record`. Run by users and CI.
 2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by agent hooks via stdin JSON. All data collection. Agent-agnostic via adapter pattern.
 
 ### Data flow
 
 ```
-Agent hooks → agentnote hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
-git commit → prepare-commit-msg injects trailer → post-commit calls agentnote record → git note written
+Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
+git commit → prepare-commit-msg injects trailer → post-commit calls agent-note record → git note written
 git push → pre-push auto-pushes refs/notes/agentnote
-agentnote show/log/session → reads git notes --ref=agentnote
+agent-note show/log/session → reads git notes --ref=agentnote
 ```
 
 ### Agent adapters (`packages/cli/src/agents/`)
@@ -79,12 +79,12 @@ Gemini-specific event handling:
 - **SessionStart / SessionEnd**: Standard session lifecycle events
 - **BeforeTool (unrecognized tool)**: Null fallback — still writes `{"decision": "allow"}` to stdout to avoid blocking Gemini CLI
 
-### Git hooks (`agentnote init`)
+### Git hooks (`agent-note init`)
 
-`agentnote init` installs three git hooks alongside the agent's hook config:
+`agent-note init` installs three git hooks alongside the agent's hook config:
 
 - **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour), injects `Agentnote-Session` trailer into commit message. Skips amends.
-- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agentnote record <sid>` to write git note.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.
@@ -117,7 +117,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 ### Harness hooks
 
-`.claude/settings.json` includes quality gates beyond agentnote tracking:
+`.claude/settings.json` includes quality gates beyond agent-note tracking:
 - **Stop (async)**: Run tests after each turn
 - **PreToolUse (sync)**: Typecheck before `git commit` — blocks if types fail
 - **PostToolUse (async)**: Biome lint after Edit/Write — feedback only
@@ -138,7 +138,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 - **Zero runtime dependencies for CLI.** Only devDependencies. The action has its own deps (`@actions/core`, `@actions/github`), bundled with ncc.
 - **Git CLI only.** All git operations go through `packages/cli/src/git.ts` which calls the `git` binary via `execFile`. Never use a git library.
-- **Never break git commit.** All agentnote recording is wrapped in try/catch. If agentnote fails, the commit must still succeed.
+- **Never break git commit.** All agent-note recording is wrapped in try/catch. If agent-note fails, the commit must still succeed.
 - **All source code in English.** Comments, variable names, CLI output, test descriptions — everything in English.
 - **PreToolUse hooks are synchronous.** Must write JSON to stdout, must not be marked `async: true`.
 - **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).

@@ -40,19 +40,19 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 1. リポジトリで init を実行
 
    ```bash
-   npx agentnote init --agent claude
+   npx agent-note init --agent claude
    ```
 
-   Codex CLI の場合: `npx agentnote init --agent codex`
-   Cursor の場合: `npx agentnote init --agent cursor`
-   Gemini CLI の場合: `npx agentnote init --agent gemini`
-   複数エージェントを同時に: `npx agentnote init --agent claude --agent cursor`
+   Codex CLI の場合: `npx agent-note init --agent codex`
+   Cursor の場合: `npx agent-note init --agent cursor`
+   Gemini CLI の場合: `npx agent-note init --agent gemini`
+   複数エージェントを同時に: `npx agent-note init --agent claude --agent cursor`
 
 2. 生成されたファイルをコミット
 
    ```bash
    git add .claude/settings.json .github/workflows/agentnote.yml
-   git commit -m "chore: enable agentnote"
+   git commit -m "chore: enable agent-note"
    git push
    ```
 
@@ -61,17 +61,17 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    Gemini CLI の場合は `.gemini/settings.json` をコミットします。
 
 3. 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
-   git hook が使えない環境では `agentnote commit -m "..."` を fallback として使えます。
+   git hook が使えない環境では `agent-note commit -m "..."` を fallback として使えます。
 </Steps>
 
 ## セットアップ確認
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -87,7 +87,7 @@ linked:  3/20 recent commits
 ## 実際の表示
 
 <Tabs>
-  <TabItem label="agentnote show">
+  <TabItem label="agent-note show">
   ```
   commit:  ce941f7 feat: add JWT auth middleware
   session: a1b2c3d4-5678-90ab-cdef-111122223333
@@ -102,7 +102,7 @@ linked:  3/20 recent commits
     CHANGELOG.md  👤
   ```
   </TabItem>
-  <TabItem label="agentnote log">
+  <TabItem label="agent-note log">
   ```
   ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
   326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
@@ -137,7 +137,7 @@ linked:  3/20 recent commits
 | Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
 |---|---|---|---|---|
 | 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
 | Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
 | 既定の attribution | Line-level | File-level | File-level | File-level |
 | 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |

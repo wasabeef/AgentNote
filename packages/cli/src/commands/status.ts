@@ -13,7 +13,7 @@ declare const __VERSION__: string;
 const VERSION = __VERSION__;
 
 export async function status(): Promise<void> {
-  console.log(`agentnote v${VERSION}`);
+  console.log(`agent-note v${VERSION}`);
   console.log();
 
   const repoRoot = await root();
@@ -27,7 +27,7 @@ export async function status(): Promise<void> {
   if (enabledAgents.length > 0) {
     console.log(`agent:   active (${enabledAgents.join(", ")})`);
   } else {
-    console.log("agent:   not configured (run 'agentnote init')");
+    console.log("agent:   not configured (run 'agent-note init')");
   }
 
   const captureDetails = await readAgentCaptureDetails(repoRoot, enabledAgents);
@@ -42,11 +42,11 @@ export async function status(): Promise<void> {
   } else if (enabledAgents.includes("cursor")) {
     console.log("git:     not configured");
     console.log(
-      "commit:  fallback mode (`agentnote commit` recommended; Cursor shell hooks may still attach notes)",
+      "commit:  fallback mode (`agent-note commit` recommended; Cursor shell hooks may still attach notes)",
     );
   } else if (enabledAgents.length > 0) {
     console.log("git:     not configured");
-    console.log("commit:  fallback mode (use `agentnote commit`)");
+    console.log("commit:  fallback mode (use `agent-note commit`)");
   } else {
     console.log("git:     not configured");
     console.log("commit:  not configured");
@@ -150,7 +150,10 @@ async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]>
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((hook) => hook.command?.includes("agentnote hook")),
+        (group.hooks ?? []).some(
+          (hook) =>
+            hook.command?.includes("agent-note hook") || hook.command?.includes("agentnote hook"),
+        ),
       );
 
     const capabilities: string[] = [];
@@ -176,7 +179,10 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
     const parsed = JSON.parse(content) as CursorHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
-      (hooks[eventName] ?? []).some((entry) => entry.command?.includes("agentnote hook"));
+      (hooks[eventName] ?? []).some(
+        (entry) =>
+          entry.command?.includes("agent-note hook") || entry.command?.includes("agentnote hook"),
+      );
 
     const capabilities: string[] = [];
     if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
@@ -209,7 +215,9 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((h) => h.command?.includes("agentnote hook")),
+        (group.hooks ?? []).some(
+          (h) => h.command?.includes("agent-note hook") || h.command?.includes("agentnote hook"),
+        ),
       );
 
     const capabilities: string[] = [];

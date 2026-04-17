@@ -10,7 +10,7 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 <Steps>
 1. You prompt your coding agent → hooks capture the prompt
 2. The agent writes code → hooks or transcripts track files touched and attribution signals
-3. You run `git commit` or `agentnote commit` → trailer injected, note recorded
+3. You run `git commit` or `agent-note commit` → trailer injected, note recorded
 4. You `git push` → notes auto-pushed to remote
 </Steps>
 
@@ -123,5 +123,5 @@ git notes --ref=agentnote show <commit>
 ```
 
 <Aside type="tip">
-  `agentnote init` configures auto-fetch and the `pre-push` hook handles auto-push. No manual commands needed.
+  `agent-note init` configures auto-fetch and the `pre-push` hook handles auto-push. No manual commands needed.
 </Aside>

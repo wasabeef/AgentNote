@@ -365,7 +365,7 @@ export async function pr(args: string[]): Promise<void> {
   const base = positional[0] ?? (await detectBaseBranch());
 
   if (!base) {
-    console.error("error: could not detect base branch. pass it as argument: agentnote pr <base>");
+    console.error("error: could not detect base branch. pass it as argument: agent-note pr <base>");
     process.exit(1);
   }
 
@@ -392,11 +392,11 @@ export async function pr(args: string[]): Promise<void> {
   if (prNumber) {
     if (outputMode === "description") {
       await updatePrDescription(prNumber, rendered);
-      console.log(`agentnote: PR #${prNumber} description updated`);
+      console.log(`agent-note: PR #${prNumber} description updated`);
     } else {
       // Comment mode: post via gh CLI.
       await postPrComment(prNumber, rendered);
-      console.log(`agentnote: PR #${prNumber} comment posted`);
+      console.log(`agent-note: PR #${prNumber} comment posted`);
     }
   } else {
     console.log(rendered);

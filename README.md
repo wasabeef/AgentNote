@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/wasabeef/AgentNote/actions"><img src="https://img.shields.io/github/actions/workflow/status/wasabeef/AgentNote/ci.yml?branch=main" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://www.npmjs.com/package/agentnote"><img src="https://img.shields.io/npm/v/agentnote" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/agent-note"><img src="https://img.shields.io/npm/v/agent-note" alt="npm"></a>
 </p>
 
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
@@ -23,26 +23,26 @@ Agent Note records each prompt, response, and AI-attributed file, then attaches 
 ## Setup
 
 ```bash
-npx agentnote init --agent claude
+npx agent-note init --agent claude
 ```
 
 For Codex CLI:
 
 ```bash
-npx agentnote init --agent codex
+npx agent-note init --agent codex
 ```
 
 For Cursor:
 
 ```bash
-npx agentnote init --agent cursor
+npx agent-note init --agent cursor
 ```
 
 Commit the generated files and push:
 
 ```bash
 git add .claude/settings.json .github/workflows/agentnote.yml
-git commit -m "chore: enable agentnote"
+git commit -m "chore: enable agent-note"
 git push
 ```
 
@@ -51,18 +51,18 @@ Cursor repositories commit `.cursor/hooks.json` instead of `.claude/settings.jso
 
 Each developer runs `init` after cloning to install local git hooks.
 
-Codex support is currently preview-only: prompt / response recovery and `files_touched` come from local transcripts, and line-level attribution is only upgraded when transcript `apply_patch` counts match the final commit diff. Shell-only edits that do not produce transcript patch data stay on the safe side: Agent Note can still preserve the prompt / response pair and observed Codex tools, but it does not guess `files_touched` or AI-authored files from shell steps alone. Those commits therefore stay at `0%` AI attribution unless another primary signal ties files to the agent. If the Codex transcript cannot be read, `agentnote commit` warns and skips note creation instead of writing uncertain attribution data.
+Codex support is currently preview-only: prompt / response recovery and `files_touched` come from local transcripts, and line-level attribution is only upgraded when transcript `apply_patch` counts match the final commit diff. Shell-only edits that do not produce transcript patch data stay on the safe side: Agent Note can still preserve the prompt / response pair and observed Codex tools, but it does not guess `files_touched` or AI-authored files from shell steps alone. Those commits therefore stay at `0%` AI attribution unless another primary signal ties files to the agent. If the Codex transcript cannot be read, `agent-note commit` warns and skips note creation instead of writing uncertain attribution data.
 
-Cursor support is currently preview-only: attribution comes from `afterFileEdit` / `afterTabFileEdit` hooks, prompt / response pairs are restored from Cursor response hooks or local transcripts when available, and the default git hooks track plain `git commit` normally. When Cursor edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to line-level attribution. `agentnote commit -m "..."` remains a useful fallback wrapper when git hooks are unavailable.
+Cursor support is currently preview-only: attribution comes from `afterFileEdit` / `afterTabFileEdit` hooks, prompt / response pairs are restored from Cursor response hooks or local transcripts when available, and the default git hooks track plain `git commit` normally. When Cursor edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to line-level attribution. `agent-note commit -m "..."` remains a useful fallback wrapper when git hooks are unavailable.
 
 ## Check Your Setup
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -73,14 +73,14 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` shows which agent adapters are enabled. `capture:` summarizes what the active agent hooks collect. `git:` shows whether the managed repo-local git hooks are installed. `commit:` tells you the primary tracking path: normal `git commit` when git hooks are active, or fallback mode when you should prefer `agentnote commit`.
+`agent:` shows which agent adapters are enabled. `capture:` summarizes what the active agent hooks collect. `git:` shows whether the managed repo-local git hooks are installed. `commit:` tells you the primary tracking path: normal `git commit` when git hooks are active, or fallback mode when you should prefer `agent-note commit`.
 
 ## What You Get
 
 ### Every commit tells its story
 
 ```
-$ npx agentnote show
+$ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
 session: a1b2c3d4-5678-90ab-cdef-111122223333
@@ -105,7 +105,7 @@ prompts: 2
 ### Scan your history at a glance
 
 ```
-$ npx agentnote log
+$ npx agent-note log
 
 ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 326a568 test: add auth tests          [a1b2c3d4… | 🤖100% | 1p]
@@ -115,7 +115,7 @@ ba091be fix: update dependencies
 ### PR reports
 
 ```
-$ npx agentnote pr --output description --update 42
+$ npx agent-note pr --output description --update 42
 ```
 
 Posts an AI session report to the PR description:
@@ -148,12 +148,12 @@ You git push
 
 | Command | What it does |
 | --- | --- |
-| `agentnote init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
-| `agentnote deinit` | Remove hooks and config for an agent |
-| `agentnote show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
-| `agentnote log [n]` | List recent commits with AI ratio |
-| `agentnote pr [base]` | Generate PR report (markdown or JSON) |
-| `agentnote status` | Show tracking state |
+| `agent-note init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
+| `agent-note deinit` | Remove hooks and config for an agent |
+| `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
+| `agent-note log [n]` | List recent commits with AI ratio |
+| `agent-note pr [base]` | Generate PR report (markdown or JSON) |
+| `agent-note status` | Show tracking state |
 
 ## Works with
 
@@ -169,7 +169,7 @@ You git push
 | Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
 | --- | --- | --- | --- | --- |
 | Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agentnote commit` fallback | Yes | Yes | Yes | Yes |
+| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
 | Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
 | Default attribution | Line-level | File-level | File-level | File-level |
 | Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
@@ -185,12 +185,12 @@ You git push
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
-  id: agentnote
+  id: agent-note
   with:
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.agentnote.outputs.overall_ai_ratio }}%"
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 </details>

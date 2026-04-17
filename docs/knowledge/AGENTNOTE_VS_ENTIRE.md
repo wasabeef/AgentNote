@@ -25,7 +25,7 @@ Agent Note is a lightweight, Git-native tool focused on attaching AI session con
 - Smaller Git footprint. Agent Note stores permanent data in `git notes` instead of introducing checkpoint branches.
 - Local-first workflow. The CLI and stored metadata are usable without a hosted web surface.
 - Conservative Cursor design. Cursor support stays on documented hook / transcript paths and keeps git hooks as the primary commit integration path.
-- Simple operator view. `agentnote status` shows active agent adapters, capture paths, git hook state, and commit tracking mode in one place.
+- Simple operator view. `agent-note status` shows active agent adapters, capture paths, git hook state, and commit tracking mode in one place.
 
 ## Where Entire Is Strong
 

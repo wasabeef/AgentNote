@@ -63,7 +63,7 @@ describe("agentnote codex", () => {
     const hooks = readFileSync(hooksPath, "utf-8");
     assert.ok(config.includes("codex_hooks = true"), "codex hooks feature should be enabled");
     assert.ok(hooks.includes("UserPromptSubmit"), "hooks.json should include UserPromptSubmit");
-    assert.ok(hooks.includes("agentnote hook --agent codex"), "hooks should call codex mode");
+    assert.ok(hooks.includes("agent-note hook --agent codex"), "hooks should call codex mode");
   });
 
   it("records Codex session metadata and upgrades to line attribution when patch counts match the commit", () => {
@@ -383,7 +383,7 @@ describe("agentnote codex", () => {
       env: { ...process.env, HOME: testHome },
       encoding: "utf-8",
     });
-    assert.match(output, /agentnote: 1 prompts, AI ratio 0%/);
+    assert.match(output, /agent-note: 1 prompts, AI ratio 0%/);
 
     const note = JSON.parse(
       execSync("git notes --ref=agentnote show HEAD", {
@@ -443,7 +443,11 @@ describe("agentnote codex", () => {
       env: { ...process.env, HOME: testHome },
       encoding: "utf-8",
     });
-    assert.match(output, /agentnote: warning:/, "commit should warn when transcript reading fails");
+    assert.match(
+      output,
+      /agent-note: warning:/,
+      "commit should warn when transcript reading fails",
+    );
 
     const noteResult = spawnSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
       cwd: testDir,

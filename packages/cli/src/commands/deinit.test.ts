@@ -148,7 +148,7 @@ describe("agentnote deinit", () => {
 
     execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
 
-    const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agentnote");
+    const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
     assert.ok(existsSync(shimPath), "shim should exist after init");
 
     execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });

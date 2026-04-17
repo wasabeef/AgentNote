@@ -5,12 +5,12 @@ description: Agent Note CLI コマンドリファレンス
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## agentnote init
+## agent-note init
 
 リポジトリに Agent Note をセットアップします。
 
 ```bash
-npx agentnote init --agent claude
+npx agent-note init --agent claude
 ```
 
 | フラグ | 説明 |
@@ -23,13 +23,13 @@ npx agentnote init --agent claude
 | `--action` | ワークフローのみ作成 |
 | `--agent <name>` | **必須。** エージェントアダプターを指定: `claude`、`codex`、`cursor`、`gemini`。複数エージェントの場合は繰り返し指定 |
 
-## agentnote show
+## agent-note show
 
 コミットの AI セッション詳細を表示します。
 
 ```bash
-npx agentnote show          # HEAD
-npx agentnote show abc1234  # commit SHA
+npx agent-note show          # HEAD
+npx agent-note show abc1234  # commit SHA
 ```
 
 ```
@@ -46,47 +46,47 @@ files:   5 changed, 3 by AI
   CHANGELOG.md  👤
 ```
 
-## agentnote log
+## agent-note log
 
 最近のコミットを AI 比率付きで一覧表示します。
 
 ```bash
-npx agentnote log      # 直近 10 件
-npx agentnote log 20   # 直近 20 件
+npx agent-note log      # 直近 10 件
+npx agent-note log 20   # 直近 20 件
 ```
 
-## agentnote pr
+## agent-note pr
 
 PR レポートを生成します。
 
 <Tabs>
   <TabItem label="Markdown">
   ```bash
-  npx agentnote pr origin/main
+  npx agent-note pr origin/main
   ```
   </TabItem>
   <TabItem label="JSON">
   ```bash
-  npx agentnote pr origin/main --json
+  npx agent-note pr origin/main --json
   ```
   </TabItem>
   <TabItem label="PR 更新">
   ```bash
-  npx agentnote pr origin/main --output description --update 42
+  npx agent-note pr origin/main --output description --update 42
   ```
   </TabItem>
 </Tabs>
 
-## agentnote status
+## agent-note status
 
 現在の tracking state を表示します。
 
 ```bash
-npx agentnote status
+npx agent-note status
 ```
 
 ```text
-agentnote v0.x.x
+agent-note v0.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)
@@ -98,15 +98,15 @@ linked:  3/20 recent commits
 ```
 
 <Aside>
-  `agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は実際の主経路を示します。`commit:` が fallback mode のときは `agentnote commit` を使うのが安全です。
+  `agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は実際の主経路を示します。`commit:` が fallback mode のときは `agent-note commit` を使うのが安全です。
 </Aside>
 
-## agentnote deinit
+## agent-note deinit
 
 リポジトリから Agent Note のフックと設定を除去します。
 
 ```bash
-npx agentnote deinit --agent claude
+npx agent-note deinit --agent claude
 ```
 
 | フラグ | 説明 |
@@ -119,12 +119,12 @@ npx agentnote deinit --agent claude
   他のエージェントがまだ有効な場合、共有インフラ（git フック、notes 設定）は温存されます。
 </Aside>
 
-## agentnote commit
+## agent-note commit
 
 セッショントレーラーと note 記録を含む `git commit` のラッパーです。
 
 ```bash
-npx agentnote commit -m "feat: add auth"
+npx agent-note commit -m "feat: add auth"
 ```
 
 <Aside type="tip">
@@ -133,5 +133,5 @@ npx agentnote commit -m "feat: add auth"
 
 <Aside>
   Cursor preview でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
-  現在は prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合のみ安全に line-level へ昇格します。git hook が使えない環境では `agentnote commit` が fallback として使えます。
+  現在は prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合のみ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が fallback として使えます。
 </Aside>
