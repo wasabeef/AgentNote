@@ -136,8 +136,11 @@ export async function recordCommitEntry(opts: {
     adapter.findTranscript(opts.sessionId);
 
   // Build interactions from transcript for accurate prompt-response pairing.
-  // Suppress transcript pairing for cross-turn commits: slice(-prompts.length)
-  // is only accurate when all relevant edits are from the current turn.
+  //
+  // Cross-turn commits (edits from multiple turns bundled into one commit) are
+  // unsafe to pair via tail slicing — `slice(-prompts.length)` could pull in
+  // unrelated interactions. But content-based exact matching is safe even
+  // across turns, so we still try that path first.
   let crossTurnCommit = false;
   if (hasTurnData && relevantTurns.size > 0) {
     const turnFilePath = join(sessionDir, TURN_FILE);
@@ -152,34 +155,52 @@ export async function recordCommitEntry(opts: {
   let interactions: Interaction[];
   let transcriptLineCounts: LineCounts | undefined;
 
-  if (transcriptPath && !crossTurnCommit) {
+  if (transcriptPath) {
     const allInteractions = await adapter.extractInteractions(transcriptPath);
-    const interactionWindow = findTranscriptPromptWindow(allInteractions, prompts);
-    const transcriptMatched = interactionWindow.filter((interaction) =>
-      (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
-    );
 
-    if (transcriptMatched.length > 0) {
-      interactions = transcriptMatched.map((interaction) =>
-        toRecordedInteraction(interaction, commitFileSet),
+    // Prefer exact content match: safe for both same-turn and cross-turn commits.
+    // For same-turn commits without exact match, fall back to tail slicing.
+    // Cross-turn commits without exact match get prompts only (no response pairing).
+    const exactWindow = findExactTranscriptPromptWindow(allInteractions, prompts);
+    const interactionWindow =
+      exactWindow ?? (!crossTurnCommit ? findTranscriptPromptWindow(allInteractions, prompts) : []);
+
+    if (interactionWindow.length > 0) {
+      const transcriptMatched = interactionWindow.filter((interaction) =>
+        (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
       );
-      aiFiles = [
-        ...new Set(
-          interactions.flatMap((interaction) =>
-            (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file)),
+
+      if (transcriptMatched.length > 0) {
+        interactions = transcriptMatched.map((interaction) =>
+          toRecordedInteraction(interaction, commitFileSet),
+        );
+        aiFiles = [
+          ...new Set(
+            interactions.flatMap((interaction) =>
+              (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file)),
+            ),
           ),
-        ),
-      ];
-      transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
-    } else if (prompts.length > 0 && interactionWindow.length > 0) {
-      interactions = interactionWindow.map((interaction) =>
-        toRecordedInteraction(interaction, commitFileSet),
-      );
-    } else {
+        ];
+        transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
+      } else if (prompts.length > 0) {
+        interactions = interactionWindow.map((interaction) =>
+          toRecordedInteraction(interaction, commitFileSet),
+        );
+      } else {
+        interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
+        if (interactions.length === 0) {
+          interactions = prompts.map((p) => ({ prompt: p, response: null }));
+        }
+      }
+    } else if (!crossTurnCommit) {
+      // Same-turn, no window available — use transcript-level fallbacks.
       interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
       if (interactions.length === 0) {
         interactions = prompts.map((p) => ({ prompt: p, response: null }));
       }
+    } else {
+      // Cross-turn with no exact match: prompts only, no response pairing.
+      interactions = prompts.map((p) => ({ prompt: p, response: null }));
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
@@ -244,11 +265,19 @@ export async function recordCommitEntry(opts: {
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
 
-function findTranscriptPromptWindow(
+/**
+ * Exact content match: find a window of `interactions` whose prompts equal `prompts`
+ * in order. Returns null if no exact match exists.
+ *
+ * Safe to use regardless of cross-turn status because the match is content-based,
+ * not position-based. Used as the preferred pairing path so that bundled commits
+ * (changes from multiple prompts committed together) still recover responses.
+ */
+function findExactTranscriptPromptWindow(
   interactions: TranscriptInteraction[],
   prompts: string[],
-): TranscriptInteraction[] {
-  if (prompts.length === 0 || interactions.length === 0) return interactions;
+): TranscriptInteraction[] | null {
+  if (prompts.length === 0 || interactions.length === 0) return null;
 
   for (let start = interactions.length - prompts.length; start >= 0; start--) {
     const candidate = interactions.slice(start, start + prompts.length);
@@ -257,7 +286,16 @@ function findTranscriptPromptWindow(
     if (matches) return candidate;
   }
 
-  return interactions.slice(-prompts.length);
+  return null;
+}
+
+function findTranscriptPromptWindow(
+  interactions: TranscriptInteraction[],
+  prompts: string[],
+): TranscriptInteraction[] {
+  if (prompts.length === 0 || interactions.length === 0) return interactions;
+  const exact = findExactTranscriptPromptWindow(interactions, prompts);
+  return exact ?? interactions.slice(-prompts.length);
 }
 
 function toRecordedInteraction(

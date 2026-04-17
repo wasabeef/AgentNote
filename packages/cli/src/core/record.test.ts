@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { AGENTNOTE_DIR, CHANGES_FILE, PROMPTS_FILE, SESSIONS_DIR } from "./constants.js";
+import { AGENTNOTE_DIR, CHANGES_FILE, PROMPTS_FILE, SESSIONS_DIR, TURN_FILE } from "./constants.js";
 import { recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
@@ -128,6 +128,85 @@ describe("recordCommitEntry", () => {
     const paths = files.map((f) => f.path);
     assert.ok(paths.includes("committed.ts"), "committed file should be in note");
     assert.ok(!paths.includes("not-committed.ts"), "uncommitted file should not be in note");
+  });
+
+  it("cross-turn commit: exact prompt-content match recovers responses from transcript", async () => {
+    // Simulate a bundled commit where edits from multiple earlier turns are
+    // committed after the turn counter has moved on. Without the exact-match
+    // path, this scenario would return response=null for every interaction.
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"first prompt"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"first response"}]}}',
+          '{"type":"user","message":{"content":[{"type":"text","text":"second prompt"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"second response"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"first prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"second prompt","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"file1.ts","turn":1}\n' +
+          '{"event":"file_change","tool":"Write","file":"file2.ts","turn":2}\n',
+      );
+      // Current turn advanced past the relevant turns — forces crossTurnCommit = true.
+      writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+      writeFileSync(join(repoDir, "file1.ts"), "export const a = 1;\n");
+      writeFileSync(join(repoDir, "file2.ts"), "export const b = 2;\n");
+      execSync("git add file1.ts file2.ts", { cwd: repoDir });
+      execSync('git commit -m "cross-turn bundled commit"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+      }>;
+      assert.equal(interactions.length, 2);
+      assert.equal(interactions[0].prompt, "first prompt");
+      assert.equal(
+        interactions[0].response,
+        "first response",
+        "cross-turn commit should still recover first response via exact content match",
+      );
+      assert.equal(interactions[1].prompt, "second prompt");
+      assert.equal(
+        interactions[1].response,
+        "second response",
+        "cross-turn commit should still recover second response via exact content match",
+      );
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
   });
 
   it("skips writing note when no prompts and no AI files exist", async () => {
