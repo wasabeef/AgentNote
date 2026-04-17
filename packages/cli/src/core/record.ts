@@ -156,7 +156,25 @@ export async function recordCommitEntry(opts: {
   let transcriptLineCounts: LineCounts | undefined;
 
   if (transcriptPath) {
-    const allInteractions = await adapter.extractInteractions(transcriptPath);
+    // Cross-turn commits tolerate transcript failures: PR #16 newly reaches
+    // this path, and the pre-PR #16 behavior for cross-turn was prompts-only
+    // (never touched the transcript). Preserve that fallback.
+    //
+    // Same-turn commits still re-throw so commit.ts can warn and skip the
+    // note entirely — some adapters (Codex) require a readable transcript
+    // for correct attribution and intentionally throw on missing files.
+    //
+    // Note: the Codex adapter does not emit file_change events, so its
+    // sessions currently always hit the same-turn branch (relevantTurns stays
+    // empty). If a future adapter emits file_change AND throws on missing
+    // transcripts, this guard keeps the cross-turn path safe for it too.
+    let allInteractions: TranscriptInteraction[] = [];
+    try {
+      allInteractions = await adapter.extractInteractions(transcriptPath);
+    } catch (err) {
+      if (!crossTurnCommit) throw err;
+      // cross-turn: fall through with no interactions — handled below as prompts-only.
+    }
 
     // Prefer exact content match: safe for both same-turn and cross-turn commits.
     // For same-turn commits without exact match, fall back to tail slicing.
@@ -272,6 +290,12 @@ export async function recordCommitEntry(opts: {
  * Safe to use regardless of cross-turn status because the match is content-based,
  * not position-based. Used as the preferred pairing path so that bundled commits
  * (changes from multiple prompts committed together) still recover responses.
+ *
+ * Limitation: when the same prompt text repeats within a session (e.g. the user
+ * says "continue" multiple times across turns), the descending scan returns the
+ * latest matching window. Older identical prompts may be paired with responses
+ * from later turns. Disambiguating via turn or timestamp would require carrying
+ * those signals through TranscriptInteraction, which is out of scope here.
  */
 function findExactTranscriptPromptWindow(
   interactions: TranscriptInteraction[],

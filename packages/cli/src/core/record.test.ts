@@ -209,6 +209,70 @@ describe("recordCommitEntry", () => {
     }
   });
 
+  it("cross-turn commit: Codex transcript throw does not abort note creation", async () => {
+    // Codex adapter.extractInteractions() throws when the transcript path is
+    // invalid or missing — by design, because Codex attribution is transcript-
+    // native. Before this guard, such a throw on the cross-turn path would
+    // bubble up and skip the whole note. The fix tolerates it on cross-turn
+    // only (same-turn Codex still fails loudly, preserving codex.test.ts's
+    // "warn + skip note" contract at commands/codex.test.ts:411).
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    // Override the agent marker so this session uses the Codex adapter.
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      // Path under CODEX_HOME so isValidTranscriptPath() passes; file absent
+      // so extractInteractions() throws "Codex transcript not found:".
+      const missingTranscript = join(codexHome, "sessions", "missing.jsonl");
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"some prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"file.ts","turn":1}\n',
+      );
+      // Current turn advanced past the relevant turns — forces crossTurnCommit = true.
+      writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+      writeFileSync(join(repoDir, "file.ts"), "export const a = 1;\n");
+      execSync("git add file.ts", { cwd: repoDir });
+      execSync('git commit -m "missing codex transcript"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath: missingTranscript,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null, "note should still be written even when transcript is unreadable");
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+      }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "some prompt");
+      assert.equal(interactions[0].response, null, "response should fall back to null");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });
