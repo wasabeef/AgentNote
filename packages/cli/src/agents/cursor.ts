@@ -402,7 +402,8 @@ export const cursor: AgentAdapter = {
 
     try {
       const content = await readFile(hooksPath, "utf-8");
-      return content.includes(HOOK_COMMAND);
+      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
+      return content.includes(HOOK_COMMAND) || content.includes("agentnote hook --agent cursor");
     } catch {
       return false;
     }

@@ -320,7 +320,8 @@ export const gemini: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      return content.includes(HOOK_COMMAND);
+      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
+      return content.includes(HOOK_COMMAND) || content.includes("agentnote hook --agent gemini");
     } catch {
       return false;
     }

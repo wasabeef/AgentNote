@@ -157,8 +157,11 @@ export const claude: AgentAdapter = {
       const content = await readFile(settingsPath, "utf-8");
       return (
         content.includes(CLAUDE_HOOK_COMMAND) ||
+        // Legacy package name (agentnote) — pre-rebrand installations.
+        content.includes("agentnote hook --agent claude") ||
         content.includes("agentnote hook --agent claude-code") ||
-        content.includes("cli.js hook --agent claude-code")
+        content.includes("cli.js hook --agent claude-code") ||
+        content.includes("cli.js hook --agent claude")
       );
     } catch {
       return false;

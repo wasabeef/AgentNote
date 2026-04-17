@@ -96,10 +96,18 @@ export async function deinit(args: string[]): Promise<void> {
       }
     }
 
-    // Local CLI shim
-    const shimPath = join(await agentnoteDir(), "bin", "agent-note");
-    if (existsSync(shimPath)) {
-      await unlink(shimPath);
+    // Local CLI shim — remove both the current name and the legacy `agentnote`
+    // shim left over from pre-rebrand installations.
+    const binDir = join(await agentnoteDir(), "bin");
+    let shimRemoved = false;
+    for (const name of ["agent-note", "agentnote"]) {
+      const shimPath = join(binDir, name);
+      if (existsSync(shimPath)) {
+        await unlink(shimPath);
+        shimRemoved = true;
+      }
+    }
+    if (shimRemoved) {
       results.push("  ✓ removed local CLI shim");
     }
 

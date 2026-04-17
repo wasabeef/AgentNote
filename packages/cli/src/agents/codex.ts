@@ -385,7 +385,11 @@ export const codex: AgentAdapter = {
         configContent.includes("features.codex_hooks = true") ||
         (configContent.includes("[features]") &&
           configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null);
-      return configOk && hooksContent.includes(HOOK_COMMAND);
+      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
+      const hasHook =
+        hooksContent.includes(HOOK_COMMAND) ||
+        hooksContent.includes("agentnote hook --agent codex");
+      return configOk && hasHook;
     } catch {
       return false;
     }
