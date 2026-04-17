@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: Comprenez pourquoi votre code a changé, pas seulement ce qui a changé.
+description: Pour que git n'oublie pas pourquoi votre IA a écrit ce code. Prompts, réponses et attribution ligne par ligne, attachés à chaque commit.
 template: splash
 hero:
-  tagline: Chaque prompt IA, réponse et attribution de fichier — rattachés automatiquement à vos commits git. Attribution à la ligne près quand l'agent expose un historique d'édition suffisant.
+  tagline: |
+    Un git commit enregistre ce qui a changé.
+    Agent Note enregistre pourquoi ça a changé.
   actions:
     - text: Démarrer
       link: /AgentNote/fr/getting-started/
@@ -17,24 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Ce que fait Agent Note
+<div class="origin-note">
+  <h2 class="origin-note__title">Pourquoi j'ai créé ça</h2>
+  <p class="origin-note__lede">Il y a six mois, j'ai relu du code que l'IA avait écrit pour moi et je n'ai pas pu répondre à « pourquoi j'ai fait ça comme ça ? ». <code>git log</code> n'avait que le diff. Les prompts, les réponses — tout disparu.</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">Alors j'ai commencé à attacher la conversation IA à chaque commit.</p>
+</div>
+
+## Ce que ça fait
 
 <CardGrid stagger>
-  <Card title="Attribution IA ligne par ligne" icon="pencil">
-    Claude Code bénéficie d'une attribution complète ligne par ligne. Codex passe au niveau ligne quand les compteurs de patch du transcript correspondent au commit final.
+  <Card title="Garder une trace des lignes écrites par l'IA" icon="pencil">
+    Plus fin que `git blame`. Claude Code est complet au niveau ligne ; les autres agents sont mis à niveau quand les conditions correspondent.
   </Card>
-  <Card title="Suivi de session" icon="document">
-    Prompts, réponses, nom du modèle et outils utilisés — le tout lié aux commits qu'ils ont produits.
+  <Card title="Prompts et réponses sauvegardés ensemble" icon="document">
+    Le nom du modèle et l'utilisation des outils aussi — tout regroupé dans les git notes avec le changement.
   </Card>
-  <Card title="Rapports de PR" icon="rocket">
-    Rapports automatiques de session IA sur les pull requests avec ratio par commit, nombre de lignes et hashes liés.
+  <Card title="Rapports PR automatiques" icon="rocket">
+    Ratio IA, nombre de prompts, hashes de commits. Les relecteurs voient le contexte avant le code.
   </Card>
-  <Card title="Natif Git" icon="setting">
-    Stocké sous forme de git notes — invisible pour les branches et la CI. Peut être poussé, récupéré et partagé.
+  <Card title="Écrit uniquement dans les git notes" icon="setting">
+    Les branches restent propres. Push / fetch pour partager avec l'équipe.
   </Card>
 </CardGrid>
 
-## Configuration en 60 secondes
+## Configuration
 
 <Steps>
 1. Lancez init dans votre dépôt
@@ -43,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   Pour Codex CLI : `npx agent-note init --agent codex`
-   Pour Cursor : `npx agent-note init --agent cursor`
-   Pour Gemini CLI : `npx agent-note init --agent gemini`
-   Plusieurs agents à la fois : `npx agent-note init --agent claude --agent cursor`
+   - Pour Codex CLI : `npx agent-note init --agent codex`
+   - Pour Cursor : `npx agent-note init --agent cursor`
+   - Pour Gemini CLI : `npx agent-note init --agent gemini`
+   - Plusieurs agents à la fois : `npx agent-note init --agent claude --agent cursor`
 
 2. Committez les fichiers générés
 
@@ -56,14 +65,34 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   Les dépôts Codex versionnent `.codex/config.toml` et `.codex/hooks.json` à la place de `.claude/settings.json`.
-   Les dépôts Cursor versionnent `.cursor/hooks.json`.
-   Les dépôts Gemini CLI commitent `.gemini/settings.json`.
+   - Codex CLI : versionner `.codex/config.toml` et `.codex/hooks.json`
+   - Cursor : versionner `.cursor/hooks.json`
+   - Gemini CLI : versionner `.gemini/settings.json`
 
-3. Claude Code et Codex peuvent utiliser `git commit` normalement.
-   Avec les git hooks générés, Cursor preview peut aussi utiliser `git commit` normalement.
-   Utilisez `agent-note commit -m "..."` comme solution de secours si les git hooks ne sont pas disponibles.
+3. Codez avec l'IA.
+   Le `git commit` normal fonctionne quand les git hooks générés sont installés.
+   `agent-note commit -m "..."` reste le fallback si les git hooks ne sont pas disponibles.
 </Steps>
+
+## Vérifiez votre configuration
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` affiche l'adaptateur actif, `capture:` résume ce que collectent les hooks de l'agent actif, `git:` indique si les git hooks locaux du dépôt sont installés, et `commit:` indique si le `git commit` normal est la voie principale ou si le mode fallback est actif.
 
 ## Voyez par vous-même
 
@@ -104,11 +133,55 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   </TabItem>
 </Tabs>
 
-## Compatibilité
+## Matrice de support des agents
 
-| Agent | Statut | Notes |
-|---|---|---|
-| Claude Code | Support complet | Attribution ligne par ligne via des paires de blobs capturées par hook |
-| Codex CLI | Preview | Basé sur le transcript ; passe au niveau ligne quand les compteurs de patch correspondent au commit |
-| Cursor | Preview | Attribution via `afterFileEdit` / `afterTabFileEdit`, avec passage sûr au niveau ligne quand le blob final correspond encore à l'édition IA |
-| Gemini CLI | Preview | Attribution par fichier via les hooks `BeforeTool`/`AfterTool` dans `.gemini/settings.json` |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">Capacité</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Statut</div>
+    <div class="cap-yes">Stable</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Attribution IA ligne par ligne</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Récupération des prompts / réponses</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Enregistrement via `git commit` normal</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
+
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> Complet</span>
+  <span><span class="cap-partial">△</span> Conditionnel (nécessite un transcript ou blob correspondant)</span>
+  <span><span class="cap-no">—</span> Non disponible</span>
+</p>

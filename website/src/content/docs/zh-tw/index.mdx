@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: 記錄程式碼為何變更，而非只是變更了什麼。
+description: 讓 git 不會忘記你的 AI 為何寫了那段程式碼。提示詞、回應和行級歸因——固定到每一個 commit。
 template: splash
 hero:
-  tagline: 每一次 AI 提示詞、回應和檔案級 AI 標註都會自動關聯到你的 git 提交。當代理提供足夠的編輯歷史時，也能提升到行級歸因。
+  tagline: |
+    git commit 記錄了什麼改變了。
+    Agent Note 記錄了為何改變。
   actions:
     - text: 開始使用
       link: /AgentNote/zh-tw/getting-started/
@@ -17,24 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Agent Note 能做什麼
+<div class="origin-note">
+  <h2 class="origin-note__title">為何做這個</h2>
+  <p class="origin-note__lede">半年前我重新閱讀了 AI 幫我寫的程式碼，卻無法回答「為什麼要這樣做？」。<code>git log</code> 裡只有 diff。提示詞、回應——全都消失了。</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">於是我開始把 AI 對話附加到每一個 commit 上。</p>
+</div>
+
+## 它能做什麼
 
 <CardGrid stagger>
-  <Card title="行級 AI 貢獻度分析" icon="pencil">
-    Claude Code 提供完整的行級歸因。Codex 會在 transcript 中的 patch 行數與最終 commit 一致時提升到行級。
+  <Card title="保留 AI 編寫行的紀錄" icon="pencil">
+    比 `git blame` 更細粒度。Claude Code 完全支援行級；其他 agent 在條件符合時升級到行級。
   </Card>
-  <Card title="工作階段追蹤" icon="document">
-    提示詞、回應、模型名稱和工具使用紀錄——全部關聯到對應的提交。
+  <Card title="提示詞和回應一併儲存" icon="document">
+    模型名稱和工具使用情況也一起——全部與變更捆綁存入 git notes。
   </Card>
-  <Card title="PR 報告" icon="rocket">
-    在 Pull Request 自動產生 AI 工作階段報告，包含每次提交的比例、行數和關聯雜湊值。
+  <Card title="自動產生 PR 報告" icon="rocket">
+    AI 比例、提示詞數量、commit 雜湊值。審查者在看程式碼之前就能看到上下文。
   </Card>
-  <Card title="Git 原生" icon="setting">
-    以 git notes 形式儲存——對分支和 CI 不可見。可推送、可拉取、可共享。
+  <Card title="僅寫入 git notes" icon="setting">
+    分支保持乾淨。push / fetch 與團隊共享。
   </Card>
 </CardGrid>
 
-## 60 秒完成設定
+## 設定
 
 <Steps>
 1. 在儲存庫中執行 init
@@ -43,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   如果你使用 Codex CLI：`npx agent-note init --agent codex`
-   如果你使用 Cursor：`npx agent-note init --agent cursor`
-   Gemini CLI 請執行：`npx agent-note init --agent gemini`
-   同時使用多個 agent：`npx agent-note init --agent claude --agent cursor`
+   - 如果你使用 Codex CLI：`npx agent-note init --agent codex`
+   - 如果你使用 Cursor：`npx agent-note init --agent cursor`
+   - Gemini CLI 請執行：`npx agent-note init --agent gemini`
+   - 同時使用多個 agent：`npx agent-note init --agent claude --agent cursor`
 
 2. 提交產生的檔案
 
@@ -56,14 +65,34 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   Codex 儲存庫需要提交 `.codex/config.toml` 與 `.codex/hooks.json`，而不是 `.claude/settings.json`。
-   Cursor 儲存庫需要提交 `.cursor/hooks.json`。
-   Gemini CLI 儲存庫提交 `.gemini/settings.json`。
+   - Codex CLI: 提交 `.codex/config.toml` 與 `.codex/hooks.json`
+   - Cursor: 提交 `.cursor/hooks.json`
+   - Gemini CLI: 提交 `.gemini/settings.json`
 
-3. Claude Code 與 Codex 可以照常使用 `git commit`。
-   如果已安裝產生的 git hook，Cursor preview 也可以直接使用一般 `git commit`。
-   若 git hook 無法使用，請改用 `agent-note commit -m "..."` 作為 fallback。
+3. 用 AI 編寫程式碼。
+   安裝產生的 git hook 後，普通 `git commit` 即可正常運作。
+   若 git hook 無法使用，`agent-note commit -m "..."` 仍可作為 fallback。
 </Steps>
+
+## 檢查設定
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` 顯示已啟用的 adapter，`capture:` 彙總活躍 agent hook 收集的內容，`git:` 顯示 repo 本地 git hook 是否已安裝，`commit:` 顯示普通 `git commit` 是否為主路徑或 fallback 模式是否啟用。
 
 ## 實際效果
 
@@ -104,11 +133,55 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   </TabItem>
 </Tabs>
 
-## 支援情況
+## Agent 支援矩陣
 
-| Agent | 狀態 | 說明 |
-|---|---|---|
-| Claude Code | 完整支援 | 透過 hook 擷取的 blob 配對實現行級歸因 |
-| Codex CLI | Preview | 以 transcript 為基礎；當 patch 行數與 commit 一致時提升到行級 |
-| Cursor | Preview | 以 `afterFileEdit` / `afterTabFileEdit` 為基礎；只有最終 blob 仍與 AI edit 一致時才安全升級為行級歸因 |
-| Gemini CLI | Preview | 透過 `.gemini/settings.json` 中的 `BeforeTool`/`AfterTool` 鉤子進行檔案級歸屬判定 |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">功能</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">狀態</div>
+    <div class="cap-yes">穩定</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">行級 AI 歸因</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">提示詞 / 回應復原</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">透過普通 `git commit` 記錄</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
+
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> 完整支援</span>
+  <span><span class="cap-partial">△</span> 條件支援（需要匹配的 transcript 或 blob）</span>
+  <span><span class="cap-no">—</span> 不支援</span>
+</p>

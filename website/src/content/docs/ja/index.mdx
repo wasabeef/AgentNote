@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: コードが「なぜ」変わったのかを記録する
+description: AI が書いたコードの「なぜ」を、git が忘れないために。プロンプト・レスポンス・行単位の著作情報をコミットに記録。
 template: splash
 hero:
-  tagline: AI のプロンプト・レスポンス・ファイルごとの著作情報を、git コミットに自動で紐づけます。エージェントが十分な編集履歴を出せる場合は行単位でも追跡できます。
+  tagline: |
+    Git Commit は「何が変わったか」を残す。
+    Agent Note は「なぜそう変わったか」を残す。
   actions:
     - text: はじめる
       link: /AgentNote/ja/getting-started/
@@ -17,24 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Agent Note でできること
+<div class="origin-note">
+  <h2 class="origin-note__title">なぜ作ったか</h2>
+  <p class="origin-note__lede">半年前に AI に書いてもらったコードを読み返して、「なんでこうした？」が答えられなかった。<code>git log</code> に残っているのは diff だけ。プロンプトも返答も、ぜんぶ消えていた。</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">だから、AI との会話をコミットに残すことにした。</p>
+</div>
+
+## できること
 
 <CardGrid stagger>
-  <Card title="行単位の AI 著作判定" icon="pencil">
-    Claude Code は 3-diff で完全な行単位判定。Codex は transcript の patch 行数と commit が一致した場合に行単位へ昇格します。
+  <Card title="AI が書いた行を残す" icon="pencil">
+    `git blame` より細かい粒度。Claude Code は行単位で完全、他のエージェントは条件が揃ったとき行単位へ昇格。
   </Card>
-  <Card title="セッション記録" icon="document">
-    プロンプト・レスポンス・使用モデル・ツール情報をコミットと一緒に記録します。
+  <Card title="プロンプトと返答も一緒に保存" icon="document">
+    モデル名・使ったツール情報も含めて、変更とセットで git notes に入れる。
   </Card>
-  <Card title="PR レポート" icon="rocket">
-    プルリクエストに AI セッションレポートを自動投稿。コミットごとの AI 比率・変更行数・リンク付きハッシュを表示。
+  <Card title="PR に自動でレポート" icon="rocket">
+    AI 比率、プロンプト数、コミットハッシュ。レビュアーが最初に見る画面に文脈が載る。
   </Card>
-  <Card title="Git ネイティブ" icon="setting">
-    git notes で保存するため、ブランチや CI に影響しません。push・fetch でチーム共有も簡単。
+  <Card title="git notes にだけ書く" icon="setting">
+    ブランチには混ざらない。push / fetch でチーム共有。
   </Card>
 </CardGrid>
 
-## 60 秒でセットアップ
+## セットアップ
 
 <Steps>
 1. リポジトリで init を実行
@@ -43,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   Codex CLI の場合: `npx agent-note init --agent codex`
-   Cursor の場合: `npx agent-note init --agent cursor`
-   Gemini CLI の場合: `npx agent-note init --agent gemini`
-   複数エージェントを同時に: `npx agent-note init --agent claude --agent cursor`
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - 複数エージェント同時: `npx agent-note init --agent claude --agent cursor`
 
 2. 生成されたファイルをコミット
 
@@ -56,9 +65,9 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   Codex CLI の場合は `.claude/settings.json` の代わりに `.codex/config.toml` と `.codex/hooks.json` をコミットします。
-   Cursor の場合は `.cursor/hooks.json` をコミットします。
-   Gemini CLI の場合は `.gemini/settings.json` をコミットします。
+   - Codex CLI: `.codex/config.toml` と `.codex/hooks.json` をコミット
+   - Cursor: `.cursor/hooks.json` をコミット
+   - Gemini CLI: `.gemini/settings.json` をコミット
 
 3. 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
    git hook が使えない環境では `agent-note commit -m "..."` を fallback として使えます。
@@ -123,21 +132,55 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## 対応状況
+## エージェント別サポート状況
 
-| エージェント | 状態 | 補足 |
-|---|---|---|
-| Claude Code | 対応済み | 行単位の著作判定 |
-| Codex CLI | Preview | transcript ベース。patch 行数と commit が一致したときは行単位へ昇格 |
-| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit` ベース。最後の AI edit の blob がそのまま commit に残るときだけ安全に line-level へ昇格 |
-| Gemini CLI | Preview | `.gemini/settings.json` の `BeforeTool`/`AfterTool` フックによるファイル単位の著作判定 |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">機能</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">ステータス</div>
+    <div class="cap-yes">対応済み</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">行単位の AI 著作判定</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">プロンプト / レスポンス復元</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">通常の `git commit` で記録</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
 
-## Capability の概要
-
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-|---|---|---|---|---|
-| 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
-| 既定の attribution | Line-level | File-level | File-level | File-level |
-| 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> 対応</span>
+  <span><span class="cap-partial">△</span> 条件付き (transcript や blob の一致が必要)</span>
+  <span><span class="cap-no">—</span> 未対応</span>
+</p>

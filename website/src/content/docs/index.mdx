@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: Know why your code changed, not just what changed.
+description: So git doesn't forget why your AI wrote that code. Prompts, responses, and line-level attribution pinned to every commit.
 template: splash
 hero:
-  tagline: Every AI prompt, response, and file attribution — attached to your git commits automatically. Line-level attribution when the agent exposes enough edit history.
+  tagline: |
+    A git commit records what changed.
+    Agent Note records why it changed.
   actions:
     - text: Get Started
       link: /AgentNote/getting-started/
@@ -17,25 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
+<div class="origin-note">
+  <h2 class="origin-note__title">Why I built this</h2>
+  <p class="origin-note__lede">Six months ago I reread some code the AI had written for me and couldn't answer "why did I do it this way?". <code>git log</code> only had the diff. The prompts, the responses — all gone.</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">So I started attaching the AI conversation to every commit.</p>
+</div>
 
-## What Agent Note Does
+## What it does
 
 <CardGrid stagger>
-  <Card title="Line-Level AI Attribution" icon="pencil">
-    Claude Code gets full line-level attribution. Codex upgrades to line-level when transcript patch counts match the final commit.
+  <Card title="Keep AI-authored lines on record" icon="pencil">
+    Finer than `git blame`. Claude Code is full line-level; other agents upgrade when conditions match.
   </Card>
-  <Card title="Session Tracking" icon="document">
-    Prompts, responses, model name, and tool usage — all linked to the commits they produced.
+  <Card title="Prompts and responses, saved alongside" icon="document">
+    Model name and tool usage too — all bundled into git notes with the change.
   </Card>
-  <Card title="PR Reports" icon="rocket">
-    Automatic AI session reports on pull requests with per-commit ratio, line counts, and linked hashes.
+  <Card title="Automatic PR reports" icon="rocket">
+    AI ratio, prompt count, commit hashes. Reviewers see context before code.
   </Card>
-  <Card title="Git Native" icon="setting">
-    Stored as git notes — invisible to branches and CI. Pushable, fetchable, shareable.
+  <Card title="Written only to git notes" icon="setting">
+    Branches stay clean. Push / fetch to share with the team.
   </Card>
 </CardGrid>
 
-## Setup in 60 Seconds
+## Setup
 
 <Steps>
 1. Run init in your repository
@@ -44,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   For Codex CLI: `npx agent-note init --agent codex`
-   For Cursor: `npx agent-note init --agent cursor`
-   For Gemini CLI: `npx agent-note init --agent gemini`
-   Multiple agents at once: `npx agent-note init --agent claude --agent cursor`
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - Multiple agents at once: `npx agent-note init --agent claude --agent cursor`
 
 2. Commit the generated files
 
@@ -57,9 +65,9 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   For Codex CLI, run `npx agent-note init --agent codex` and commit `.codex/config.toml` plus `.codex/hooks.json` instead of `.claude/settings.json`.
-   For Cursor, run `npx agent-note init --agent cursor` and commit `.cursor/hooks.json`.
-   For Gemini CLI, run `npx agent-note init --agent gemini` and commit `.gemini/settings.json`.
+   - Codex CLI: commit `.codex/config.toml` and `.codex/hooks.json`
+   - Cursor: commit `.cursor/hooks.json`
+   - Gemini CLI: commit `.gemini/settings.json`
 
 3. Code with AI.
    Plain `git commit` works when the generated git hooks are installed.
@@ -125,21 +133,55 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Support Matrix
+## Agent Support Matrix
 
-| Agent | Status | Notes |
-|---|---|---|
-| Claude Code | Full support | Line-level attribution via hook-captured blob pairs |
-| Codex CLI | Preview | Transcript-driven attribution, with line-level upgrade when patch counts match the commit |
-| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit |
-| Gemini CLI | Preview | `BeforeTool`/`AfterTool`-driven file attribution via `.gemini/settings.json` hooks |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">Capability</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Status</div>
+    <div class="cap-yes">Stable</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Line-level AI attribution</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Prompt / response recovery</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Record via regular `git commit`</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
 
-## Capability Snapshot
-
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-|---|---|---|---|---|
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
-| Default attribution | Line-level | File-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> Full</span>
+  <span><span class="cap-partial">△</span> Conditional (requires matching transcript or blob)</span>
+  <span><span class="cap-no">—</span> Not available</span>
+</p>
