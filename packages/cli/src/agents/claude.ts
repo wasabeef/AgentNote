@@ -282,30 +282,52 @@ export const claude: AgentAdapter = {
       const lines = content.trim().split("\n");
       const interactions: Array<{ prompt: string; response: string | null }> = [];
       let pendingPrompt: string | null = null;
+      let pendingResponseTexts: string[] = [];
+
+      const flush = () => {
+        if (pendingPrompt === null) return;
+        const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
+        interactions.push({ prompt: pendingPrompt, response });
+        pendingPrompt = null;
+        pendingResponseTexts = [];
+      };
+
+      const extractUserText = (content: unknown): string | null => {
+        // Claude transcripts store user text either as a string or as content blocks.
+        // Join all text blocks when multiple are present (user messages can contain
+        // several text chunks, e.g. pasted content + question).
+        if (typeof content === "string") return content.trim() || null;
+        if (!Array.isArray(content)) return null;
+        const texts: string[] = [];
+        for (const block of content) {
+          if (block && typeof block === "object" && block.type === "text" && block.text) {
+            texts.push(block.text);
+          }
+        }
+        return texts.length > 0 ? texts.join("\n") : null;
+      };
 
       for (const line of lines) {
         try {
           const entry = JSON.parse(line);
 
           if (entry.type === "user" && entry.message?.content) {
-            for (const block of entry.message.content) {
-              if (block.type === "text" && block.text) {
-                if (pendingPrompt !== null) {
-                  interactions.push({ prompt: pendingPrompt, response: null });
-                }
-                pendingPrompt = block.text;
-              }
+            // Skip tool_result-only user messages (no actual text prompt).
+            const userText = extractUserText(entry.message.content);
+            if (userText) {
+              // New user prompt: flush previous pair first.
+              flush();
+              pendingPrompt = userText;
             }
           }
 
           if (entry.type === "assistant" && entry.message?.content && pendingPrompt !== null) {
-            const texts: string[] = [];
+            // Accumulate text blocks across multiple assistant messages until next user prompt.
+            // Skip thinking and tool_use blocks.
             for (const block of entry.message.content) {
-              if (block.type === "text" && block.text) texts.push(block.text);
-            }
-            if (texts.length > 0) {
-              interactions.push({ prompt: pendingPrompt, response: texts.join("\n") });
-              pendingPrompt = null;
+              if (block?.type === "text" && block.text) {
+                pendingResponseTexts.push(block.text);
+              }
             }
           }
         } catch {
@@ -313,9 +335,7 @@ export const claude: AgentAdapter = {
         }
       }
 
-      if (pendingPrompt !== null) {
-        interactions.push({ prompt: pendingPrompt, response: null });
-      }
+      flush();
 
       return interactions;
     } catch {

@@ -637,6 +637,103 @@ describe("claude adapter", () => {
       assert.equal(interactions[0].response, null);
     });
 
+    it("aggregates response text across assistant messages interleaved with tool_result user messages", async () => {
+      const transcriptPath = join(claudeHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({
+          type: "user",
+          message: { content: [{ type: "text", text: "Fix the bug" }] },
+        }),
+        // Assistant thinks first (no text)
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "thinking", thinking: "Let me check..." }] },
+        }),
+        // Assistant uses a tool
+        JSON.stringify({
+          type: "assistant",
+          message: {
+            content: [
+              { type: "tool_use", id: "tu1", name: "Read", input: { file_path: "a.ts" } },
+            ],
+          },
+        }),
+        // User message carries only tool_result (no actual prompt)
+        JSON.stringify({
+          type: "user",
+          message: {
+            content: [{ type: "tool_result", tool_use_id: "tu1", content: "file content" }],
+          },
+        }),
+        // Assistant finally replies with text
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "text", text: "Found it — missing null check." }] },
+        }),
+        // Second text message from the same assistant turn
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "text", text: "Fixed in a.ts." }] },
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await claude.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Fix the bug");
+      assert.equal(
+        interactions[0].response,
+        "Found it — missing null check.\nFixed in a.ts.",
+        "should aggregate text across multiple assistant messages and skip tool_result-only user messages",
+      );
+    });
+
+    it("handles user content as plain string (legacy format)", async () => {
+      const transcriptPath = join(claudeHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ type: "user", message: { content: "Plain string prompt" } }),
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "text", text: "Got it." }] },
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await claude.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Plain string prompt");
+      assert.equal(interactions[0].response, "Got it.");
+    });
+
+    it("joins multiple user text blocks into a single prompt", async () => {
+      const transcriptPath = join(claudeHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({
+          type: "user",
+          message: {
+            content: [
+              { type: "text", text: "Here's the code:" },
+              { type: "text", text: "```ts\nconst x = 1;\n```" },
+            ],
+          },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "text", text: "Looks good." }] },
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await claude.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(
+        interactions[0].prompt,
+        "Here's the code:\n```ts\nconst x = 1;\n```",
+        "should join all user text blocks",
+      );
+      assert.equal(interactions[0].response, "Looks good.");
+    });
+
     it("returns empty array for non-existent transcript path", async () => {
       const interactions = await claude.extractInteractions(join(claudeHome, "nonexistent.jsonl"));
       assert.deepEqual(interactions, []);
