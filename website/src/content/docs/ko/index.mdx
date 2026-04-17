@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: 코드가 왜 변경됐는지 기록합니다.
+description: AI가 그 코드를 왜 썼는지 git이 잊지 않도록. 프롬프트, 응답, 행 단위 기여 정보를 모든 커밋에 기록합니다.
 template: splash
 hero:
-  tagline: 모든 AI 프롬프트, 응답, 파일별 AI 기여 정보를 git 커밋에 자동으로 연결합니다. 에이전트가 충분한 편집 이력을 제공하면 라인 단위까지 추적합니다.
+  tagline: |
+    git commit은 무엇이 바뀌었는지를 기록한다.
+    Agent Note는 왜 바뀌었는지를 기록한다.
   actions:
     - text: 시작하기
       link: /AgentNote/ko/getting-started/
@@ -17,24 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Agent Note가 하는 일
+<div class="origin-note">
+  <h2 class="origin-note__title">왜 만들었나</h2>
+  <p class="origin-note__lede">반년 전에 AI가 써준 코드를 다시 읽으면서 "왜 이렇게 했지?"라는 질문에 답할 수 없었다. <code>git log</code>에는 diff만 남아 있었다. 프롬프트도, 응답도 — 전부 사라져 있었다.</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">그래서 AI와의 대화를 모든 커밋에 붙이기 시작했다.</p>
+</div>
+
+## 하는 일
 
 <CardGrid stagger>
-  <Card title="라인 단위 AI 기여도 판정" icon="pencil">
-    Claude Code 는 완전한 라인 단위 판정을 제공합니다. Codex 는 transcript 의 patch 수와 최종 commit 이 일치할 때 라인 단위로 승격됩니다.
+  <Card title="AI가 작성한 행을 기록으로 남기기" icon="pencil">
+    `git blame`보다 세밀하다. Claude Code는 완전한 행 단위; 다른 에이전트는 조건이 맞을 때 행 단위로 승격된다.
   </Card>
-  <Card title="세션 추적" icon="document">
-    프롬프트, 응답, 모델명, 도구 사용 이력 — 모두 해당 커밋에 연결됩니다.
+  <Card title="프롬프트와 응답도 함께 저장" icon="document">
+    모델명과 도구 사용 이력까지 — 변경 사항과 함께 git notes에 묶어 넣는다.
   </Card>
-  <Card title="PR 리포트" icon="rocket">
-    풀 리퀘스트에 AI 세션 리포트를 자동 생성합니다. 커밋별 비율, 라인 수, 해시 링크 포함.
+  <Card title="PR 자동 리포트" icon="rocket">
+    AI 비율, 프롬프트 수, 커밋 해시. 리뷰어가 코드보다 먼저 맥락을 본다.
   </Card>
-  <Card title="Git 네이티브" icon="setting">
-    git notes로 저장되어 브랜치와 CI에 영향 없음. push, fetch, 팀 공유 가능.
+  <Card title="git notes에만 기록" icon="setting">
+    브랜치는 깨끗하게 유지된다. push / fetch로 팀과 공유.
   </Card>
 </CardGrid>
 
-## 60초 만에 설정
+## 설정
 
 <Steps>
 1. 리포지토리에서 init 실행
@@ -43,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   Codex CLI 의 경우: `npx agent-note init --agent codex`
-   Cursor 의 경우: `npx agent-note init --agent cursor`
-   Gemini CLI의 경우: `npx agent-note init --agent gemini`
-   여러 에이전트 동시에: `npx agent-note init --agent claude --agent cursor`
+   - Codex CLI 의 경우: `npx agent-note init --agent codex`
+   - Cursor 의 경우: `npx agent-note init --agent cursor`
+   - Gemini CLI의 경우: `npx agent-note init --agent gemini`
+   - 여러 에이전트 동시에: `npx agent-note init --agent claude --agent cursor`
 
 2. 생성된 파일을 커밋
 
@@ -56,14 +65,34 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   Codex 저장소는 `.claude/settings.json` 대신 `.codex/config.toml` 과 `.codex/hooks.json` 을 커밋합니다.
-   Cursor 저장소는 `.cursor/hooks.json` 을 커밋합니다.
-   Gemini CLI 리포지토리는 `.gemini/settings.json`을 커밋합니다.
+   - Codex CLI: `.codex/config.toml` 과 `.codex/hooks.json` 을 커밋
+   - Cursor: `.cursor/hooks.json` 을 커밋
+   - Gemini CLI: `.gemini/settings.json` 을 커밋
 
-3. Claude Code 와 Codex 는 평소처럼 `git commit` 하면 됩니다.
-   생성된 git hook 이 설치되어 있으면 Cursor preview 도 일반 `git commit` 을 사용할 수 있습니다.
-   git hook 을 쓸 수 없을 때는 `agent-note commit -m "..."` 를 fallback 으로 사용합니다.
+3. AI와 함께 코딩하세요.
+   생성된 git hook이 설치되어 있으면 평소 `git commit`이 그대로 동작합니다.
+   git hook을 쓸 수 없을 때는 `agent-note commit -m "..."` 을 fallback으로 사용합니다.
 </Steps>
+
+## 설정 확인
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` 는 활성 adapter, `capture:` 는 활성 agent hook이 수집하는 것, `git:` 는 repo 로컬 git hook 설치 여부, `commit:` 는 일반 `git commit` 이 주 경로인지 fallback 모드인지를 나타냅니다.
 
 ## 직접 확인해 보세요
 
@@ -104,11 +133,55 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   </TabItem>
 </Tabs>
 
-## 지원 상태
+## 에이전트 지원 현황
 
-| 에이전트 | 상태 | 비고 |
-|---|---|---|
-| Claude Code | 정식 지원 | hook 으로 수집한 blob 쌍을 이용한 라인 단위 판정 |
-| Codex CLI | Preview | transcript 기반. patch 수와 commit 이 일치할 때 라인 단위로 승격 |
-| Cursor | Preview | `afterFileEdit` / `afterTabFileEdit` 기반 attribution. 마지막 AI edit 의 blob 이 그대로 commit 에 남을 때만 안전하게 라인 단위로 승격 |
-| Gemini CLI | Preview | `.gemini/settings.json`의 `BeforeTool`/`AfterTool` 후크를 통한 파일 수준 저작 판정 |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">기능</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">상태</div>
+    <div class="cap-yes">안정</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">행 단위 AI 기여 판정</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">프롬프트 / 응답 복원</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">일반 `git commit`으로 기록</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
+
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> 완전 지원</span>
+  <span><span class="cap-partial">△</span> 조건부 (transcript 또는 blob 일치 필요)</span>
+  <span><span class="cap-no">—</span> 미지원</span>
+</p>

@@ -1,9 +1,11 @@
 ---
 title: Agent Note
-description: Узнай, почему изменился код, а не только что изменилось.
+description: Чтобы git не забывал, почему ИИ написал этот код. Промпты, ответы и построчная атрибуция — прикреплены к каждому коммиту.
 template: splash
 hero:
-  tagline: Каждый промпт ИИ, ответ и атрибуция файлов автоматически привязаны к вашим git-коммитам. Построчная атрибуция доступна, когда агент сохраняет достаточно истории редактирования.
+  tagline: |
+    Git commit фиксирует, что изменилось.
+    Agent Note фиксирует, почему это изменилось.
   actions:
     - text: Начать
       link: /AgentNote/ru/getting-started/
@@ -17,24 +19,31 @@ hero:
 
 import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Что делает Agent Note
+<div class="origin-note">
+  <h2 class="origin-note__title">Почему я это сделал</h2>
+  <p class="origin-note__lede">Полгода назад я перечитывал код, который ИИ написал для меня, и не мог ответить «почему я сделал это именно так?». <code>git log</code> хранил только diff. Промпты, ответы — всё исчезло.</p>
+  <hr class="origin-note__rule" />
+  <p class="origin-note__kicker">Поэтому я начал прикреплять разговор с ИИ к каждому коммиту.</p>
+</div>
+
+## Что он делает
 
 <CardGrid stagger>
-  <Card title="Атрибуция ИИ на уровне строк" icon="pencil">
-    Claude Code даёт полную атрибуцию на уровне строк. Codex повышается до уровня строк, когда счётчики patch в transcript совпадают с финальным коммитом.
+  <Card title="Сохранять записи строк, написанных ИИ" icon="pencil">
+    Точнее `git blame`. Claude Code — полная построчная атрибуция; другие агенты повышаются, когда условия совпадают.
   </Card>
-  <Card title="Отслеживание сессий" icon="document">
-    Промпты, ответы, название модели и использованные инструменты — всё привязано к коммитам, которые они породили.
+  <Card title="Промпты и ответы сохраняются рядом" icon="document">
+    Также имя модели и использование инструментов — всё собрано в git notes вместе с изменением.
   </Card>
-  <Card title="Отчёты в PR" icon="rocket">
-    Автоматические отчёты ИИ-сессий в pull request с долей на коммит, количеством строк и связанными хешами.
+  <Card title="Автоматические отчёты в PR" icon="rocket">
+    Доля ИИ, количество промптов, хеши коммитов. Ревьюеры видят контекст перед кодом.
   </Card>
-  <Card title="Нативный Git" icon="setting">
-    Хранится в git notes — невидимо для веток и CI. Можно пушить, фетчить и делиться.
+  <Card title="Записывается только в git notes" icon="setting">
+    Ветки остаются чистыми. Push / fetch для совместного использования командой.
   </Card>
 </CardGrid>
 
-## Настройка за 60 секунд
+## Настройка
 
 <Steps>
 1. Запустите init в вашем репозитории
@@ -43,10 +52,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    npx agent-note init --agent claude
    ```
 
-   Для Codex CLI: `npx agent-note init --agent codex`
-   Для Cursor: `npx agent-note init --agent cursor`
-   Для Gemini CLI: `npx agent-note init --agent gemini`
-   Несколько агентов одновременно: `npx agent-note init --agent claude --agent cursor`
+   - Для Codex CLI: `npx agent-note init --agent codex`
+   - Для Cursor: `npx agent-note init --agent cursor`
+   - Для Gemini CLI: `npx agent-note init --agent gemini`
+   - Несколько агентов одновременно: `npx agent-note init --agent claude --agent cursor`
 
 2. Закоммитьте сгенерированные файлы
 
@@ -56,14 +65,34 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    git push
    ```
 
-   Репозитории с Codex коммитят `.codex/config.toml` и `.codex/hooks.json` вместо `.claude/settings.json`.
-   Репозитории с Cursor коммитят `.cursor/hooks.json`.
-   Для Gemini CLI коммитьте `.gemini/settings.json`.
+   - Codex CLI: закоммитить `.codex/config.toml` и `.codex/hooks.json`
+   - Cursor: закоммитить `.cursor/hooks.json`
+   - Gemini CLI: закоммитить `.gemini/settings.json`
 
-3. Claude Code и Codex могут использовать обычный `git commit`.
-   С установленными сгенерированными git hooks Cursor preview также может использовать обычный `git commit`.
+3. Пишите код с ИИ.
+   Обычный `git commit` работает, когда сгенерированные git hooks установлены.
    `agent-note commit -m "..."` остаётся fallback-вариантом, если git hooks недоступны.
 </Steps>
+
+## Проверьте настройку
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+`agent:` показывает активный адаптер, `capture:` суммирует, что собирают хуки активного агента, `git:` показывает, установлены ли локальные git hooks репозитория, а `commit:` указывает, является ли обычный `git commit` основным путём или активен режим fallback.
 
 ## Посмотрите в действии
 
@@ -104,11 +133,55 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   </TabItem>
 </Tabs>
 
-## Поддержка
+## Матрица поддержки агентов
 
-| Агент | Статус | Примечания |
-|---|---|---|
-| Claude Code | Полная поддержка | Построчная атрибуция через пары blob, сохранённые хуками |
-| Codex CLI | Preview | Основано на transcript; повышается до уровня строк, когда счётчики patch совпадают с коммитом |
-| Cursor | Preview | Атрибуция через `afterFileEdit` / `afterTabFileEdit` с безопасным повышением до строк, когда итоговый blob всё ещё совпадает с AI-правкой |
-| Gemini CLI | Preview | Атрибуция на уровне файлов через хуки `BeforeTool`/`AfterTool` в `.gemini/settings.json` |
+<div class="capability-matrix">
+  <div class="capability-header">
+    <div class="capability-label">Возможность</div>
+    <div>Claude Code</div>
+    <div>Codex CLI</div>
+    <div>Cursor</div>
+    <div>Gemini CLI</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Статус</div>
+    <div class="cap-yes">Стабильный</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+    <div class="cap-partial">Preview</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Построчная атрибуция ИИ</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-no">—</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Восстановление промптов / ответов</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-partial">△</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Запись через обычный `git commit`</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+    <div class="cap-yes">✓</div>
+  </div>
+</div>
+
+<p class="capability-legend">
+  <span><span class="cap-yes">✓</span> Полная</span>
+  <span><span class="cap-partial">△</span> Условная (требует совпадения transcript или blob)</span>
+  <span><span class="cap-no">—</span> Недоступно</span>
+</p>
