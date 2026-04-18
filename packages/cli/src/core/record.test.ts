@@ -273,6 +273,79 @@ describe("recordCommitEntry", () => {
     }
   });
 
+  it("includes context prompts (non-edit-linked) in interactions when commit has AI edits", async () => {
+    // Option B: a commit note keeps the full conversation window. Earlier
+    // discussion / planning prompts that did not themselves edit files
+    // should appear as interactions alongside the edit-linked prompt.
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"read the spec","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"propose an approach","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"implement it","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"impl.ts","turn":3}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    writeFileSync(join(repoDir, "impl.ts"), "export const a = 1;\n");
+    execSync("git add impl.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: implement it"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions.length, 3, "should include all 3 session prompts");
+    assert.equal(interactions[0].prompt, "read the spec");
+    assert.equal(interactions[1].prompt, "propose an approach");
+    assert.equal(interactions[2].prompt, "implement it");
+    // Only the edit-linked prompt (turn 3) carries files_touched.
+    assert.equal(interactions[0].files_touched, undefined);
+    assert.equal(interactions[1].files_touched, undefined);
+    assert.deepEqual(interactions[2].files_touched, ["impl.ts"]);
+  });
+
+  it("skips writing note when a commit has no AI-edited files, even if session has prompts", async () => {
+    // Guard for Option B: a purely human commit sharing a session with prior
+    // AI work should not inherit those prompts. Without this guard the empty-
+    // note skip would no longer fire for human commits in split scenarios.
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"AI please write feature.ts","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    // changes.jsonl references a file NOT in this commit — commit is human-only.
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"feature.ts","turn":1}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    writeFileSync(join(repoDir, "human-only.ts"), "export const h = 0;\n");
+    execSync("git add human-only.ts", { cwd: repoDir });
+    execSync('git commit -m "chore: human-only tweak"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+    assert.equal(result.promptCount, 0);
+    const note = await readNote(commitSha);
+    assert.equal(note, null, "human-only commit should not inherit unrelated AI prompts");
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });

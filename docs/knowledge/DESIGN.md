@@ -196,13 +196,35 @@ Each `UserPromptSubmit` event increments a monotonic turn counter stored in `.gi
 
 At commit time, `recordCommitEntry()` uses turn numbers to scope attribution:
 
-1. Find all turns that touched files in this specific commit (`commitFileSet`).
-2. Filter prompts to only those turns.
-3. Attach `files_touched` per interaction using the same turn grouping.
+1. Find all turns that touched files in this specific commit (`commitFileSet`) — these are the **edit-linked turns**.
+2. Attach `files_touched` per interaction using the same turn grouping — non-edit-linked prompts get no `files_touched`.
+3. Compute line-level attribution only from edit-linked turns (see Line-level attribution).
+
+Prompt selection is a separate concern — see **Prompt selection for notes** below.
 
 This avoids timestamp-based attribution, which is unreliable when hooks fire asynchronously.
 
 Fallback: if no turn data is present (entries recorded before turn tracking was introduced), all prompts and changes are used without filtering (v1 compat).
+
+### Prompt selection for notes
+
+A commit note records a list of `interactions` (prompt + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
+
+**Options considered:**
+
+- **A. Edit-linked only** — include only prompts whose turn produced a file change matching the commit.
+- **B. All prompts since last rotation** — include every prompt in the session window covered by this commit, regardless of whether that turn edited any committed file.
+- **C. Primary + context split** — two lists: `primary` (edit-linked) and `context` (others). Schema change.
+- **D. Edit-linked + N preceding** — edit-linked plus the N prompts immediately before each edit-linked prompt.
+
+**Current: Option B.** A commit report usually needs the full reasoning chain — exploration, planning, Q&A prompts that shape the code but don't themselves edit files. Option A was technically correct for attribution but dropped conversational context. Option B keeps attribution at the edit-linked turn level (unchanged) and widens only the prompt list used for `interactions`.
+
+**Trade-off:** in mixed-topic sessions (one commit covers topic X while earlier prompts discussed topic Y), Option B includes the unrelated Y prompts. Mitigations:
+
+- Split commits are rare in casual use; when they matter, the `files_touched` per interaction still flags which prompts actually edited the commit's files.
+- Prompt logs are already rotated per commit (`rotateLogs()` runs after each commit), so "all prompts since last rotation" is a naturally bounded window, not the entire session.
+
+The boundary of Option B is the rotation window: every prompt in `prompts.jsonl` (current + stem-\*.jsonl archives) appears in the note. Line-level attribution and `files_touched` remain scoped to edit-linked turns only.
 
 ### Line-level AI attribution
 

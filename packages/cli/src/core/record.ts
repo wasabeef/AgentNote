@@ -116,12 +116,25 @@ export async function recordCommitEntry(opts: {
       }
     }
 
-    // Filter prompts to only those with matching turns.
-    relevantPromptEntries = promptEntries.filter((e) => {
-      const turn = typeof e.turn === "number" ? e.turn : 0;
-      return relevantTurns.has(turn);
-    });
-    prompts = relevantPromptEntries.map((e) => e.prompt as string);
+    // When this commit has AI edits, include every prompt from the rotation
+    // window — full conversation context for the note. Line-level attribution
+    // and per-interaction `files_touched` still scope to edit-linked turns
+    // only via relevantTurns (see attachFilesTouched and computeLineAttribution
+    // below).
+    //
+    // When this commit has NO AI edits (e.g. a purely human split commit
+    // while earlier AI work is still in the archive), include no prompts —
+    // the empty-note skip below keeps human commits free of unrelated AI
+    // prompts that happened in the same session.
+    //
+    // See docs/knowledge/DESIGN.md → "Prompt selection for notes".
+    if (relevantTurns.size > 0) {
+      relevantPromptEntries = promptEntries;
+      prompts = relevantPromptEntries.map((e) => e.prompt as string);
+    } else {
+      relevantPromptEntries = [];
+      prompts = [];
+    }
   } else {
     // Fallback: no turn data — use all prompts and changes (v1 compat).
     aiFiles = changeEntries.map((e) => e.file as string).filter(Boolean);
@@ -188,23 +201,24 @@ export async function recordCommitEntry(opts: {
         (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
       );
 
+      // Interactions always carry the full prompt window so the note keeps
+      // the conversation context (exploration, planning, Q&A), even when
+      // those turns did not touch commit files.
+      // Line counts and aiFiles still scope to the edit-linked subset only.
+      interactions = interactionWindow.map((interaction) =>
+        toRecordedInteraction(interaction, commitFileSet),
+      );
+
       if (transcriptMatched.length > 0) {
-        interactions = transcriptMatched.map((interaction) =>
-          toRecordedInteraction(interaction, commitFileSet),
-        );
         aiFiles = [
           ...new Set(
-            interactions.flatMap((interaction) =>
+            transcriptMatched.flatMap((interaction) =>
               (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file)),
             ),
           ),
         ];
         transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
-      } else if (prompts.length > 0) {
-        interactions = interactionWindow.map((interaction) =>
-          toRecordedInteraction(interaction, commitFileSet),
-        );
-      } else {
+      } else if (prompts.length === 0) {
         interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
         if (interactions.length === 0) {
           interactions = prompts.map((p) => ({ prompt: p, response: null }));
