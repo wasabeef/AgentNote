@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
@@ -10,6 +11,7 @@ import {
   HEARTBEAT_FILE,
   PENDING_COMMIT_FILE,
   PRE_BLOBS_FILE,
+  PROMPT_ID_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
@@ -82,6 +84,13 @@ async function readCurrentTurn(sessionDir: string): Promise<number> {
   if (!existsSync(turnPath)) return 0;
   const raw = (await readFile(turnPath, "utf-8")).trim();
   return Number.parseInt(raw, 10) || 0;
+}
+
+async function readCurrentPromptId(sessionDir: string): Promise<string | null> {
+  const p = join(sessionDir, PROMPT_ID_FILE);
+  if (!existsSync(p)) return null;
+  const raw = (await readFile(p, "utf-8")).trim();
+  return raw || null;
 }
 
 async function readCurrentHead(): Promise<string | null> {
@@ -225,16 +234,25 @@ export async function hook(args: string[] = []): Promise<void> {
       turn += 1;
       await writeFile(turnPath, String(turn));
 
+      // Primary key for this prompt — carried into every change/pre_blob
+      // and used to pair session prompts with transcript interactions
+      // without relying on text-content comparison (which breaks on
+      // identical repeated prompts like "continue").
+      const promptId = randomUUID();
+      await writeFile(join(sessionDir, PROMPT_ID_FILE), promptId);
+
       await appendJsonl(join(sessionDir, PROMPTS_FILE), {
         event: "prompt",
         timestamp: event.timestamp,
         prompt: event.prompt,
+        prompt_id: promptId,
         turn,
       });
       await appendJsonl(eventsPath, {
         event: "prompt",
         session_id: event.sessionId,
         timestamp: event.timestamp,
+        prompt_id: promptId,
         turn,
         model: event.model ?? null,
       });
@@ -262,8 +280,9 @@ export async function hook(args: string[] = []): Promise<void> {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
 
-      // Read current turn for causal attribution.
+      // Read current turn and prompt_id for causal attribution.
       const turn = await readCurrentTurn(sessionDir);
+      const promptId = await readCurrentPromptId(sessionDir);
 
       // Write blob to object store before the edit happens.
       const preBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
@@ -271,6 +290,7 @@ export async function hook(args: string[] = []): Promise<void> {
       await appendJsonl(join(sessionDir, PRE_BLOBS_FILE), {
         event: "pre_blob",
         turn,
+        prompt_id: promptId,
         file: filePath,
         blob: preBlob,
         // tool_use_id links this pre-blob to its PostToolUse counterpart,
@@ -290,8 +310,9 @@ export async function hook(args: string[] = []): Promise<void> {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
 
-      // Read current turn for causal attribution.
+      // Read current turn and prompt_id for causal attribution.
       const turn = await readCurrentTurn(sessionDir);
+      const promptId = await readCurrentPromptId(sessionDir);
 
       // Capture post-edit blob hash for line-level attribution.
       const postBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
@@ -309,6 +330,7 @@ export async function hook(args: string[] = []): Promise<void> {
         file: filePath,
         session_id: event.sessionId,
         turn,
+        prompt_id: promptId,
         blob: postBlob,
         change_id: changeId,
         edit_added: event.editStats?.added ?? null,

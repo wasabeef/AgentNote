@@ -535,6 +535,86 @@ describe("recordCommitEntry", () => {
     );
   });
 
+  it("prompt_id lookup pairs the right identical-text prompt with its response", async () => {
+    // Transcript has FOUR "continue" interactions (responses A, B, C, D).
+    // Session only ran turns 1 and 2 (mapped to transcript positions 0 and 1
+    // → responses A and B). The old text-window algorithm descending-scans
+    // and finds ["continue","continue"] at positions 2..3 first, pairing
+    // session turns 1&2 with responses C&D — the WRONG ones. With prompt_id
+    // lookup and adapter correlation, each session prompt finds its exact
+    // transcript interaction by position.
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response A"}]}}',
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response B"}]}}',
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response C"}]}}',
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response D"}]}}',
+        ].join("\n"),
+      );
+
+      // Session only captured turns 1 and 2. Their prompt_ids correlate to
+      // transcript positions 0 and 1 (responses A and B) via the walk order.
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"continue","prompt_id":"id-A","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"continue","prompt_id":"id-B","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"a.ts","turn":1,"prompt_id":"id-A"}\n' +
+          '{"event":"file_change","tool":"Write","file":"b.ts","turn":2,"prompt_id":"id-B"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(repoDir, "b.ts"), "export const b = 2;\n");
+      execSync("git add a.ts b.ts", { cwd: repoDir });
+      execSync('git commit -m "bundle both continues"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
+      assert.equal(interactions.length, 2);
+      assert.equal(interactions[0].prompt, "continue");
+      assert.equal(
+        interactions[0].response,
+        "response A",
+        "turn 1 must pair with response A, not C or D",
+      );
+      assert.equal(interactions[1].prompt, "continue");
+      assert.equal(
+        interactions[1].response,
+        "response B",
+        "turn 2 must pair with response B, not C or D",
+      );
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });
