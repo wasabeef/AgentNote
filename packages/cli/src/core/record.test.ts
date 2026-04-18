@@ -410,6 +410,131 @@ describe("recordCommitEntry", () => {
     assert.equal(secondInteractions[1].prompt, "turn 4 edits second");
   });
 
+  it("human-only commit in Codex-style session with transcript for other files does not get a note", async () => {
+    // Reviewer scenario: the transcript records AI editing file A, but the
+    // commit only includes human-only.ts. Option B's empty-prompt shortcut
+    // must stop `findTranscriptPromptWindow` from pulling the other file's
+    // interaction into this commit's note.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptPath = join(codexHome, `${SESSION_ID}.jsonl`);
+      // Codex-style transcript with a single apply_patch for "other.ts" only.
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:31:23.296Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:31:16.968Z"}}`,
+          '{"timestamp":"2026-04-15T09:31:23.296Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"AI please edit other.ts"}]}}',
+          '{"timestamp":"2026-04-15T09:31:35.585Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"OK, editing other.ts."}]}}',
+          '{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: other.ts\\\\n+export const x = 1;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      // Session recorded the prompt but Codex emits no file_change events.
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"AI please edit other.ts","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+      // User commits a file they created themselves — not in the transcript.
+      writeFileSync(join(repoDir, "human-only.ts"), "export const h = 0;\n");
+      execSync("git add human-only.ts", { cwd: repoDir });
+      execSync('git commit -m "chore: human-only tweak"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.equal(
+        note,
+        null,
+        "human-only commit must not inherit transcript interactions for other files",
+      );
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("pre-blob-only commit records consumed pairs so prior prompts do not leak into the next commit", async () => {
+    // Reviewer scenario: a commit's PostToolUse (→ changes.jsonl) was dropped
+    // async, but PreToolUse (→ pre_blobs.jsonl) survived. relevantTurns still
+    // forms via pre_blobs, so the note is written — but without also recording
+    // pre-blob turns as consumed, the next commit's Option B window leaks
+    // those prompts.
+
+    // --- First commit: turn 1, only pre_blobs for first.ts (no change entry) ---
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"plan a","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"edit a","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, "pre_blobs.jsonl"),
+      '{"event":"pre_edit","file":"first.ts","turn":2,"tool_use_id":"t1","pre_blob":"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    writeFileSync(join(repoDir, "first.ts"), "export const a = 1;\n");
+    execSync("git add first.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: first (pre-blob only)"', { cwd: repoDir });
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    // --- Second commit: new turn 3-4 for second.ts (normal hook data) ---
+    // Use a 6+ char lowercase-alphanumeric suffix so ARCHIVE_ID_RE matches
+    // and readAllSessionJsonl actually picks the archive up.
+    const { rename: renameFile } = await import("node:fs/promises");
+    await renameFile(join(sessionDir, PROMPTS_FILE), join(sessionDir, "prompts-arcvone.jsonl"));
+    await renameFile(
+      join(sessionDir, "pre_blobs.jsonl"),
+      join(sessionDir, "pre_blobs-arcvone.jsonl"),
+    );
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"plan b","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"edit b","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"second.ts","turn":4,"change_id":"c2"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    writeFileSync(join(repoDir, "second.ts"), "export const b = 2;\n");
+    execSync("git add second.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: second"', { cwd: repoDir });
+    const secondSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const secondNote = await readNote(secondSha);
+    assert.ok(secondNote !== null);
+    const secondInteractions = secondNote.interactions as Array<{ prompt: string }>;
+    const prompts = secondInteractions.map((i) => i.prompt);
+    assert.deepEqual(
+      prompts,
+      ["plan b", "edit b"],
+      "second commit should not leak prompts from the pre-blob-only first commit",
+    );
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });

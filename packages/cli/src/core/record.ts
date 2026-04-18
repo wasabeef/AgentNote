@@ -179,27 +179,50 @@ export async function recordCommitEntry(opts: {
   let interactions: Interaction[];
   let transcriptLineCounts: LineCounts | undefined;
 
+  // Extract transcript interactions up front so the human-only guard below
+  // can use them without triggering the extraction twice. Cross-turn commits
+  // tolerate transcript failures (pre-PR #16 behavior); same-turn commits
+  // re-throw so commit.ts can warn and skip the note (e.g. Codex requires a
+  // readable transcript and intentionally throws on missing files).
+  let allInteractions: TranscriptInteraction[] = [];
   if (transcriptPath) {
-    // Cross-turn commits tolerate transcript failures: PR #16 newly reaches
-    // this path, and the pre-PR #16 behavior for cross-turn was prompts-only
-    // (never touched the transcript). Preserve that fallback.
-    //
-    // Same-turn commits still re-throw so commit.ts can warn and skip the
-    // note entirely — some adapters (Codex) require a readable transcript
-    // for correct attribution and intentionally throw on missing files.
-    //
-    // Note: the Codex adapter does not emit file_change events, so its
-    // sessions currently always hit the same-turn branch (relevantTurns stays
-    // empty). If a future adapter emits file_change AND throws on missing
-    // transcripts, this guard keeps the cross-turn path safe for it too.
-    let allInteractions: TranscriptInteraction[] = [];
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
     } catch (err) {
       if (!crossTurnCommit) throw err;
       // cross-turn: fall through with no interactions — handled below as prompts-only.
     }
+  }
 
+  // Human-only commit shortcut: when turn tracking says this commit has no
+  // AI-edited files AND the transcript shows AI editing OTHER files but not
+  // this commit's files, leave interactions empty so the empty-note skip
+  // below fires. Without this guard, `findTranscriptPromptWindow(_, [])`
+  // would return the full transcript and `selectTranscriptFallbackInteractions`
+  // would pull an unrelated AI interaction for some other file into the note.
+  //
+  // Two restrictions keep this narrow:
+  //   1. transcript must reference edits on other files — otherwise we might
+  //      be looking at a shell-only Codex session that legitimately wants the
+  //      prompt/response preserved even with no file attribution.
+  //   2. transcript must NOT reference commit files — legitimate AI work on
+  //      this commit still goes through the normal window logic below.
+  const transcriptEditsCommit = allInteractions.some((i) =>
+    (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
+  );
+  const transcriptEditsOthers = allInteractions.some((i) => {
+    const touched = i.files_touched ?? [];
+    return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
+  });
+  if (
+    hasTurnData &&
+    prompts.length === 0 &&
+    aiFiles.length === 0 &&
+    !transcriptEditsCommit &&
+    transcriptEditsOthers
+  ) {
+    interactions = [];
+  } else if (transcriptPath) {
     // Prefer exact content match: safe for both same-turn and cross-turn commits.
     // For same-turn commits without exact match, fall back to tail slicing.
     // Cross-turn commits without exact match get prompts only (no response pairing).
@@ -299,7 +322,11 @@ export async function recordCommitEntry(opts: {
 
   // Record consumed (turn, file) pairs so subsequent commits in this session
   // don't re-attribute the same edits. Append-only, not rotated.
-  await recordConsumedPairs(sessionDir, changeEntries, commitFileSet);
+  // Pre-blob entries are also recorded: an async PostToolUse drop can leave
+  // a commit with only pre_blobs data. Without consuming those, the next
+  // commit would see the pre_blobs' turn as "not yet consumed" and leak
+  // those prompts into its own note window.
+  await recordConsumedPairs(sessionDir, changeEntries, preBlobEntriesForTurnFix, commitFileSet);
 
   // Do NOT delete rotated archives here. They are kept available for subsequent
   // split commits in the same turn (each commit scopes its own files via
@@ -812,11 +839,16 @@ function consumedKey(entry: Record<string, unknown>): string {
 async function recordConsumedPairs(
   sessionDir: string,
   changeEntries: Record<string, unknown>[],
+  preBlobEntries: Record<string, unknown>[],
   commitFileSet: Set<string>,
 ): Promise<void> {
   const seen = new Set<string>();
   const pairsFile = join(sessionDir, COMMITTED_PAIRS_FILE);
-  for (const entry of changeEntries) {
+  // Iterate both change and pre-blob entries. A pre-blob-only commit (e.g.
+  // async PostToolUse drop) still needs its turns recorded so the next
+  // commit's prompt-window filter does not re-emit those prompts.
+  const allEntries = [...changeEntries, ...preBlobEntries];
+  for (const entry of allEntries) {
     const file = entry.file as string;
     if (!file || !commitFileSet.has(file)) continue;
     const key = consumedKey(entry);
