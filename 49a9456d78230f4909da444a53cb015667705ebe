@@ -1,0 +1,34 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-18T02:56:26.959Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "日本語も Stable でいいかも",
+      "response": null,
+      "files_touched": [
+        "website/src/content/docs/ja/index.mdx"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 2,
+      "total_added": 2,
+      "deleted": 2
+    }
+  }
+}
