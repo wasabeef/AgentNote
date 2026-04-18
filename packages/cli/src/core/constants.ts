@@ -26,6 +26,7 @@ export const MAX_COMMITS = 500;
 export const BAR_WIDTH_COMPACT = 5;
 export const BAR_WIDTH_FULL = 20;
 export const TRUNCATE_PROMPT = 120;
+export const TRUNCATE_PROMPT_PR = 500;
 export const TRUNCATE_RESPONSE_SHOW = 200;
 export const TRUNCATE_RESPONSE_PR = 500;
 export const TRUNCATE_RESPONSE_CHAT = 800;

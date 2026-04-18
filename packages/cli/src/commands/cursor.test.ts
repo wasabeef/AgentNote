@@ -225,7 +225,11 @@ describe("agentnote cursor", () => {
       }),
     );
     assert.equal(note.model, "gpt-5");
-    assert.equal(note.interactions[0].prompt, "Create later-model.txt");
+    // Option B: full conversation context is preserved — both prompts appear.
+    // The first prompt had no model but still counts as session context.
+    assert.equal(note.interactions.length, 2);
+    assert.equal(note.interactions[0].prompt, "Plan the change");
+    assert.equal(note.interactions[1].prompt, "Create later-model.txt");
   });
 
   it("restores Cursor assistant responses from local transcripts when available", () => {
