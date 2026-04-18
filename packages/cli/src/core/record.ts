@@ -762,6 +762,11 @@ function parseDiffTreeBlobs(
  * prompt window so a new commit does not re-emit prompts that earlier commits
  * in the same session already captured. Returns 0 when no prior commit has
  * happened (no file exists or no entries have a turn field).
+ *
+ * Example: a session commits three times at turns 10, 20, 30. The fourth
+ * commit runs at turn 45. maxConsumedTurn returns 30, so the fourth note's
+ * prompt window starts at turn 31. Prompts from turns 1–30 stay attached to
+ * the earlier notes where they were first recorded.
  */
 async function readMaxConsumedTurn(sessionDir: string): Promise<number> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
