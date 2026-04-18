@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { AGENTNOTE_DIR, CHANGES_FILE, PROMPTS_FILE, SESSIONS_DIR } from "./constants.js";
+import { AGENTNOTE_DIR, CHANGES_FILE, PROMPTS_FILE, SESSIONS_DIR, TURN_FILE } from "./constants.js";
 import { recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
@@ -128,6 +128,149 @@ describe("recordCommitEntry", () => {
     const paths = files.map((f) => f.path);
     assert.ok(paths.includes("committed.ts"), "committed file should be in note");
     assert.ok(!paths.includes("not-committed.ts"), "uncommitted file should not be in note");
+  });
+
+  it("cross-turn commit: exact prompt-content match recovers responses from transcript", async () => {
+    // Simulate a bundled commit where edits from multiple earlier turns are
+    // committed after the turn counter has moved on. Without the exact-match
+    // path, this scenario would return response=null for every interaction.
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"first prompt"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"first response"}]}}',
+          '{"type":"user","message":{"content":[{"type":"text","text":"second prompt"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"second response"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"first prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"second prompt","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"file1.ts","turn":1}\n' +
+          '{"event":"file_change","tool":"Write","file":"file2.ts","turn":2}\n',
+      );
+      // Current turn advanced past the relevant turns — forces crossTurnCommit = true.
+      writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+      writeFileSync(join(repoDir, "file1.ts"), "export const a = 1;\n");
+      writeFileSync(join(repoDir, "file2.ts"), "export const b = 2;\n");
+      execSync("git add file1.ts file2.ts", { cwd: repoDir });
+      execSync('git commit -m "cross-turn bundled commit"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+      }>;
+      assert.equal(interactions.length, 2);
+      assert.equal(interactions[0].prompt, "first prompt");
+      assert.equal(
+        interactions[0].response,
+        "first response",
+        "cross-turn commit should still recover first response via exact content match",
+      );
+      assert.equal(interactions[1].prompt, "second prompt");
+      assert.equal(
+        interactions[1].response,
+        "second response",
+        "cross-turn commit should still recover second response via exact content match",
+      );
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
+  it("cross-turn commit: Codex transcript throw does not abort note creation", async () => {
+    // Codex adapter.extractInteractions() throws when the transcript path is
+    // invalid or missing — by design, because Codex attribution is transcript-
+    // native. Before this guard, such a throw on the cross-turn path would
+    // bubble up and skip the whole note. The fix tolerates it on cross-turn
+    // only (same-turn Codex still fails loudly, preserving codex.test.ts's
+    // "warn + skip note" contract at commands/codex.test.ts:411).
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    // Override the agent marker so this session uses the Codex adapter.
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      // Path under CODEX_HOME so isValidTranscriptPath() passes; file absent
+      // so extractInteractions() throws "Codex transcript not found:".
+      const missingTranscript = join(codexHome, "sessions", "missing.jsonl");
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"some prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"file.ts","turn":1}\n',
+      );
+      // Current turn advanced past the relevant turns — forces crossTurnCommit = true.
+      writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+      writeFileSync(join(repoDir, "file.ts"), "export const a = 1;\n");
+      execSync("git add file.ts", { cwd: repoDir });
+      execSync('git commit -m "missing codex transcript"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath: missingTranscript,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null, "note should still be written even when transcript is unreadable");
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+      }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "some prompt");
+      assert.equal(interactions[0].response, null, "response should fall back to null");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
   });
 
   it("skips writing note when no prompts and no AI files exist", async () => {
