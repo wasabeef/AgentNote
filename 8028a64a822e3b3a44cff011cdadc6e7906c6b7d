@@ -1,0 +1,44 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-18T04:30:55.251Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "プロンプトに改行があったらもう省略されちゃう？",
+      "response": "現状: `cleanPrompt` は 1 行目だけ返す → 複数行 prompt は潰れる。\n\n修正: PR 用に複数行保持 + 制限を緩める (500 字):\n既存 pr.test.ts の snapshot/assertion を確認:\nmulti-line 保持の regression test 追加:\nNegative 検証 + full test:\n全チェック通過 → commit + push:",
+      "files_touched": [
+        "packages/cli/src/core/constants.ts",
+        "packages/cli/src/commands/pr.ts",
+        "packages/cli/src/commands/pr.test.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/commands/pr.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/pr.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/constants.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 99,
+    "method": "line",
+    "lines": {
+      "ai_added": 90,
+      "total_added": 91,
+      "deleted": 13
+    }
+  }
+}
