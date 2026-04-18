@@ -97,6 +97,65 @@ describe("agentnote pr", () => {
     assert.equal(report.commits[0].interactions[0].prompt, "add feature A");
   });
 
+  it("preserves multi-line prompts with blockquote continuation", () => {
+    // Isolated repo so we can seed a multi-line prompt on a fresh commit.
+    const mlDir = mkdtempSync(join(tmpdir(), "agentnote-pr-ml-"));
+    try {
+      execSync("git init", { cwd: mlDir });
+      execSync("git config user.email test@test.com", { cwd: mlDir });
+      execSync("git config user.name Test", { cwd: mlDir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: mlDir });
+      execSync(`node ${cliPath} init --agent claude --hooks`, { cwd: mlDir });
+
+      const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-000000000077";
+      writeFileSync(join(mlDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+      const sessionDir = join(mlDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+      mkdirSync(sessionDir, { recursive: true });
+      writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+
+      // A prompt with a bullet list across several lines — e.g. a review
+      // comment or structured feedback.
+      const multilinePrompt = [
+        "Findings:",
+        "- High: something important",
+        "- Medium: another concern",
+      ].join("\n");
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        `${JSON.stringify({
+          event: "prompt",
+          timestamp: "2026-04-06T00:00:00Z",
+          prompt: multilinePrompt,
+        })}\n`,
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        `${JSON.stringify({
+          event: "file_change",
+          tool: "Write",
+          file: join(mlDir, "ml.ts"),
+        })}\n`,
+      );
+      writeFileSync(join(mlDir, "ml.ts"), "export const m = 1;");
+      execSync("git add .", { cwd: mlDir });
+      execSync(`node ${cliPath} commit -m "feat: multi-line prompt"`, { cwd: mlDir });
+
+      const output = execSync(`node ${cliPath} pr HEAD~1`, {
+        cwd: mlDir,
+        encoding: "utf-8",
+      });
+
+      assert.ok(output.includes("Findings:"), "first prompt line should appear");
+      assert.ok(
+        output.includes("> - High: something important"),
+        "subsequent lines should be quoted with > prefix",
+      );
+      assert.ok(output.includes("> - Medium: another concern"), "third line should also be quoted");
+    } finally {
+      rmSync(mlDir, { recursive: true, force: true });
+    }
+  });
+
   it("includes per-commit AI ratio in JSON", () => {
     const output = execSync(`node ${cliPath} pr HEAD~2 --json`, {
       cwd: testDir,

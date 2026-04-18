@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { TRUNCATE_PROMPT, TRUNCATE_RESPONSE_PR } from "../core/constants.js";
+import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../core/constants.js";
 import type { Attribution } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
@@ -228,24 +228,41 @@ function commitLink(c: CommitEntry, repoUrl: string | null): string {
   return `\`${c.short}\``;
 }
 
-/** Extract the first meaningful line from a prompt, filtering skill expansions. */
+/**
+ * Prepare a prompt for the PR report: preserve multi-line structure, strip
+ * skill-expansion boilerplate, and cap length.
+ *
+ * When a prompt starts with a markdown heading (`# ` / `## `), it is usually
+ * a skill-generated expansion like `## /plugin` followed by the user's real
+ * message. We skip past the heading to find the first non-heading, non-code-
+ * fence line of meaningful length and return from there onward.
+ *
+ * For normal prompts, newlines are preserved so multi-line feedback (bullet
+ * lists, code blocks, quoted findings) survives into the note. The caller
+ * is responsible for applying a `>` prefix per line when rendering inside
+ * a GitHub blockquote.
+ */
 function cleanPrompt(prompt: string, maxLen: number): string {
-  // Skip skill-generated expansions (start with ## heading).
-  const lines = prompt.split("\n").filter((l) => l.trim());
-  let firstLine = lines[0] ?? "";
+  const trimmed = prompt.trim();
+  if (trimmed.length === 0) return "";
 
-  // If prompt starts with a markdown heading (skill expansion), find the actual user input.
+  const lines = trimmed.split("\n");
+  const firstLine = lines[0] ?? "";
+
+  let body = trimmed;
   if (firstLine.startsWith("## ") || firstLine.startsWith("# ")) {
-    // Look for a non-heading, non-empty line after the first heading.
-    const userLine = lines.find(
+    const userStart = lines.findIndex(
       (l, i) => i > 0 && !l.startsWith("#") && !l.startsWith("```") && l.trim().length > 10,
     );
-    if (userLine) firstLine = userLine.trim();
-    else firstLine = firstLine.replace(/^#+\s*/, "");
+    if (userStart !== -1) {
+      body = lines.slice(userStart).join("\n").trim();
+    } else {
+      body = firstLine.replace(/^#+\s*/, "");
+    }
   }
 
-  if (firstLine.length <= maxLen) return firstLine;
-  return `${firstLine.slice(0, maxLen)}…`;
+  if (body.length <= maxLen) return body;
+  return `${body.slice(0, maxLen)}…`;
 }
 
 // ─── Table format rendering ─────────────────────────
@@ -292,7 +309,8 @@ function renderMarkdown(report: PrReport): string {
       lines.push("");
 
       for (const { prompt, response } of c.interactions) {
-        lines.push(`> **🧑 Prompt:** ${cleanPrompt(prompt, TRUNCATE_PROMPT)}`);
+        const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
+        lines.push(`> **🧑 Prompt:** ${cleaned.split("\n").join("\n> ")}`);
         if (response) {
           const truncated =
             response.length > TRUNCATE_RESPONSE_PR
