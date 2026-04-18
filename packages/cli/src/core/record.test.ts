@@ -346,6 +346,70 @@ describe("recordCommitEntry", () => {
     assert.equal(note, null, "human-only commit should not inherit unrelated AI prompts");
   });
 
+  it("does not leak prompts from prior commits in the same session (Option B unbilled window)", async () => {
+    // Session spans two commits. Prompts from turns <= first commit's max turn
+    // must not appear in the second commit's note — each commit owns its own
+    // slice of the conversation.
+
+    // --- First commit: turns 1 and 2, both edit first.ts ---
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"turn 1 intro","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"turn 2 edits first","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"first.ts","turn":2,"change_id":"c1"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    writeFileSync(join(repoDir, "first.ts"), "export const a = 1;\n");
+    execSync("git add first.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: first"', { cwd: repoDir });
+    const firstSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const firstNote = await readNote(firstSha);
+    assert.ok(firstNote !== null);
+    const firstInteractions = firstNote.interactions as Array<{ prompt: string }>;
+    assert.equal(firstInteractions.length, 2, "first commit sees both turn-1 and turn-2 prompts");
+
+    // --- Second commit: add turn 3 and 4 prompts, turn 4 edits second.ts ---
+    // Simulate rotation: archive current prompts and changes so readAllSessionJsonl
+    // picks them up, then start fresh files for the new turns.
+    const { rename: renameFile } = await import("node:fs/promises");
+    await renameFile(join(sessionDir, PROMPTS_FILE), join(sessionDir, "prompts-archive1.jsonl"));
+    await renameFile(join(sessionDir, CHANGES_FILE), join(sessionDir, "changes-archive1.jsonl"));
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"turn 3 context","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"turn 4 edits second","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"second.ts","turn":4,"change_id":"c2"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    writeFileSync(join(repoDir, "second.ts"), "export const b = 2;\n");
+    execSync("git add second.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: second"', { cwd: repoDir });
+    const secondSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const secondNote = await readNote(secondSha);
+    assert.ok(secondNote !== null);
+    const secondInteractions = secondNote.interactions as Array<{ prompt: string }>;
+    assert.equal(
+      secondInteractions.length,
+      2,
+      "second commit should only see turn-3 and turn-4 prompts, not leak turn-1/2",
+    );
+    assert.equal(secondInteractions[0].prompt, "turn 3 context");
+    assert.equal(secondInteractions[1].prompt, "turn 4 edits second");
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });

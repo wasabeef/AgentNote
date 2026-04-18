@@ -79,6 +79,11 @@ export async function recordCommitEntry(opts: {
     (e) => !consumedPairs.has(consumedKey(e)),
   );
 
+  // Highest turn already attributed to a previous commit in this session.
+  // Prompts from turns <= this are considered "spent" — their own commits
+  // already carry them in their notes. Used to trim the prompt window below.
+  const maxConsumedTurn = await readMaxConsumedTurn(sessionDir);
+
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
 
@@ -116,20 +121,26 @@ export async function recordCommitEntry(opts: {
       }
     }
 
-    // When this commit has AI edits, include every prompt from the rotation
-    // window — full conversation context for the note. Line-level attribution
-    // and per-interaction `files_touched` still scope to edit-linked turns
-    // only via relevantTurns (see attachFilesTouched and computeLineAttribution
-    // below).
+    // When this commit has AI edits, include every prompt in the unbilled
+    // window — prompts from turns not yet attributed to a prior commit.
+    // "Unbilled" = turn > maxConsumedTurn OR turn is in this commit's
+    // edit-linked set (preserves split-commit semantics: two commits sharing
+    // the same edit turn each show that turn's prompts).
     //
-    // When this commit has NO AI edits (e.g. a purely human split commit
-    // while earlier AI work is still in the archive), include no prompts —
-    // the empty-note skip below keeps human commits free of unrelated AI
-    // prompts that happened in the same session.
+    // This gives the note the full conversation context (exploration,
+    // planning, Q&A) while preventing prompts already captured by a prior
+    // commit's note from leaking into this one. Line-level attribution and
+    // per-interaction `files_touched` still scope to edit-linked turns only.
+    //
+    // When this commit has NO AI edits, include no prompts — the empty-note
+    // skip below keeps human commits free of unrelated AI prompts.
     //
     // See docs/knowledge/DESIGN.md → "Prompt selection for notes".
     if (relevantTurns.size > 0) {
-      relevantPromptEntries = promptEntries;
+      relevantPromptEntries = promptEntries.filter((e) => {
+        const turn = typeof e.turn === "number" ? e.turn : 0;
+        return turn > maxConsumedTurn || relevantTurns.has(turn);
+      });
       prompts = relevantPromptEntries.map((e) => e.prompt as string);
     } else {
       relevantPromptEntries = [];
@@ -746,6 +757,24 @@ function parseDiffTreeBlobs(
  * Read consumed change identifiers from committed_pairs.jsonl.
  * Uses change_id/tool_use_id when available (unique per edit), falls back to turn:file.
  */
+/**
+ * Highest turn number recorded in the consumed-pairs log. Used to trim the
+ * prompt window so a new commit does not re-emit prompts that earlier commits
+ * in the same session already captured. Returns 0 when no prior commit has
+ * happened (no file exists or no entries have a turn field).
+ */
+async function readMaxConsumedTurn(sessionDir: string): Promise<number> {
+  const file = join(sessionDir, COMMITTED_PAIRS_FILE);
+  if (!existsSync(file)) return 0;
+  const entries = await readJsonlEntries(file);
+  let max = 0;
+  for (const e of entries) {
+    const turn = typeof e.turn === "number" ? e.turn : 0;
+    if (turn > max) max = turn;
+  }
+  return max;
+}
+
 async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
   if (!existsSync(file)) return new Set();

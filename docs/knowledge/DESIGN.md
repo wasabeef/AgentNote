@@ -219,12 +219,18 @@ A commit note records a list of `interactions` (prompt + response + `files_touch
 
 **Current: Option B.** A commit report usually needs the full reasoning chain — exploration, planning, Q&A prompts that shape the code but don't themselves edit files. Option A was technically correct for attribution but dropped conversational context. Option B keeps attribution at the edit-linked turn level (unchanged) and widens only the prompt list used for `interactions`.
 
-**Trade-off:** in mixed-topic sessions (one commit covers topic X while earlier prompts discussed topic Y), Option B includes the unrelated Y prompts. Mitigations:
+**Boundary — the "unbilled window":** a naive "all prompts since last rotation" would leak earlier commits' prompts into later commits in the same long-lived session, because rotation archives persist for split-commit support. Option B trims the window using `consumed_pairs`:
 
-- Split commits are rare in casual use; when they matter, the `files_touched` per interaction still flags which prompts actually edited the commit's files.
-- Prompt logs are already rotated per commit (`rotateLogs()` runs after each commit), so "all prompts since last rotation" is a naturally bounded window, not the entire session.
+- Each commit records its consumed `(turn, file)` pairs along with the turn number.
+- For a new commit, `maxConsumedTurn` is the highest turn any prior commit already attributed.
+- Prompts are included iff `turn > maxConsumedTurn` **or** `turn ∈ relevantTurns` (the commit's own edit-linked turns).
 
-The boundary of Option B is the rotation window: every prompt in `prompts.jsonl` (current + stem-\*.jsonl archives) appears in the note. Line-level attribution and `files_touched` remain scoped to edit-linked turns only.
+The `turn ∈ relevantTurns` clause preserves split-commit semantics: two commits sharing turn N both show turn N's prompts, because that turn is edit-linked for both.
+
+**Trade-off:** in mixed-topic sessions within a single unbilled window, prompts from unrelated sub-topics can still appear. Mitigations:
+
+- The `files_touched` field per interaction flags which prompts actually edited the commit's files — readers can still tell the "primary" prompts apart.
+- Commits with zero AI edits get no prompts (empty-note skip) so purely human commits are never decorated with AI prompts.
 
 ### Line-level AI attribution
 
