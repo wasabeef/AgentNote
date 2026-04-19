@@ -152,13 +152,13 @@ describe("recordCommitEntry", () => {
 
       writeFileSync(
         join(sessionDir, PROMPTS_FILE),
-        '{"event":"prompt","prompt":"first prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
-          '{"event":"prompt","prompt":"second prompt","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+        '{"event":"prompt","prompt":"first prompt","prompt_id":"id-first","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"second prompt","prompt_id":"id-second","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
       );
       writeFileSync(
         join(sessionDir, CHANGES_FILE),
-        '{"event":"file_change","tool":"Write","file":"file1.ts","turn":1}\n' +
-          '{"event":"file_change","tool":"Write","file":"file2.ts","turn":2}\n',
+        '{"event":"file_change","tool":"Write","file":"file1.ts","turn":1,"prompt_id":"id-first"}\n' +
+          '{"event":"file_change","tool":"Write","file":"file2.ts","turn":2,"prompt_id":"id-second"}\n',
       );
       // Current turn advanced past the relevant turns — forces crossTurnCommit = true.
       writeFileSync(join(sessionDir, TURN_FILE), "5\n");
@@ -677,6 +677,84 @@ describe("recordCommitEntry", () => {
         interactions[2].response,
         "response C",
         "C must still pair — the walker recovers after the missing B",
+      );
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
+  it("correlatePromptIds walker limitation: duplicates + dropped transcript → known mispair", async () => {
+    // Documents a known limitation: when session has 3 "continue" prompts
+    // and transcript has only 2 (middle one dropped), the walker stamps the
+    // wrong id onto the 2nd transcript entry. Not a correctness guarantee —
+    // included so any future fix to correlatePromptIds has a regression
+    // pinning the current behavior. If this test FAILS after a fix, update
+    // it to match the new (presumably stricter) behavior.
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      // Transcript has only 2 of 3 "continue" interactions (middle one dropped).
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response first"}]}}',
+          // middle "continue" + "response middle" dropped from transcript
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response third"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"continue","prompt_id":"id-1","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"continue","prompt_id":"id-2","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"continue","prompt_id":"id-3","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"a.ts","turn":1,"prompt_id":"id-1"}\n' +
+          '{"event":"file_change","tool":"Write","file":"b.ts","turn":2,"prompt_id":"id-2"}\n' +
+          '{"event":"file_change","tool":"Write","file":"c.ts","turn":3,"prompt_id":"id-3"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+      writeFileSync(join(repoDir, "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(repoDir, "b.ts"), "export const b = 2;\n");
+      writeFileSync(join(repoDir, "c.ts"), "export const c = 3;\n");
+      execSync("git add a.ts b.ts c.ts", { cwd: repoDir });
+      execSync('git commit -m "three continues"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
+      // Walker stamps: id-1→tx[0] (first), id-2→tx[1] (second — but this
+      // corresponds to session turn 3's response!). id-3 finds nothing.
+      assert.equal(interactions[0].response, "response first", "turn 1 ↔ tx[0] ✓");
+      assert.equal(
+        interactions[1].response,
+        "response third",
+        "turn 2 ↔ tx[1] ✗ (known mis-pair: actually turn 3's response)",
+      );
+      assert.equal(
+        interactions[2].response,
+        null,
+        "turn 3 → no stamp because walker already consumed tx[1]",
       );
     } finally {
       if (prevClaudeHome === undefined) {

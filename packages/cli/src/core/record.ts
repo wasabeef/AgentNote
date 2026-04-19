@@ -194,18 +194,12 @@ export async function recordCommitEntry(opts: {
   }
 
   // Tag each transcript interaction with the prompt_id of its corresponding
-  // session prompt. Pairing becomes a pure map lookup below, which
-  // disambiguates identical prompt text (e.g. "continue" across turns).
+  // session prompt. Pairing is a pure map lookup below.
   correlatePromptIds(allInteractions, promptEntries);
   const interactionsById = new Map<string, TranscriptInteraction>();
   for (const i of allInteractions) {
     if (i.prompt_id) interactionsById.set(i.prompt_id, i);
   }
-  // Legacy data path: session prompts predate prompt_id. Fall back to the
-  // text-based window algorithm so older sessions still pair correctly.
-  const hasPromptIds = promptEntries.some(
-    (e) => typeof e.prompt_id === "string" && (e.prompt_id as string).length > 0,
-  );
 
   // Human-only commit shortcut: when turn tracking says this commit has no
   // AI-edited files AND the transcript shows AI editing OTHER files but not
@@ -234,13 +228,12 @@ export async function recordCommitEntry(opts: {
     transcriptEditsOthers
   ) {
     interactions = [];
-  } else if (hasPromptIds && relevantPromptEntries.length > 0) {
-    // Primary path: session prompts carry prompt_id → pure map lookup.
-    // Disambiguates repeated prompt text without text-window heuristics.
-    //
-    // Skipped when relevantPromptEntries is empty (e.g. Codex where no
-    // file_change events advance relevantTurns) — those fall through to the
-    // text-window path that drives attribution from the transcript directly.
+  } else if (relevantPromptEntries.length > 0) {
+    // Session-driven path: session prompts drive the note. Each prompt is
+    // paired with its transcript interaction by `prompt_id`. Prompts that
+    // lack a `prompt_id` (pre-feature sessions, or the transition commit
+    // that introduced it) simply get `response: null` — no text-window
+    // heuristic or descending scan.
     interactions = relevantPromptEntries.map((entry) => {
       const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
       const matched = id ? interactionsById.get(id) : undefined;
@@ -267,46 +260,31 @@ export async function recordCommitEntry(opts: {
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
-    } else if (interactions.length === 0 && allInteractions.length > 0 && !crossTurnCommit) {
-      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
     }
-  } else if (transcriptPath) {
-    // Legacy path (pre-prompt_id sessions): use the old text-window algorithm.
-    const exactWindow = findExactTranscriptPromptWindow(allInteractions, prompts);
-    const interactionWindow =
-      exactWindow ?? (!crossTurnCommit ? findTranscriptPromptWindow(allInteractions, prompts) : []);
+  } else if (transcriptPath && allInteractions.length > 0) {
+    // Transcript-driven path: sessions that don't emit `file_change` events
+    // (e.g. Codex) have no `relevantPromptEntries`, so attribution has to
+    // come straight from the transcript. Pick interactions that edited
+    // commit files; fall back to the latest tool-backed interaction for
+    // shell-only sessions that produce no file-attributed transcript entries.
+    const transcriptMatched = allInteractions.filter((i) =>
+      (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
+    );
 
-    if (interactionWindow.length > 0) {
-      const transcriptMatched = interactionWindow.filter((interaction) =>
-        (interaction.files_touched ?? []).some((file) => commitFileSet.has(file)),
-      );
-
-      interactions = interactionWindow.map((interaction) =>
-        toRecordedInteraction(interaction, commitFileSet),
-      );
-
-      if (transcriptMatched.length > 0) {
-        aiFiles = [
-          ...new Set(
-            transcriptMatched.flatMap((interaction) =>
-              (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file)),
-            ),
+    if (transcriptMatched.length > 0) {
+      interactions = transcriptMatched.map((i) => toRecordedInteraction(i, commitFileSet));
+      aiFiles = [
+        ...new Set(
+          transcriptMatched.flatMap((i) =>
+            (i.files_touched ?? []).filter((f) => commitFileSet.has(f)),
           ),
-        ];
-        transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
-      } else if (prompts.length === 0) {
-        interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
-        if (interactions.length === 0) {
-          interactions = prompts.map((p) => ({ prompt: p, response: null }));
-        }
-      }
+        ),
+      ];
+      transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
     } else if (!crossTurnCommit) {
       interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
-      if (interactions.length === 0) {
-        interactions = prompts.map((p) => ({ prompt: p, response: null }));
-      }
     } else {
-      interactions = prompts.map((p) => ({ prompt: p, response: null }));
+      interactions = [];
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
@@ -377,13 +355,22 @@ export async function recordCommitEntry(opts: {
 
 /**
  * Tag each transcript interaction with the prompt_id of its matching session
- * prompt. Both lists are append-only and chronological, so walking them in
- * parallel — advancing the transcript cursor until the prompt text matches,
- * then stamping the id — yields a stable pairing even when prompt text
- * repeats across turns ("continue", "y", "ok").
+ * prompt. Both lists are chronological; the walker advances through the
+ * transcript text-matching each session prompt in order and stamps the id.
  *
- * Mutates `interactions` in place. Prompts without a `prompt_id` (legacy
- * data) are skipped.
+ * Skip-on-miss: if a session prompt isn't found in the transcript (e.g. a
+ * dropped hook event), leave the cursor where it was and move to the next
+ * session prompt rather than abandoning the walk.
+ *
+ * Known limitation: when the same prompt text repeats across multiple turns
+ * AND the transcript has dropped exactly one of them, the walker stamps the
+ * wrong transcript interaction with the dropped prompt's id (shifts the
+ * mis-pairing by one). A strict count-based approach would skip the whole
+ * text group instead; we accept the walker's behavior because text
+ * repetition + transcript drop is rare and dropping every duplicate pair
+ * would regress the common case (no drops).
+ *
+ * Mutates `interactions` in place.
  */
 function correlatePromptIds(
   interactions: TranscriptInteraction[],
@@ -394,10 +381,6 @@ function correlatePromptIds(
     const text = typeof entry.prompt === "string" ? entry.prompt : undefined;
     const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
     if (!text || !id) continue;
-    // Skip-on-miss: if the session prompt doesn't appear in the transcript
-    // (e.g. a dropped event), don't advance txIdx — subsequent prompts can
-    // still find their matches. Without this, one missing prompt would
-    // cascade-fail every later correlation.
     let found = -1;
     for (let k = txIdx; k < interactions.length; k++) {
       if (interactions[k].prompt === text) {
@@ -409,38 +392,6 @@ function correlatePromptIds(
     interactions[found].prompt_id = id;
     txIdx = found + 1;
   }
-}
-
-/**
- * Legacy text-window pairing. Used only when session prompt entries lack
- * `prompt_id` (pre-prompt_id sessions). New sessions bypass this via the
- * prompt_id map lookup path.
- *
- * Exact content match: find a contiguous window of `interactions` whose
- * prompts equal `prompts` in order. Returns null if no exact match exists.
- */
-function findExactTranscriptPromptWindow(
-  interactions: TranscriptInteraction[],
-  prompts: string[],
-): TranscriptInteraction[] | null {
-  if (prompts.length === 0 || interactions.length === 0) return null;
-  for (let start = interactions.length - prompts.length; start >= 0; start--) {
-    const candidate = interactions.slice(start, start + prompts.length);
-    if (candidate.length !== prompts.length) continue;
-    const matches = candidate.every((interaction, index) => interaction.prompt === prompts[index]);
-    if (matches) return candidate;
-  }
-  return null;
-}
-
-/** Lenient legacy wrapper: returns exact match or tail slice when no exact match. */
-function findTranscriptPromptWindow(
-  interactions: TranscriptInteraction[],
-  prompts: string[],
-): TranscriptInteraction[] {
-  if (prompts.length === 0 || interactions.length === 0) return interactions;
-  const exact = findExactTranscriptPromptWindow(interactions, prompts);
-  return exact ?? interactions.slice(-prompts.length);
 }
 
 function toRecordedInteraction(
