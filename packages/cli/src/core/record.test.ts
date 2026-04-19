@@ -615,6 +615,79 @@ describe("recordCommitEntry", () => {
     }
   });
 
+  it("correlatePromptIds skips missing transcript prompts instead of cascade-failing", async () => {
+    // Session has 3 prompts [A, B, C], but the transcript only recorded A
+    // and C (B missing — e.g. a dropped event or transcript truncation).
+    // The walker must skip B and still tag C, not abandon the walk.
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"A"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response A"}]}}',
+          // B's user message is NOT in the transcript.
+          '{"type":"user","message":{"content":[{"type":"text","text":"C"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"response C"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"A","prompt_id":"id-A","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"B","prompt_id":"id-B","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"C","prompt_id":"id-C","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"a.ts","turn":1,"prompt_id":"id-A"}\n' +
+          '{"event":"file_change","tool":"Write","file":"b.ts","turn":2,"prompt_id":"id-B"}\n' +
+          '{"event":"file_change","tool":"Write","file":"c.ts","turn":3,"prompt_id":"id-C"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+      writeFileSync(join(repoDir, "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(repoDir, "b.ts"), "export const b = 2;\n");
+      writeFileSync(join(repoDir, "c.ts"), "export const c = 3;\n");
+      execSync("git add a.ts b.ts c.ts", { cwd: repoDir });
+      execSync('git commit -m "bundle three turns"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
+      assert.equal(interactions.length, 3);
+      assert.equal(interactions[0].response, "response A", "A pairs with its response");
+      assert.equal(
+        interactions[1].response,
+        null,
+        "B has no transcript entry, so response stays null",
+      );
+      assert.equal(
+        interactions[2].response,
+        "response C",
+        "C must still pair — the walker recovers after the missing B",
+      );
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });

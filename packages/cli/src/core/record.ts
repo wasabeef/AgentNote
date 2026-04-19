@@ -394,12 +394,20 @@ function correlatePromptIds(
     const text = typeof entry.prompt === "string" ? entry.prompt : undefined;
     const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
     if (!text || !id) continue;
-    while (txIdx < interactions.length && interactions[txIdx].prompt !== text) {
-      txIdx++;
+    // Skip-on-miss: if the session prompt doesn't appear in the transcript
+    // (e.g. a dropped event), don't advance txIdx — subsequent prompts can
+    // still find their matches. Without this, one missing prompt would
+    // cascade-fail every later correlation.
+    let found = -1;
+    for (let k = txIdx; k < interactions.length; k++) {
+      if (interactions[k].prompt === text) {
+        found = k;
+        break;
+      }
     }
-    if (txIdx >= interactions.length) return;
-    interactions[txIdx].prompt_id = id;
-    txIdx++;
+    if (found === -1) continue;
+    interactions[found].prompt_id = id;
+    txIdx = found + 1;
   }
 }
 
