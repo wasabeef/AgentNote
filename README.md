@@ -17,28 +17,37 @@ Agent Note records each prompt, response, and AI-attributed file, then attaches 
 </p>
 
 <p align="center">
+Think of it as <code>git log</code> plus the AI conversation behind the change.
+</p>
+
+<p align="center">
   <a href="https://wasabeef.github.io/AgentNote/">Documentation</a>
 </p>
 
+## Requirements
+
+- Git
+- Node.js 20 or later
+- A supported coding agent installed and authenticated
+
 ## Setup
+
+1. Enable Agent Note for your coding agent.
 
 ```bash
 npx agent-note init --agent claude
+# or: codex / cursor / gemini
 ```
 
-For Codex CLI:
+Each developer should run this once locally after cloning.
+
+You can enable more than one agent in the same repository:
 
 ```bash
-npx agent-note init --agent codex
+npx agent-note init --agent claude --agent cursor
 ```
 
-For Cursor:
-
-```bash
-npx agent-note init --agent cursor
-```
-
-Commit the generated files and push:
+2. Commit the generated files and push.
 
 ```bash
 git add .claude/settings.json .github/workflows/agentnote.yml
@@ -46,14 +55,31 @@ git commit -m "chore: enable agent-note"
 git push
 ```
 
-Codex repositories commit `.codex/config.toml` and `.codex/hooks.json` instead of `.claude/settings.json`.
-Cursor repositories commit `.cursor/hooks.json` instead of `.claude/settings.json`.
+- Claude Code: commit `.claude/settings.json`
+- Codex CLI: commit `.codex/config.toml` and `.codex/hooks.json`
+- Cursor: commit `.cursor/hooks.json`
+- Gemini CLI: commit `.gemini/settings.json`
 
-Each developer runs `init` after cloning to install local git hooks.
+3. Keep using your normal `git commit` workflow.
 
-Codex support is currently preview-only: prompt / response recovery and `files_touched` come from local transcripts, and line-level attribution is only upgraded when transcript `apply_patch` counts match the final commit diff. Shell-only edits that do not produce transcript patch data stay on the safe side: Agent Note can still preserve the prompt / response pair and observed Codex tools, but it does not guess `files_touched` or AI-authored files from shell steps alone. Those commits therefore stay at `0%` AI attribution unless another primary signal ties files to the agent. If the Codex transcript cannot be read, `agent-note commit` warns and skips note creation instead of writing uncertain attribution data.
+With the generated git hooks installed, Agent Note records commits automatically. Use `agent-note commit -m "..."` only as a fallback when git hooks are unavailable.
 
-Cursor is supported for day-to-day use: attribution comes from `afterFileEdit` / `afterTabFileEdit` hooks, prompt / response pairs are restored from Cursor response hooks or local transcripts when available, and the default git hooks track plain `git commit` normally. When Cursor edit counts match and the final committed blob still matches the last AI edit, Agent Note safely upgrades those files to line-level attribution; otherwise attribution stays at file level. `agent-note commit -m "..."` remains a useful fallback wrapper when git hooks are unavailable. The `beforeShellExecution` rewrite path is deferred — git hooks carry the commit integration instead.
+## What Agent Note Saves
+
+- The prompts and responses behind a commit
+- The files touched by the agent
+- An AI ratio for the commit
+
+Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
+
+## Agent Support
+
+| Agent | Status | Attribution | Notes |
+| --- | --- | --- | --- |
+| Claude Code | Full support | Line-level by default | Hook-native prompt / response recovery |
+| Codex CLI | Preview | File-level by default | Transcript-driven. Line-level is upgraded only when transcript `apply_patch` counts match the final commit diff. If the transcript cannot be read, Agent Note skips note creation instead of writing uncertain data. |
+| Cursor | Supported | File-level by default | Uses `afterFileEdit` / `afterTabFileEdit` hooks. Line-level is upgraded only when the committed blob still matches the latest AI edit. |
+| Gemini CLI | Preview | File-level | Hook-based capture with normal `git commit` support through the generated git hooks |
 
 ## Check Your Setup
 
@@ -118,7 +144,7 @@ ba091be fix: update dependencies
 $ npx agent-note pr --output description --update 42
 ```
 
-Posts an AI session report to the PR description:
+This posts an AI session report to the PR description:
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -135,13 +161,27 @@ Posts an AI session report to the PR description:
 
 ```
 You prompt your coding agent
-  → hooks capture the prompt
-The agent writes code
-  → hooks or transcripts track files + attribution data
-You git commit
-  → trailer injected, note recorded
-You git push
-  → notes auto-pushed to remote
+        │
+        ▼
+Hooks capture the prompt and session metadata
+        │
+        ▼
+The agent edits files
+        │
+        ▼
+Hooks or local transcripts record files touched and attribution signals
+        │
+        ▼
+You run `git commit`
+        │
+        ▼
+Agent Note writes a git note for that commit
+        │
+        ▼
+You run `git push`
+        │
+        ▼
+`refs/notes/agentnote` is pushed alongside your branch
 ```
 
 ## Commands
@@ -153,28 +193,13 @@ You git push
 | `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
 | `agent-note log [n]` | List recent commits with AI ratio |
 | `agent-note pr [base]` | Generate PR report (markdown or JSON) |
+| `agent-note session <id>` | Show all commits linked to one session |
+| `agent-note commit [args]` | Fallback wrapper around `git commit` when git hooks are unavailable |
 | `agent-note status` | Show tracking state |
 
-## Works with
-
-| Agent | Status | Attribution |
-| --- | --- | --- |
-| Claude Code | Full support | Line-level |
-| Codex CLI | Preview | File-level by default, line-level when transcript patch counts match the commit |
-| Cursor | Supported | `afterFileEdit` / `afterTabFileEdit`-driven attribution, with safe line-level upgrade when the committed blob still matches the AI edit |
-| Gemini CLI | Preview | File-level via `BeforeTool`/`AfterTool` hooks; pending-commit pattern for trailer injection |
-
-## Capability Matrix
-
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-| --- | --- | --- | --- | --- |
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
-| Default attribution | Line-level | File-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
-
 ## GitHub Action
+
+Examples in this section assume `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` is set.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -182,7 +207,13 @@ You git push
 
 ### Dashboard data
 
-The optional dashboard package lives in `packages/dashboard/` and reads static note files from `packages/dashboard/public/notes/`. Pass `packages/dashboard/public` as `dashboard_dir`; the action writes `notes/*.json` under that directory.
+The optional dashboard package lives in `packages/dashboard/`. If you want a static dashboard on GitHub Pages:
+
+1. Enable dashboard bundle output in the action.
+2. Pass `packages/dashboard/public` as `dashboard_dir`.
+3. Configure your Pages workflow to restore and persist `gh-pages/dashboard/notes/*.json`.
+
+The action writes `notes/*.json` inside `packages/dashboard/public/`.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -191,7 +222,11 @@ The optional dashboard package lives in `packages/dashboard/` and reads static n
     dashboard_dir: packages/dashboard/public
 ```
 
-Agent Note does not commit sample dashboard data to the repository. A new dashboard starts empty. For the live GitHub Pages dashboard, use a push-driven workflow that restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`, rebuilds the site, and persists the updated note set back to `gh-pages`.
+Agent Note does not commit sample dashboard data to the repository. A new dashboard starts out empty. For a live GitHub Pages dashboard, use a push-driven workflow that:
+
+- restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`
+- rebuilds the site
+- writes the updated note set back to `gh-pages`
 
 <details>
 <summary>Full example with outputs</summary>
@@ -242,6 +277,15 @@ $ git notes --ref=agentnote show ce941f7
 ```
 
 </details>
+
+## Security & Privacy
+
+- Agent Note is local-first. The core CLI works without a hosted service.
+- Temporary session data is stored under `.git/agentnote/` inside your repository.
+- The permanent record is stored in `refs/notes/agentnote`, not in tracked source files.
+- For transcript-driven agents, Agent Note reads local transcript files from the agent's own data directory.
+- The CLI does not send telemetry.
+- Commit tracking is best-effort. If Agent Note fails during a hook, your `git commit` still succeeds.
 
 ## Design
 
