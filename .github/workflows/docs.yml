@@ -8,6 +8,7 @@ on:
     types:
       - opened
       - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -25,10 +26,10 @@ jobs:
     outputs:
       should_deploy: ${{ steps.notes.outputs.should_build }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Restore dashboard notes from gh-pages
@@ -163,6 +164,19 @@ jobs:
             }
           }
 
+          function sleep(ms) {
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+          }
+
+          function mainWorkflowSupportsPullRequest() {
+            try {
+              const raw = run("git", ["show", "origin/main:.github/workflows/docs.yml"]);
+              return /\npull_request:\n/.test(`\n${raw}`);
+            } catch {
+              return false;
+            }
+          }
+
           function fetchBranchPullRequest() {
             if (!owner || !refName) return null;
             try {
@@ -182,6 +196,27 @@ jobs:
             } catch {
               return null;
             }
+          }
+
+          function fetchBranchPullRequestWithRetry() {
+            const maxAttempts = 5;
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              const pull = fetchBranchPullRequest();
+              if (pull?.number && pull?.title) {
+                return pull;
+              }
+
+              if (attempt < maxAttempts) {
+                console.log(
+                  `Open pull request lookup for branch ${refName} is not ready yet ` +
+                    `(attempt ${attempt}/${maxAttempts}). Retrying...`,
+                );
+                sleep(3000);
+              }
+            }
+
+            return null;
           }
 
           function fetchPullRequestCommits(prNumber) {
@@ -286,7 +321,16 @@ jobs:
               updateNotesForPr(pullRequest.number, pullRequest);
             }
           } else {
-            const pull = fetchBranchPullRequest();
+            if (mainWorkflowSupportsPullRequest()) {
+              console.log(
+                "Skip branch push preview because origin/main already handles PR previews " +
+                  "with pull_request events.",
+              );
+              setShouldBuild("false");
+              process.exit(0);
+            }
+
+            const pull = fetchBranchPullRequestWithRetry();
             if (!pull || typeof pull.number !== "number" || typeof pull.title !== "string") {
               console.log(`No open pull request found for branch ${refName}.`);
               setShouldBuild("false");
@@ -309,14 +353,12 @@ jobs:
           NODE
       - name: Build website and dashboard
         if: steps.notes.outputs.should_build == 'true'
-        env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           BUILD_ROOT="${GITHUB_WORKSPACE}"
 
-          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+          if [ ! -f packages/dashboard/package.json ]; then
             git fetch origin main --depth=1
             if git cat-file -e origin/main:packages/dashboard/package.json 2>/dev/null; then
               BUILD_ROOT="$(mktemp -d)"
@@ -374,7 +416,7 @@ jobs:
 
           git commit -m "chore: update dashboard notes"
           git push origin HEAD:gh-pages
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: steps.notes.outputs.should_build == 'true'
         with:
           path: .pages
