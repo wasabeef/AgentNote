@@ -237,7 +237,7 @@ async function run(): Promise<void> {
 		);
 		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
 		const dashboardDirInput =
-			core.getInput("dashboard_dir") || "packages/dashboard/public/view-demo";
+			core.getInput("dashboard_dir") || "packages/dashboard/public";
 
 		let json = "";
 		let report: Record<string, unknown> | null = null;

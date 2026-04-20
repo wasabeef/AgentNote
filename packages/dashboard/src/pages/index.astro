@@ -36,7 +36,7 @@ interface DashboardIndexData {
 const baseUrl = import.meta.env.BASE_URL;
 const homePath = `${baseUrl}`;
 const repoUrl = "https://github.com/wasabeef/AgentNote";
-const notesDir = resolve(fileURLToPath(new URL("../../public/view-demo/notes", import.meta.url)));
+const notesDir = resolve(fileURLToPath(new URL("../../public/notes", import.meta.url)));
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -86,7 +86,7 @@ function buildDashboardIndex(): DashboardIndexData {
         lines_ai: numberValue(lines.ai_added),
         lines_total: numberValue(lines.total_added),
         turns: interactions.length,
-        note_url: `${baseUrl}/view-demo/notes/${file}`.replace(/\/+/g, "/"),
+        note_url: `${baseUrl}/notes/${file}`.replace(/\/+/g, "/"),
       } satisfies DashboardCommitSummary;
     })
     .sort((a, b) => {
@@ -2459,9 +2459,12 @@ const dashboardIndex = buildDashboardIndex();
           return;
         }
         if (!state.current) {
+          const hasNotes = (state.index?.commits?.length || 0) > 0;
           root.appendChild(h("div", { className: "empty" }, [
-            h("div", { className: "big" }, "💬"),
-            "Pick a commit from the sidebar.",
+            h("div", { className: "big" }, hasNotes ? "💬" : "📭"),
+            hasNotes
+              ? "Pick a commit from the sidebar."
+              : "No dashboard data yet. Push a branch with agent-note history to start populating this dashboard.",
           ]));
           return;
         }

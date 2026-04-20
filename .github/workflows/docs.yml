@@ -30,7 +30,7 @@ jobs:
       - name: Restore dashboard notes from gh-pages
         run: |
           set -euo pipefail
-          NOTES_DIR="packages/dashboard/public/view-demo/notes"
+          NOTES_DIR="packages/dashboard/public/notes"
           rm -rf "$NOTES_DIR"
           mkdir -p "$NOTES_DIR"
 
@@ -60,7 +60,7 @@ jobs:
           import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
           import { join } from "node:path";
 
-          const notesDir = "packages/dashboard/public/view-demo/notes";
+          const notesDir = "packages/dashboard/public/notes";
           const before = process.env.BEFORE_SHA || "";
           const head = process.env.HEAD_SHA || "";
           const repo = process.env.GITHUB_REPOSITORY || "";
@@ -284,8 +284,8 @@ jobs:
             if git cat-file -e origin/main:packages/dashboard/package.json 2>/dev/null; then
               BUILD_ROOT="$(mktemp -d)"
               git archive --format=tar origin/main | tar -xf - -C "$BUILD_ROOT"
-              mkdir -p "$BUILD_ROOT/packages/dashboard/public/view-demo/notes"
-              cp -R packages/dashboard/public/view-demo/notes/. "$BUILD_ROOT/packages/dashboard/public/view-demo/notes/"
+              mkdir -p "$BUILD_ROOT/packages/dashboard/public/notes"
+              cp -R packages/dashboard/public/notes/. "$BUILD_ROOT/packages/dashboard/public/notes/"
             fi
           fi
 
@@ -306,7 +306,7 @@ jobs:
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          SRC_DIR="${GITHUB_WORKSPACE}/packages/dashboard/public/view-demo/notes"
+          SRC_DIR="${GITHUB_WORKSPACE}/packages/dashboard/public/notes"
           TMP_DIR="$(mktemp -d)"
 
           git init "$TMP_DIR"

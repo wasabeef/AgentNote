@@ -30217,7 +30217,7 @@ async function run() {
         const cliCmd = resolveCliCommand();
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-        const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public/view-demo";
+        const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public";
         let json = "";
         let report = null;
         const maxAttempts = 3;
