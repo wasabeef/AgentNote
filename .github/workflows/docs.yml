@@ -24,7 +24,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ steps.notes.outputs.should_build }}
+      should_deploy: ${{ steps.notes.outputs.should_deploy }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -201,25 +201,34 @@ jobs:
             return head ? [head] : [];
           }
 
-          function setShouldBuild(value) {
+          function setOutput(name, value) {
             if (!githubOutput) return;
-            writeFileSync(githubOutput, `should_build=${value}\n`, { flag: "a" });
+            writeFileSync(githubOutput, `${name}=${value}\n`, { flag: "a" });
+          }
+
+          function setFlags({ build, persist, deploy }) {
+            setOutput("should_build", build);
+            setOutput("should_persist", persist);
+            setOutput("should_deploy", deploy);
           }
 
           if (eventName === "pull_request") {
             if (!Number.isInteger(prNumber) || !prTitle) {
               console.log("Pull request metadata is missing.");
-              setShouldBuild("false");
+              setFlags({ build: "false", persist: "false", deploy: "false" });
               process.exit(0);
             }
 
+            const isForkPullRequest = prHeadRepo && repo && prHeadRepo !== repo;
             if (prHeadRepo && repo && prHeadRepo !== repo) {
-              console.log(`Skip dashboard deploy for fork pull request #${prNumber}.`);
-              setShouldBuild("false");
-              process.exit(0);
+              console.log(`Skip dashboard note persistence for fork pull request #${prNumber}.`);
             }
 
-            setShouldBuild("true");
+            setFlags({
+              build: "true",
+              persist: isForkPullRequest ? "false" : "true",
+              deploy: "false",
+            });
             removeNotesForPr(prNumber);
 
             const pullRequest = {
@@ -232,7 +241,7 @@ jobs:
               writeDashboardNote(sha, pullRequest);
             }
           } else {
-            setShouldBuild("true");
+            setFlags({ build: "true", persist: "true", deploy: "true" });
             const mergedPullRequests = new Map();
             for (const sha of buildCommitRange()) {
               const pulls = fetchCommitPulls(sha);
@@ -290,7 +299,7 @@ jobs:
           cp -R "$BUILD_ROOT/website/dist/." .pages/
           cp -R "$BUILD_ROOT/packages/dashboard/dist/." .pages/dashboard/
       - name: Persist dashboard notes to gh-pages
-        if: steps.notes.outputs.should_build == 'true'
+        if: steps.notes.outputs.should_persist == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -329,7 +338,7 @@ jobs:
           git commit -m "chore: update dashboard notes"
           git push origin HEAD:gh-pages
       - uses: actions/upload-pages-artifact@v5
-        if: steps.notes.outputs.should_build == 'true'
+        if: steps.notes.outputs.should_deploy == 'true'
         with:
           path: .pages
 

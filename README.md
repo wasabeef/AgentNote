@@ -222,11 +222,13 @@ The action writes `notes/*.json` inside `packages/dashboard/public/`.
     dashboard_dir: packages/dashboard/public
 ```
 
-Agent Note does not commit sample dashboard data to the repository. A new dashboard starts out empty. For a live GitHub Pages dashboard, use a push-driven workflow that:
+Agent Note does not commit sample dashboard data to the repository. A new dashboard starts out empty. For a live GitHub Pages dashboard, use a workflow that:
 
 - restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`
-- rebuilds the site
-- writes the updated note set back to `gh-pages`
+- on `pull_request` (`opened`, `reopened`, `synchronize`), rewrites the current PR's note set and persists it back to `gh-pages`
+- on `push` to `main`, rebuilds the site, persists merged note state, and deploys the public Pages artifact
+
+This keeps generated JSON off `main` while still letting dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `main` deployment.
 
 <details>
 <summary>Full example with outputs</summary>

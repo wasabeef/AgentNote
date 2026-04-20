@@ -115,20 +115,19 @@ The repository does not ship sample dashboard JSON. A fresh dashboard stays empt
 
 ## GitHub Pages Sync
 
-For the live dashboard, keep the Pages workflow `push`-driven. `pull_request` jobs are useful for validating bundle generation, but persistence and deploy should come from `push`.
+For the live dashboard, split responsibilities by event:
 
 - `gh-pages/dashboard/notes/*.json` is the durable data store
 - each run restores those files into `packages/dashboard/public/notes/`
-- `push` on a PR branch can capture commit notes before squash merge hides those SHAs from `main`
-- non-`main` pushes can rebuild the shared dashboard using the current `main` shell plus the branch's note data
-- `push` on `main` finalizes matching PR notes as `merged`
-- a brand-new repo starts with an empty dashboard until the first eligible push writes note JSON
+- `pull_request` (`opened`, `reopened`, `synchronize`) rewrites the current PR's note set and persists it back to `gh-pages`
+- `push` on `main` finalizes matching PR notes as `merged`, rebuilds the site, and deploys the shared Pages URL
+- a brand-new repo can accumulate dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment
 
 Recommended flow:
 
 1. Restore `gh-pages/dashboard/notes` into `packages/dashboard/public/notes`.
-2. On non-`main` pushes, resolve the open PR for `owner:branch`, remove the old note files for that PR number, then rewrite the note JSON for the PR's current commits.
-3. On `main` pushes, write note JSON for the pushed commits and update matching PR note state to `merged`.
-4. Build the Pages artifact, persist `dashboard/notes` back to `gh-pages`, and deploy.
+2. On `pull_request` (`opened`, `reopened`, `synchronize`), remove the old note files for that PR number, then rewrite the note JSON for the PR's current commits.
+3. Persist the updated `dashboard/notes` back to `gh-pages`.
+4. On `push` to `main`, write note JSON for the pushed commits, update matching PR note state to `merged`, then build and deploy the Pages artifact.
 
 This keeps `main` free of generated JSON while still letting one shared dashboard show open and merged PR history.
