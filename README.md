@@ -180,6 +180,19 @@ You git push
 - uses: wasabeef/AgentNote@v0
 ```
 
+### Dashboard data
+
+The optional dashboard package lives in `packages/dashboard/` and reads static note files from `packages/dashboard/public/notes/`. Pass `packages/dashboard/public` as `dashboard_dir`; the action writes `notes/*.json` under that directory.
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    dashboard: true
+    dashboard_dir: packages/dashboard/public
+```
+
+Agent Note does not commit sample dashboard data to the repository. A new dashboard starts empty. For the live GitHub Pages dashboard, use a push-driven workflow that restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`, rebuilds the site, and persists the updated note set back to `gh-pages`.
+
 <details>
 <summary>Full example with outputs</summary>
 

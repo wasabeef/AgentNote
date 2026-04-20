@@ -3,20 +3,42 @@ export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
 /**
- * Resolve the output mode from action inputs.
- * Explicit `output` input takes precedence; legacy `comment=false` maps to description.
+ * Resolve the legacy PR output mode from action inputs.
  */
 export function resolveOutputMode(
 	outputInput: string,
 	commentInput: string,
-): "description" | "comment" {
+): "description" | "comment" | "none" {
 	if (outputInput === "description" || outputInput === "comment") {
 		return outputInput;
 	}
 	if (commentInput === "false") {
-		return "description";
+		return "none";
 	}
 	return "description"; // default
+}
+
+/**
+ * Resolve PR output mode from modern and legacy action inputs.
+ * `comment=false` remains a hard opt-out for backward compatibility.
+ * Otherwise `pr_output` takes precedence, then `output`.
+ */
+export function resolvePrOutputMode(
+	prOutputInput: string,
+	outputInput: string,
+	commentInput: string,
+): "description" | "comment" | "none" {
+	if (commentInput === "false") {
+		return "none";
+	}
+	if (
+		prOutputInput === "description" ||
+		prOutputInput === "comment" ||
+		prOutputInput === "none"
+	) {
+		return prOutputInput;
+	}
+	return resolveOutputMode(outputInput, commentInput);
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: GitHub Action
-description: プルリクエストに AI セッションレポートを自動投稿
+description: プルリクエストに AI セッションレポートを自動投稿し、dashboard bundle も生成
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -34,8 +34,26 @@ jobs:
 | 入力 | デフォルト | 説明 |
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
-| `output` | `description` | レポートの出力先: `description` または `comment` |
-| `comment` | `true` | レガシー: `false` で投稿を無効化 |
+| `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
+| `dashboard` | `false` | 現在の PR 用の dashboard snapshot を書き出す |
+| `dashboard_dir` | `packages/dashboard/public` | `notes/*.json` を書き出す親ディレクトリ |
+| `output` | — | レガシー: `pr_output` の旧名 |
+| `comment` | `true` | レガシー: `false` で PR レポート投稿を無効化 |
+
+### PR Description と dashboard を同時に使う
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    dashboard_dir: packages/dashboard/public
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+`dashboard_dir` には `packages/dashboard/public` を渡します。Action はその配下に `packages/dashboard/public/notes/*.json` を作成・更新します。
 
 ## 出力
 
@@ -48,7 +66,35 @@ jobs:
 | `total_prompts` | number | 全プロンプト数 |
 | `json` | string | 構造化レポート全体 |
 | `markdown` | string | レンダリング済みのマークダウンレポート |
+| `dashboard_dir` | string | dashboard bundle の出力先ディレクトリ |
+| `dashboard_commits` | number | dashboard bundle に書き出した tracked commit 数 |
 
 <Aside type="tip">
   レポート内のコミットハッシュは GitHub のコミットページにリンクされます。
 </Aside>
+
+## Dashboard Package
+
+interactive な dashboard は `packages/dashboard/` に分離されています。Action はその package 配下の data bundle を更新し、実際の GitHub Pages への publish は workflow 側で制御できます。
+
+repo 自体には sample dashboard JSON を置きません。fresh な dashboard は、Pages sync workflow が `packages/dashboard/public/notes/*.json` を復元または生成するまで空のままです。
+
+## GitHub Pages Sync
+
+live dashboard は `push` 主体の workflow にしておくのがおすすめです。`pull_request` job は bundle 生成確認には使えても、永続化や deploy の主体にはしません。
+
+- 永続データは `gh-pages/dashboard/notes/*.json` に置きます
+- 各 run でその内容を `packages/dashboard/public/notes/` に復元します
+- PR branch への `push` 時点で commit ごとの note を保存できるので、`squash merge` 前の SHA を取りこぼしません
+- non-`main` push では note data を差し替えつつ、dashboard 本体は現在の `main` shell を使って rebuild できます
+- `main` への `push` で、対応する PR の note を `merged` として確定できます
+- brand-new repo の dashboard は、最初の対象 push で note JSON が入るまで空です
+
+推奨フロー:
+
+1. `gh-pages/dashboard/notes` を `packages/dashboard/public/notes` に復元する
+2. non-`main` push では `owner:branch` に対応する open PR を引き、同じ PR 番号の既存 note を一度消してから、その PR の現在の commit 分だけ note JSON を書き直す
+3. `main` push では push された commit の note JSON を書き込み、対応する PR note の state を `merged` に更新する
+4. Pages artifact を build し、`dashboard/notes` を `gh-pages` に書き戻してから deploy する
+
+これで `main` を JSON で汚さずに、1 つの shared dashboard から open / merged 両方の PR 履歴を見られます。

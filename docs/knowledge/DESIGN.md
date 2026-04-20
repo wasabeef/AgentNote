@@ -12,7 +12,7 @@ AI agents already store transcripts locally. Agent Note captures the right metad
 
 ## Repository structure
 
-The repository is a monorepo with two packages:
+The repository is a monorepo with three packages plus the docs site:
 
 ```
 wasabeef/AgentNote/
@@ -54,6 +54,13 @@ wasabeef/AgentNote/
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
 │       └── package.json            # name: agent-note-action (private, not published)
+│   │
+│   └── dashboard/                  # optional static dashboard package
+│       ├── src/pages/index.astro   # dashboard shell + build-time note index
+│       ├── public/notes/           # synced dashboard note JSON during build/deploy
+│       └── package.json
+│
+├── website/                        # Starlight docs site
 │
 ├── docs/
 │   └── knowledge/
@@ -73,8 +80,21 @@ wasabeef/AgentNote/
 The action calls `agent-note pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
 
 - A single PR can change CLI output + action parsing in lockstep
+- The static dashboard can reuse the same note schema without a second data contract
 - No cross-repo version coordination
 - Shared CI
+
+### Dashboard deploy model
+
+The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
+
+For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` as the durable store:
+
+- restore those files into `packages/dashboard/public/notes/`
+- rebuild the dashboard (and optionally the docs site) from that working-tree copy
+- persist the updated `dashboard/notes` back to `gh-pages`
+
+A brand-new deploy therefore starts empty until the first eligible push writes note JSON.
 
 ### Root action.yml trick
 
