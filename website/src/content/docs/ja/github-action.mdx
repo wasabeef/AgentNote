@@ -1,6 +1,6 @@
 ---
 title: GitHub Action
-description: プルリクエストに AI セッションレポートを自動投稿
+description: プルリクエストに AI セッションレポートを自動投稿し、dashboard bundle も生成
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -34,8 +34,24 @@ jobs:
 | 入力 | デフォルト | 説明 |
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
-| `output` | `description` | レポートの出力先: `description` または `comment` |
-| `comment` | `true` | レガシー: `false` で投稿を無効化 |
+| `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
+| `dashboard` | `false` | 現在の PR 用の dashboard snapshot を書き出す |
+| `dashboard_dir` | `packages/dashboard/public/view-demo` | `index.json` と `notes/*.json` の出力先 |
+| `output` | — | レガシー: `pr_output` の旧名 |
+| `comment` | `true` | レガシー: `false` で PR レポート投稿を無効化 |
+
+### PR Description と dashboard を同時に使う
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    dashboard_dir: packages/dashboard/public/view-demo
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ## 出力
 
@@ -48,7 +64,13 @@ jobs:
 | `total_prompts` | number | 全プロンプト数 |
 | `json` | string | 構造化レポート全体 |
 | `markdown` | string | レンダリング済みのマークダウンレポート |
+| `dashboard_dir` | string | dashboard bundle の出力先ディレクトリ |
+| `dashboard_commits` | number | dashboard bundle に書き出した tracked commit 数 |
 
 <Aside type="tip">
   レポート内のコミットハッシュは GitHub のコミットページにリンクされます。
 </Aside>
+
+## Dashboard Package
+
+interactive な dashboard は `packages/dashboard/` に分離されています。Action はその package 配下の data bundle を更新し、実際の GitHub Pages への publish は workflow 側で制御できます。

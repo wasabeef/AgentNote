@@ -6,7 +6,9 @@
   },
   "scripts": {
     "docs:install": "npm ci --prefix website",
-    "docs:build": "npm run build --prefix website"
+    "docs:build": "npm run build --prefix website",
+    "dashboard:install": "npm ci --prefix packages/dashboard",
+    "dashboard:build": "npm run build --prefix packages/dashboard"
   },
   "workspaces": [
     "packages/cli",

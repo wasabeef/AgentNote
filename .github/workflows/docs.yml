@@ -1,14 +1,18 @@
-name: Deploy Website
+name: Deploy Pages
 
 on:
   push:
     branches: [main]
     paths:
       - website/**
+      - packages/dashboard/**
+      - package.json
       - .github/workflows/docs.yml
   pull_request:
     paths:
       - website/**
+      - packages/dashboard/**
+      - package.json
       - .github/workflows/docs.yml
 
 permissions:
@@ -29,13 +33,23 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --prefix website
+      - run: npm ci --prefix packages/dashboard
       - run: npm run build --prefix website
         env:
           SITE: https://wasabeef.github.io
           BASE: /AgentNote
+      - run: npm run build --prefix packages/dashboard
+        env:
+          SITE: https://wasabeef.github.io
+          BASE: /AgentNote/dashboard
+      - run: |
+          rm -rf .pages
+          mkdir -p .pages/dashboard
+          cp -R website/dist/. .pages/
+          cp -R packages/dashboard/dist/. .pages/dashboard/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: website/dist
+          path: .pages
 
   deploy:
     needs: build

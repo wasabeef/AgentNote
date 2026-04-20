@@ -4,6 +4,7 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
+	resolvePrOutputMode,
 	resolveOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
@@ -18,8 +19,8 @@ describe("resolveOutputMode", () => {
 		assert.equal(resolveOutputMode("comment", ""), "comment");
 	});
 
-	it('returns "description" when output is unset and comment is "false"', () => {
-		assert.equal(resolveOutputMode("", "false"), "description");
+	it('returns "none" when output is unset and comment is "false"', () => {
+		assert.equal(resolveOutputMode("", "false"), "none");
 	});
 
 	it('returns "description" by default when both inputs are empty', () => {
@@ -28,6 +29,21 @@ describe("resolveOutputMode", () => {
 
 	it("ignores comment input when output is explicitly set", () => {
 		assert.equal(resolveOutputMode("comment", "false"), "comment");
+	});
+});
+
+describe("resolvePrOutputMode", () => {
+	it('returns "none" when pr_output is "none"', () => {
+		assert.equal(resolvePrOutputMode("none", "", ""), "none");
+	});
+
+	it('prefers "pr_output" over legacy "output"', () => {
+		assert.equal(resolvePrOutputMode("description", "comment", ""), "description");
+	});
+
+	it("falls back to legacy inputs when pr_output is unset", () => {
+		assert.equal(resolvePrOutputMode("", "comment", ""), "comment");
+		assert.equal(resolvePrOutputMode("", "", "false"), "none");
 	});
 });
 

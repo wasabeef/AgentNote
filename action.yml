@@ -1,5 +1,5 @@
-name: "Agent Note PR Report"
-description: "AI agent session tracking report for pull requests"
+name: "Agent Note"
+description: "AI agent session reports for pull requests and dashboard bundles"
 author: "wasabeef"
 
 inputs:
@@ -7,14 +7,26 @@ inputs:
     description: "Base branch to compare against (default: PR base)"
     required: false
     default: ""
+  pr_output:
+    description: "PR report destination: description, comment, or none (default: description)"
+    required: false
+    default: ""
   output:
-    description: "Report destination: description or comment (default: description)"
+    description: "Legacy: PR report destination: description or comment"
     required: false
     default: ""
   comment:
-    description: "Legacy: set to false to disable report posting"
+    description: "Legacy: set to false to disable PR report posting"
     required: false
     default: "true"
+  dashboard:
+    description: "Write/update dashboard snapshot files for the current PR"
+    required: false
+    default: "false"
+  dashboard_dir:
+    description: "Directory where dashboard index.json and notes/*.json will be written"
+    required: false
+    default: "packages/dashboard/public/view-demo"
 
 outputs:
   overall_ai_ratio:
@@ -31,6 +43,10 @@ outputs:
     description: "Full structured report as JSON"
   markdown:
     description: "Rendered markdown report"
+  dashboard_dir:
+    description: "Dashboard snapshot directory written by the action"
+  dashboard_commits:
+    description: "Number of tracked commits written into the dashboard snapshot"
 
 runs:
   using: "node24"

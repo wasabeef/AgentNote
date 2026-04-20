@@ -1,6 +1,6 @@
 ---
 title: GitHub Action
-description: Automatically post AI session reports on pull requests.
+description: Automatically post AI session reports on pull requests and generate dashboard bundles.
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -35,15 +35,31 @@ That's it. Every PR gets an AI session report.
 | Input | Default | Description |
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
-| `output` | `description` | Report destination: `description` or `comment` |
-| `comment` | `true` | Legacy: set to `false` to disable posting |
+| `pr_output` | `description` | PR report destination: `description`, `comment`, or `none` |
+| `dashboard` | `false` | Write/update dashboard snapshot files for the current PR |
+| `dashboard_dir` | `packages/dashboard/public/view-demo` | Target directory for `index.json` and `notes/*.json` |
+| `output` | — | Legacy alias for `pr_output` (`description` or `comment`) |
+| `comment` | `true` | Legacy: set to `false` to disable PR report posting |
 
 ### Post as comment instead of description
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
   with:
-    output: comment
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Generate dashboard data alongside the PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    dashboard_dir: packages/dashboard/public/view-demo
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -59,6 +75,8 @@ That's it. Every PR gets an AI session report.
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report |
 | `markdown` | string | Rendered markdown report |
+| `dashboard_dir` | string | Directory where the dashboard bundle was written |
+| `dashboard_commits` | number | Number of tracked commits written to the dashboard bundle |
 
 ### Use outputs in workflow
 
@@ -86,3 +104,7 @@ The PR report includes:
 ## Notes Sharing
 
 The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git hook installed by `agent-note init` auto-pushes notes on every `git push` — no manual push needed.
+
+## Dashboard Package
+
+The interactive dashboard now lives in `packages/dashboard/` and is deployed alongside the docs site under `/dashboard/`. The action can update the bundle files in that package, while your GitHub Pages workflow decides when to publish them.

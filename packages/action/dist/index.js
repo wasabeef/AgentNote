@@ -29930,23 +29930,35 @@ function wrappy (fn, cb) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DESCRIPTION_END = exports.DESCRIPTION_BEGIN = exports.COMMENT_MARKER = void 0;
 exports.resolveOutputMode = resolveOutputMode;
+exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
 /**
- * Resolve the output mode from action inputs.
- * Explicit `output` input takes precedence; legacy `comment=false` maps to description.
+ * Resolve the legacy PR output mode from action inputs.
  */
 function resolveOutputMode(outputInput, commentInput) {
     if (outputInput === "description" || outputInput === "comment") {
         return outputInput;
     }
     if (commentInput === "false") {
-        return "description";
+        return "none";
     }
     return "description"; // default
+}
+/**
+ * Resolve PR output mode from modern and legacy action inputs.
+ * `pr_output` takes precedence, then `output`, then legacy `comment=false`.
+ */
+function resolvePrOutputMode(prOutputInput, outputInput, commentInput) {
+    if (prOutputInput === "description" ||
+        prOutputInput === "comment" ||
+        prOutputInput === "none") {
+        return prOutputInput;
+    }
+    return resolveOutputMode(outputInput, commentInput);
 }
 /**
  * Upsert the agentnote markdown section into a PR description body.
@@ -30018,6 +30030,7 @@ const core = __importStar(__nccwpck_require__(7184));
 const github = __importStar(__nccwpck_require__(5683));
 const child_process_1 = __nccwpck_require__(5317);
 const fs_1 = __nccwpck_require__(9896);
+const promises_1 = __nccwpck_require__(1943);
 const path_1 = __nccwpck_require__(6928);
 const helpers_js_1 = __nccwpck_require__(1979);
 /**
@@ -30049,15 +30062,185 @@ function fetchAgentnoteNotes() {
         core.info("No agent-note notes found on remote.");
     }
 }
+function isEnabled(value) {
+    return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+function readGitNote(commitSha) {
+    try {
+        const raw = (0, child_process_1.execSync)(`git notes --ref=agentnote show "${commitSha}"`, {
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
+        if (!raw)
+            return null;
+        return JSON.parse(raw);
+    }
+    catch {
+        return null;
+    }
+}
+async function readDashboardIndex(indexPath) {
+    if (!(0, fs_1.existsSync)(indexPath))
+        return null;
+    try {
+        const raw = await (0, promises_1.readFile)(indexPath, "utf-8");
+        return JSON.parse(raw);
+    }
+    catch {
+        return null;
+    }
+}
+function toDashboardCommitEntry(note, commitSha) {
+    const commit = (note.commit ?? {});
+    const attribution = (note.attribution ?? {});
+    const lines = (attribution.lines ?? {});
+    const interactions = Array.isArray(note.interactions) ? note.interactions : [];
+    const shortSha = typeof commit.short_sha === "string" && commit.short_sha
+        ? commit.short_sha
+        : commitSha.slice(0, 7);
+    return {
+        sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
+        short_sha: shortSha,
+        message: typeof commit.message === "string" && commit.message
+            ? commit.message
+            : shortSha,
+        date: typeof commit.date === "string" ? commit.date : "",
+        author: typeof commit.author === "string" ? commit.author : "",
+        agent: typeof note.agent === "string" ? note.agent : null,
+        model: typeof note.model === "string" ? note.model : null,
+        session_id: typeof note.session_id === "string" ? note.session_id : null,
+        ai_ratio: typeof attribution.ai_ratio === "number" ? attribution.ai_ratio : 0,
+        lines_ai: typeof lines.ai_added === "number" ? lines.ai_added : 0,
+        lines_total: typeof lines.total_added === "number" ? lines.total_added : 0,
+        turns: interactions.length,
+        note_url: `./notes/${shortSha}.json`,
+    };
+}
+function mergeDashboardIndex(existing, repoName, prEntry, commitEntries) {
+    const nextCommits = new Map();
+    for (const commit of existing?.commits ?? []) {
+        nextCommits.set(commit.sha, commit);
+    }
+    for (const commit of commitEntries) {
+        nextCommits.set(commit.sha, commit);
+    }
+    const nextPrs = new Map();
+    for (const pr of existing?.prs ?? []) {
+        nextPrs.set(pr.number, pr);
+    }
+    nextPrs.set(prEntry.number, prEntry);
+    return {
+        version: 1,
+        generated_at: new Date().toISOString(),
+        repo: repoName,
+        prs: [...nextPrs.values()].sort((a, b) => b.number - a.number),
+        commits: [...nextCommits.values()].sort((a, b) => {
+            const dateCompare = b.date.localeCompare(a.date);
+            if (dateCompare !== 0)
+                return dateCompare;
+            return b.short_sha.localeCompare(a.short_sha);
+        }),
+    };
+}
+async function writeDashboardBundle(report, dashboardDirInput) {
+    const pullRequest = github.context.payload.pull_request;
+    if (!pullRequest) {
+        core.info("No pull request context available. Skipping dashboard bundle.");
+        return { dir: (0, path_1.resolve)(dashboardDirInput), commits: 0 };
+    }
+    const dashboardDir = (0, path_1.resolve)(dashboardDirInput);
+    const notesDir = (0, path_1.join)(dashboardDir, "notes");
+    const indexPath = (0, path_1.join)(dashboardDir, "index.json");
+    await (0, promises_1.mkdir)(notesDir, { recursive: true });
+    const repoName = `${github.context.repo.owner}/${github.context.repo.repo}`;
+    const commitEntries = [];
+    const commits = Array.isArray(report.commits)
+        ? report.commits
+        : [];
+    for (const commit of commits) {
+        const sha = typeof commit.sha === "string" ? commit.sha : "";
+        if (!sha)
+            continue;
+        const note = readGitNote(sha);
+        if (!note)
+            continue;
+        const entry = toDashboardCommitEntry(note, sha);
+        await (0, promises_1.writeFile)((0, path_1.join)(notesDir, `${entry.short_sha}.json`), `${JSON.stringify(note, null, 2)}\n`);
+        commitEntries.push(entry);
+    }
+    const existing = await readDashboardIndex(indexPath);
+    const merged = mergeDashboardIndex(existing, repoName, {
+        number: pullRequest.number,
+        title: pullRequest.title,
+        commits: commitEntries.map((commit) => commit.short_sha),
+    }, commitEntries);
+    await (0, promises_1.writeFile)(indexPath, `${JSON.stringify(merged, null, 2)}\n`);
+    core.info(`Agent Note dashboard bundle updated at ${dashboardDir} (${commitEntries.length} commits).`);
+    return { dir: dashboardDir, commits: commitEntries.length };
+}
+async function postPrReport(outputMode, markdown) {
+    if (outputMode === "none")
+        return;
+    if (!markdown || !github.context.payload.pull_request)
+        return;
+    const token = process.env.GITHUB_TOKEN || "";
+    if (!token) {
+        core.warning("No GitHub token available. Skipping PR report.");
+        return;
+    }
+    const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
+    const issueNumber = github.context.payload.pull_request.number;
+    if (outputMode === "description") {
+        const { data: pr } = await octokit.rest.pulls.get({
+            owner,
+            repo,
+            pull_number: issueNumber,
+        });
+        const existingBody = pr.body ?? "";
+        const newBody = (0, helpers_js_1.upsertDescription)(existingBody, markdown);
+        await octokit.rest.pulls.update({
+            owner,
+            repo,
+            pull_number: issueNumber,
+            body: newBody,
+        });
+        core.info("Agent Note report added to PR description.");
+        return;
+    }
+    const body = `${helpers_js_1.COMMENT_MARKER}\n${markdown}`;
+    const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+    const existing = comments.find((comment) => comment.body?.includes(helpers_js_1.COMMENT_MARKER));
+    if (existing) {
+        await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existing.id,
+            body,
+        });
+    }
+    else {
+        await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body,
+        });
+    }
+    core.info("Agent Note report posted as PR comment.");
+}
 async function run() {
     try {
         const base = core.getInput("base") ||
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
         const cliCmd = resolveCliCommand();
-        // Resolve output mode from action inputs.
-        const outputInput = core.getInput("output");
-        const commentInput = core.getInput("comment");
-        const outputMode = (0, helpers_js_1.resolveOutputMode)(outputInput, commentInput);
+        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
+        const dashboardEnabled = isEnabled(core.getInput("dashboard"));
+        const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public/view-demo";
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30088,14 +30271,12 @@ async function run() {
             core.info("No agent-note data found for this PR.");
             return;
         }
-        // Set outputs.
         core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
         core.setOutput("overall_method", String(report.overall_method ?? "file"));
         core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
         core.setOutput("total_commits", String(report.total_commits ?? 0));
         core.setOutput("total_prompts", String(report.total_prompts ?? 0));
         core.setOutput("json", json);
-        // Generate markdown report.
         let markdown = "";
         try {
             markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}"`, {
@@ -30107,64 +30288,16 @@ async function run() {
             markdown = "";
         }
         core.setOutput("markdown", markdown);
-        // Skip posting if comment=false (legacy opt-out).
-        if (commentInput === "false")
-            return;
-        if (!markdown || !github.context.payload.pull_request)
-            return;
-        const token = process.env.GITHUB_TOKEN || "";
-        if (!token) {
-            core.warning("No GitHub token available. Skipping PR report.");
-            return;
+        let dashboardCommits = 0;
+        let dashboardDir = "";
+        if (dashboardEnabled) {
+            const result = await writeDashboardBundle(report, dashboardDirInput);
+            dashboardCommits = result.commits;
+            dashboardDir = result.dir;
         }
-        const octokit = github.getOctokit(token);
-        const { owner, repo } = github.context.repo;
-        const issueNumber = github.context.payload.pull_request.number;
-        if (outputMode === "description") {
-            // Upsert into PR description.
-            const { data: pr } = await octokit.rest.pulls.get({
-                owner,
-                repo,
-                pull_number: issueNumber,
-            });
-            const existingBody = pr.body ?? "";
-            const newBody = (0, helpers_js_1.upsertDescription)(existingBody, markdown);
-            await octokit.rest.pulls.update({
-                owner,
-                repo,
-                pull_number: issueNumber,
-                body: newBody,
-            });
-            core.info("Agent Note report added to PR description.");
-        }
-        else {
-            // Post/update PR comment.
-            const marker = "<!-- agentnote-pr-report -->";
-            const body = `${marker}\n${markdown}`;
-            const { data: comments } = await octokit.rest.issues.listComments({
-                owner,
-                repo,
-                issue_number: issueNumber,
-            });
-            const existing = comments.find((c) => c.body?.includes(marker));
-            if (existing) {
-                await octokit.rest.issues.updateComment({
-                    owner,
-                    repo,
-                    comment_id: existing.id,
-                    body,
-                });
-            }
-            else {
-                await octokit.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: issueNumber,
-                    body,
-                });
-            }
-            core.info("Agent Note report posted as PR comment.");
-        }
+        core.setOutput("dashboard_dir", dashboardDir);
+        core.setOutput("dashboard_commits", String(dashboardCommits));
+        await postPrReport(prOutputMode, markdown);
     }
     catch (error) {
         if (error instanceof Error) {
@@ -30246,6 +30379,14 @@ module.exports = require("events");
 
 "use strict";
 module.exports = require("fs");
+
+/***/ }),
+
+/***/ 1943:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs/promises");
 
 /***/ }),
 

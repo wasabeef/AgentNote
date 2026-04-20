@@ -63,16 +63,19 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       /* ─── App skeleton ─── */
       .app {
         display: grid;
-        grid-template-columns: 320px 1fr;
+        grid-template-columns: 292px minmax(0, 1fr);
         min-height: 100vh;
       }
-      .app.wide {
-        grid-template-columns: 300px 1fr 1fr;
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 268px minmax(0, 1fr);
+        }
       }
       @media (max-width: 960px) {
         .app, .app.wide { grid-template-columns: 1fr; }
         .sidebar {
-          position: fixed; inset: 0; z-index: 40;
+          position: fixed; inset: 0 auto 0 0; z-index: 40;
+          width: min(86vw, 320px);
           transform: translateX(-100%);
           transition: transform 200ms ease;
         }
@@ -212,7 +215,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         padding: 0.65rem 0.85rem;
         border-radius: 10px;
         cursor: pointer;
-        transition: background 120ms, border-color 120ms;
+        transition: background 120ms, border-color 120ms, transform 120ms;
         border: 1px solid transparent;
       }
       .pr-card:hover, .commit-card:hover, .session-card:hover {
@@ -221,6 +224,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       .pr-card.active, .commit-card.active, .session-card.active {
         background: var(--accent-dim);
         border-color: var(--accent);
+        transform: translateY(2px);
       }
       .card-title {
         font-size: 0.83rem;
@@ -263,6 +267,114 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         gap: 0.4rem;
         font-family: 'JetBrains Mono', monospace;
       }
+      .sidebar-tree {
+        margin: 0.12rem 0.55rem 0.55rem 1.1rem;
+        padding-left: 0.75rem;
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.22rem;
+      }
+      .tree-section-label {
+        margin: 0.28rem 0 0.24rem;
+        color: var(--muted-2);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.54rem;
+        letter-spacing: 0.14em;
+        line-height: 1.35;
+        text-transform: uppercase;
+      }
+      .tree-commit,
+      .turn-node {
+        width: 100%;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        text-align: left;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: background 120ms, border-color 120ms, color 120ms, transform 120ms;
+      }
+      .tree-commit {
+        padding: 0.5rem 0.65rem;
+      }
+      .tree-commit:hover,
+      .turn-node:hover {
+        background: var(--panel-2);
+        color: var(--text);
+      }
+      .tree-commit.active {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.28);
+        color: var(--text);
+        transform: translateY(2px);
+      }
+      .tree-commit.scroll-target {
+        border-style: dashed;
+      }
+      .tree-commit-title {
+        font-size: 0.78rem;
+        line-height: 1.35;
+        color: inherit;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .tree-commit-meta {
+        margin-top: 0.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.55rem;
+        font-size: 0.66rem;
+        color: var(--muted-2);
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .tree-commit-meta .sha {
+        color: var(--accent);
+      }
+      .turn-tree {
+        margin: 0.18rem 0 0.35rem 0.7rem;
+        padding-left: 0.75rem;
+        border-left: 1px dashed rgba(100, 116, 139, 0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+      }
+      .turn-node {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 0.4rem;
+        padding: 0.38rem 0.55rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+      }
+      .turn-node.active {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: rgba(96, 165, 250, 0.35);
+        color: var(--text);
+        transform: translateY(2px);
+      }
+      .turn-node-id {
+        color: var(--accent);
+      }
+      .turn-node-text {
+        min-width: 0;
+        line-height: 1.35;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+      }
+      .turn-node-pill {
+        padding: 0.08rem 0.38rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.14);
+        color: var(--text-soft);
+        font-size: 0.64rem;
+      }
 
       /* ─── Main area ─── */
       .main {
@@ -270,11 +382,17 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         max-height: 100vh;
       }
       .main-inner {
-        max-width: 820px;
+        max-width: 860px;
         margin: 0 auto;
-        padding: 1.5rem 1.5rem 6rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 1.25rem clamp(1rem, 2.2vw, 1.5rem) 5rem;
       }
-      .app.wide .main-inner { max-width: 680px; }
+      .main-footer {
+        margin-top: auto;
+        padding-top: 1.25rem;
+      }
 
       .topbar {
         display: flex;
@@ -378,6 +496,95 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         background: linear-gradient(90deg, var(--accent), var(--accent-2));
       }
 
+      .stat.warm {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(96, 165, 250, 0.5);
+        color: #bfdbfe;
+      }
+      .commit-context-grid {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.95fr);
+        gap: 0.8rem;
+      }
+      .commit-context-card {
+        padding: 0.9rem 1rem;
+        background: rgba(2, 6, 23, 0.38);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+      .commit-context-title {
+        margin: 0 0 0.6rem;
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted-2);
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .meta-pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.28rem 0.55rem;
+        border-radius: 999px;
+        background: var(--chip-bg);
+        border: 1px solid var(--border-strong);
+        color: var(--text-soft);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.71rem;
+        min-width: 0;
+      }
+      .meta-pill-label {
+        color: var(--muted-2);
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .meta-pill-value {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .meta-pill.agent-pill {
+        padding-left: 0.34rem;
+      }
+      .commit-file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .commit-file-row {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 9px;
+        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(51, 65, 85, 0.75);
+        color: var(--text-soft);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.74rem;
+      }
+      .commit-file-row .by_ai { color: var(--accent); }
+      .commit-file-row .by_human { color: var(--muted-2); }
+      .commit-file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .commit-file-empty {
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
       /* ─── Tabs / split ─── */
       .view-tabs {
         display: flex;
@@ -400,7 +607,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         color: var(--accent);
         border-bottom-color: var(--accent);
       }
-      .app.wide .view-tabs { display: none; }
 
       /* Chat */
       .chat-pane {
@@ -455,6 +661,28 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         border-color: var(--accent);
         color: var(--accent-2);
       }
+      .avatar.ai-icon {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border-radius: 10px;
+        overflow: hidden;
+        background: transparent;
+        border-color: rgba(148, 163, 184, 0.35);
+        box-shadow: 0 8px 20px rgba(2, 6, 23, 0.35);
+      }
+      .avatar.ai-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .avatar-inline {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        box-shadow: none;
+      }
       .bubble {
         max-width: min(82%, 540px);
         padding: 0.75rem 1rem;
@@ -476,7 +704,15 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         border-bottom-left-radius: 4px;
         border: 1px solid var(--border);
       }
-      .bubble.ai.empty { color: var(--muted-2); font-style: italic; }
+      .bubble.ai.empty {
+        color: var(--muted-2);
+        font-style: italic;
+        display: inline-flex;
+        align-items: center;
+        min-height: 0;
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+      }
       /* ─── Markdown content inside bubbles ─── */
       .md {
         white-space: normal;
@@ -698,28 +934,140 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         font-size: 0.74rem;
       }
 
-      /* ─── Split layout (wide) ─── */
-      .split {
-        display: none;
+      /* Aggregate views */
+      .collection-head {
+        padding: 1.35rem 1.5rem;
+        background:
+          radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 32%),
+          linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 32, 0.96));
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        margin-bottom: 1.25rem;
+        box-shadow: var(--shadow);
       }
-      .app.wide .split {
-        display: grid;
-        grid-template-rows: 1fr;
-        max-height: calc(100vh - 230px);
+      .collection-kicker {
+        margin-bottom: 0.45rem;
+        color: var(--accent-2);
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-family: 'JetBrains Mono', monospace;
       }
-      .app.wide .main-inner {
+      .collection-title {
+        margin: 0;
+        font-size: 1.3rem;
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+      }
+      .collection-subtitle {
+        margin: 0.55rem 0 0;
+        color: var(--text-soft);
+        font-size: 0.95rem;
+        line-height: 1.7;
+      }
+      .collection-jump-list {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+      }
+      .jump-chip {
+        padding: 0.35rem 0.7rem;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        color: var(--text-soft);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        cursor: pointer;
+      }
+      .jump-chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .collection-pane {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        gap: 1rem;
       }
-      .split-pane {
-        overflow-y: auto;
-        padding-right: 0.5rem;
-        scrollbar-width: thin;
-        scrollbar-color: var(--border-strong) transparent;
+      .collection-commit {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(11, 18, 32, 0.95), rgba(15, 23, 42, 0.98));
+        box-shadow: var(--shadow);
       }
-      .split-pane::-webkit-scrollbar { width: 6px; }
-      .split-pane::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+      .collection-commit-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        justify-content: space-between;
+        padding: 1rem 1.15rem;
+        border-bottom: 1px solid var(--border);
+        background: rgba(17, 28, 46, 0.7);
+      }
+      .collection-commit-head-main {
+        min-width: 0;
+      }
+      .collection-commit-kicker {
+        margin-bottom: 0.35rem;
+        color: var(--muted-2);
+        font-size: 0.7rem;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .collection-commit-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.4;
+      }
+      .collection-commit-meta {
+        margin-top: 0.45rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.8rem;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .collection-commit-actions {
+        display: flex;
+        gap: 0.45rem;
+        flex-shrink: 0;
+      }
+      .collection-commit-body {
+        padding: 1rem 1.15rem 1.15rem;
+      }
+      .collection-commit .chat-pane {
+        gap: 1rem;
+      }
+      .collection-commit .bubble {
+        max-width: min(88%, 640px);
+      }
+      .collection-commit details {
+        margin-top: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(2, 6, 23, 0.45);
+      }
+      .collection-commit summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 0.8rem 1rem;
+        color: var(--text-soft);
+        font-size: 0.82rem;
+        font-family: 'JetBrains Mono', monospace;
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom: 1px solid transparent;
+      }
+      .collection-commit details[open] summary {
+        border-bottom-color: var(--border);
+      }
+      .collection-commit summary::-webkit-details-marker {
+        display: none;
+      }
 
       .right-rail {
         padding: 1.5rem 1.25rem;
@@ -727,10 +1075,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         border-left: 1px solid var(--border);
         overflow-y: auto;
         max-height: 100vh;
-      }
-      @media (max-width: 1280px) {
-        .app.wide { grid-template-columns: 300px 1fr; }
-        .app.wide .right-rail { display: none; }
       }
       .right-rail h3 {
         margin: 0 0 0.5rem;
@@ -747,12 +1091,19 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         gap: 0.45rem;
         padding: 0.35rem 0.5rem;
         border-radius: 6px;
-        font-size: 0.78rem;
+        font-size: 0.83rem;
         color: var(--muted);
         font-family: 'JetBrains Mono', monospace;
         cursor: default;
       }
       .right-rail .file-row:hover { background: var(--panel-2); color: var(--text); }
+      .right-rail button.file-row {
+        width: 100%;
+        border: none;
+        background: transparent;
+        text-align: left;
+        font: inherit;
+      }
       .right-rail .file-row .by_ai { color: var(--accent); }
       .right-rail .file-row .by_human { color: var(--muted-2); }
       .right-rail .kv {
@@ -764,6 +1115,43 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       }
       .right-rail .kv dt { color: var(--muted-2); font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
       .right-rail .kv dd { margin: 0; color: var(--text-soft); font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
+      .right-rail .file-row.active {
+        background: var(--accent-dim);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+      }
+      .right-rail .pill {
+        margin-left: auto;
+        padding: 0.08rem 0.4rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.14);
+        color: var(--text-soft);
+        font-size: 0.66rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .right-rail .nav-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: start;
+      }
+      .right-rail .row-id {
+        flex-shrink: 0;
+        font-size: 0.68rem;
+      }
+      .right-rail .row-main {
+        min-width: 0;
+        line-height: 1.35;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+      }
+      .right-rail .nav-row .pill {
+        margin-left: 0;
+        align-self: start;
+        font-size: 0.68rem;
+      }
 
       /* Empty state */
       .empty {
@@ -809,6 +1197,76 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         font-size: 0.75rem;
         color: var(--text-soft);
       }
+      @media (max-width: 960px) {
+        .main {
+          max-height: none;
+        }
+        .main-inner {
+          padding: 1rem 0.9rem 4rem;
+        }
+      }
+      @media (max-width: 720px) {
+        .topbar {
+          gap: 0.4rem;
+        }
+        .spacer {
+          display: none;
+        }
+        .icon-btn {
+          padding: 0.4rem 0.65rem;
+          font-size: 0.74rem;
+        }
+        .commit-head,
+        .collection-head {
+          padding: 1rem;
+        }
+        .collection-commit-head,
+        .collection-commit-body {
+          padding: 0.9rem 1rem;
+        }
+        .commit-context-grid {
+          grid-template-columns: 1fr;
+        }
+        .view-tabs {
+          gap: 0;
+        }
+        .view-tabs button {
+          flex: 1;
+          padding: 0.6rem 0.75rem;
+          text-align: center;
+        }
+        .bubble {
+          max-width: calc(100vw - 5rem);
+        }
+        .turn-label {
+          display: none;
+        }
+        .turn .bubble-footer {
+          margin-left: 0 !important;
+        }
+      }
+      @media (max-width: 560px) {
+        .commit-meta-row {
+          gap: 0.25rem 0.6rem;
+          font-size: 0.74rem;
+        }
+        .stats-row {
+          gap: 0.35rem;
+        }
+        .stat {
+          padding: 0.28rem 0.6rem;
+          font-size: 0.7rem;
+        }
+        .collection-jump-list {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding-bottom: 0.25rem;
+          scrollbar-width: thin;
+        }
+        .jump-chip {
+          white-space: nowrap;
+        }
+      }
     </style>
   </head>
   <body>
@@ -823,7 +1281,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         <div class="tab-row" id="tab-row">
           <button data-tab="prs" class="active">PRs</button>
           <button data-tab="commits">Commits</button>
-          <button data-tab="sessions">Sessions</button>
         </div>
         <div class="search">
           <input id="search-box" type="search" placeholder="Search…" autocomplete="off" />
@@ -842,7 +1299,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
             <button class="icon-btn" id="btn-prev" aria-label="Previous commit">← prev</button>
             <button class="icon-btn" id="btn-next" aria-label="Next commit">next →</button>
             <div class="spacer"></div>
-            <button class="icon-btn" id="btn-share" aria-label="Share">🔗 Share</button>
             <a class="icon-btn" id="btn-github" href={repoUrl} target="_blank" rel="noopener">GitHub ↗</a>
           </div>
 
@@ -852,20 +1308,9 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
               Pick a commit from the sidebar.
             </div>
           </div>
+          <div class="main-footer" id="main-footer"></div>
         </div>
       </main>
-
-      <!-- ─── Right rail (shown only in wide mode) -->
-      <aside class="right-rail" id="rail" hidden>
-        <div class="section">
-          <h3>Meta</h3>
-          <dl class="kv" id="rail-kv"></dl>
-        </div>
-        <div class="section">
-          <h3>Files in Commit</h3>
-          <div id="rail-files"></div>
-        </div>
-      </aside>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -875,8 +1320,12 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         index: null,
         current: null,
         currentNote: null,
+        currentGroupNotes: [],
+        loading: false,
+        loadToken: 0,
+        noteCache: new Map(),
         tab: "chat",            // main tabs: chat | diff
-        sideTab: "prs",         // sidebar tabs: prs | commits | sessions
+        sideTab: "prs",         // sidebar tabs: prs | commits
         search: "",
         flatCommits: [],
         wide: false,
@@ -903,6 +1352,84 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         return String(s).replace(/[&<>"']/g, (c) => ({
           "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
         })[c]);
+      }
+      const AGENT_ICON_LABELS = {
+        claude: "Claude",
+        cursor: "Cursor",
+        gemini: "Gemini",
+        codex: "OpenAI Codex",
+      };
+      const AGENT_SVGS = {
+        claude: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="32" height="32" rx="10" fill="#05070D"/>
+          <path fill="#D87A56" d="M8 10h16v3h3v9h-3v3h-1v4h-2v-4h-3v4h-2v-4h-4v4h-2v-4H9v-3H6v-9h2z"/>
+          <rect x="11" y="14" width="2.2" height="4.2" fill="#05070D"/>
+          <rect x="18.8" y="14" width="2.2" height="4.2" fill="#05070D"/>
+        </svg>`,
+        cursor: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="32" height="32" rx="10" fill="#05070D"/>
+          <path d="M16 4.5 26 10.7V21.3L16 27.5 6 21.3V10.7L16 4.5Z" fill="#F8FAFC"/>
+          <path d="M8.7 11.6H23.5L16.6 23.5V16.8L8.7 11.6Z" fill="#05070D"/>
+        </svg>`,
+        gemini: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="gemini-a" x1="4.5" y1="16" x2="27.5" y2="16" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#FACC15"/>
+              <stop offset="0.52" stop-color="#14B8A6"/>
+              <stop offset="1" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="gemini-b" x1="16" y1="4.5" x2="16" y2="27.5" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#FF4D5A"/>
+              <stop offset="0.58" stop-color="#3B82F6" stop-opacity="0"/>
+              <stop offset="1" stop-color="#22C55E"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="10" fill="#F8FAFC"/>
+          <path d="M16 4.5C17.6 10.5 21.5 14.4 27.5 16C21.5 17.6 17.6 21.5 16 27.5C14.4 21.5 10.5 17.6 4.5 16C10.5 14.4 14.4 10.5 16 4.5Z" fill="url(#gemini-a)"/>
+          <path d="M16 4.5C17.6 10.5 21.5 14.4 27.5 16C21.5 17.6 17.6 21.5 16 27.5C14.4 21.5 10.5 17.6 4.5 16C10.5 14.4 14.4 10.5 16 4.5Z" fill="url(#gemini-b)" fill-opacity="0.9"/>
+        </svg>`,
+        codex: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="32" height="32" rx="10" fill="#05070D"/>
+          <g fill="#F8FAFC" transform="translate(16 16)">
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(0)"/>
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(60)"/>
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(120)"/>
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(180)"/>
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(240)"/>
+            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(300)"/>
+          </g>
+          <polygon points="16,11.2 20.1,13.6 20.1,18.4 16,20.8 11.9,18.4 11.9,13.6" fill="#05070D"/>
+        </svg>`,
+      };
+      function normalizeAgentKey(...parts) {
+        const text = parts
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+          .toLowerCase();
+        if (!text) return null;
+        if (text.includes("claude") || text.includes("anthropic")) return "claude";
+        if (text.includes("cursor")) return "cursor";
+        if (text.includes("gemini")) return "gemini";
+        if (
+          text.includes("codex") ||
+          text.includes("openai") ||
+          text.includes("chatgpt") ||
+          /\bgpt\b/.test(text)
+        ) return "codex";
+        return null;
+      }
+      function renderAgentAvatar(agent, model, compact = false) {
+        const key = normalizeAgentKey(agent, model);
+        const label = AGENT_ICON_LABELS[key] || agent || model || "Unknown AI agent";
+        const compactClass = compact ? " avatar-inline" : "";
+        if (!key) return h("div", { className: "avatar ai" + compactClass, title: label, "aria-label": label }, "🤖");
+        return h("div", {
+          className: "avatar ai-icon" + compactClass,
+          title: label,
+          "aria-label": label,
+          html: AGENT_SVGS[key],
+        });
       }
       function formatDate(iso) {
         if (!iso) return "";
@@ -973,15 +1500,178 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         }).catch(() => { /* keep fallback */ });
       }
 
+      function compactText(text, max = 44) {
+        const singleLine = String(text || "").replace(/\s+/g, " ").trim();
+        if (!singleLine) return "(empty)";
+        return singleLine.length > max ? singleLine.slice(0, max - 1) + "…" : singleLine;
+      }
+      function jumpToAnchor(id) {
+        const url = new URL(window.location.href);
+        url.hash = id;
+        history.replaceState(null, "", url);
+        scrollToId(id);
+      }
+      function tailPath(path) {
+        return String(path || "").split("/").slice(-2).join("/");
+      }
+      function renderMetaPill(label, value, extraChildren = []) {
+        if (value == null || value === "") return null;
+        return h("span", { className: "meta-pill" }, [
+          h("span", { className: "meta-pill-label" }, label),
+          ...extraChildren,
+          h("span", { className: "meta-pill-value", title: String(value) }, String(value)),
+        ]);
+      }
+      function renderAgentPill(agent, model) {
+        if (!agent && !model) return null;
+        const key = normalizeAgentKey(agent, model);
+        const label = AGENT_ICON_LABELS[key] || agent || model || "Unknown AI agent";
+        return h("span", { className: "meta-pill agent-pill" }, [
+          renderAgentAvatar(agent, model, true),
+          h("span", { className: "meta-pill-value" }, label),
+        ]);
+      }
+      function renderCommitFiles(files) {
+        if (!files?.length) return h("div", { className: "commit-file-empty" }, "No files captured");
+        return h("div", { className: "commit-file-list" }, files.map((file) =>
+          h("div", { className: "commit-file-row" }, [
+            h("span", { className: file.by_ai ? "by_ai" : "by_human" }, file.by_ai ? "🤖" : "👤"),
+            h("span", { className: "commit-file-name", title: file.path }, tailPath(file.path)),
+          ])
+        ));
+      }
+      function renderTurnTree(note, anchorPrefix = "") {
+        const turns = note?.interactions || [];
+        if (turns.length === 0) return null;
+        const activeHash = (window.location.hash || "").replace(/^#/, "");
+        return h("div", { className: "turn-tree" }, [
+          h("div", { className: "tree-section-label" }, "Turns"),
+          ...turns.map((interaction, idx) => {
+            const turnId = anchorPrefix + "t-" + (idx + 1);
+            return h("button", {
+              className: "turn-node" + (activeHash === turnId ? " active" : ""),
+              onClick: (e) => {
+                e.stopPropagation();
+                jumpToAnchor(turnId);
+                renderSidebar();
+                closeMobileSidebar();
+              },
+            }, [
+              h("span", { className: "turn-node-id" }, "#" + (idx + 1)),
+              h("span", { className: "turn-node-text" }, compactText(interaction.prompt, 48)),
+              (interaction.tools?.length || 0) > 0 && h("span", { className: "turn-node-pill" }, interaction.tools.length + "t"),
+            ].filter(Boolean));
+          }),
+        ]);
+      }
+      function queryMatches(fields) {
+        const q = state.search.trim().toLowerCase();
+        if (!q) return true;
+        const haystack = [];
+        for (const field of fields) {
+          if (Array.isArray(field)) haystack.push(...field);
+          else haystack.push(field);
+        }
+        return haystack.filter(Boolean).join(" ").toLowerCase().includes(q);
+      }
+      function sortCommitSummaries(commits, direction = "desc") {
+        return [...commits].sort((a, b) => {
+          const left = a?.date || "";
+          const right = b?.date || "";
+          return direction === "asc" ? left.localeCompare(right) : right.localeCompare(left);
+        });
+      }
+      function getCommitSummary(shortSha) {
+        return (state.index?.commits || []).find((c) => c.short_sha === shortSha || c.sha === shortSha);
+      }
+      function getPRForCommit(shortSha) {
+        return (state.index?.prs || []).find((pr) => pr.commits.includes(shortSha));
+      }
+      async function loadNoteForSummary(summary) {
+        if (state.noteCache.has(summary.short_sha)) return state.noteCache.get(summary.short_sha);
+        const baseAbs = new URL(indexPath, window.location.origin).toString();
+        const noteUrl = new URL(summary.note_url, baseAbs).toString();
+        const res = await fetch(noteUrl);
+        if (!res.ok) throw new Error("Failed to load note: " + summary.short_sha);
+        const note = await res.json();
+        state.noteCache.set(summary.short_sha, note);
+        if (!summary.session_id && note.session_id) summary.session_id = note.session_id;
+        return note;
+      }
+      async function loadNotesForSummaries(summaries) {
+        const notes = await Promise.all(
+          summaries.map(async (summary) => {
+            try {
+              return await loadNoteForSummary(summary);
+            } catch {
+              return null;
+            }
+          })
+        );
+        return notes
+          .filter(Boolean)
+          .sort((a, b) => (a.commit?.date || "").localeCompare(b.commit?.date || ""));
+      }
+
       // ─── Sidebar ───
       function getFilteredCommits() {
-        const q = state.search.trim().toLowerCase();
         const commits = state.index?.commits || [];
-        if (!q) return commits;
-        return commits.filter((c) => {
-          const hay = [c.message, c.short_sha, c.author, c.agent].filter(Boolean).join(" ").toLowerCase();
-          return hay.includes(q);
+        return commits.filter((c) =>
+          queryMatches([c.message, c.short_sha, c.author, c.agent, c.model])
+        );
+      }
+      function getFilteredPRs() {
+        const prs = state.index?.prs || [];
+        return prs.filter((pr) => {
+          const summaries = pr.commits.map((sha) => getCommitSummary(sha)).filter(Boolean);
+          return queryMatches([
+            "#" + pr.number,
+            pr.title,
+            summaries.map((s) => [s.message, s.short_sha, s.author, s.agent]),
+          ]);
         });
+      }
+      function commitSectionIdFromSummary(summary) {
+        return "commit-" + (summary?.short_sha || (summary?.sha || "").slice(0, 7));
+      }
+      function renderSidebarCommitNode(summary, options = {}) {
+        const mode = options.mode || "select";
+        const note = options.note || null;
+        const showTurns = !!options.showTurns;
+        const anchorPrefix = options.anchorPrefix || "";
+        const sectionId = commitSectionIdFromSummary(summary);
+        const activeCommit = state.current?.mode === "commit" && state.current.commit === summary.short_sha;
+        const activeHash = (window.location.hash || "").replace(/^#/, "");
+        const highlighted =
+          mode === "scroll" &&
+          (activeHash === sectionId || activeHash.startsWith(anchorPrefix + "t-"));
+        return h("div", {}, [
+          h("button", {
+            className:
+              "tree-commit" +
+              (activeCommit || highlighted ? " active" : "") +
+              (mode === "scroll" ? " scroll-target" : ""),
+            onClick: (e) => {
+              e.stopPropagation();
+              if (mode === "scroll") {
+                jumpToAnchor(sectionId);
+                closeMobileSidebar();
+                return;
+              }
+              selectCommit(summary.short_sha);
+            },
+          }, [
+            h("div", { className: "tree-commit-title" }, summary.message || "(no message)"),
+            h("div", { className: "tree-commit-meta" }, [
+              h("span", { className: "sha" }, summary.short_sha),
+              h("span", {}, "🤖 " + (summary.ai_ratio ?? 0) + "%"),
+              h("span", {}, (summary.turns ?? 0) + " turns"),
+              summary.date && h("span", {}, formatDate(summary.date)),
+            ].filter(Boolean)),
+          ]),
+          showTurns && note && renderTurnTree(note, anchorPrefix),
+          !showTurns && activeCommit && state.currentNote && renderTurnTree(state.currentNote),
+        ].filter(Boolean));
       }
 
       function renderSidebar() {
@@ -989,9 +1679,10 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         list.innerHTML = "";
         if (!state.index) return;
         const filtered = getFilteredCommits();
+        const filteredCommitIds = new Set(filtered.map((commit) => commit.short_sha));
 
         if (state.sideTab === "prs") {
-          const prs = state.index.prs || [];
+          const prs = getFilteredPRs();
           if (prs.length === 0) {
             list.appendChild(h("div", { className: "empty" }, "No PRs yet"));
             return;
@@ -1001,10 +1692,14 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
             const prCommits = pr.commits
               .map((sha) => state.index.commits.find((c) => c.short_sha === sha || c.sha === sha))
               .filter(Boolean);
+            const prNotesByShortSha = new Map(
+              (state.currentGroupNotes || []).map((note) => [note.commit?.short_sha, note])
+            );
             const avgRatio = prCommits.length
               ? Math.round(prCommits.reduce((a, c) => a + (c.ai_ratio ?? 0), 0) / prCommits.length)
               : 0;
             const active = state.current?.prNumber === pr.number;
+            const branch = h("div", { className: "sidebar-branch" }, []);
             const card = h("div", {
               className: "pr-card" + (active ? " active" : ""),
               onClick: () => selectPR(pr.number),
@@ -1016,7 +1711,31 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
               ]),
               h("div", { className: "ratio-bar" }, h("span", { style: "width:" + avgRatio + "%;" })),
             ]);
-            list.appendChild(card);
+            branch.appendChild(card);
+            if (active) {
+              const visibleCommits = prCommits.filter((commit) => !state.search || filteredCommitIds.has(commit.short_sha));
+              if (visibleCommits.length > 0) {
+                branch.appendChild(h(
+                  "div",
+                  { className: "sidebar-tree" },
+                  [
+                    h("div", { className: "tree-section-label" }, "Commits"),
+                    ...visibleCommits.map((commit) =>
+                    renderSidebarCommitNode(
+                      commit,
+                      {
+                        mode: state.current?.mode === "pr" ? "scroll" : "select",
+                        note: prNotesByShortSha.get(commit.short_sha) || null,
+                        showTurns: state.current?.mode === "pr",
+                        anchorPrefix: `${commit.short_sha}-`,
+                      },
+                    )
+                  ),
+                  ]
+                ));
+              }
+            }
+            list.appendChild(branch);
           }
           return;
         }
@@ -1029,92 +1748,83 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
             return;
           }
           for (const c of sorted) {
-            const active = state.current?.commit === c.short_sha;
-            const item = h("div", {
-              className: "commit-card" + (active ? " active" : ""),
-              onClick: () => selectCommit(c.short_sha),
-            }, [
-              h("div", { className: "card-title" }, c.message || "(no message)"),
-              h("div", { className: "card-meta" }, [
-                h("span", { className: "sha" }, c.short_sha),
-                h("span", { className: "ratio" }, "🤖 " + (c.ai_ratio ?? 0) + "%"),
-                h("span", {}, c.turns + "p"),
-                c.date && h("span", {}, formatDate(c.date)),
-              ].filter(Boolean)),
-            ]);
-            list.appendChild(item);
+            list.appendChild(h("div", { className: "sidebar-branch" }, [
+              renderSidebarCommitNode(c, { mode: "select" }),
+            ]));
           }
           return;
-        }
-
-        if (state.sideTab === "sessions") {
-          list.appendChild(h("div", { className: "group-label" }, "Sessions"));
-          // group commits by session_id
-          const sessions = new Map();
-          for (const c of filtered) {
-            const sid = c.session_id || "(unknown)";
-            if (!sessions.has(sid)) sessions.set(sid, []);
-            sessions.get(sid).push(c);
-          }
-          if (sessions.size === 0) {
-            list.appendChild(h("div", { className: "empty" }, "No sessions"));
-            return;
-          }
-          for (const [sid, commits] of sessions) {
-            const short = sid.slice(0, 8);
-            const active = state.current?.session === sid;
-            const avgRatio = Math.round(commits.reduce((a, c) => a + (c.ai_ratio ?? 0), 0) / commits.length);
-            const card = h("div", {
-              className: "session-card" + (active ? " active" : ""),
-              onClick: () => commits[0] && selectCommit(commits[0].short_sha),
-            }, [
-              h("div", { className: "card-title" }, "Session " + short),
-              h("div", { className: "card-meta" }, [
-                h("span", {}, commits.length + " commits"),
-                h("span", { className: "ratio" }, "🤖 " + avgRatio + "%"),
-              ]),
-            ]);
-            list.appendChild(card);
-          }
         }
       }
 
       // ─── Navigation ───
       async function selectCommit(shortSha) {
-        const summary = (state.index?.commits || []).find((c) => c.short_sha === shortSha);
+        const summary = getCommitSummary(shortSha);
         if (!summary) return;
-        // Find which PR contains this commit
-        const pr = (state.index.prs || []).find((p) => p.commits.includes(shortSha));
+        const pr = getPRForCommit(shortSha);
+        state.loading = true;
         state.current = {
+          mode: "commit",
           commit: shortSha,
           prNumber: pr?.number ?? null,
-          session: summary.session_id ?? null,
         };
+        state.currentNote = null;
+        state.currentGroupNotes = [];
         setUrlParam("commit", shortSha);
         setUrlParam("pr", pr?.number ?? null);
-        try {
-          const baseAbs = new URL(indexPath, window.location.origin).toString();
-          const noteUrl = new URL(summary.note_url, baseAbs).toString();
-          const res = await fetch(noteUrl);
-          state.currentNote = await res.json();
-        } catch (err) {
-          state.currentNote = null;
-        }
         renderSidebar();
         renderMain();
         renderRail();
         updateNavButtons();
         closeMobileSidebar();
+        const token = ++state.loadToken;
+        try {
+          const note = await loadNoteForSummary(summary);
+          if (token !== state.loadToken) return;
+          state.currentNote = note;
+        } catch {
+          if (token !== state.loadToken) return;
+          state.currentNote = null;
+        }
+        if (token !== state.loadToken) return;
+        state.loading = false;
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
       }
 
-      function selectPR(num) {
+      async function selectPR(num) {
         const pr = (state.index?.prs || []).find((p) => p.number === num);
-        if (!pr?.commits?.length) return;
-        // open first commit in PR
-        selectCommit(pr.commits[0]);
+        const summaries = pr?.commits?.map((sha) => getCommitSummary(sha)).filter(Boolean) || [];
+        if (summaries.length === 0) return;
+        state.loading = true;
+        state.current = {
+          mode: "pr",
+          commit: null,
+          prNumber: num,
+        };
+        state.currentNote = null;
+        state.currentGroupNotes = [];
+        setUrlParam("commit", null);
+        setUrlParam("pr", num);
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
+        closeMobileSidebar();
+        const token = ++state.loadToken;
+        const notes = await loadNotesForSummaries(sortCommitSummaries(summaries, "asc"));
+        if (token !== state.loadToken) return;
+        state.currentGroupNotes = notes;
+        state.loading = false;
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
       }
 
       function neighborCommit(dir) {
+        if (state.current?.mode !== "commit") return null;
         const list = state.flatCommits;
         const idx = list.findIndex((c) => c.short_sha === state.current?.commit);
         if (idx === -1) return null;
@@ -1129,13 +1839,83 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         document.getElementById("btn-next").toggleAttribute("disabled", !next);
       }
 
+      function summarizeNotes(notes) {
+        const fileCounts = new Map();
+        const agents = new Set();
+        const authors = new Set();
+        let turns = 0;
+        let aiAdded = 0;
+        let totalAdded = 0;
+        let deleted = 0;
+        let ratioTotal = 0;
+        const prNumbers = new Set();
+
+        for (const note of notes) {
+          turns += note.interactions?.length || 0;
+          aiAdded += note.attribution?.lines?.ai_added ?? 0;
+          totalAdded += note.attribution?.lines?.total_added ?? 0;
+          deleted += note.attribution?.lines?.deleted ?? 0;
+          ratioTotal += note.attribution?.ai_ratio ?? 0;
+          if (note.agent) agents.add(note.agent);
+          if (note.commit?.author) authors.add(note.commit.author);
+          const pr = getPRForCommit(note.commit?.short_sha);
+          if (pr?.number != null) prNumbers.add(pr.number);
+          for (const file of note.files || []) {
+            const current = fileCounts.get(file.path) || { path: file.path, count: 0, aiCount: 0 };
+            current.count += 1;
+            if (file.by_ai) current.aiCount += 1;
+            fileCounts.set(file.path, current);
+          }
+        }
+
+        const sortedByDate = [...notes].sort((a, b) => (a.commit?.date || "").localeCompare(b.commit?.date || ""));
+        return {
+          commits: notes.length,
+          turns,
+          aiAdded,
+          totalAdded,
+          deleted,
+          uniqueFiles: fileCounts.size,
+          avgRatio: notes.length ? Math.round(ratioTotal / notes.length) : 0,
+          firstDate: sortedByDate[0]?.commit?.date ?? null,
+          lastDate: sortedByDate[sortedByDate.length - 1]?.commit?.date ?? null,
+          agents: [...agents],
+          authors: [...authors],
+          prNumbers: [...prNumbers],
+          fileCounts: [...fileCounts.values()].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)),
+        };
+      }
+      function commitSectionId(note) {
+        return commitSectionIdFromSummary(note.commit || {});
+      }
+      function scrollToId(id) {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      function updateGitHubLink() {
+        const link = document.getElementById("btn-github");
+        if (!link) return;
+        let href = repoUrl;
+        let label = "GitHub ↗";
+        if (state.current?.mode === "commit" && state.currentNote?.commit?.sha) {
+          href = `${repoUrl}/commit/${state.currentNote.commit.sha}`;
+          label = `Commit ${state.currentNote.commit.short_sha || state.currentNote.commit.sha.slice(0, 7)} ↗`;
+        } else if (state.current?.mode === "pr" && state.current?.prNumber != null) {
+          href = `${repoUrl}/pull/${state.current.prNumber}`;
+          label = `PR #${state.current.prNumber} ↗`;
+        }
+        link.href = href;
+        link.textContent = label;
+      }
+
       // ─── Main ───
       function renderCommitHeader(note) {
         const c = note.commit || {};
         const attr = note.attribution || {};
         const files = note.files || [];
-        const aiFiles = files.filter((f) => f.by_ai).length;
         const ratio = attr.ai_ratio ?? 0;
+        const lines = attr.lines || {};
+        const sessionShort = note.session_id ? `${note.session_id.slice(0, 8)}…` : null;
 
         const shaSpan = h("span", {
           className: "sha",
@@ -1151,8 +1931,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
           h("h1", { className: "commit-title" }, c.message || "(no message)"),
           h("div", { className: "commit-meta-row" }, [
             shaSpan,
-            note.agent && h("span", {}, note.agent),
-            note.model && h("span", {}, note.model),
             c.author && h("span", {}, c.author),
             c.date && h("span", {}, formatDateTime(c.date)),
           ].filter(Boolean)),
@@ -1161,16 +1939,32 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
               h("span", {}, "🤖 " + ratio + "%"),
               h("span", { className: "track" }, h("span", { style: "width:" + ratio + "%;" })),
             ]),
-            attr.lines && h("span", { className: "stat outline" }, attr.lines.ai_added + "/" + attr.lines.total_added + " lines"),
-            files.length > 0 && h("span", { className: "stat outline" }, aiFiles + "/" + files.length + " files"),
             note.interactions && h("span", { className: "stat outline" }, note.interactions.length + " turns"),
           ].filter(Boolean)),
+          h("div", { className: "commit-context-grid" }, [
+            h("section", { className: "commit-context-card" }, [
+              h("h2", { className: "commit-context-title" }, "Meta"),
+              h("div", { className: "meta-pill-row" }, [
+                renderAgentPill(note.agent, note.model),
+                renderMetaPill("model", note.model),
+                renderMetaPill("session", sessionShort, []),
+                renderMetaPill("method", attr.method),
+                renderMetaPill("added", `${lines.ai_added ?? 0} / ${lines.total_added ?? 0}`),
+                renderMetaPill("deleted", String(lines.deleted ?? 0)),
+              ].filter(Boolean)),
+            ]),
+            h("section", { className: "commit-context-card" }, [
+              h("h2", { className: "commit-context-title" }, "Files in Commit"),
+              renderCommitFiles(files),
+            ]),
+          ]),
         ]);
       }
 
-      function renderTurn(interaction, idx, total) {
+      function renderTurn(interaction, idx, total, agent, model, anchorPrefix = "") {
         const tools = interaction.tools || [];
         const files = interaction.files_touched || [];
+        const turnId = anchorPrefix + "t-" + (idx + 1);
 
         // User bubble — prompts are usually plain text (user input), render as markdown too for inline code support
         const userBody = h("div", {});
@@ -1190,7 +1984,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
                 title: "Permalink",
                 onClick: () => {
                   const url = new URL(window.location.href);
-                  url.hash = "t-" + (idx + 1);
+                  url.hash = turnId;
                   copyToClipboard(url.toString());
                 },
               }, "🔗"),
@@ -1206,7 +2000,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         if (hasResp) renderMarkdownInto(aiBody, interaction.response);
         else aiBody.textContent = "(no response captured)";
         const aiRow = h("div", { className: "bubble-row from-ai" }, [
-          h("div", { className: "avatar ai" }, "🤖"),
+          renderAgentAvatar(agent, model),
           h("div", { className: "bubble ai" + (hasResp ? "" : " empty") }, [
             h("div", { className: "bubble-actions" }, [
               h("button", {
@@ -1222,7 +2016,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         for (const t of tools) footer.push(h("span", { className: "chip tool" }, t));
         for (const f of files) footer.push(h("span", { className: "chip file" }, f.split("/").pop()));
 
-        return h("div", { className: "turn", id: "t-" + (idx + 1) }, [
+        return h("div", { className: "turn", id: turnId }, [
           h("div", { className: "turn-divider" }, "turn " + (idx + 1) + " / " + total),
           userRow,
           aiRow,
@@ -1230,10 +2024,12 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         ].filter(Boolean));
       }
 
-      function renderChat(note) {
+      function renderChat(note, anchorPrefix = "") {
         const thread = h("div", { className: "chat-pane" });
         const interactions = note.interactions || [];
-        interactions.forEach((i, idx) => thread.appendChild(renderTurn(i, idx, interactions.length)));
+        interactions.forEach((i, idx) => {
+          thread.appendChild(renderTurn(i, idx, interactions.length, note.agent, note.model, anchorPrefix));
+        });
         return thread;
       }
 
@@ -1307,6 +2103,74 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         }
         return wrap;
       }
+      function renderCollectionHeader(notes) {
+        const summary = summarizeNotes(notes);
+        const pr = (state.index?.prs || []).find((item) => item.number === state.current?.prNumber);
+        const title = `PR #${pr?.number ?? state.current?.prNumber} · ${pr?.title || "Merged conversation"}`;
+        const subtitle = "Read the whole conversation arc across commits before drilling into a single diff.";
+
+        return h("div", { className: "collection-head" }, [
+          h("div", { className: "collection-kicker" }, "Pull Request Story"),
+          h("h1", { className: "collection-title" }, title),
+          h("p", { className: "collection-subtitle" }, subtitle),
+          h("div", { className: "stats-row" }, [
+            h("span", { className: "stat primary bar" }, [
+              h("span", {}, "🤖 " + summary.avgRatio + "%"),
+              h("span", { className: "track" }, h("span", { style: "width:" + summary.avgRatio + "%;" })),
+            ]),
+            h("span", { className: "stat outline" }, summary.commits + " commits"),
+            h("span", { className: "stat outline" }, summary.turns + " turns"),
+            h("span", { className: "stat outline" }, summary.uniqueFiles + " files"),
+            h("span", { className: "stat warm" }, `${summary.aiAdded}/${summary.totalAdded} AI-added lines`),
+          ]),
+          h("div", { className: "collection-subtitle", style: "margin-top:0.85rem;" }, [
+            summary.firstDate && h("span", {}, `${formatDate(summary.firstDate)} → ${formatDate(summary.lastDate)}`),
+            summary.authors.length > 0 && h("span", {}, ` · ${summary.authors.join(", ")}`),
+            summary.agents.length > 0 && h("span", {}, ` · ${summary.agents.join(", ")}`),
+          ].filter(Boolean)),
+          h("div", { className: "collection-jump-list" },
+            notes.map((note) => h("button", {
+              className: "jump-chip",
+              onClick: () => jumpToAnchor(commitSectionId(note)),
+            }, `${note.commit?.short_sha} · ${compactText(note.commit?.message, 28)}`))
+          ),
+        ]);
+      }
+      function renderCollectionCommit(note, idx, total) {
+        const commit = note.commit || {};
+        const ratio = note.attribution?.ai_ratio ?? 0;
+        return h("section", { className: "collection-commit", id: commitSectionId(note) }, [
+          h("div", { className: "collection-commit-head" }, [
+            h("div", { className: "collection-commit-head-main" }, [
+              h("div", { className: "collection-commit-kicker" }, `Commit ${idx + 1} of ${total}`),
+              h("h2", { className: "collection-commit-title" }, commit.message || "(no message)"),
+              h("div", { className: "collection-commit-meta" }, [
+                h("span", { className: "sha" }, commit.short_sha || (commit.sha || "").slice(0, 7)),
+                commit.author && h("span", {}, commit.author),
+                commit.date && h("span", {}, formatDateTime(commit.date)),
+                h("span", { className: "ratio" }, `🤖 ${ratio}%`),
+                h("span", {}, `${note.interactions?.length || 0} turns`),
+              ].filter(Boolean)),
+            ]),
+            h("div", { className: "collection-commit-actions" }, [
+              h("button", {
+                className: "icon-btn primary",
+                onClick: () => selectCommit(commit.short_sha || (commit.sha || "").slice(0, 7)),
+              }, "Open commit"),
+            ]),
+          ]),
+          h("div", { className: "collection-commit-body" }, [
+            renderChat(note, `${commit.short_sha || (commit.sha || "").slice(0, 7)}-`),
+            h("details", {}, [
+              h("summary", {}, `Show diff (${note.diff?.files?.length || 0} files)`),
+              renderDiff(note),
+            ]),
+          ]),
+        ]);
+      }
+      function renderCollection(notes) {
+        return h("div", { className: "collection-pane" }, notes.map((note, idx) => renderCollectionCommit(note, idx, notes.length)));
+      }
 
       function renderViewTabs() {
         const tabs = [
@@ -1328,32 +2192,55 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       function renderKeyboardHints() {
         return h("div", { className: "hints" }, [
           h("span", {}, "Tip: "),
-          h("kbd", {}, "/"), " to focus search · hover a bubble for copy / permalink.",
+          h("kbd", {}, "/"), " to focus search · use the sidebar tree or jump chips to move through the story.",
         ]);
       }
 
       function renderMain() {
         const root = document.getElementById("root");
+        const footer = document.getElementById("main-footer");
         root.innerHTML = "";
-        if (!state.currentNote) {
+        footer.innerHTML = "";
+        footer.appendChild(renderKeyboardHints());
+        updateGitHubLink();
+        if (state.loading) {
+          root.appendChild(h("div", { className: "empty" }, [
+            h("div", { className: "big" }, "⏳"),
+            "Loading captured notes…",
+          ]));
+          return;
+        }
+        if (!state.current) {
           root.appendChild(h("div", { className: "empty" }, [
             h("div", { className: "big" }, "💬"),
             "Pick a commit from the sidebar.",
           ]));
           return;
         }
-        const note = state.currentNote;
-        root.appendChild(renderCommitHeader(note));
-
-        if (state.wide) {
-          const splitChat = h("div", { className: "split-pane" }, renderChat(note));
-          const splitDiff = h("div", { className: "split-pane" }, renderDiff(note));
-          root.appendChild(h("div", { className: "split" }, [splitChat, splitDiff]));
-        } else {
+        if (state.current.mode === "commit") {
+          if (!state.currentNote) {
+            root.appendChild(h("div", { className: "empty" }, [
+              h("div", { className: "big" }, "📭"),
+              "No note data found for this commit.",
+            ]));
+            return;
+          }
+          const note = state.currentNote;
+          root.appendChild(renderCommitHeader(note));
           root.appendChild(renderViewTabs());
           root.appendChild(state.tab === "diff" ? renderDiff(note) : renderChat(note));
+        } else {
+          const notes = state.currentGroupNotes;
+          if (notes.length === 0) {
+            root.appendChild(h("div", { className: "empty" }, [
+              h("div", { className: "big" }, "📭"),
+              "No note data found for this selection.",
+            ]));
+            return;
+          }
+          root.appendChild(renderCollectionHeader(notes));
+          root.appendChild(renderCollection(notes));
         }
-        root.appendChild(renderKeyboardHints());
 
         // Scroll to anchor if any
         if (window.location.hash) {
@@ -1363,34 +2250,7 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       }
 
       function renderRail() {
-        const rail = document.getElementById("rail");
-        if (!state.wide || !state.currentNote) { rail.hidden = true; return; }
-        rail.hidden = false;
-        const note = state.currentNote;
-        const kv = document.getElementById("rail-kv");
-        kv.innerHTML = "";
-        const rows = [
-          ["agent", note.agent],
-          ["model", note.model],
-          ["session", (note.session_id || "").slice(0, 8) + "…"],
-          ["method", note.attribution?.method],
-          ["added", (note.attribution?.lines?.ai_added ?? 0) + " / " + (note.attribution?.lines?.total_added ?? 0)],
-          ["deleted", String(note.attribution?.lines?.deleted ?? 0)],
-        ];
-        for (const [k, v] of rows) {
-          if (v == null) continue;
-          kv.appendChild(h("dt", {}, k));
-          kv.appendChild(h("dd", {}, String(v)));
-        }
-
-        const files = document.getElementById("rail-files");
-        files.innerHTML = "";
-        for (const f of note.files || []) {
-          files.appendChild(h("div", { className: "file-row" }, [
-            h("span", { className: f.by_ai ? "by_ai" : "by_human" }, f.by_ai ? "🤖" : "👤"),
-            h("span", { title: f.path }, f.path.split("/").slice(-2).join("/")),
-          ]));
-        }
+        return;
       }
 
       // ─── Mobile sidebar drawer ───
@@ -1404,9 +2264,9 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
       }
 
       // ─── Wide mode detect ───
-      function detectWide() {
-        state.wide = window.innerWidth >= 1280;
-        document.getElementById("app").classList.toggle("wide", state.wide);
+      function detectLayout() {
+        state.wide = false;
+        document.getElementById("app").classList.remove("wide");
       }
 
       // ─── Init ───
@@ -1420,9 +2280,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         document.getElementById("btn-next").addEventListener("click", () => {
           const s = neighborCommit(1);
           if (s) selectCommit(s);
-        });
-        document.getElementById("btn-share").addEventListener("click", () => {
-          copyToClipboard(window.location.href);
         });
       }
 
@@ -1467,20 +2324,16 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         const pr = p.get("pr");
         if (pr && state.index?.prs) {
           const match = state.index.prs.find((x) => String(x.number) === pr);
-          if (match?.commits?.length) return selectCommit(match.commits[0]);
+          if (match?.commits?.length) return selectPR(match.number);
         }
+        if (state.index?.prs?.length) return selectPR(state.index.prs[0].number);
         if (state.index?.commits?.length) return selectCommit(state.index.commits[0].short_sha);
       }
 
       async function init() {
-        detectWide();
+        detectLayout();
         window.addEventListener("resize", () => {
-          const old = state.wide;
-          detectWide();
-          if (old !== state.wide) {
-            renderMain();
-            renderRail();
-          }
+          detectLayout();
         });
 
         try {
@@ -1495,7 +2348,6 @@ const repoUrl = "https://github.com/wasabeef/AgentNote";
         // Build flat-sorted commit list for keyboard/prev/next (newest first)
         state.flatCommits = [...(state.index.commits || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
-        // For each commit, try to grab session_id from fetched note (lazy) or default to null
         bindTopbar();
         bindSidebarTabs();
         bindKeyboard();
