@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "child_process";
 import { existsSync } from "fs";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
 import { join, resolve } from "path";
 import {
 	COMMENT_MARKER,
@@ -85,6 +85,30 @@ function withDashboardMetadata(
 	};
 }
 
+async function removeDashboardNotesForPr(
+	notesDir: string,
+	prNumber: number,
+): Promise<void> {
+	if (!existsSync(notesDir)) return;
+
+	for (const name of await readdir(notesDir)) {
+		if (!name.endsWith(".json")) continue;
+		const path = join(notesDir, name);
+
+		try {
+			const note = JSON.parse(
+				await readFile(path, "utf-8"),
+			) as Record<string, unknown>;
+			const pullRequest = (note.pull_request ?? {}) as Record<string, unknown>;
+			if (pullRequest.number === prNumber) {
+				await rm(path, { force: true });
+			}
+		} catch {
+			// Ignore malformed dashboard files and leave them untouched.
+		}
+	}
+}
+
 async function writeDashboardBundle(
 	report: Record<string, unknown>,
 	dashboardDirInput: string,
@@ -98,6 +122,7 @@ async function writeDashboardBundle(
 	const dashboardDir = resolve(dashboardDirInput);
 	const notesDir = join(dashboardDir, "notes");
 	await mkdir(notesDir, { recursive: true });
+	await removeDashboardNotesForPr(notesDir, pullRequest.number);
 
 	let writtenCommits = 0;
 	const commits = Array.isArray(report.commits)

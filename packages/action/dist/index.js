@@ -29950,9 +29950,13 @@ function resolveOutputMode(outputInput, commentInput) {
 }
 /**
  * Resolve PR output mode from modern and legacy action inputs.
- * `pr_output` takes precedence, then `output`, then legacy `comment=false`.
+ * `comment=false` remains a hard opt-out for backward compatibility.
+ * Otherwise `pr_output` takes precedence, then `output`.
  */
 function resolvePrOutputMode(prOutputInput, outputInput, commentInput) {
+    if (commentInput === "false") {
+        return "none";
+    }
     if (prOutputInput === "description" ||
         prOutputInput === "comment" ||
         prOutputInput === "none") {
@@ -30097,6 +30101,25 @@ function withDashboardMetadata(note, commitSha, pullRequest) {
         },
     };
 }
+async function removeDashboardNotesForPr(notesDir, prNumber) {
+    if (!(0, fs_1.existsSync)(notesDir))
+        return;
+    for (const name of await (0, promises_1.readdir)(notesDir)) {
+        if (!name.endsWith(".json"))
+            continue;
+        const path = (0, path_1.join)(notesDir, name);
+        try {
+            const note = JSON.parse(await (0, promises_1.readFile)(path, "utf-8"));
+            const pullRequest = (note.pull_request ?? {});
+            if (pullRequest.number === prNumber) {
+                await (0, promises_1.rm)(path, { force: true });
+            }
+        }
+        catch {
+            // Ignore malformed dashboard files and leave them untouched.
+        }
+    }
+}
 async function writeDashboardBundle(report, dashboardDirInput) {
     const pullRequest = github.context.payload.pull_request;
     if (!pullRequest) {
@@ -30106,6 +30129,7 @@ async function writeDashboardBundle(report, dashboardDirInput) {
     const dashboardDir = (0, path_1.resolve)(dashboardDirInput);
     const notesDir = (0, path_1.join)(dashboardDir, "notes");
     await (0, promises_1.mkdir)(notesDir, { recursive: true });
+    await removeDashboardNotesForPr(notesDir, pullRequest.number);
     let writtenCommits = 0;
     const commits = Array.isArray(report.commits)
         ? report.commits

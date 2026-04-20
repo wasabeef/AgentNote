@@ -41,6 +41,11 @@ describe("resolvePrOutputMode", () => {
 		assert.equal(resolvePrOutputMode("description", "comment", ""), "description");
 	});
 
+	it('treats "comment=false" as a hard opt-out even when outputs are set', () => {
+		assert.equal(resolvePrOutputMode("description", "", "false"), "none");
+		assert.equal(resolvePrOutputMode("", "comment", "false"), "none");
+	});
+
 	it("falls back to legacy inputs when pr_output is unset", () => {
 		assert.equal(resolvePrOutputMode("", "comment", ""), "comment");
 		assert.equal(resolvePrOutputMode("", "", "false"), "none");

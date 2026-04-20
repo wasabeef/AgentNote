@@ -20,13 +20,17 @@ export function resolveOutputMode(
 
 /**
  * Resolve PR output mode from modern and legacy action inputs.
- * `pr_output` takes precedence, then `output`, then legacy `comment=false`.
+ * `comment=false` remains a hard opt-out for backward compatibility.
+ * Otherwise `pr_output` takes precedence, then `output`.
  */
 export function resolvePrOutputMode(
 	prOutputInput: string,
 	outputInput: string,
 	commentInput: string,
 ): "description" | "comment" | "none" {
+	if (commentInput === "false") {
+		return "none";
+	}
 	if (
 		prOutputInput === "description" ||
 		prOutputInput === "comment" ||
