@@ -2,58 +2,336 @@ name: Deploy Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - website/**
-      - packages/dashboard/**
-      - package.json
-      - .github/workflows/docs.yml
-  pull_request:
-    paths:
-      - website/**
-      - packages/dashboard/**
-      - package.json
-      - .github/workflows/docs.yml
+    branches-ignore:
+      - gh-pages
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
+  pull-requests: read
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.notes.outputs.should_build }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci --prefix website
-      - run: npm ci --prefix packages/dashboard
-      - run: npm run build --prefix website
+      - name: Restore dashboard notes from gh-pages
+        run: |
+          set -euo pipefail
+          NOTES_DIR="packages/dashboard/public/view-demo/notes"
+          rm -rf "$NOTES_DIR"
+          mkdir -p "$NOTES_DIR"
+
+          if git fetch origin gh-pages --depth=1 2>/dev/null; then
+            TMP_DIR="$(mktemp -d)"
+            if git archive --format=tar FETCH_HEAD dashboard/notes 2>/dev/null | tar -xf - -C "$TMP_DIR"; then
+              if [ -d "$TMP_DIR/dashboard/notes" ]; then
+                cp -R "$TMP_DIR/dashboard/notes/." "$NOTES_DIR/"
+              fi
+            fi
+          fi
+      - name: Update dashboard notes from git notes
+        id: notes
         env:
-          SITE: https://wasabeef.github.io
-          BASE: /AgentNote
-      - run: npm run build --prefix packages/dashboard
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch origin refs/notes/agentnote:refs/notes/agentnote || true
+
+          node --input-type=module <<'NODE'
+          import { execSync } from "node:child_process";
+          import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+
+          const notesDir = "packages/dashboard/public/view-demo/notes";
+          const before = process.env.BEFORE_SHA || "";
+          const head = process.env.HEAD_SHA || "";
+          const repo = process.env.GITHUB_REPOSITORY || "";
+          const owner = process.env.GITHUB_REPOSITORY_OWNER || "";
+          const refName = process.env.REF_NAME || "";
+          const githubOutput = process.env.GITHUB_OUTPUT || "";
+          const zeroSha = /^0+$/;
+
+          mkdirSync(notesDir, { recursive: true });
+
+          function run(command) {
+            return execSync(command, {
+              encoding: "utf-8",
+              stdio: ["pipe", "pipe", "pipe"],
+              env: process.env,
+            }).trim();
+          }
+
+          function readGitNote(sha) {
+            let raw = "";
+            try {
+              raw = run(`git notes --ref=agentnote show "${sha}"`);
+            } catch {
+              return null;
+            }
+            if (!raw) return null;
+            return JSON.parse(raw);
+          }
+
+          function writeDashboardNote(sha, pullRequest) {
+            const note = readGitNote(sha);
+            if (!note) return false;
+
+            const commit = note.commit && typeof note.commit === "object" ? note.commit : {};
+            const shortSha =
+              typeof commit.short_sha === "string" && commit.short_sha
+                ? commit.short_sha
+                : sha.slice(0, 7);
+
+            note.commit = {
+              ...commit,
+              sha: typeof commit.sha === "string" && commit.sha ? commit.sha : sha,
+              short_sha: shortSha,
+            };
+
+            if (pullRequest) {
+              note.pull_request = pullRequest;
+            } else {
+              delete note.pull_request;
+            }
+
+            writeFileSync(join(notesDir, `${shortSha}.json`), `${JSON.stringify(note, null, 2)}\n`);
+            return true;
+          }
+
+          function listNoteFiles() {
+            return readdirSync(notesDir)
+              .filter((name) => name.endsWith(".json"))
+              .map((name) => join(notesDir, name));
+          }
+
+          function readDashboardNote(path) {
+            try {
+              return JSON.parse(readFileSync(path, "utf-8"));
+            } catch {
+              return null;
+            }
+          }
+
+          function removeNotesForPr(prNumber) {
+            for (const path of listNoteFiles()) {
+              const note = readDashboardNote(path);
+              if (note?.pull_request?.number === prNumber) {
+                rmSync(path, { force: true });
+              }
+            }
+          }
+
+          function updateNotesForPr(prNumber, patch) {
+            for (const path of listNoteFiles()) {
+              const note = readDashboardNote(path);
+              if (note?.pull_request?.number !== prNumber) continue;
+              note.pull_request = {
+                ...note.pull_request,
+                ...patch,
+              };
+              writeFileSync(path, `${JSON.stringify(note, null, 2)}\n`);
+            }
+          }
+
+          function fetchBranchPullRequest() {
+            if (!owner || !refName) return null;
+            try {
+              const raw = run(
+                `gh api repos/${repo}/pulls --paginate --slurp -f state=open -f head=${owner}:${refName}`,
+              );
+              const pages = JSON.parse(raw);
+              const pulls = Array.isArray(pages) ? pages.flat() : [];
+              return pulls[0] ?? null;
+            } catch {
+              return null;
+            }
+          }
+
+          function fetchPullRequestCommits(prNumber) {
+            try {
+              const raw = run(
+                `gh api repos/${repo}/pulls/${prNumber}/commits --paginate --slurp`,
+              );
+              const pages = JSON.parse(raw);
+              const commits = Array.isArray(pages) ? pages.flat() : [];
+              return commits
+                .map((commit) => (typeof commit?.sha === "string" ? commit.sha : ""))
+                .filter(Boolean);
+            } catch {
+              return [];
+            }
+          }
+
+          function fetchCommitPulls(sha) {
+            try {
+              const raw = run(
+                `gh api repos/${repo}/commits/${sha}/pulls --header "Accept: application/vnd.github+json"`,
+              );
+              return JSON.parse(raw);
+            } catch {
+              return [];
+            }
+          }
+
+          function buildCommitRange() {
+            if (before && !zeroSha.test(before)) {
+              return run(`git rev-list --reverse ${before}..${head}`)
+                .split(/\s+/)
+                .filter(Boolean);
+            }
+            return head ? [head] : [];
+          }
+
+          function setShouldBuild(value) {
+            if (!githubOutput) return;
+            writeFileSync(githubOutput, `should_build=${value}\n`, { flag: "a" });
+          }
+
+          if (refName === "main") {
+            setShouldBuild("true");
+            const mergedPullRequests = new Map();
+            for (const sha of buildCommitRange()) {
+              const pulls = fetchCommitPulls(sha);
+              const merged = pulls
+                .filter((pull) => pull && pull.merged_at)
+                .sort((left, right) =>
+                  String(right.merged_at || "").localeCompare(String(left.merged_at || "")),
+                );
+              const pull = merged[0] || pulls[0] || null;
+              const pullRequest =
+                pull && typeof pull.number === "number" && typeof pull.title === "string"
+                  ? {
+                      number: pull.number,
+                      title: pull.title,
+                      state: pull.merged_at ? "merged" : "open",
+                    }
+                  : null;
+
+              writeDashboardNote(sha, pullRequest);
+
+              if (pullRequest?.state === "merged") {
+                mergedPullRequests.set(pullRequest.number, pullRequest);
+              }
+            }
+
+            for (const pullRequest of mergedPullRequests.values()) {
+              updateNotesForPr(pullRequest.number, pullRequest);
+            }
+          } else {
+            const pull = fetchBranchPullRequest();
+            if (!pull || typeof pull.number !== "number" || typeof pull.title !== "string") {
+              console.log(`No open pull request found for branch ${refName}.`);
+              setShouldBuild("false");
+              process.exit(0);
+            }
+
+            setShouldBuild("true");
+            removeNotesForPr(pull.number);
+
+            const pullRequest = {
+              number: pull.number,
+              title: pull.title,
+              state: "open",
+            };
+
+            for (const sha of fetchPullRequestCommits(pull.number)) {
+              writeDashboardNote(sha, pullRequest);
+            }
+          }
+          NODE
+      - name: Build website and dashboard
+        if: steps.notes.outputs.should_build == 'true'
         env:
-          SITE: https://wasabeef.github.io
-          BASE: /AgentNote/dashboard
-      - run: |
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          BUILD_ROOT="${GITHUB_WORKSPACE}"
+
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            git fetch origin main --depth=1
+            if git cat-file -e origin/main:packages/dashboard/package.json 2>/dev/null; then
+              BUILD_ROOT="$(mktemp -d)"
+              git archive --format=tar origin/main | tar -xf - -C "$BUILD_ROOT"
+              mkdir -p "$BUILD_ROOT/packages/dashboard/public/view-demo/notes"
+              cp -R packages/dashboard/public/view-demo/notes/. "$BUILD_ROOT/packages/dashboard/public/view-demo/notes/"
+            fi
+          fi
+
+          npm ci --prefix "$BUILD_ROOT/website"
+          npm ci --prefix "$BUILD_ROOT/packages/dashboard"
+          SITE=https://wasabeef.github.io BASE=/AgentNote npm run build --prefix "$BUILD_ROOT/website"
+          SITE=https://wasabeef.github.io BASE=/AgentNote/dashboard npm run build --prefix "$BUILD_ROOT/packages/dashboard"
+
           rm -rf .pages
           mkdir -p .pages/dashboard
-          cp -R website/dist/. .pages/
-          cp -R packages/dashboard/dist/. .pages/dashboard/
+          cp -R "$BUILD_ROOT/website/dist/." .pages/
+          cp -R "$BUILD_ROOT/packages/dashboard/dist/." .pages/dashboard/
+      - name: Persist dashboard notes to gh-pages
+        if: steps.notes.outputs.should_build == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          SRC_DIR="${GITHUB_WORKSPACE}/packages/dashboard/public/view-demo/notes"
+          TMP_DIR="$(mktemp -d)"
+
+          git init "$TMP_DIR"
+          cd "$TMP_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            git checkout -B gh-pages FETCH_HEAD
+          else
+            git checkout --orphan gh-pages
+          fi
+
+          mkdir -p dashboard
+          rm -rf dashboard/notes
+          mkdir -p dashboard/notes
+          if [ -d "$SRC_DIR" ]; then
+            cp -R "$SRC_DIR/." dashboard/notes/
+          fi
+          touch .nojekyll
+
+          git add .nojekyll dashboard/notes
+          if git diff --cached --quiet; then
+            echo "No dashboard note changes to persist."
+            exit 0
+          fi
+
+          git commit -m "chore: update dashboard notes"
+          git push origin HEAD:gh-pages
       - uses: actions/upload-pages-artifact@v3
+        if: steps.notes.outputs.should_build == 'true'
         with:
           path: .pages
 
   deploy:
     needs: build
-    if: github.event_name == 'push'
+    if: needs.build.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

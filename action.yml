@@ -24,7 +24,7 @@ inputs:
     required: false
     default: "false"
   dashboard_dir:
-    description: "Directory where dashboard index.json and notes/*.json will be written"
+    description: "Directory where dashboard notes/*.json will be written"
     required: false
     default: "packages/dashboard/public/view-demo"
 

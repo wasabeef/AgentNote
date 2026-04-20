@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "child_process";
 import { existsSync } from "fs";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { join, resolve } from "path";
 import {
 	COMMENT_MARKER,
@@ -12,36 +12,6 @@ import {
 } from "./helpers.js";
 
 type PrOutputMode = "description" | "comment" | "none";
-
-interface DashboardPrEntry {
-	number: number;
-	title: string;
-	commits: string[];
-}
-
-interface DashboardCommitEntry {
-	sha: string;
-	short_sha: string;
-	message: string;
-	date: string;
-	author: string;
-	agent: string | null;
-	model: string | null;
-	session_id: string | null;
-	ai_ratio: number;
-	lines_ai: number;
-	lines_total: number;
-	turns: number;
-	note_url: string;
-}
-
-interface DashboardIndex {
-	version: number;
-	generated_at: string;
-	repo: string;
-	prs: DashboardPrEntry[];
-	commits: DashboardCommitEntry[];
-}
 
 /**
  * Resolve the agentnote CLI command.
@@ -90,78 +60,28 @@ function readGitNote(commitSha: string): Record<string, unknown> | null {
 	}
 }
 
-async function readDashboardIndex(indexPath: string): Promise<DashboardIndex | null> {
-	if (!existsSync(indexPath)) return null;
-	try {
-		const raw = await readFile(indexPath, "utf-8");
-		return JSON.parse(raw) as DashboardIndex;
-	} catch {
-		return null;
-	}
-}
-
-function toDashboardCommitEntry(note: Record<string, unknown>, commitSha: string): DashboardCommitEntry {
+function withDashboardMetadata(
+	note: Record<string, unknown>,
+	commitSha: string,
+	pullRequest: { number: number; title: string },
+): Record<string, unknown> {
 	const commit = (note.commit ?? {}) as Record<string, unknown>;
-	const attribution = (note.attribution ?? {}) as Record<string, unknown>;
-	const lines = (attribution.lines ?? {}) as Record<string, unknown>;
-	const interactions = Array.isArray(note.interactions) ? note.interactions : [];
 	const shortSha =
 		typeof commit.short_sha === "string" && commit.short_sha
 			? commit.short_sha
 			: commitSha.slice(0, 7);
 
 	return {
-		sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
-		short_sha: shortSha,
-		message:
-			typeof commit.message === "string" && commit.message
-				? commit.message
-				: shortSha,
-		date: typeof commit.date === "string" ? commit.date : "",
-		author: typeof commit.author === "string" ? commit.author : "",
-		agent: typeof note.agent === "string" ? note.agent : null,
-		model: typeof note.model === "string" ? note.model : null,
-		session_id: typeof note.session_id === "string" ? note.session_id : null,
-		ai_ratio:
-			typeof attribution.ai_ratio === "number" ? attribution.ai_ratio : 0,
-		lines_ai: typeof lines.ai_added === "number" ? lines.ai_added : 0,
-		lines_total:
-			typeof lines.total_added === "number" ? lines.total_added : 0,
-		turns: interactions.length,
-		note_url: `./notes/${shortSha}.json`,
-	};
-}
-
-function mergeDashboardIndex(
-	existing: DashboardIndex | null,
-	repoName: string,
-	prEntry: DashboardPrEntry,
-	commitEntries: DashboardCommitEntry[],
-): DashboardIndex {
-	const nextCommits = new Map<string, DashboardCommitEntry>();
-	for (const commit of existing?.commits ?? []) {
-		nextCommits.set(commit.sha, commit);
-	}
-	for (const commit of commitEntries) {
-		nextCommits.set(commit.sha, commit);
-	}
-
-	const nextPrs = new Map<number, DashboardPrEntry>();
-	for (const pr of existing?.prs ?? []) {
-		nextPrs.set(pr.number, pr);
-	}
-	nextPrs.set(prEntry.number, prEntry);
-
-	return {
-		version: 1,
-		generated_at: new Date().toISOString(),
-		repo: repoName,
-		prs: [...nextPrs.values()].sort((a, b) => b.number - a.number),
-		commits: [...nextCommits.values()].sort((a, b) => {
-			const dateCompare = b.date.localeCompare(a.date);
-			if (dateCompare !== 0) return dateCompare;
-			return b.short_sha.localeCompare(a.short_sha);
-		}),
+		...note,
+		commit: {
+			...commit,
+			sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
+			short_sha: shortSha,
+		},
+		pull_request: {
+			number: pullRequest.number,
+			title: pullRequest.title,
+		},
 	};
 }
 
@@ -177,11 +97,9 @@ async function writeDashboardBundle(
 
 	const dashboardDir = resolve(dashboardDirInput);
 	const notesDir = join(dashboardDir, "notes");
-	const indexPath = join(dashboardDir, "index.json");
 	await mkdir(notesDir, { recursive: true });
 
-	const repoName = `${github.context.repo.owner}/${github.context.repo.repo}`;
-	const commitEntries: DashboardCommitEntry[] = [];
+	let writtenCommits = 0;
 	const commits = Array.isArray(report.commits)
 		? (report.commits as Array<Record<string, unknown>>)
 		: [];
@@ -193,26 +111,26 @@ async function writeDashboardBundle(
 		const note = readGitNote(sha);
 		if (!note) continue;
 
-		const entry = toDashboardCommitEntry(note, sha);
+		const dashboardNote = withDashboardMetadata(note, sha, {
+			number: pullRequest.number,
+			title: pullRequest.title,
+		});
+		const commitInfo = (dashboardNote.commit ?? {}) as Record<string, unknown>;
+		const shortSha =
+			typeof commitInfo.short_sha === "string" && commitInfo.short_sha
+				? commitInfo.short_sha
+				: sha.slice(0, 7);
 		await writeFile(
-			join(notesDir, `${entry.short_sha}.json`),
-			`${JSON.stringify(note, null, 2)}\n`,
+			join(notesDir, `${shortSha}.json`),
+			`${JSON.stringify(dashboardNote, null, 2)}\n`,
 		);
-		commitEntries.push(entry);
+		writtenCommits += 1;
 	}
 
-	const existing = await readDashboardIndex(indexPath);
-	const merged = mergeDashboardIndex(existing, repoName, {
-		number: pullRequest.number,
-		title: pullRequest.title,
-		commits: commitEntries.map((commit) => commit.short_sha),
-	}, commitEntries);
-
-	await writeFile(indexPath, `${JSON.stringify(merged, null, 2)}\n`);
 	core.info(
-		`Agent Note dashboard bundle updated at ${dashboardDir} (${commitEntries.length} commits).`,
+		`Agent Note dashboard notes updated at ${notesDir} (${writtenCommits} commits).`,
 	);
-	return { dir: dashboardDir, commits: commitEntries.length };
+	return { dir: dashboardDir, commits: writtenCommits };
 }
 
 async function postPrReport(

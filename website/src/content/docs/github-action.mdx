@@ -37,7 +37,7 @@ That's it. Every PR gets an AI session report.
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR report destination: `description`, `comment`, or `none` |
 | `dashboard` | `false` | Write/update dashboard snapshot files for the current PR |
-| `dashboard_dir` | `packages/dashboard/public/view-demo` | Target directory for `index.json` and `notes/*.json` |
+| `dashboard_dir` | `packages/dashboard/public/view-demo` | Target directory for `notes/*.json` |
 | `output` | — | Legacy alias for `pr_output` (`description` or `comment`) |
 | `comment` | `true` | Legacy: set to `false` to disable PR report posting |
 
@@ -108,3 +108,21 @@ The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git ho
 ## Dashboard Package
 
 The interactive dashboard now lives in `packages/dashboard/` and is deployed alongside the docs site under `/dashboard/`. The action can update the bundle files in that package, while your GitHub Pages workflow decides when to publish them.
+
+## GitHub Pages Sync
+
+For the live dashboard, prefer a `push`-driven Pages workflow over `pull_request`-only updates.
+
+- `push` on a PR branch captures commit notes before squash merge can hide those SHAs from `main`
+- `gh-pages/dashboard/notes/*.json` is the persistent data store
+- the dashboard app itself can stay on the current `main` shell while only the note data changes on branch pushes
+- `push` on `main` finalizes matching PR notes as `merged`
+
+Recommended flow:
+
+1. Restore `dashboard/notes` from the `gh-pages` branch.
+2. On branch pushes, resolve the open PR for `owner:branch`, remove existing notes for that PR number, then rewrite only the PR's current commits.
+3. On `main` pushes, update matching PR notes to `merged` and write any direct-push notes.
+4. Build the Pages artifact and publish it.
+
+This keeps `main` free of generated JSON while still letting one shared dashboard show open and merged PR history.

@@ -58,6 +58,10 @@
     "date": "2026-04-19T23:04:21+09:00",
     "author": "wasabeef"
   },
+  "pull_request": {
+    "number": 19,
+    "title": "refactor(cli): prompt_id primary key"
+  },
   "diff": {
     "files": [
       {

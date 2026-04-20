@@ -30079,67 +30079,22 @@ function readGitNote(commitSha) {
         return null;
     }
 }
-async function readDashboardIndex(indexPath) {
-    if (!(0, fs_1.existsSync)(indexPath))
-        return null;
-    try {
-        const raw = await (0, promises_1.readFile)(indexPath, "utf-8");
-        return JSON.parse(raw);
-    }
-    catch {
-        return null;
-    }
-}
-function toDashboardCommitEntry(note, commitSha) {
+function withDashboardMetadata(note, commitSha, pullRequest) {
     const commit = (note.commit ?? {});
-    const attribution = (note.attribution ?? {});
-    const lines = (attribution.lines ?? {});
-    const interactions = Array.isArray(note.interactions) ? note.interactions : [];
     const shortSha = typeof commit.short_sha === "string" && commit.short_sha
         ? commit.short_sha
         : commitSha.slice(0, 7);
     return {
-        sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
-        short_sha: shortSha,
-        message: typeof commit.message === "string" && commit.message
-            ? commit.message
-            : shortSha,
-        date: typeof commit.date === "string" ? commit.date : "",
-        author: typeof commit.author === "string" ? commit.author : "",
-        agent: typeof note.agent === "string" ? note.agent : null,
-        model: typeof note.model === "string" ? note.model : null,
-        session_id: typeof note.session_id === "string" ? note.session_id : null,
-        ai_ratio: typeof attribution.ai_ratio === "number" ? attribution.ai_ratio : 0,
-        lines_ai: typeof lines.ai_added === "number" ? lines.ai_added : 0,
-        lines_total: typeof lines.total_added === "number" ? lines.total_added : 0,
-        turns: interactions.length,
-        note_url: `./notes/${shortSha}.json`,
-    };
-}
-function mergeDashboardIndex(existing, repoName, prEntry, commitEntries) {
-    const nextCommits = new Map();
-    for (const commit of existing?.commits ?? []) {
-        nextCommits.set(commit.sha, commit);
-    }
-    for (const commit of commitEntries) {
-        nextCommits.set(commit.sha, commit);
-    }
-    const nextPrs = new Map();
-    for (const pr of existing?.prs ?? []) {
-        nextPrs.set(pr.number, pr);
-    }
-    nextPrs.set(prEntry.number, prEntry);
-    return {
-        version: 1,
-        generated_at: new Date().toISOString(),
-        repo: repoName,
-        prs: [...nextPrs.values()].sort((a, b) => b.number - a.number),
-        commits: [...nextCommits.values()].sort((a, b) => {
-            const dateCompare = b.date.localeCompare(a.date);
-            if (dateCompare !== 0)
-                return dateCompare;
-            return b.short_sha.localeCompare(a.short_sha);
-        }),
+        ...note,
+        commit: {
+            ...commit,
+            sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
+            short_sha: shortSha,
+        },
+        pull_request: {
+            number: pullRequest.number,
+            title: pullRequest.title,
+        },
     };
 }
 async function writeDashboardBundle(report, dashboardDirInput) {
@@ -30150,10 +30105,8 @@ async function writeDashboardBundle(report, dashboardDirInput) {
     }
     const dashboardDir = (0, path_1.resolve)(dashboardDirInput);
     const notesDir = (0, path_1.join)(dashboardDir, "notes");
-    const indexPath = (0, path_1.join)(dashboardDir, "index.json");
     await (0, promises_1.mkdir)(notesDir, { recursive: true });
-    const repoName = `${github.context.repo.owner}/${github.context.repo.repo}`;
-    const commitEntries = [];
+    let writtenCommits = 0;
     const commits = Array.isArray(report.commits)
         ? report.commits
         : [];
@@ -30164,19 +30117,19 @@ async function writeDashboardBundle(report, dashboardDirInput) {
         const note = readGitNote(sha);
         if (!note)
             continue;
-        const entry = toDashboardCommitEntry(note, sha);
-        await (0, promises_1.writeFile)((0, path_1.join)(notesDir, `${entry.short_sha}.json`), `${JSON.stringify(note, null, 2)}\n`);
-        commitEntries.push(entry);
+        const dashboardNote = withDashboardMetadata(note, sha, {
+            number: pullRequest.number,
+            title: pullRequest.title,
+        });
+        const commitInfo = (dashboardNote.commit ?? {});
+        const shortSha = typeof commitInfo.short_sha === "string" && commitInfo.short_sha
+            ? commitInfo.short_sha
+            : sha.slice(0, 7);
+        await (0, promises_1.writeFile)((0, path_1.join)(notesDir, `${shortSha}.json`), `${JSON.stringify(dashboardNote, null, 2)}\n`);
+        writtenCommits += 1;
     }
-    const existing = await readDashboardIndex(indexPath);
-    const merged = mergeDashboardIndex(existing, repoName, {
-        number: pullRequest.number,
-        title: pullRequest.title,
-        commits: commitEntries.map((commit) => commit.short_sha),
-    }, commitEntries);
-    await (0, promises_1.writeFile)(indexPath, `${JSON.stringify(merged, null, 2)}\n`);
-    core.info(`Agent Note dashboard bundle updated at ${dashboardDir} (${commitEntries.length} commits).`);
-    return { dir: dashboardDir, commits: commitEntries.length };
+    core.info(`Agent Note dashboard notes updated at ${notesDir} (${writtenCommits} commits).`);
+    return { dir: dashboardDir, commits: writtenCommits };
 }
 async function postPrReport(outputMode, markdown) {
     if (outputMode === "none")
