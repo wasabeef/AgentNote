@@ -58,17 +58,23 @@ export async function recordCommitEntry(opts: {
   // Correct async turn drift: PostToolUse (async) may read TURN_FILE after the next
   // prompt has incremented it. Pre-blob entries (sync PreToolUse) have the authoritative
   // turn. Override changeEntries' turn with the pre-blob turn when tool_use_id matches.
+  // Same drift can flip `prompt_id` (file_change reads PROMPT_ID_FILE async, which
+  // the next UserPromptSubmit may have already overwritten). Pre-blob runs in the
+  // synchronous PreToolUse hook with the authoritative id, so mirror the correction.
   const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
   const preBlobTurnById = new Map<string, number>();
+  const preBlobPromptIdById = new Map<string, string>();
   for (const e of allPreBlobEntries) {
     const id = e.tool_use_id as string | undefined;
-    if (id && typeof e.turn === "number") preBlobTurnById.set(id, e.turn);
+    if (!id) continue;
+    if (typeof e.turn === "number") preBlobTurnById.set(id, e.turn);
+    if (typeof e.prompt_id === "string" && e.prompt_id) preBlobPromptIdById.set(id, e.prompt_id);
   }
   for (const entry of allChangeEntries) {
     const id = entry.tool_use_id as string | undefined;
-    if (id && preBlobTurnById.has(id)) {
-      entry.turn = preBlobTurnById.get(id);
-    }
+    if (!id) continue;
+    if (preBlobTurnById.has(id)) entry.turn = preBlobTurnById.get(id);
+    if (preBlobPromptIdById.has(id)) entry.prompt_id = preBlobPromptIdById.get(id);
   }
 
   // Filter out (turn, file) pairs already attributed to a previous commit.
@@ -414,6 +420,15 @@ export async function recordCommitEntry(opts: {
  * than the session (e.g. a dropped hook event), skip the entire text group
  * rather than silently shifting pairs by one. Losing the response on every
  * duplicate is safer than silently attaching the wrong one.
+ *
+ * Known limitation: Claude `--continue` preserves the original session_id
+ * but extends the transcript with prior-run turns, while `prompts.jsonl`
+ * starts fresh for the resumed run. A repeated prompt text that also
+ * appeared in the prior run can have its session_id stamped onto a
+ * transcript index that belongs to the prior run, producing response=null
+ * (or, worse, a wrong-session response) for the current run's pairing.
+ * Fixing this cleanly needs a chronological lower bound (first transcript
+ * index to consider) derived from the session_start timestamp; deferred.
  *
  * Mutates `interactions` in place.
  */
