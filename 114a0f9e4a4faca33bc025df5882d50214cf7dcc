@@ -1,0 +1,34 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-20T03:13:54.452Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "最後にチームでレビューして",
+      "response": "両 reviewer 並列起動、結果待機中。",
+      "files_touched": [
+        "packages/cli/src/core/record.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 19,
+      "total_added": 19,
+      "deleted": 4
+    }
+  }
+}
