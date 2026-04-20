@@ -1,0 +1,99 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-20T03:13:54.452Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "最後にチームでレビューして",
+      "response": "両 reviewer 並列起動、結果待機中。",
+      "files_touched": [
+        "packages/cli/src/core/record.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 19,
+      "total_added": 19,
+      "deleted": 4
+    }
+  },
+  "commit": {
+    "sha": "114a0f9e4a4faca33bc025df5882d50214cf7dcc",
+    "short_sha": "114a0f9",
+    "message": "fix(cli): close final dual-review follow-ups on prompt_id pairing",
+    "date": "2026-04-20T12:13:54+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/src/core/record.ts",
+        "lines": [
+          "index 84a7b8d..05710d5 100644",
+          "--- a/packages/cli/src/core/record.ts",
+          "+++ b/packages/cli/src/core/record.ts",
+          "@@ -58,17 +58,23 @@ export async function recordCommitEntry(opts: {",
+          "   // Correct async turn drift: PostToolUse (async) may read TURN_FILE after the next",
+          "   // prompt has incremented it. Pre-blob entries (sync PreToolUse) have the authoritative",
+          "   // turn. Override changeEntries' turn with the pre-blob turn when tool_use_id matches.",
+          "+  // Same drift can flip `prompt_id` (file_change reads PROMPT_ID_FILE async, which",
+          "+  // the next UserPromptSubmit may have already overwritten). Pre-blob runs in the",
+          "+  // synchronous PreToolUse hook with the authoritative id, so mirror the correction.",
+          "   const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);",
+          "   const preBlobTurnById = new Map<string, number>();",
+          "+  const preBlobPromptIdById = new Map<string, string>();",
+          "   for (const e of allPreBlobEntries) {",
+          "     const id = e.tool_use_id as string | undefined;",
+          "-    if (id && typeof e.turn === \"number\") preBlobTurnById.set(id, e.turn);",
+          "+    if (!id) continue;",
+          "+    if (typeof e.turn === \"number\") preBlobTurnById.set(id, e.turn);",
+          "+    if (typeof e.prompt_id === \"string\" && e.prompt_id) preBlobPromptIdById.set(id, e.prompt_id);",
+          "   }",
+          "   for (const entry of allChangeEntries) {",
+          "     const id = entry.tool_use_id as string | undefined;",
+          "-    if (id && preBlobTurnById.has(id)) {",
+          "-      entry.turn = preBlobTurnById.get(id);",
+          "-    }",
+          "+    if (!id) continue;",
+          "+    if (preBlobTurnById.has(id)) entry.turn = preBlobTurnById.get(id);",
+          "+    if (preBlobPromptIdById.has(id)) entry.prompt_id = preBlobPromptIdById.get(id);",
+          "   }",
+          " ",
+          "   // Filter out (turn, file) pairs already attributed to a previous commit.",
+          "@@ -415,6 +421,15 @@ export async function recordCommitEntry(opts: {",
+          "  * rather than silently shifting pairs by one. Losing the response on every",
+          "  * duplicate is safer than silently attaching the wrong one.",
+          "  *",
+          "+ * Known limitation: Claude `--continue` preserves the original session_id",
+          "+ * but extends the transcript with prior-run turns, while `prompts.jsonl`",
+          "+ * starts fresh for the resumed run. A repeated prompt text that also",
+          "+ * appeared in the prior run can have its session_id stamped onto a",
+          "+ * transcript index that belongs to the prior run, producing response=null",
+          "+ * (or, worse, a wrong-session response) for the current run's pairing.",
+          "+ * Fixing this cleanly needs a chronological lower bound (first transcript",
+          "+ * index to consider) derived from the session_start timestamp; deferred.",
+          "+ *",
+          "  * Mutates `interactions` in place.",
+          "  */",
+          " function correlatePromptIds(",
+          ""
+        ],
+        "truncated": false
+      }
+    ]
+  }
+}
