@@ -1,0 +1,39 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "1ecd2655-73eb-4d0d-af54-87ace7c48cf3",
+  "timestamp": "2026-04-20T02:17:38.307Z",
+  "model": "claude-sonnet-4-6",
+  "interactions": [
+    {
+      "prompt": "• Findings\n\n  - Medium: transcript-driven agent の連続 commit で、前の commit の prompt が次の note に漏れ続けます。\n    packages/cli/src/core/record.ts:279 の windowEntries は turn > maxConsumedTurn だけで Option B の\n    window を切っていますが、Codex 系では changeEntries / preBlobEntries が空のため、packages/cli/src/\n    core/record.ts:366 の recordConsumedPairs() では何も記録されず maxConsumedTurn が進みません。結果とし\n    て 2 回目以降の commit でも session 開始以来の prompt 全体が再び interactions に入り、docs/knowledge/\n    DESIGN.md:222 の「unbilled window で prior commit の prompt を切る」境界を満たせていません。今回追加さ\n    れた Codex test は単発 commit の Option B しか見ておらず、この leak は未検知です。",
+      "response": "適切な指摘。Codex は `maxConsumedTurn` が進まず session 全体の prompt が commit ごとに再出現。修正:\n\n1. `recordConsumedPairs` を拡張して prompt entries も記録\n2. 各 branch の consumed entries を渡す\n次に call site で consumed entries を渡す:\n279 pass。Codex leak 対策の regression test 追加:\nCodex 用にも split-commit 保護を追加 — transcriptMatched から \"relevant turns\" を導出:\ntest の assertion が Claude の split-commit 挙動と同じ期待で修正:\n280 pass。Negative + lint + typecheck:\nNegative 確認済。commit + push:",
+      "files_touched": [
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/core/record.test.ts"
+      ],
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 131,
+      "total_added": 131,
+      "deleted": 2
+    }
+  }
+}
