@@ -4,6 +4,10 @@ on:
   push:
     branches-ignore:
       - gh-pages
+  pull_request:
+    types:
+      - opened
+      - reopened
 
 permissions:
   contents: write
@@ -45,12 +49,16 @@ jobs:
       - name: Update dashboard notes from git notes
         id: notes
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
           REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -euo pipefail
           git fetch origin refs/notes/agentnote:refs/notes/agentnote || true
@@ -61,11 +69,15 @@ jobs:
           import { join } from "node:path";
 
           const notesDir = "packages/dashboard/public/notes";
+          const eventName = process.env.EVENT_NAME || "";
           const before = process.env.BEFORE_SHA || "";
           const head = process.env.HEAD_SHA || "";
           const repo = process.env.GITHUB_REPOSITORY || "";
           const owner = process.env.GITHUB_REPOSITORY_OWNER || "";
           const refName = process.env.REF_NAME || "";
+          const prNumber = Number(process.env.PR_NUMBER || "");
+          const prTitle = process.env.PR_TITLE || "";
+          const prHeadRepo = process.env.PR_HEAD_REPO || "";
           const githubOutput = process.env.GITHUB_OUTPUT || "";
           const zeroSha = /^0+$/;
 
@@ -218,7 +230,32 @@ jobs:
             writeFileSync(githubOutput, `should_build=${value}\n`, { flag: "a" });
           }
 
-          if (refName === "main") {
+          if (eventName === "pull_request") {
+            if (!Number.isInteger(prNumber) || !prTitle) {
+              console.log("Pull request metadata is missing.");
+              setShouldBuild("false");
+              process.exit(0);
+            }
+
+            if (prHeadRepo && repo && prHeadRepo !== repo) {
+              console.log(`Skip dashboard deploy for fork pull request #${prNumber}.`);
+              setShouldBuild("false");
+              process.exit(0);
+            }
+
+            setShouldBuild("true");
+            removeNotesForPr(prNumber);
+
+            const pullRequest = {
+              number: prNumber,
+              title: prTitle,
+              state: "open",
+            };
+
+            for (const sha of fetchPullRequestCommits(prNumber)) {
+              writeDashboardNote(sha, pullRequest);
+            }
+          } else if (refName === "main") {
             setShouldBuild("true");
             const mergedPullRequests = new Map();
             for (const sha of buildCommitRange()) {
