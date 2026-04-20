@@ -828,6 +828,88 @@ describe("recordCommitEntry", () => {
     }
   });
 
+  it("transcript-driven Codex: consecutive commits do not leak prior prompts", async () => {
+    // Codex has no file_change events → recordConsumedPairs previously
+    // skipped these sessions entirely, so maxConsumedTurn stayed at 0 and
+    // every commit re-included the whole session's prompts. The consumed-
+    // prompt path now advances maxConsumedTurn for the transcript-driven
+    // branch too.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "leak.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T10:00:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T10:00:00Z"}}`,
+          // Turn 1: edit first.ts
+          '{"timestamp":"2026-04-15T10:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit first"}]}}',
+          '{"timestamp":"2026-04-15T10:00:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing first"}]}}',
+          '{"timestamp":"2026-04-15T10:00:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: first.ts\\\\n+export const f = 1;\\\\n*** End Patch\\"}"}}',
+          // Turn 2: edit second.ts
+          '{"timestamp":"2026-04-15T10:00:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit second"}]}}',
+          '{"timestamp":"2026-04-15T10:00:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing second"}]}}',
+          '{"timestamp":"2026-04-15T10:00:06Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c2","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: second.ts\\\\n+export const s = 2;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"edit first","prompt_id":"id-first","turn":1,"timestamp":"2026-04-15T10:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"edit second","prompt_id":"id-second","turn":2,"timestamp":"2026-04-15T10:00:04Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      // --- Commit 1: first.ts only ---
+      writeFileSync(join(repoDir, "first.ts"), "export const f = 1;\n");
+      execSync("git add first.ts", { cwd: repoDir });
+      execSync('git commit -m "first"', { cwd: repoDir });
+      const firstSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const firstNote = await readNote(firstSha);
+      assert.ok(firstNote !== null);
+      const firstInteractions = firstNote.interactions as Array<{ prompt: string }>;
+      // Both prompts are in the window on first commit.
+      assert.equal(firstInteractions.length, 2);
+
+      // --- Commit 2: second.ts only ---
+      writeFileSync(join(repoDir, "second.ts"), "export const s = 2;\n");
+      execSync("git add second.ts", { cwd: repoDir });
+      execSync('git commit -m "second"', { cwd: repoDir });
+      const secondSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const secondNote = await readNote(secondSha);
+      assert.ok(secondNote !== null, "second commit must still write a note");
+      const secondInteractions = secondNote.interactions as Array<{ prompt: string }>;
+      const prompts = secondInteractions.map((i) => i.prompt);
+      // After fix, maxConsumedTurn advances to 2 after commit 1 so commit 2's
+      // window is no longer the whole session. But split-commit semantics
+      // still apply: the prompt whose transcript work edited THIS commit's
+      // files (id-second → second.ts) is re-included. The unrelated prompt
+      // (id-first) must stay out.
+      assert.ok(
+        !prompts.includes("edit first"),
+        "commit 2 must not re-include the prompt already billed to commit 1",
+      );
+      assert.deepEqual(prompts, ["edit second"], "commit 2 shows only its edit-linked prompt");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
   it("skips writing note when no prompts and no AI files exist", async () => {
     writeFileSync(join(repoDir, "empty.ts"), "export {};\n");
     execSync("git add empty.ts", { cwd: repoDir });

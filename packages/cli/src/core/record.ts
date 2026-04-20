@@ -178,6 +178,10 @@ export async function recordCommitEntry(opts: {
 
   let interactions: Interaction[];
   let transcriptLineCounts: LineCounts | undefined;
+  // Session entries that contributed to this commit's interactions. Passed
+  // to recordConsumedPairs so maxConsumedTurn advances even when no
+  // file_change/pre_blob entries exist (e.g. Codex transcript-driven path).
+  let consumedPromptEntries: Record<string, unknown>[] = [];
 
   // Extract transcript interactions up front. Cross-turn commits tolerate
   // transcript failures (pre-PR #16 behavior); same-turn commits re-throw so
@@ -240,6 +244,7 @@ export async function recordCommitEntry(opts: {
       if (matched) return toRecordedInteraction(matched, commitFileSet);
       return { prompt: (entry.prompt as string) ?? "", response: null };
     });
+    consumedPromptEntries = relevantPromptEntries;
 
     const transcriptMatched = relevantPromptEntries
       .map((entry) => {
@@ -276,9 +281,23 @@ export async function recordCommitEntry(opts: {
       (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
     );
 
+    // Derive this commit's "edit-linked turns" from transcript-matched
+    // interactions. For Codex (no file_change events) this is the only
+    // way to preserve split-commit semantics: if a prompt's turn was
+    // already consumed by a prior commit but the transcript shows its
+    // work reaching this specific commit's files, include it.
+    const transcriptRelevantTurns = new Set<number>();
+    for (const tx of transcriptMatched) {
+      if (!tx.prompt_id) continue;
+      const sessionEntry = promptEntries.find((e) => e.prompt_id === tx.prompt_id);
+      if (sessionEntry && typeof sessionEntry.turn === "number") {
+        transcriptRelevantTurns.add(sessionEntry.turn);
+      }
+    }
+
     const windowEntries = promptEntries.filter((e) => {
       const turn = typeof e.turn === "number" ? e.turn : 0;
-      return turn > maxConsumedTurn;
+      return turn > maxConsumedTurn || transcriptRelevantTurns.has(turn);
     });
 
     if (windowEntries.length > 0) {
@@ -291,6 +310,7 @@ export async function recordCommitEntry(opts: {
         if (matched) return toRecordedInteraction(matched, commitFileSet);
         return { prompt: (entry.prompt as string) ?? "", response: null };
       });
+      consumedPromptEntries = windowEntries;
     } else if (transcriptMatched.length > 0) {
       // No session prompts at all — emit just the edit-linked transcript
       // interactions (e.g. commit with no surviving prompts.jsonl entry).
@@ -369,7 +389,13 @@ export async function recordCommitEntry(opts: {
   // a commit with only pre_blobs data. Without consuming those, the next
   // commit would see the pre_blobs' turn as "not yet consumed" and leak
   // those prompts into its own note window.
-  await recordConsumedPairs(sessionDir, changeEntries, preBlobEntriesForTurnFix, commitFileSet);
+  await recordConsumedPairs(
+    sessionDir,
+    changeEntries,
+    preBlobEntriesForTurnFix,
+    commitFileSet,
+    consumedPromptEntries,
+  );
 
   // Do NOT delete rotated archives here. They are kept available for subsequent
   // split commits in the same turn (each commit scopes its own files via
@@ -891,6 +917,7 @@ async function recordConsumedPairs(
   changeEntries: Record<string, unknown>[],
   preBlobEntries: Record<string, unknown>[],
   commitFileSet: Set<string>,
+  consumedPromptEntries: Record<string, unknown>[] = [],
 ): Promise<void> {
   const seen = new Set<string>();
   const pairsFile = join(sessionDir, COMMITTED_PAIRS_FILE);
@@ -909,6 +936,26 @@ async function recordConsumedPairs(
       file,
       change_id: entry.change_id ?? null,
       tool_use_id: entry.tool_use_id ?? null,
+    });
+  }
+  // Record prompt-only consumed turns so transcript-driven agents (Codex)
+  // advance maxConsumedTurn even with no file_change/pre_blob entries.
+  // Without this, each Codex commit re-includes every prior session prompt
+  // in its unbilled window.
+  const promptSeen = new Set<string>();
+  for (const entry of consumedPromptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : undefined;
+    if (!promptId || turn === undefined) continue;
+    const key = `prompt:${promptId}`;
+    if (promptSeen.has(key) || seen.has(key)) continue;
+    promptSeen.add(key);
+    await appendJsonl(pairsFile, {
+      turn,
+      prompt_id: promptId,
+      file: null,
+      change_id: null,
+      tool_use_id: null,
     });
   }
 }
