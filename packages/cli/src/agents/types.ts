@@ -8,6 +8,13 @@ export interface HookInput {
 export interface TranscriptInteraction {
   prompt: string;
   response: string | null;
+  /**
+   * Authoritative identity for this prompt, assigned by the hook at
+   * UserPromptSubmit time. Used to pair transcript-derived interactions with
+   * session prompts without relying on text-content comparison. Undefined on
+   * older interactions extracted before the adapter's correlate step runs.
+   */
+  prompt_id?: string;
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;

@@ -17,6 +17,12 @@ export const CHANGES_FILE = "changes.jsonl";
 export const EVENTS_FILE = "events.jsonl";
 export const TRANSCRIPT_PATH_FILE = "transcript_path";
 export const TURN_FILE = "turn";
+/**
+ * Current user prompt identity (UUID v4, one line). Overwritten at each
+ * UserPromptSubmit. Authoritative primary key for pairing prompts with the
+ * file edits and transcript interactions they produced.
+ */
+export const PROMPT_ID_FILE = "prompt_id";
 export const SESSION_FILE = "session";
 export const SESSION_AGENT_FILE = "agent";
 export const PENDING_COMMIT_FILE = "pending_commit.json";

@@ -147,10 +147,14 @@ describe("agentnote commit", () => {
     // Point session to transcript
     writeFileSync(join(sessionDir, TRANSCRIPT_PATH_FILE), transcriptPath);
 
-    // Add prompt
+    // Add prompt with prompt_id so the new pairing pipeline can pair it.
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
-      '{"event":"prompt","timestamp":"2026-04-06T00:00:00Z","prompt":"implement auth"}\n',
+      '{"event":"prompt","timestamp":"2026-04-06T00:00:00Z","prompt":"implement auth","prompt_id":"auth-prompt-id","turn":1}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"auth.ts","turn":1,"prompt_id":"auth-prompt-id"}\n',
     );
 
     writeFileSync(join(testDir, "auth.ts"), "export {}");
