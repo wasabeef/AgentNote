@@ -688,13 +688,12 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("correlatePromptIds walker limitation: duplicates + dropped transcript → known mispair", async () => {
-    // Documents a known limitation: when session has 3 "continue" prompts
-    // and transcript has only 2 (middle one dropped), the walker stamps the
-    // wrong id onto the 2nd transcript entry. Not a correctness guarantee —
-    // included so any future fix to correlatePromptIds has a regression
-    // pinning the current behavior. If this test FAILS after a fix, update
-    // it to match the new (presumably stricter) behavior.
+  it("correlatePromptIds strict count: duplicates + dropped transcript → skip the whole group, no mis-pair", async () => {
+    // When session has 3 "continue" prompts but transcript has only 2
+    // (middle one dropped), pairing is ambiguous. The strict count check
+    // skips the entire text group rather than silently attaching the wrong
+    // response. All 3 session prompts get response=null, which is safer
+    // than pairing turn 2 with turn 3's response.
     const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
     const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
     process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
@@ -743,19 +742,11 @@ describe("recordCommitEntry", () => {
       const note = await readNote(commitSha);
       assert.ok(note !== null);
       const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
-      // Walker stamps: id-1→tx[0] (first), id-2→tx[1] (second — but this
-      // corresponds to session turn 3's response!). id-3 finds nothing.
-      assert.equal(interactions[0].response, "response first", "turn 1 ↔ tx[0] ✓");
-      assert.equal(
-        interactions[1].response,
-        "response third",
-        "turn 2 ↔ tx[1] ✗ (known mis-pair: actually turn 3's response)",
-      );
-      assert.equal(
-        interactions[2].response,
-        null,
-        "turn 3 → no stamp because walker already consumed tx[1]",
-      );
+      // Strict count: session count 3, transcript count 2 for "continue" →
+      // skip the whole group. All three prompts keep response=null.
+      assert.equal(interactions[0].response, null, "turn 1 not paired — count mismatch");
+      assert.equal(interactions[1].response, null, "turn 2 not paired — count mismatch");
+      assert.equal(interactions[2].response, null, "turn 3 not paired — count mismatch");
     } finally {
       if (prevClaudeHome === undefined) {
         delete process.env.AGENTNOTE_CLAUDE_HOME;
@@ -763,6 +754,77 @@ describe("recordCommitEntry", () => {
         process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
       }
       rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven (Codex) commit carries full Option B context, not just edit-linked", async () => {
+    // Codex has no file_change events, so relevantTurns stays empty. The
+    // transcript-driven branch must still honor Option B: include every
+    // prompt in the unbilled window as `interactions`, paired with transcript
+    // responses via prompt_id. Edit-linked interactions drive attribution
+    // only.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "context.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:31:23Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:31:23Z"}}`,
+          '{"timestamp":"2026-04-15T09:31:24Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"plan first"}]}}',
+          '{"timestamp":"2026-04-15T09:31:25Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"planning..."}]}}',
+          '{"timestamp":"2026-04-15T09:31:26Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit target.ts"}]}}',
+          '{"timestamp":"2026-04-15T09:31:27Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing..."}]}}',
+          '{"timestamp":"2026-04-15T09:31:28Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: target.ts\\\\n+export const t = 1;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"plan first","prompt_id":"id-plan","turn":1,"timestamp":"2026-04-15T09:31:24Z"}\n' +
+          '{"event":"prompt","prompt":"edit target.ts","prompt_id":"id-edit","turn":2,"timestamp":"2026-04-15T09:31:26Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "target.ts"), "export const t = 1;\n");
+      execSync("git add target.ts", { cwd: repoDir });
+      execSync('git commit -m "codex commit"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+      }>;
+      assert.equal(interactions.length, 2, "both prompts in the window appear");
+      assert.equal(interactions[0].prompt, "plan first");
+      assert.equal(
+        interactions[0].response,
+        "planning...",
+        "context prompt (no file edit) still pairs with its response",
+      );
+      assert.equal(interactions[1].prompt, "edit target.ts");
+      assert.equal(interactions[1].response, "editing...");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
     }
   });
 

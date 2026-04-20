@@ -263,16 +263,45 @@ export async function recordCommitEntry(opts: {
     }
   } else if (transcriptPath && allInteractions.length > 0) {
     // Transcript-driven path: sessions that don't emit `file_change` events
-    // (e.g. Codex) have no `relevantPromptEntries`, so attribution has to
-    // come straight from the transcript. Pick interactions that edited
-    // commit files; fall back to the latest tool-backed interaction for
-    // shell-only sessions that produce no file-attributed transcript entries.
+    // (e.g. Codex) have no `relevantTurns` computed from change entries, so
+    // attribution comes from the transcript. But Option B still applies —
+    // the note should carry the full conversation window, not just the
+    // edit-linked interactions.
+    //
+    // Window selection: session `promptEntries` filtered to turns greater
+    // than `maxConsumedTurn` (same unbilled-window rule as the session-
+    // driven path). Transcript-matched interactions (files_touched ∩ commit)
+    // drive file attribution and line counts only.
     const transcriptMatched = allInteractions.filter((i) =>
       (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
     );
 
-    if (transcriptMatched.length > 0) {
+    const windowEntries = promptEntries.filter((e) => {
+      const turn = typeof e.turn === "number" ? e.turn : 0;
+      return turn > maxConsumedTurn;
+    });
+
+    if (windowEntries.length > 0) {
+      // Session prompts exist for this window — they drive `interactions`
+      // (full Option B context) and responses come from the correlated
+      // transcript interactions.
+      interactions = windowEntries.map((entry) => {
+        const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+        const matched = id ? interactionsById.get(id) : undefined;
+        if (matched) return toRecordedInteraction(matched, commitFileSet);
+        return { prompt: (entry.prompt as string) ?? "", response: null };
+      });
+    } else if (transcriptMatched.length > 0) {
+      // No session prompts at all — emit just the edit-linked transcript
+      // interactions (e.g. commit with no surviving prompts.jsonl entry).
       interactions = transcriptMatched.map((i) => toRecordedInteraction(i, commitFileSet));
+    } else if (!crossTurnCommit) {
+      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
+    } else {
+      interactions = [];
+    }
+
+    if (transcriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
           transcriptMatched.flatMap((i) =>
@@ -281,10 +310,6 @@ export async function recordCommitEntry(opts: {
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
-    } else if (!crossTurnCommit) {
-      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
-    } else {
-      interactions = [];
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
@@ -355,20 +380,14 @@ export async function recordCommitEntry(opts: {
 
 /**
  * Tag each transcript interaction with the prompt_id of its matching session
- * prompt. Both lists are chronological; the walker advances through the
- * transcript text-matching each session prompt in order and stamps the id.
+ * prompt. Both lists are chronological and the transcript is a superset of
+ * the session — so for each distinct prompt text the session's occurrences
+ * pair 1:1 against the transcript's from the start.
  *
- * Skip-on-miss: if a session prompt isn't found in the transcript (e.g. a
- * dropped hook event), leave the cursor where it was and move to the next
- * session prompt rather than abandoning the walk.
- *
- * Known limitation: when the same prompt text repeats across multiple turns
- * AND the transcript has dropped exactly one of them, the walker stamps the
- * wrong transcript interaction with the dropped prompt's id (shifts the
- * mis-pairing by one). A strict count-based approach would skip the whole
- * text group instead; we accept the walker's behavior because text
- * repetition + transcript drop is rare and dropping every duplicate pair
- * would regress the common case (no drops).
+ * Strict count match: if transcript has FEWER occurrences of a given text
+ * than the session (e.g. a dropped hook event), skip the entire text group
+ * rather than silently shifting pairs by one. Losing the response on every
+ * duplicate is safer than silently attaching the wrong one.
  *
  * Mutates `interactions` in place.
  */
@@ -376,21 +395,32 @@ function correlatePromptIds(
   interactions: TranscriptInteraction[],
   sessionPromptEntries: Record<string, unknown>[],
 ): void {
-  let txIdx = 0;
+  const sessionTextToIds = new Map<string, string[]>();
   for (const entry of sessionPromptEntries) {
     const text = typeof entry.prompt === "string" ? entry.prompt : undefined;
     const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
     if (!text || !id) continue;
-    let found = -1;
-    for (let k = txIdx; k < interactions.length; k++) {
-      if (interactions[k].prompt === text) {
-        found = k;
-        break;
-      }
+    if (!sessionTextToIds.has(text)) sessionTextToIds.set(text, []);
+    sessionTextToIds.get(text)?.push(id);
+  }
+
+  const txTextToIndices = new Map<string, number[]>();
+  for (let idx = 0; idx < interactions.length; idx++) {
+    const text = interactions[idx].prompt;
+    if (!txTextToIndices.has(text)) txTextToIndices.set(text, []);
+    txTextToIndices.get(text)?.push(idx);
+  }
+
+  for (const [text, ids] of sessionTextToIds) {
+    const indices = txTextToIndices.get(text) ?? [];
+    if (indices.length < ids.length) continue; // ambiguous — skip this text group
+    // Transcript has >= session. Pair the first N transcript occurrences
+    // (in chronological order) with session's N prompts; the session is a
+    // prefix of the transcript for each text group since both are
+    // append-only from session start.
+    for (let i = 0; i < ids.length; i++) {
+      interactions[indices[i]].prompt_id = ids[i];
     }
-    if (found === -1) continue;
-    interactions[found].prompt_id = id;
-    txIdx = found + 1;
   }
 }
 
