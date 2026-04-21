@@ -217,6 +217,8 @@ The optional dashboard package lives in `packages/dashboard/`. If you want a sta
 
 The action writes `notes/*.json` inside `packages/dashboard/public/`.
 
+`packages/dashboard` keeps its local default at `/`. Set `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL` in your Pages workflow so the deployed dashboard points at the right URL and GitHub repository.
+
 ```yaml
 - uses: wasabeef/AgentNote@v0
   with:

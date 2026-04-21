@@ -27,14 +27,20 @@ interface DashboardPrSummary {
 interface DashboardIndexData {
   version: number;
   generated_at: string;
-  repo: string;
+  repo: string | null;
   prs: DashboardPrSummary[];
   commits: DashboardCommitSummary[];
 }
 
 const baseUrl = import.meta.env.BASE_URL;
 const homePath = `${baseUrl}`;
-const repoUrl = "https://github.com/wasabeef/AgentNote";
+const configuredRepo =
+  typeof import.meta.env.PUBLIC_REPO === "string" ? import.meta.env.PUBLIC_REPO.trim() : "";
+const configuredRepoUrl =
+  typeof import.meta.env.PUBLIC_REPO_URL === "string"
+    ? import.meta.env.PUBLIC_REPO_URL.trim()
+    : "";
+const repoUrl = configuredRepoUrl || (configuredRepo ? `https://github.com/${configuredRepo}` : "");
 // Resolve from the package root because Astro/Vite rewrites import.meta.url to
 // the compiled module location during build, which can make source-relative
 // traversal miss public/notes even when the files are present.
@@ -121,7 +127,7 @@ function buildDashboardIndex(): DashboardIndexData {
   return {
     version: 1,
     generated_at: new Date().toISOString(),
-    repo: "wasabeef/AgentNote",
+    repo: configuredRepo || null,
     prs: [...prs.values()]
       .map((pr) => ({
         number: pr.number,
@@ -1500,7 +1506,11 @@ const dashboardIndex = buildDashboardIndex();
             <button class="icon-btn" id="btn-prev" aria-label="Previous commit">← prev</button>
             <button class="icon-btn" id="btn-next" aria-label="Next commit">next →</button>
             <div class="spacer"></div>
-            <a class="icon-btn" id="btn-github" href={repoUrl} target="_blank" rel="noopener">GitHub ↗</a>
+            {repoUrl && (
+              <a class="icon-btn" id="btn-github" href={repoUrl} target="_blank" rel="noopener">
+                GitHub ↗
+              </a>
+            )}
           </div>
 
           <div id="root">
