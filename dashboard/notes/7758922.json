@@ -306,6 +306,6 @@
   "pull_request": {
     "number": 24,
     "title": "fix(dashboard): use generic Pages defaults",
-    "state": "open"
+    "state": "merged"
   }
 }
