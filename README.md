@@ -151,12 +151,12 @@ This posts an AI session report to the PR description:
 ```
 ## 🧑💬🤖 Agent Note
 
-**AI ratio: 73%** ████████
-`45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+**Total AI Ratio:** 73% ████████
+Model: `claude-sonnet-4-20250514`
 
-| Commit | AI Ratio | Lines | Prompts | Files |
-|---|---|---|---|---|
-| ce941f7 feat: add auth | 73% | 45/75 | 2 | auth.ts 🤖, token.ts 🤖 |
+| Commit | AI Ratio | Prompts | Files |
+|---|---|---|---|
+| ce941f7 feat: add auth | 73% ████░ | 2 | auth.ts 🤖, token.ts 🤖 |
 ```
 
 ## How It Works
@@ -224,6 +224,8 @@ The action writes `notes/*.json` inside `packages/dashboard/public/`.
   with:
     dashboard: true
     dashboard_dir: packages/dashboard/public
+    # Optional. Set this only after the dashboard is publicly available.
+    dashboard_url: https://docs.example.com/dashboard/
 ```
 
 Agent Note does not commit sample dashboard data to the repository. A new dashboard starts out empty. For a live GitHub Pages dashboard, use a workflow that:
