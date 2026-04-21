@@ -168,6 +168,6 @@
   "pull_request": {
     "number": 22,
     "title": "fix(dashboard): load notes index from public dir",
-    "state": "open"
+    "state": "merged"
   }
 }
