@@ -141,6 +141,6 @@
   "pull_request": {
     "number": 25,
     "title": "fix(cli): narrow stale file-level prompt carryover",
-    "state": "open"
+    "state": "merged"
   }
 }
