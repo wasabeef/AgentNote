@@ -1,6 +1,15 @@
 import { defineConfig } from "astro/config";
 
+function normalizeBase(base) {
+  if (!base || base === "/") return "/";
+
+  const trimmed = base.endsWith("/") ? base.slice(0, -1) : base;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+const site = process.env.SITE;
+
 export default defineConfig({
-  site: process.env.SITE ?? "https://wasabeef.github.io",
-  base: process.env.BASE ?? "/AgentNote/dashboard",
+  ...(site ? { site } : {}),
+  base: normalizeBase(process.env.BASE),
 });

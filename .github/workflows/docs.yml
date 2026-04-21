@@ -292,7 +292,7 @@ jobs:
           npm ci --prefix "$BUILD_ROOT/website"
           npm ci --prefix "$BUILD_ROOT/packages/dashboard"
           SITE=https://wasabeef.github.io BASE=/AgentNote npm run build --prefix "$BUILD_ROOT/website"
-          SITE=https://wasabeef.github.io BASE=/AgentNote/dashboard npm run build --prefix "$BUILD_ROOT/packages/dashboard"
+          SITE=https://wasabeef.github.io BASE=/AgentNote/dashboard PUBLIC_REPO=wasabeef/AgentNote PUBLIC_REPO_URL=https://github.com/wasabeef/AgentNote npm run build --prefix "$BUILD_ROOT/packages/dashboard"
 
           rm -rf .pages
           mkdir -p .pages/dashboard
