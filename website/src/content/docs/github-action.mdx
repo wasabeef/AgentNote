@@ -113,6 +113,8 @@ The interactive dashboard now lives in `packages/dashboard/` and is deployed alo
 
 The repository does not ship sample dashboard JSON. A fresh dashboard stays empty until your Pages sync workflow restores or generates `packages/dashboard/public/notes/*.json`.
 
+`packages/dashboard` keeps its local default at `/`, so your Pages workflow should inject deploy-specific values with `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL`.
+
 ## GitHub Pages Sync
 
 For the live dashboard, split responsibilities by event:
@@ -121,6 +123,7 @@ For the live dashboard, split responsibilities by event:
 - each run restores those files into `packages/dashboard/public/notes/`
 - `pull_request` (`opened`, `reopened`, `synchronize`) rewrites the current PR's note set and persists it back to `gh-pages`
 - `push` on `main` finalizes matching PR notes as `merged`, rebuilds the site, and deploys the shared Pages URL
+- dashboard builds should pass repo-specific env vars such as `SITE=https://<owner>.github.io`, `BASE=/<repo>/dashboard`, and `PUBLIC_REPO=<owner>/<repo>`
 - a brand-new repo can accumulate dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment
 
 Recommended flow:
