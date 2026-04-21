@@ -11,6 +11,12 @@ export interface DiffHunk {
   newCount: number;
 }
 
+export interface AttributionTurnPair {
+  preBlob: string;
+  postBlob: string;
+  turn?: number;
+}
+
 /** Parse @@ hunk headers from `git diff --unified=0` output. */
 export function parseUnifiedHunks(diffOutput: string): DiffHunk[] {
   const hunks: DiffHunk[] = [];
@@ -67,12 +73,13 @@ export function countLines(hunks: DiffHunk[]): { added: number; deleted: number 
 export async function computePositionAttribution(
   parentBlob: string,
   committedBlob: string,
-  turnPairs: { preBlob: string; postBlob: string }[],
+  turnPairs: AttributionTurnPair[],
 ): Promise<{
   aiAddedLines: number;
   humanAddedLines: number;
   totalAddedLines: number;
   deletedLines: number;
+  contributingTurns: Set<number>;
 }> {
   // diff1: all changes in this commit (parent → committed)
   const diff1Output = await gitDiffUnified0(parentBlob, committedBlob);
@@ -86,13 +93,15 @@ export async function computePositionAttribution(
       humanAddedLines: totalAddedLines,
       totalAddedLines,
       deletedLines,
+      contributingTurns: new Set<number>(),
     };
   }
 
   // Per-turn: compute AI positions and union them.
   const aiPositions = new Set<number>();
+  const contributingTurns = new Set<number>();
 
-  for (const { preBlob, postBlob } of turnPairs) {
+  for (const { preBlob, postBlob, turn } of turnPairs) {
     // diff2_T: changes from pre_T to committed (AI + human-after)
     const diff2Output = await gitDiffUnified0(preBlob, committedBlob);
     const diff2Positions = expandNewPositions(parseUnifiedHunks(diff2Output));
@@ -105,6 +114,15 @@ export async function computePositionAttribution(
     for (const pos of diff2Positions) {
       if (!diff3Positions.has(pos)) {
         aiPositions.add(pos);
+      }
+    }
+
+    if (turn !== undefined && turn > 0) {
+      for (const pos of diff1Added) {
+        if (diff2Positions.has(pos) && !diff3Positions.has(pos)) {
+          contributingTurns.add(turn);
+          break;
+        }
       }
     }
   }
@@ -121,7 +139,7 @@ export async function computePositionAttribution(
     }
   }
 
-  return { aiAddedLines, humanAddedLines, totalAddedLines, deletedLines };
+  return { aiAddedLines, humanAddedLines, totalAddedLines, deletedLines, contributingTurns };
 }
 
 /** Run `git diff --unified=0` between two blob hashes. */

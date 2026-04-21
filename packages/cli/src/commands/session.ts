@@ -1,5 +1,6 @@
 import { MAX_COMMITS, TRAILER_KEY } from "../core/constants.js";
 import type { AgentnoteEntry } from "../core/entry.js";
+import { countAiRatioEligibleFiles } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
@@ -92,8 +93,9 @@ export async function session(sessionId: string): Promise<void> {
         lineTotalAdded += attr.lines.total_added;
         lineCount++;
       } else if (attr.method === "file") {
-        fileFilesAi += m.entry.files.filter((f) => f.by_ai).length;
-        fileFilesTotal += m.entry.files.length;
+        const eligibleCounts = countAiRatioEligibleFiles(m.entry.files);
+        fileFilesAi += eligibleCounts.ai;
+        fileFilesTotal += eligibleCounts.total;
         fileCount++;
       }
       // method: "none" — excluded from ratio
@@ -128,8 +130,9 @@ export async function session(sessionId: string): Promise<void> {
       const isLineEligible = attr.method === "line" && attr.lines && attr.lines.total_added > 0;
       const isFileEligible = attr.method === "file";
       if (isLineEligible || isFileEligible) {
-        weightedSum += attr.ai_ratio * m.entry.files.length;
-        weightTotal += m.entry.files.length;
+        const eligibleCounts = countAiRatioEligibleFiles(m.entry.files);
+        weightedSum += attr.ai_ratio * eligibleCounts.total;
+        weightTotal += eligibleCounts.total;
       }
     }
     overallRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
