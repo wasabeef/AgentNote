@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci && npm -w packages/cli run build
-      - uses: wasabeef/AgentNote@main
+      - run: npm ci && npm -w packages/cli run build && npm -w packages/action run build
+      - uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
