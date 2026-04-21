@@ -29923,7 +29923,7 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 1979:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -29934,6 +29934,12 @@ exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
+exports.resolveDashboardUrl = resolveDashboardUrl;
+exports.withDashboardLink = withDashboardLink;
+exports.resolveModelIconDataUrl = resolveModelIconDataUrl;
+exports.withModelIcon = withModelIcon;
+const node_fs_1 = __nccwpck_require__(3024);
+const node_path_1 = __nccwpck_require__(6760);
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -29997,6 +30003,80 @@ function buildPrReportCommand(cliCmd, base, headSha, options) {
     const headArg = headSha ? ` --head "${headSha}"` : "";
     const jsonArg = options?.json ? " --json" : "";
     return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
+}
+function ensureTrailingSlash(url) {
+    return url.endsWith("/") ? url : `${url}/`;
+}
+/**
+ * Resolve the public dashboard URL used in PR descriptions.
+ * Only use an explicit input so we do not emit a broken link before the
+ * dashboard has actually been deployed.
+ */
+function resolveDashboardUrl(dashboardUrlInput) {
+    const explicit = dashboardUrlInput.trim();
+    return explicit ? ensureTrailingSlash(explicit) : "";
+}
+/**
+ * Insert a dashboard link near the top of the rendered PR report.
+ */
+function withDashboardLink(markdown, dashboardUrl) {
+    if (!markdown.trim())
+        return markdown;
+    const linkLine = `🔎 [Open dashboard](${ensureTrailingSlash(dashboardUrl)})`;
+    const lines = markdown.split("\n");
+    const headingIndex = lines.findIndex((line) => line.startsWith("## "));
+    if (headingIndex === -1) {
+        return `${linkLine}\n\n${markdown}`;
+    }
+    let insertIndex = headingIndex + 1;
+    if (lines[insertIndex] === "") {
+        insertIndex += 1;
+    }
+    lines.splice(insertIndex, 0, linkLine, "");
+    return lines.join("\n");
+}
+function normalizeModelIconKey(model) {
+    const text = model.trim().toLowerCase();
+    if (!text)
+        return null;
+    if (text.includes("claude") || text.includes("anthropic"))
+        return "claude";
+    if (text.includes("cursor"))
+        return "cursor";
+    if (text.includes("gemini"))
+        return "gemini";
+    if (text.includes("codex") ||
+        text.includes("openai") ||
+        text.includes("chatgpt") ||
+        /\bgpt\b/.test(text)) {
+        return "codex";
+    }
+    return null;
+}
+/**
+ * Load a dashboard model icon and return it as a base64 data URL so PR
+ * descriptions do not depend on the dashboard being deployed yet.
+ */
+function resolveModelIconDataUrl(model) {
+    const key = normalizeModelIconKey(model);
+    if (!key)
+        return "";
+    const iconPath = (0, node_path_1.resolve)("packages/dashboard/public/model-icons", `${key}.png`);
+    if (!(0, node_fs_1.existsSync)(iconPath))
+        return "";
+    return `data:image/png;base64,${(0, node_fs_1.readFileSync)(iconPath).toString("base64")}`;
+}
+/**
+ * Replace the plain Model line with an inline icon + model label.
+ */
+function withModelIcon(markdown, model, iconDataUrl) {
+    if (!markdown.trim() || !model.trim() || !iconDataUrl.trim())
+        return markdown;
+    const modelLine = `Model: \`${model}\``;
+    const iconLine = `Model: <img src="${iconDataUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
+    return markdown.includes(modelLine)
+        ? markdown.replace(modelLine, iconLine)
+        : markdown;
 }
 
 
@@ -30230,6 +30310,7 @@ async function run() {
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
         const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public";
+        const dashboardUrlInput = core.getInput("dashboard_url");
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30276,16 +30357,28 @@ async function run() {
         catch {
             markdown = "";
         }
-        core.setOutput("markdown", markdown);
+        const reportModel = typeof report.model === "string" ? report.model.trim() : "";
+        if (reportModel) {
+            markdown = (0, helpers_js_1.withModelIcon)(markdown, reportModel, (0, helpers_js_1.resolveModelIconDataUrl)(reportModel));
+        }
         let dashboardCommits = 0;
         let dashboardDir = "";
+        let dashboardUrl = "";
         if (dashboardEnabled) {
             const result = await writeDashboardBundle(report, dashboardDirInput);
             dashboardCommits = result.commits;
             dashboardDir = result.dir;
+            if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
+                dashboardUrl = (0, helpers_js_1.resolveDashboardUrl)(dashboardUrlInput);
+            }
         }
+        if (dashboardUrl) {
+            markdown = (0, helpers_js_1.withDashboardLink)(markdown, dashboardUrl);
+        }
+        core.setOutput("markdown", markdown);
         core.setOutput("dashboard_dir", dashboardDir);
         core.setOutput("dashboard_commits", String(dashboardCommits));
+        core.setOutput("dashboard_url", dashboardUrl);
         await postPrReport(prOutputMode, markdown);
     }
     catch (error) {
@@ -30424,6 +30517,22 @@ module.exports = require("node:crypto");
 
 "use strict";
 module.exports = require("node:events");
+
+/***/ }),
+
+/***/ 3024:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:fs");
+
+/***/ }),
+
+/***/ 6760:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:path");
 
 /***/ }),
 

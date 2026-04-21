@@ -7,9 +7,13 @@ import { join, resolve } from "path";
 import {
 	buildPrReportCommand,
 	COMMENT_MARKER,
+	resolveModelIconDataUrl,
+	resolveDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
+	withDashboardLink,
+	withModelIcon,
 } from "./helpers.js";
 
 type PrOutputMode = "description" | "comment" | "none";
@@ -240,6 +244,7 @@ async function run(): Promise<void> {
 		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
 		const dashboardDirInput =
 			core.getInput("dashboard_dir") || "packages/dashboard/public";
+		const dashboardUrlInput = core.getInput("dashboard_url");
 
 		let json = "";
 		let report: Record<string, unknown> | null = null;
@@ -295,17 +300,34 @@ async function run(): Promise<void> {
 		} catch {
 			markdown = "";
 		}
-		core.setOutput("markdown", markdown);
+		const reportModel =
+			typeof report.model === "string" ? report.model.trim() : "";
+		if (reportModel) {
+			markdown = withModelIcon(
+				markdown,
+				reportModel,
+				resolveModelIconDataUrl(reportModel),
+			);
+		}
 
 		let dashboardCommits = 0;
 		let dashboardDir = "";
+		let dashboardUrl = "";
 		if (dashboardEnabled) {
 			const result = await writeDashboardBundle(report, dashboardDirInput);
 			dashboardCommits = result.commits;
 			dashboardDir = result.dir;
+			if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
+				dashboardUrl = resolveDashboardUrl(dashboardUrlInput);
+			}
 		}
+		if (dashboardUrl) {
+			markdown = withDashboardLink(markdown, dashboardUrl);
+		}
+		core.setOutput("markdown", markdown);
 		core.setOutput("dashboard_dir", dashboardDir);
 		core.setOutput("dashboard_commits", String(dashboardCommits));
+		core.setOutput("dashboard_url", dashboardUrl);
 
 		await postPrReport(prOutputMode, markdown);
 	} catch (error) {

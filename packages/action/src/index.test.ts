@@ -5,10 +5,14 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
+	resolveModelIconDataUrl,
+	resolveDashboardUrl,
 	resolvePrOutputMode,
 	resolveOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
+	withDashboardLink,
+	withModelIcon,
 } from "./helpers.js";
 
 describe("resolveOutputMode", () => {
@@ -161,6 +165,64 @@ describe("buildPrReportCommand", () => {
 				json: true,
 			}),
 			'node packages/cli/dist/cli.js pr "origin/main" --json',
+		);
+	});
+});
+
+describe("resolveDashboardUrl", () => {
+	it("prefers an explicit dashboard url input", () => {
+		assert.equal(
+			resolveDashboardUrl("https://docs.example.com/agent-note/dashboard"),
+			"https://docs.example.com/agent-note/dashboard/",
+		);
+	});
+
+	it("returns an empty string when the url is not configured", () => {
+		assert.equal(resolveDashboardUrl(""), "");
+	});
+});
+
+describe("withDashboardLink", () => {
+	it("inserts the dashboard link below the report heading", () => {
+		const markdown = ["## 🧑💬🤖 Agent Note", "", "**Total AI Ratio:** 100% ████████"].join(
+			"\n",
+		);
+		const result = withDashboardLink(
+			markdown,
+			"https://wasabeef.github.io/AgentNote/dashboard/",
+		);
+
+		assert.ok(
+			result.includes(
+				"## 🧑💬🤖 Agent Note\n\n🔎 [Open dashboard](https://wasabeef.github.io/AgentNote/dashboard/)\n\n**Total AI Ratio:** 100% ████████",
+			),
+		);
+	});
+});
+
+describe("resolveModelIconDataUrl", () => {
+	it("loads a base64 png for supported model families", () => {
+		const dataUrl = resolveModelIconDataUrl("gpt-5.4");
+		assert.ok(dataUrl.startsWith("data:image/png;base64,"));
+	});
+
+	it("returns an empty string for unknown model families", () => {
+		assert.equal(resolveModelIconDataUrl("mystery-model"), "");
+	});
+});
+
+describe("withModelIcon", () => {
+	it("replaces the plain model line with an inline image", () => {
+		const result = withModelIcon(
+			["## 🧑💬🤖 Agent Note", "", "Model: `gpt-5.4`"].join("\n"),
+			"gpt-5.4",
+			"data:image/png;base64,abc123",
+		);
+
+		assert.ok(
+			result.includes(
+				'Model: <img src="data:image/png;base64,abc123" alt="gpt-5.4" width="16" height="16"> `gpt-5.4`',
+			),
 		);
 	});
 });

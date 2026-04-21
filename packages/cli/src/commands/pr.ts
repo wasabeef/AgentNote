@@ -194,31 +194,16 @@ function renderProgressBar(ratio: number, width = 8): string {
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
+function renderRatioWithBar(ratio: number, width: number): string {
+  return `${ratio}% ${renderProgressBar(ratio, width)}`;
+}
+
 /** Build the header (2 lines: ratio + bar, then metadata). */
 function renderHeader(report: PrReport): string[] {
   // Line 1: ratio + progress bar
-  const line1 = `**AI ratio: ${report.overall_ai_ratio}%** ${renderProgressBar(report.overall_ai_ratio)}`;
-
-  // Line 2: metadata
-  const meta: string[] = [];
-
-  const lineCommits = report.commits.filter(
-    (c) => c.attribution?.method === "line" && c.attribution.lines,
-  );
-  if (lineCommits.length > 0) {
-    const aiAdded = lineCommits.reduce((s, c) => s + (c.attribution?.lines?.ai_added ?? 0), 0);
-    const totalAdded = lineCommits.reduce(
-      (s, c) => s + (c.attribution?.lines?.total_added ?? 0),
-      0,
-    );
-    if (totalAdded > 0) meta.push(`\`${aiAdded}/${totalAdded} lines\``);
-  }
-
-  meta.push(`\`${report.tracked_commits}/${report.total_commits} commits\``);
-  meta.push(`\`${report.total_prompts} prompts\``);
-  if (report.model) meta.push(`\`${report.model}\``);
-
-  return [line1, meta.join(" · ")];
+  const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
+  if (!report.model) return [line1];
+  return [line1, `Model: \`${report.model}\``];
 }
 
 /** Format commit hash as a link if repo URL is available. */
@@ -227,6 +212,10 @@ function commitLink(c: CommitEntry, repoUrl: string | null): string {
     return `[\`${c.short}\`](${repoUrl}/commit/${c.sha})`;
   }
   return `\`${c.short}\``;
+}
+
+function escapeTableCell(value: string): string {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 /**
@@ -276,25 +265,23 @@ function renderMarkdown(report: PrReport): string {
   lines.push(...renderHeader(report));
   lines.push("");
 
-  lines.push("| Commit | AI Ratio | Lines | Prompts | Files |");
-  lines.push("|---|---|---|---|---|");
+  lines.push("| Commit | AI Ratio | Prompts | Files |");
+  lines.push("|---|---|---|---|");
 
   for (const c of report.commits) {
     const link = commitLink(c, report.repo_url);
+    const commitCell = escapeTableCell(`${link} ${c.message}`);
     if (c.ai_ratio === null) {
-      lines.push(`| ${link} ${c.message} | — | — | — | — |`);
+      lines.push(`| ${commitCell} | — | — | — |`);
       continue;
     }
 
-    const linesCol =
-      c.attribution?.method === "line" && c.attribution.lines && c.attribution.lines.total_added > 0
-        ? `${c.attribution.lines.ai_added}/${c.attribution.lines.total_added}`
-        : "—";
-    const fileList = c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", ");
-
-    lines.push(
-      `| ${link} ${c.message} | ${c.ai_ratio}% | ${linesCol} | ${c.prompts_count} | ${fileList} |`,
+    const fileList = escapeTableCell(
+      c.files.map((f) => `${basename(f.path)} ${f.by_ai ? "🤖" : "👤"}`).join(", "),
     );
+    const aiRatioCell = renderRatioWithBar(c.ai_ratio, 5);
+
+    lines.push(`| ${commitCell} | ${aiRatioCell} | ${c.prompts_count} | ${fileList} |`);
   }
 
   lines.push("");

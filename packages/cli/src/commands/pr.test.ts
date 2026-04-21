@@ -66,9 +66,58 @@ describe("agentnote pr", () => {
     const output = execSync(`node ${cliPath} pr HEAD~2`, { cwd: testDir, encoding: "utf-8" });
 
     assert.ok(output.includes("## 🧑💬🤖 Agent Note"));
+    assert.ok(output.includes("**Total AI Ratio:**"));
+    assert.ok(!output.includes("Commits: 2 tracked / 2 total"));
+    assert.ok(!output.includes("Prompts: 2"));
+    assert.ok(output.includes("| Commit | AI Ratio | Prompts | Files |"));
+    assert.match(output, /\| .* \| \d+% [█░]+ \| \d+ \| .* \|/);
     assert.ok(output.includes("feat: add A"));
     assert.ok(output.includes("feat: add B"));
     assert.ok(output.includes("🤖"));
+  });
+
+  it("escapes pipes in commit messages and file names for markdown tables", () => {
+    const pipeDir = mkdtempSync(join(tmpdir(), "agentnote-pr-pipe-"));
+    try {
+      execSync("git init", { cwd: pipeDir });
+      execSync("git config user.email test@test.com", { cwd: pipeDir });
+      execSync("git config user.name Test", { cwd: pipeDir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: pipeDir });
+      writeFileSync(join(pipeDir, "plain.ts"), "export const plain = true;");
+      execSync("git add plain.ts", { cwd: pipeDir });
+      execSync('git commit -m "feat: add pipe | table"', { cwd: pipeDir });
+
+      const sha = execSync("git rev-parse HEAD", { cwd: pipeDir, encoding: "utf-8" }).trim();
+      const note = {
+        v: 1,
+        session_id: "a1b2c3d4-aaaa-bbbb-cccc-000000000055",
+        timestamp: "2026-04-06T00:00:00Z",
+        interactions: [
+          {
+            prompt: "add pipe-safe table row",
+            response: null,
+          },
+        ],
+        files: [{ path: "pipe|file.ts", by_ai: true }],
+        attribution: {
+          ai_ratio: 100,
+          method: "file",
+        },
+      };
+      execSync(`git notes --ref=agentnote add -f -m '${JSON.stringify(note)}' ${sha}`, {
+        cwd: pipeDir,
+      });
+
+      const output = execSync(`node ${cliPath} pr HEAD~1`, {
+        cwd: pipeDir,
+        encoding: "utf-8",
+      });
+
+      assert.ok(output.includes("feat: add pipe \\| table"));
+      assert.ok(output.includes("pipe\\|file.ts 🤖"));
+    } finally {
+      rmSync(pipeDir, { recursive: true, force: true });
+    }
   });
 
   it("includes prompts section in markdown output", () => {

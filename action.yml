@@ -27,6 +27,10 @@ inputs:
     description: "Directory where dashboard notes/*.json will be written"
     required: false
     default: "packages/dashboard/public"
+  dashboard_url:
+    description: "Public dashboard URL to link from the PR report when the dashboard is already deployed"
+    required: false
+    default: ""
 
 outputs:
   overall_ai_ratio:
@@ -47,6 +51,8 @@ outputs:
     description: "Dashboard snapshot directory written by the action"
   dashboard_commits:
     description: "Number of tracked commits written into the dashboard snapshot"
+  dashboard_url:
+    description: "Public dashboard URL linked from the PR report when explicitly configured"
 
 runs:
   using: "node24"
