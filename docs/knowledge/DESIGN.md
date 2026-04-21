@@ -91,10 +91,10 @@ The dashboard package is a static Astro app. `packages/dashboard/public/notes/` 
 For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
-- rebuild the dashboard (and optionally the docs site) from that working-tree copy
-- persist the updated `dashboard/notes` back to `gh-pages`
+- on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
+- on `push` to `main`, rebuild the dashboard (and optionally the docs site), persist merged note state, and deploy the public site
 
-A brand-new deploy therefore starts empty until the first eligible push writes note JSON.
+A brand-new repo can therefore accumulate dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment.
 
 ### Root action.yml trick
 

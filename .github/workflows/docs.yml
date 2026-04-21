@@ -2,8 +2,13 @@ name: Deploy Pages
 
 on:
   push:
-    branches-ignore:
-      - gh-pages
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -19,12 +24,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ steps.notes.outputs.should_build }}
+      should_deploy: ${{ steps.notes.outputs.should_deploy }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Restore dashboard notes from gh-pages
@@ -45,12 +50,14 @@ jobs:
       - name: Update dashboard notes from git notes
         id: notes
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
-          REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -euo pipefail
           git fetch origin refs/notes/agentnote:refs/notes/agentnote || true
@@ -61,11 +68,13 @@ jobs:
           import { join } from "node:path";
 
           const notesDir = "packages/dashboard/public/notes";
+          const eventName = process.env.EVENT_NAME || "";
           const before = process.env.BEFORE_SHA || "";
           const head = process.env.HEAD_SHA || "";
           const repo = process.env.GITHUB_REPOSITORY || "";
-          const owner = process.env.GITHUB_REPOSITORY_OWNER || "";
-          const refName = process.env.REF_NAME || "";
+          const prNumber = Number(process.env.PR_NUMBER || "");
+          const prTitle = process.env.PR_TITLE || "";
+          const prHeadRepo = process.env.PR_HEAD_REPO || "";
           const githubOutput = process.env.GITHUB_OUTPUT || "";
           const zeroSha = /^0+$/;
 
@@ -151,27 +160,6 @@ jobs:
             }
           }
 
-          function fetchBranchPullRequest() {
-            if (!owner || !refName) return null;
-            try {
-              const raw = run("gh", [
-                "api",
-                `repos/${repo}/pulls`,
-                "--paginate",
-                "--slurp",
-                "-f",
-                "state=open",
-                "-f",
-                `head=${owner}:${refName}`,
-              ]);
-              const pages = JSON.parse(raw);
-              const pulls = Array.isArray(pages) ? pages.flat() : [];
-              return pulls[0] ?? null;
-            } catch {
-              return null;
-            }
-          }
-
           function fetchPullRequestCommits(prNumber) {
             try {
               const raw = run("gh", [
@@ -213,13 +201,47 @@ jobs:
             return head ? [head] : [];
           }
 
-          function setShouldBuild(value) {
+          function setOutput(name, value) {
             if (!githubOutput) return;
-            writeFileSync(githubOutput, `should_build=${value}\n`, { flag: "a" });
+            writeFileSync(githubOutput, `${name}=${value}\n`, { flag: "a" });
           }
 
-          if (refName === "main") {
-            setShouldBuild("true");
+          function setFlags({ build, persist, deploy }) {
+            setOutput("should_build", build);
+            setOutput("should_persist", persist);
+            setOutput("should_deploy", deploy);
+          }
+
+          if (eventName === "pull_request") {
+            if (!Number.isInteger(prNumber) || !prTitle) {
+              console.log("Pull request metadata is missing.");
+              setFlags({ build: "false", persist: "false", deploy: "false" });
+              process.exit(0);
+            }
+
+            const isForkPullRequest = prHeadRepo && repo && prHeadRepo !== repo;
+            if (prHeadRepo && repo && prHeadRepo !== repo) {
+              console.log(`Skip dashboard note persistence for fork pull request #${prNumber}.`);
+            }
+
+            setFlags({
+              build: "true",
+              persist: isForkPullRequest ? "false" : "true",
+              deploy: "false",
+            });
+            removeNotesForPr(prNumber);
+
+            const pullRequest = {
+              number: prNumber,
+              title: prTitle,
+              state: "open",
+            };
+
+            for (const sha of fetchPullRequestCommits(prNumber)) {
+              writeDashboardNote(sha, pullRequest);
+            }
+          } else {
+            setFlags({ build: "true", persist: "true", deploy: "true" });
             const mergedPullRequests = new Map();
             for (const sha of buildCommitRange()) {
               const pulls = fetchCommitPulls(sha);
@@ -248,38 +270,16 @@ jobs:
             for (const pullRequest of mergedPullRequests.values()) {
               updateNotesForPr(pullRequest.number, pullRequest);
             }
-          } else {
-            const pull = fetchBranchPullRequest();
-            if (!pull || typeof pull.number !== "number" || typeof pull.title !== "string") {
-              console.log(`No open pull request found for branch ${refName}.`);
-              setShouldBuild("false");
-              process.exit(0);
-            }
-
-            setShouldBuild("true");
-            removeNotesForPr(pull.number);
-
-            const pullRequest = {
-              number: pull.number,
-              title: pull.title,
-              state: "open",
-            };
-
-            for (const sha of fetchPullRequestCommits(pull.number)) {
-              writeDashboardNote(sha, pullRequest);
-            }
           }
           NODE
       - name: Build website and dashboard
         if: steps.notes.outputs.should_build == 'true'
-        env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           BUILD_ROOT="${GITHUB_WORKSPACE}"
 
-          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+          if [ ! -f packages/dashboard/package.json ]; then
             git fetch origin main --depth=1
             if git cat-file -e origin/main:packages/dashboard/package.json 2>/dev/null; then
               BUILD_ROOT="$(mktemp -d)"
@@ -299,7 +299,7 @@ jobs:
           cp -R "$BUILD_ROOT/website/dist/." .pages/
           cp -R "$BUILD_ROOT/packages/dashboard/dist/." .pages/dashboard/
       - name: Persist dashboard notes to gh-pages
-        if: steps.notes.outputs.should_build == 'true'
+        if: steps.notes.outputs.should_persist == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -337,8 +337,8 @@ jobs:
 
           git commit -m "chore: update dashboard notes"
           git push origin HEAD:gh-pages
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.notes.outputs.should_build == 'true'
+      - uses: actions/upload-pages-artifact@v5
+        if: steps.notes.outputs.should_deploy == 'true'
         with:
           path: .pages
 

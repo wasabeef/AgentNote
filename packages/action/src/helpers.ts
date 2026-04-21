@@ -78,3 +78,17 @@ export function shouldRetryNotesFetch(report: {
 }): boolean {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
+
+/**
+ * Build the CLI command used to collect a PR report.
+ * When GitHub provides the real PR head SHA, prefer it over the synthetic
+ * merge commit checked out by pull_request workflows.
+ */
+export function buildPrReportCommand(
+	cliCmd: string,
+	base: string,
+	headSha?: string,
+): string {
+	const headArg = headSha ? ` --head "${headSha}"` : "";
+	return `${cliCmd} pr "${base}"${headArg} --json`;
+}
