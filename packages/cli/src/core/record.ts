@@ -94,11 +94,16 @@ export async function recordCommitEntry(opts: {
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
   const allSessionEditTurns = collectSessionEditTurns(allChangeEntries, allPreBlobEntries);
+  const commitFileTurns = collectCommitFileTurns(
+    changeEntries,
+    preBlobEntriesForTurnFix,
+    commitFileSet,
+  );
 
   let aiFiles: string[];
   let prompts: string[];
   let relevantPromptEntries: Record<string, unknown>[];
-  const relevantTurns = new Set<number>();
+  const relevantTurns = new Set<number>(commitFileTurns.keys());
   let primaryTurns = new Set<number>();
 
   if (hasTurnData) {
@@ -115,20 +120,6 @@ export async function recordCommitEntry(opts: {
       if (f && commitFileSet.has(f)) aiFileSet.add(f);
     }
     aiFiles = [...aiFileSet];
-
-    // Find turns that touched files in this commit.
-    for (const entry of changeEntries) {
-      const file = entry.file as string;
-      if (file && commitFileSet.has(file)) {
-        relevantTurns.add(typeof entry.turn === "number" ? entry.turn : 0);
-      }
-    }
-    for (const entry of preBlobEntriesForTurnFix) {
-      const file = entry.file as string;
-      if (file && commitFileSet.has(file)) {
-        relevantTurns.add(typeof entry.turn === "number" ? entry.turn : 0);
-      }
-    }
 
     relevantPromptEntries = [];
     prompts = [];
@@ -155,10 +146,13 @@ export async function recordCommitEntry(opts: {
       })
     : { counts: null, contributingTurns: new Set<number>() };
   if (hasTurnData) {
+    const fileFallbackTurns = selectFileFallbackPrimaryTurns(commitFileTurns);
     primaryTurns =
       lineAttribution.contributingTurns.size > 0
         ? lineAttribution.contributingTurns
-        : new Set(relevantTurns);
+        : fileFallbackTurns.size > 0
+          ? fileFallbackTurns
+          : new Set(relevantTurns);
     relevantPromptEntries = selectPromptWindowEntries(
       promptEntries,
       primaryTurns,
@@ -638,6 +632,41 @@ function collectTranscriptEditTurns(
   return turns;
 }
 
+function collectCommitFileTurns(
+  changeEntries: Record<string, unknown>[],
+  preBlobEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+): Map<number, Set<string>> {
+  const turns = new Map<number, Set<string>>();
+
+  const addEntry = (entry: Record<string, unknown>) => {
+    const file = entry.file as string;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!file || !commitFileSet.has(file) || turn <= 0) return;
+    if (!turns.has(turn)) turns.set(turn, new Set<string>());
+    turns.get(turn)?.add(file);
+  };
+
+  for (const entry of changeEntries) addEntry(entry);
+  for (const entry of preBlobEntries) addEntry(entry);
+
+  return turns;
+}
+
+function selectFileFallbackPrimaryTurns(commitFileTurns: Map<number, Set<string>>): Set<number> {
+  if (commitFileTurns.size === 0) return new Set<number>();
+
+  const latestTurnByFile = new Map<string, number>();
+  for (const [turn, files] of commitFileTurns) {
+    for (const file of files) {
+      const previous = latestTurnByFile.get(file) ?? 0;
+      if (turn > previous) latestTurnByFile.set(file, turn);
+    }
+  }
+
+  return new Set<number>(latestTurnByFile.values());
+}
+
 function selectPromptWindowEntries(
   promptEntries: Record<string, unknown>[],
   primaryTurns: Set<number>,
@@ -649,32 +678,60 @@ function selectPromptWindowEntries(
   const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
   if (orderedPrimaryTurns.length === 0) return [];
 
-  const minPrimaryTurn = orderedPrimaryTurns[0];
-  const maxPrimaryTurn = orderedPrimaryTurns[orderedPrimaryTurns.length - 1];
   const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  const primaryTurnSet = new Set(orderedPrimaryTurns);
+  const clusters: Array<{
+    lowerBoundary: number;
+    upperBoundary: number;
+    primaryTurns: Set<number>;
+  }> = [];
 
-  let lowerBoundary = 0;
+  let lastEditTurn = 0;
+  let activeCluster: {
+    lowerBoundary: number;
+    primaryTurns: Set<number>;
+  } | null = null;
+
   for (const turn of orderedEditTurns) {
-    if (turn < minPrimaryTurn && !primaryTurns.has(turn)) {
-      lowerBoundary = turn;
+    if (primaryTurnSet.has(turn)) {
+      if (!activeCluster) {
+        activeCluster = {
+          lowerBoundary: lastEditTurn,
+          primaryTurns: new Set<number>(),
+        };
+      }
+      activeCluster.primaryTurns.add(turn);
+    } else if (activeCluster) {
+      clusters.push({
+        lowerBoundary: activeCluster.lowerBoundary,
+        upperBoundary: turn,
+        primaryTurns: activeCluster.primaryTurns,
+      });
+      activeCluster = null;
     }
+
+    lastEditTurn = turn;
   }
 
-  let upperBoundary = Number.POSITIVE_INFINITY;
-  for (const turn of orderedEditTurns) {
-    if (turn > maxPrimaryTurn && !primaryTurns.has(turn)) {
-      upperBoundary = turn;
-      break;
-    }
+  if (activeCluster) {
+    clusters.push({
+      lowerBoundary: activeCluster.lowerBoundary,
+      upperBoundary: Number.POSITIVE_INFINITY,
+      primaryTurns: activeCluster.primaryTurns,
+    });
   }
 
   return promptEntries.filter((entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (turn <= lowerBoundary || turn >= upperBoundary) return false;
-    if (turn < minPrimaryTurn || turn > maxPrimaryTurn) {
+    if (turn <= 0) return false;
+
+    for (const cluster of clusters) {
+      if (turn <= cluster.lowerBoundary || turn >= cluster.upperBoundary) continue;
+      if (cluster.primaryTurns.has(turn)) return true;
       return turn > maxConsumedTurn;
     }
-    return turn > maxConsumedTurn || primaryTurns.has(turn);
+
+    return false;
   });
 }
 
