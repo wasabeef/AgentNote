@@ -313,6 +313,6 @@
   "pull_request": {
     "number": 23,
     "title": "fix(cli): tighten prompt attribution windows",
-    "state": "open"
+    "state": "merged"
   }
 }
