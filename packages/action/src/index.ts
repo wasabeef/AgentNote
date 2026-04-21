@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import { mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
 import { join, resolve } from "path";
 import {
+	buildPrReportCommand,
 	COMMENT_MARKER,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
@@ -228,6 +229,7 @@ async function run(): Promise<void> {
 		const base =
 			core.getInput("base") ||
 			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
+		const headSha = github.context.payload.pull_request?.head?.sha;
 		const cliCmd = resolveCliCommand();
 
 		const prOutputMode = resolvePrOutputMode(
@@ -247,7 +249,7 @@ async function run(): Promise<void> {
 			fetchAgentnoteNotes();
 
 			try {
-				json = execSync(`${cliCmd} pr "${base}" --json`, {
+				json = execSync(buildPrReportCommand(cliCmd, base, headSha), {
 					encoding: "utf-8",
 					stdio: ["pipe", "pipe", "pipe"],
 				}).trim();

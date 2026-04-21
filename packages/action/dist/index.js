@@ -29933,6 +29933,7 @@ exports.resolveOutputMode = resolveOutputMode;
 exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
+exports.buildPrReportCommand = buildPrReportCommand;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -29986,6 +29987,15 @@ function upsertDescription(existingBody, markdown) {
  */
 function shouldRetryNotesFetch(report) {
     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
+}
+/**
+ * Build the CLI command used to collect a PR report.
+ * When GitHub provides the real PR head SHA, prefer it over the synthetic
+ * merge commit checked out by pull_request workflows.
+ */
+function buildPrReportCommand(cliCmd, base, headSha) {
+    const headArg = headSha ? ` --head "${headSha}"` : "";
+    return `${cliCmd} pr "${base}"${headArg} --json`;
 }
 
 
@@ -30214,6 +30224,7 @@ async function run() {
     try {
         const base = core.getInput("base") ||
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
+        const headSha = github.context.payload.pull_request?.head?.sha;
         const cliCmd = resolveCliCommand();
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
@@ -30224,7 +30235,7 @@ async function run() {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             fetchAgentnoteNotes();
             try {
-                json = (0, child_process_1.execSync)(`${cliCmd} pr "${base}" --json`, {
+                json = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha), {
                     encoding: "utf-8",
                     stdio: ["pipe", "pipe", "pipe"],
                 }).trim();

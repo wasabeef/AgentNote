@@ -21,7 +21,7 @@ usage:
   agent-note deinit --agent <name>  remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
   agent-note log [n]                list recent commits with session info
-  agent-note pr [base] [--json] [--update <PR#>] [--output description|comment]
+  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment]
                                     generate PR report or update PR description/comment
   agent-note session <id>           show commits for a session
   agent-note commit [args]          git commit with session tracking

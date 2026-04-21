@@ -167,6 +167,65 @@ describe("agentnote pr", () => {
       assert.ok(commit.ai_ratio !== null, "tracked commit should have ai_ratio");
     }
   });
+
+  it("excludes synthetic merge commits when --head points at the PR head commit", () => {
+    const mergeDir = mkdtempSync(join(tmpdir(), "agentnote-pr-merge-"));
+    try {
+      execSync("git init", { cwd: mergeDir });
+      execSync("git config user.email test@test.com", { cwd: mergeDir });
+      execSync("git config user.name Test", { cwd: mergeDir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: mergeDir });
+      execSync(`node ${cliPath} init --agent claude --hooks`, { cwd: mergeDir });
+      const defaultBranch = execSync("git branch --show-current", {
+        cwd: mergeDir,
+        encoding: "utf-8",
+      }).trim();
+
+      execSync("git checkout -b feature", { cwd: mergeDir });
+
+      const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-000000000066";
+      writeFileSync(join(mergeDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+      const sessionDir = join(mergeDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+      mkdirSync(sessionDir, { recursive: true });
+      writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","timestamp":"2026-04-06T00:02:00Z","prompt":"ship feature commit"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        `${JSON.stringify({
+          event: "file_change",
+          tool: "Write",
+          file: join(mergeDir, "feature.ts"),
+        })}\n`,
+      );
+      writeFileSync(join(mergeDir, "feature.ts"), "export const feature = true;");
+      execSync("git add .", { cwd: mergeDir });
+      execSync(`node ${cliPath} commit -m "feat: add feature branch commit"`, { cwd: mergeDir });
+      const prHeadSha = execSync("git rev-parse HEAD", { cwd: mergeDir, encoding: "utf-8" }).trim();
+
+      execSync(`git checkout ${defaultBranch}`, { cwd: mergeDir });
+      writeFileSync(join(mergeDir, "base.txt"), "base update");
+      execSync("git add base.txt", { cwd: mergeDir });
+      execSync("git commit -m 'chore: advance base branch'", { cwd: mergeDir });
+      const baseSha = execSync("git rev-parse HEAD", { cwd: mergeDir, encoding: "utf-8" }).trim();
+
+      execSync("git merge --no-ff feature -m 'Merge feature into base'", { cwd: mergeDir });
+
+      const output = execSync(`node ${cliPath} pr ${baseSha} --head ${prHeadSha} --json`, {
+        cwd: mergeDir,
+        encoding: "utf-8",
+      });
+
+      const report = JSON.parse(output);
+      assert.equal(report.total_commits, 1);
+      assert.equal(report.commits.length, 1);
+      assert.equal(report.commits[0].message, "feat: add feature branch commit");
+    } finally {
+      rmSync(mergeDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("agentnote pr (no data)", () => {

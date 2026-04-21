@@ -51,9 +51,9 @@ interface PrReport {
 
 // ─── Data collection ────────────────────────────────
 
-async function collectReport(base: string): Promise<PrReport | null> {
-  const head = await git(["rev-parse", "--short", "HEAD"]);
-  const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..HEAD`]);
+async function collectReport(base: string, headRef = "HEAD"): Promise<PrReport | null> {
+  const head = await git(["rev-parse", "--short", headRef]);
+  const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
 
   if (!raw.trim()) return null;
 
@@ -373,12 +373,15 @@ export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
   const outputIdx = args.indexOf("--output");
   const updateIdx = args.indexOf("--update");
+  const headIdx = args.indexOf("--head");
   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
+  const headRef = headIdx !== -1 ? args[headIdx + 1] : "HEAD";
   const positional = args.filter(
     (a, i) =>
       !a.startsWith("--") &&
       (outputIdx === -1 || i !== outputIdx + 1) &&
-      (updateIdx === -1 || i !== updateIdx + 1),
+      (updateIdx === -1 || i !== updateIdx + 1) &&
+      (headIdx === -1 || i !== headIdx + 1),
   );
   const base = positional[0] ?? (await detectBaseBranch());
 
@@ -389,7 +392,7 @@ export async function pr(args: string[]): Promise<void> {
 
   const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : "description";
 
-  const report = await collectReport(base);
+  const report = await collectReport(base, headRef);
 
   if (!report) {
     if (isJson) {
