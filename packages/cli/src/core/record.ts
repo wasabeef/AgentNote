@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -180,14 +181,14 @@ export async function recordCommitEntry(opts: {
   // unrelated interactions. But content-based exact matching is safe even
   // across turns, so we still try that path first.
   let crossTurnCommit = false;
-  if (hasTurnData && primaryTurns.size > 0) {
+  if (hasTurnData && relevantTurns.size > 0) {
     const turnFilePath = join(sessionDir, TURN_FILE);
     let currentTurn = 0;
     if (existsSync(turnFilePath)) {
       currentTurn = Number.parseInt((await readFile(turnFilePath, "utf-8")).trim(), 10) || 0;
     }
-    const minPrimaryTurn = Math.min(...primaryTurns);
-    crossTurnCommit = minPrimaryTurn < currentTurn;
+    const minRelevantTurn = Math.min(...relevantTurns);
+    crossTurnCommit = minRelevantTurn < currentTurn;
   }
 
   let interactions: Interaction[];
@@ -756,7 +757,7 @@ async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): P
       continue;
     }
 
-    const content = await readCommittedFileContent(commitSha, file);
+    const content = await readCommittedFilePrefix(commitSha, file);
     if (content && hasGeneratedArtifactMarkers(content)) {
       generated.add(file);
     }
@@ -765,10 +766,69 @@ async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): P
   return [...generated];
 }
 
-async function readCommittedFileContent(commitSha: string, file: string): Promise<string | null> {
-  const { stdout, exitCode } = await gitSafe(["show", `${commitSha}:${file}`]);
-  if (exitCode !== 0) return null;
-  return stdout;
+async function readCommittedFilePrefix(
+  commitSha: string,
+  file: string,
+  maxBytes = 2048,
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    const child = spawn("git", ["show", `${commitSha}:${file}`], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const stdout = child.stdout;
+    if (!stdout) {
+      resolve(null);
+      return;
+    }
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    let stoppedEarly = false;
+    let sawBinaryData = false;
+    let settled = false;
+
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    child.on("error", () => finish(null));
+
+    stdout.on("data", (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      if (buffer.includes(0)) {
+        sawBinaryData = true;
+        stoppedEarly = true;
+        child.kill();
+        return;
+      }
+
+      if (totalBytes < maxBytes) {
+        const remaining = maxBytes - totalBytes;
+        const prefix = buffer.subarray(0, remaining);
+        chunks.push(prefix);
+        totalBytes += prefix.length;
+      }
+
+      if (totalBytes >= maxBytes) {
+        stoppedEarly = true;
+        child.kill();
+      }
+    });
+
+    child.on("close", (code) => {
+      if (sawBinaryData) {
+        finish(null);
+        return;
+      }
+      if (!stoppedEarly && code !== 0) {
+        finish(null);
+        return;
+      }
+      finish(Buffer.concat(chunks).toString("utf-8"));
+    });
+  });
 }
 
 /**
