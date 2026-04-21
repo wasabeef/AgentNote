@@ -1,7 +1,6 @@
 ---
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 interface DashboardCommitSummary {
   sha: string;
@@ -36,7 +35,10 @@ interface DashboardIndexData {
 const baseUrl = import.meta.env.BASE_URL;
 const homePath = `${baseUrl}`;
 const repoUrl = "https://github.com/wasabeef/AgentNote";
-const notesDir = resolve(fileURLToPath(new URL("../../public/notes", import.meta.url)));
+// Resolve from the package root because Astro/Vite rewrites import.meta.url to
+// the compiled module location during build, which can make source-relative
+// traversal miss public/notes even when the files are present.
+const notesDir = resolve(process.cwd(), "public/notes");
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
