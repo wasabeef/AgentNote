@@ -90,7 +90,7 @@ Cursor preview menggunakan hook `afterFileEdit` dan `afterTabFileEdit` untuk att
 Gemini CLI preview menggunakan hook `BeforeTool`/`AfterTool` pada tool `write_file` dan `replace` untuk attribution berbasis file. Deteksi commit memakai pola pending-commit melalui `BeforeTool`/`AfterTool` pada `run_shell_command`. Pemulihan prompt dan response berasal dari hook `BeforeAgent`/`AfterAgent` dan parsing transcript JSONL.
 
 <Aside type="tip">
-  Daftar prompt diambil dari percakapan kausal di sekitar final diff, bukan dari seluruh riwayat sesi. Agent Note juga sebisa mungkin mengecualikan artefak hasil generate yang umum dari denominator `AI ratio`, termasuk output build web, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, dan source generated Swift / Kotlin.
+  Daftar prompt diambil dari percakapan kausal di sekitar final diff, bukan dari seluruh riwayat sesi. Saat Agent Note fallback ke `method: "file"`, jendela itu di-anchor ke latest touch turn untuk tiap committed file dan hanya menyisakan prompt-only context yang mengarah ke final edit tersebut. Same-file edit lama dan follow-up chatter setelah edit tidak ikut masuk. Agent Note juga sebisa mungkin mengecualikan artefak hasil generate yang umum dari denominator `AI ratio`, termasuk output build web, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, dan source generated Swift / Kotlin.
 </Aside>
 
 ## Siklus hidup sesi

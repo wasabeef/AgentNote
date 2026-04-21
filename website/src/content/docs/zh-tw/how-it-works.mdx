@@ -90,7 +90,7 @@ Cursor preview 使用 `afterFileEdit` 與 `afterTabFileEdit` hooks 進行 attrib
 Gemini CLI preview 使用 `write_file` 與 `replace` 工具上的 `BeforeTool`/`AfterTool` hooks 來做 file-level attribution。commit 偵測透過 `run_shell_command` 上的 `BeforeTool`/`AfterTool` pending-commit pattern 完成。prompt 與 response 的還原則來自 `BeforeAgent`/`AfterAgent` hooks 與 JSONL transcript parsing。
 
 <Aside type="tip">
-  prompt 清單來自最終 diff 周圍具有因果關係的對話，而不是整個 session backlog。Agent Note 也會盡量把常見的生成產物排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
+  prompt 清單來自最終 diff 周圍具有因果關係的對話，而不是整個 session backlog。即使 Agent Note 回退到 `method: "file"`，也會以每個 committed file 的 latest touch turn 為錨點，只保留通往那些最終 edit 的 prompt-only context。較早的 same-file edit，以及 edit 之後的 follow-up chatter，都不會被帶進 note。Agent Note 也會盡量把常見的生成產物排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
 </Aside>
 
 ## Session 生命週期
