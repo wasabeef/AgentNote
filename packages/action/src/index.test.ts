@@ -1,10 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+	buildPrReportCommand,
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
-	buildPrReportCommand,
 	resolvePrOutputMode,
 	resolveOutputMode,
 	shouldRetryNotesFetch,
@@ -134,14 +134,32 @@ describe("shouldRetryNotesFetch", () => {
 describe("buildPrReportCommand", () => {
 	it("uses the explicit PR head sha when available", () => {
 		assert.equal(
-			buildPrReportCommand("node packages/cli/dist/cli.js", "origin/main", "abc1234"),
+			buildPrReportCommand(
+				"node packages/cli/dist/cli.js",
+				"origin/main",
+				"abc1234",
+				{ json: true },
+			),
 			'node packages/cli/dist/cli.js pr "origin/main" --head "abc1234" --json',
+		);
+	});
+
+	it("uses the explicit PR head sha for markdown output too", () => {
+		assert.equal(
+			buildPrReportCommand(
+				"node packages/cli/dist/cli.js",
+				"origin/main",
+				"abc1234",
+			),
+			'node packages/cli/dist/cli.js pr "origin/main" --head "abc1234"',
 		);
 	});
 
 	it("falls back to HEAD when no head sha is provided", () => {
 		assert.equal(
-			buildPrReportCommand("node packages/cli/dist/cli.js", "origin/main"),
+			buildPrReportCommand("node packages/cli/dist/cli.js", "origin/main", undefined, {
+				json: true,
+			}),
 			'node packages/cli/dist/cli.js pr "origin/main" --json',
 		);
 	});

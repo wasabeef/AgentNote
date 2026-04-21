@@ -29993,9 +29993,10 @@ function shouldRetryNotesFetch(report) {
  * When GitHub provides the real PR head SHA, prefer it over the synthetic
  * merge commit checked out by pull_request workflows.
  */
-function buildPrReportCommand(cliCmd, base, headSha) {
+function buildPrReportCommand(cliCmd, base, headSha, options) {
     const headArg = headSha ? ` --head "${headSha}"` : "";
-    return `${cliCmd} pr "${base}"${headArg} --json`;
+    const jsonArg = options?.json ? " --json" : "";
+    return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
 }
 
 
@@ -30235,7 +30236,7 @@ async function run() {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             fetchAgentnoteNotes();
             try {
-                json = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha), {
+                json = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha, { json: true }), {
                     encoding: "utf-8",
                     stdio: ["pipe", "pipe", "pipe"],
                 }).trim();
@@ -30267,7 +30268,7 @@ async function run() {
         core.setOutput("json", json);
         let markdown = "";
         try {
-            markdown = (0, child_process_1.execSync)(`${cliCmd} pr "${base}"`, {
+            markdown = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha), {
                 encoding: "utf-8",
                 stdio: ["pipe", "pipe", "pipe"],
             }).trim();

@@ -88,7 +88,9 @@ export function buildPrReportCommand(
 	cliCmd: string,
 	base: string,
 	headSha?: string,
+	options?: { json?: boolean },
 ): string {
 	const headArg = headSha ? ` --head "${headSha}"` : "";
-	return `${cliCmd} pr "${base}"${headArg} --json`;
+	const jsonArg = options?.json ? " --json" : "";
+	return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
 }

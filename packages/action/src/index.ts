@@ -249,7 +249,7 @@ async function run(): Promise<void> {
 			fetchAgentnoteNotes();
 
 			try {
-				json = execSync(buildPrReportCommand(cliCmd, base, headSha), {
+				json = execSync(buildPrReportCommand(cliCmd, base, headSha, { json: true }), {
 					encoding: "utf-8",
 					stdio: ["pipe", "pipe", "pipe"],
 				}).trim();
@@ -288,7 +288,7 @@ async function run(): Promise<void> {
 
 		let markdown = "";
 		try {
-			markdown = execSync(`${cliCmd} pr "${base}"`, {
+			markdown = execSync(buildPrReportCommand(cliCmd, base, headSha), {
 				encoding: "utf-8",
 				stdio: ["pipe", "pipe", "pipe"],
 			}).trim();
