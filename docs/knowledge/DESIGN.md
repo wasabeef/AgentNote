@@ -234,17 +234,17 @@ A commit note records a list of `interactions` (prompt + response + `files_touch
 
 **Step 1 — derive primary turns.**
 
-- **Session-driven agents** (`Claude`, `Gemini`, partial `Cursor`): use line-level attribution when blob data is available. Turns that still own added lines in the final diff become the primary turns. If line-level attribution is unavailable, fall back to the commit's edit-linked turns.
+- **Session-driven agents** (`Claude`, `Gemini`, partial `Cursor`): use line-level attribution when blob data is available. Turns that still own added lines in the final diff become the primary turns. If line-level attribution is unavailable, fall back to the **latest touch turn for each committed file**, not every historical same-file turn in the session.
 - **Transcript-driven agents** (`Codex`): use transcript `files_touched` + `line_stats`. Agent Note searches backward for the smallest suffix of transcript edits whose cumulative line counts match the committed diff. Those turns become the primary turns. If an exact suffix cannot be proven, fall back to transcript turns that touched the commit's files.
 
 **Step 2 — expand to a causal prompt window.**
 
-- Find the nearest earlier edit turn that is **not** primary.
-- Find the nearest later edit turn that is **not** primary.
-- Include prompts between those two boundaries.
-- Within that block, prompts from turns already consumed by earlier commits stay out unless the turn itself is primary.
+- Build contiguous **clusters** of primary edit turns.
+- For each cluster, stop when the nearest earlier or later edit turn is **not** primary.
+- Include prompts only inside those cluster-local boundaries.
+- Within a cluster, prompts from turns already consumed by earlier commits stay out unless the turn itself is primary.
 
-This keeps nearby prompt-only context such as planning, clarification, or commit / conflict follow-up, but drops older overwritten edit bursts that no longer explain the final diff.
+This keeps nearby prompt-only context such as planning, clarification, or commit / conflict follow-up, but drops older overwritten edit bursts and stale same-file work that no longer explain the final diff.
 
 **Split-commit semantics are preserved.**
 

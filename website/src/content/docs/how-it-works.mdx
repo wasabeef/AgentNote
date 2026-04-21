@@ -90,7 +90,7 @@ Cursor preview uses `afterFileEdit` and `afterTabFileEdit` hooks for attribution
 Gemini CLI preview uses `BeforeTool`/`AfterTool` hooks on `write_file` and `replace` tools for file-level attribution. Commit detection uses the pending-commit pattern via `BeforeTool`/`AfterTool` on `run_shell_command`. Prompt and response recovery comes from `BeforeAgent`/`AfterAgent` hooks and JSONL transcript parsing.
 
 <Aside type="tip">
-  Prompt lists come from the causal conversation around the final diff, not the whole session backlog. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
+  Prompt lists come from the causal conversation around the final diff, not the whole session backlog. When Agent Note falls back to `method: "file"`, it anchors that window to the latest touch turn for each committed file and keeps only the nearby context clusters. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
 </Aside>
 
 ## Session Lifecycle
