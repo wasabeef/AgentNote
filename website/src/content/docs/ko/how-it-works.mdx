@@ -1,0 +1,131 @@
+---
+title: 동작 방식
+description: Agent Note 가 AI 세션 데이터를 수집해 git commit 에 연결하는 방식
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## 데이터 흐름
+
+<Steps>
+1. coding agent 에 prompt 를 보냄 → hooks 가 prompt 를 수집
+2. agent 가 코드를 작성 → hooks 또는 transcripts 가 수정된 파일과 attribution signal 을 추적
+3. `git commit` 또는 `agent-note commit` 실행 → trailer 가 주입되고 note 가 기록됨
+4. `git push` 실행 → notes 가 remote 로 자동 push 됨
+</Steps>
+
+repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니다. Cursor preview 는 response hook 또는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없는 환경에서는 shell hook 이 fallback 경로를 제공합니다.
+
+## 저장소
+
+<CardGrid>
+  <Card title="레이어 1: 로컬 임시 데이터" icon="laptop">
+    `.git/agentnote/sessions/` 안의 세션 데이터. prompt, 변경 내역, blob hash 를 담는 JSONL 파일입니다. 각 commit 뒤에 rotate 되며 push 되지 않습니다.
+  </Card>
+  <Card title="레이어 2: Git Notes" icon="document">
+    `refs/notes/agentnote` 안의 영구 기록. commit 당 하나의 JSON. push, fetch, 팀 공유가 가능합니다.
+  </Card>
+</CardGrid>
+
+### 세션 파일
+
+| 파일 | 목적 |
+|---|---|
+| `prompts.jsonl` | turn 번호와 함께 한 줄에 하나의 prompt |
+| `changes.jsonl` | AI 가 수정한 파일과 post-edit blob hash |
+| `pre_blobs.jsonl` | 각 AI edit 이전의 file 상태 |
+| `heartbeat` | 세션 활동 시각 |
+| `turn` | prompt 마다 증가하는 단조 증가 카운터 |
+
+### Note 스키마
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "JWT auth middleware 구현",
+      "response": "middleware 를 만들겠습니다...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Attribution 방식
+
+Claude Code 는 3-diff position algorithm 으로 AI authorship 을 줄 단위로 계산합니다.
+
+| Diff | From | To | 캡처하는 내용 |
+|---|---|---|---|
+| diff1 | parent commit | committed file | 이 commit 의 모든 변경 |
+| diff2 | AI edit 전 | committed file | AI edit + 이후 human edit |
+| diff3 | AI edit 후 | committed file | human edit 만 |
+
+**AI position = diff2 에 있고 diff3 에는 없는 위치**
+
+세 diff 모두 committed blob 을 대상으로 하므로 위치를 직접 비교할 수 있습니다.
+
+<Aside type="tip">
+  삭제 라인은 별도로 추적되며 AI 나 human 어느 쪽에도 attribution 되지 않습니다. blob data 를 사용할 수 없으면 file-level attribution 으로 자동 fallback 합니다.
+</Aside>
+
+Codex CLI 는 transcript-driven attribution 을 사용합니다. transcript 의 `apply_patch` line count 가 final commit diff 와 일치하면 Agent Note 는 Codex commit 을 `method: "line"` 으로 올립니다. 그렇지 않으면 false positive 를 피하기 위해 `method: "file"` 로 fallback 합니다. transcript 에 patch data 로 나타나지 않는 shell-only edit 는 안전한 쪽으로 유지됩니다. Agent Note 는 prompt / response pair 와 관측된 Codex tool 은 보존할 수 있지만, shell step 만으로 `files_touched` 나 AI-authored files 를 추측하지는 않습니다. 따라서 다른 primary signal 이 file 을 agent 와 연결하지 않는 한, 그런 commit 은 `method: "file"` 과 `0%` AI attribution 에 머뭅니다. commit 시점에 transcript 를 읽을 수 없으면 Agent Note 는 warning 을 출력하고, 불확실한 attribution data 를 기록하는 대신 note 생성을 건너뜁니다.
+
+Cursor preview 는 `afterFileEdit` 와 `afterTabFileEdit` hook 을 attribution 에 사용합니다. edit count 가 맞고 final committed blob 이 마지막 AI edit 와 여전히 일치할 때만 Agent Note 는 해당 file 을 안전하게 `method: "line"` 으로 승격합니다. 그렇지 않으면 `method: "file"` 로 fallback 하며, Cursor response hook 또는 local transcript 가 있으면 prompt / response pair 복원은 계속 수행합니다.
+
+Gemini CLI preview 는 `write_file` 및 `replace` tool 에 대한 `BeforeTool`/`AfterTool` hook 으로 file-level attribution 을 수행합니다. commit detection 은 `run_shell_command` 에 대한 `BeforeTool`/`AfterTool` 의 pending-commit pattern 을 사용합니다. prompt 와 response 복원은 `BeforeAgent`/`AfterAgent` hook 및 JSONL transcript parsing 에서 옵니다.
+
+<Aside type="tip">
+  prompt 목록은 전체 session backlog 가 아니라 final diff 주변의 인과 관계가 있는 대화에서 선택됩니다. Agent Note 는 또한 가능한 범위에서 Web build output, Flutter registrant, Dart codegen, Go protobuf, Rust binding, Swift / Kotlin generated source 같은 대표적인 생성 산출물을 `AI ratio` 분모에서 제외합니다.
+</Aside>
+
+## 세션 라이프사이클
+
+| 이벤트 | 발생하는 일 |
+|---|---|
+| **SessionStart** | 세션 디렉터리를 만들고 heartbeat 를 기록 |
+| **UserPromptSubmit** | prompt 를 추가하고, turn counter 를 증가시키며, log 를 rotate |
+| **PreToolUse Edit/Write** | pre-edit blob hash 를 동기적으로 캡처 |
+| **PostToolUse Edit/Write** | post-edit blob hash 와 file path 를 캡처 |
+| **Stop** | stop event 를 기록함 (heartbeat 는 계속 활성 상태 — Stop = response 끝, session 끝 아님) |
+
+<Aside>
+  git hook 은 trailer 를 주입하거나 notes 를 기록하기 전에 heartbeat 로 세션 freshness 를 확인합니다. heartbeat 는 SessionStart 와 각 prompt 에서 업데이트됩니다.
+</Aside>
+
+<Aside type="tip">
+  Agent Note 는 현재 agent 를 인지합니다. 세션 메타데이터에 active adapter 가 저장되므로, 나중에 `show`, `status`, commit recording 이 올바른 transcript format 을 해석할 수 있습니다.
+</Aside>
+
+## Git Notes
+
+Git notes 는 branch 목록, GitHub UI, CI 에서는 보이지 않지만 push / fetch 는 가능합니다.
+
+```bash
+# 팀과 공유
+git push origin refs/notes/agentnote
+
+# remote 에서 가져오기
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# note 보기
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agent-note init` 이 auto-fetch 를 설정하고, `pre-push` hook 이 auto-push 를 처리합니다. 수동 명령은 필요하지 않습니다.
+</Aside>

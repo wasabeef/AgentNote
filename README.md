@@ -70,6 +70,8 @@ With the generated git hooks installed, Agent Note records commits automatically
 - The files touched by the agent
 - An AI ratio for the commit
 
+Prompt lists are chosen from the causal conversation around the final diff, not from the entire session window. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
+
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
 ## Agent Support

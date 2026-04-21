@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,7 +18,7 @@ import {
   TURN_FILE,
 } from "./constants.js";
 import type { Interaction, LineCounts } from "./entry.js";
-import { buildEntry } from "./entry.js";
+import { buildEntry, hasGeneratedArtifactMarkers, isGeneratedArtifactPath } from "./entry.js";
 import { appendJsonl, readJsonlEntries } from "./jsonl.js";
 import { readSessionAgent, readSessionTranscriptPath } from "./session.js";
 import { readNote, writeNote } from "./storage.js";
@@ -92,11 +93,13 @@ export async function recordCommitEntry(opts: {
 
   // Check if turn tracking is available (turn-attributed data has turn fields).
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
+  const allSessionEditTurns = collectSessionEditTurns(allChangeEntries, allPreBlobEntries);
 
   let aiFiles: string[];
   let prompts: string[];
   let relevantPromptEntries: Record<string, unknown>[];
   const relevantTurns = new Set<number>();
+  let primaryTurns = new Set<number>();
 
   if (hasTurnData) {
     // Scope data to this commit's files via turn IDs.
@@ -127,36 +130,42 @@ export async function recordCommitEntry(opts: {
       }
     }
 
-    // When this commit has AI edits, include every prompt in the unbilled
-    // window — prompts from turns not yet attributed to a prior commit.
-    // "Unbilled" = turn > maxConsumedTurn OR turn is in this commit's
-    // edit-linked set (preserves split-commit semantics: two commits sharing
-    // the same edit turn each show that turn's prompts).
-    //
-    // This gives the note the full conversation context (exploration,
-    // planning, Q&A) while preventing prompts already captured by a prior
-    // commit's note from leaking into this one. Line-level attribution and
-    // per-interaction `files_touched` still scope to edit-linked turns only.
-    //
-    // When this commit has NO AI edits, include no prompts — the empty-note
-    // skip below keeps human commits free of unrelated AI prompts.
-    //
-    // See docs/knowledge/DESIGN.md → "Prompt selection for notes".
-    if (relevantTurns.size > 0) {
-      relevantPromptEntries = promptEntries.filter((e) => {
-        const turn = typeof e.turn === "number" ? e.turn : 0;
-        return turn > maxConsumedTurn || relevantTurns.has(turn);
-      });
-      prompts = relevantPromptEntries.map((e) => e.prompt as string);
-    } else {
-      relevantPromptEntries = [];
-      prompts = [];
-    }
+    relevantPromptEntries = [];
+    prompts = [];
   } else {
     // Fallback: no turn data — use all prompts and changes (v1 compat).
     aiFiles = changeEntries.map((e) => e.file as string).filter(Boolean);
     prompts = promptEntries.map((e) => e.prompt as string);
     relevantPromptEntries = promptEntries;
+  }
+
+  const generatedFiles = await detectGeneratedFiles(commitSha, commitFiles);
+  const attributionCommitFileSet = new Set(
+    commitFiles.filter((file) => !generatedFiles.includes(file)),
+  );
+  const lineAttribution = hasTurnData
+    ? await computeLineAttribution({
+        sessionDir,
+        commitFileSet,
+        aiFileSet: new Set(aiFiles),
+        generatedFileSet: new Set(generatedFiles),
+        relevantTurns,
+        hasTurnData,
+        changeEntries,
+      })
+    : { counts: null, contributingTurns: new Set<number>() };
+  if (hasTurnData) {
+    primaryTurns =
+      lineAttribution.contributingTurns.size > 0
+        ? lineAttribution.contributingTurns
+        : new Set(relevantTurns);
+    relevantPromptEntries = selectPromptWindowEntries(
+      promptEntries,
+      primaryTurns,
+      allSessionEditTurns,
+      maxConsumedTurn,
+    );
+    prompts = relevantPromptEntries.map((e) => e.prompt as string);
   }
 
   // Resolve transcript path from argument or saved file.
@@ -270,46 +279,33 @@ export async function recordCommitEntry(opts: {
           ),
         ),
       ];
-      transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
+      transcriptLineCounts = await resolveTranscriptLineCounts(
+        attributionCommitFileSet,
+        transcriptMatched,
+      );
     }
   } else if (transcriptPath && allInteractions.length > 0) {
     // Transcript-driven path: sessions that don't emit `file_change` events
-    // (e.g. Codex) have no `relevantTurns` computed from change entries, so
-    // attribution comes from the transcript. But Option B still applies —
-    // the note should carry the full conversation window, not just the
-    // edit-linked interactions.
-    //
-    // Window selection: session `promptEntries` filtered to turns greater
-    // than `maxConsumedTurn` (same unbilled-window rule as the session-
-    // driven path). Transcript-matched interactions (files_touched ∩ commit)
-    // drive file attribution and line counts only.
+    // (e.g. Codex) derive their causal window from transcript interactions.
     const transcriptMatched = allInteractions.filter((i) =>
       (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
     );
-
-    // Derive this commit's "edit-linked turns" from transcript-matched
-    // interactions. For Codex (no file_change events) this is the only
-    // way to preserve split-commit semantics: if a prompt's turn was
-    // already consumed by a prior commit but the transcript shows its
-    // work reaching this specific commit's files, include it.
-    const transcriptRelevantTurns = new Set<number>();
-    for (const tx of transcriptMatched) {
-      if (!tx.prompt_id) continue;
-      const sessionEntry = promptEntries.find((e) => e.prompt_id === tx.prompt_id);
-      if (sessionEntry && typeof sessionEntry.turn === "number") {
-        transcriptRelevantTurns.add(sessionEntry.turn);
-      }
-    }
-
-    const windowEntries = promptEntries.filter((e) => {
-      const turn = typeof e.turn === "number" ? e.turn : 0;
-      return turn > maxConsumedTurn || transcriptRelevantTurns.has(turn);
-    });
+    const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
+    const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
+      transcriptMatched,
+      promptEntries,
+      attributionCommitFileSet,
+    );
+    const windowEntries = selectPromptWindowEntries(
+      promptEntries,
+      transcriptPrimaryTurns,
+      transcriptEditTurns,
+      maxConsumedTurn,
+    );
+    relevantPromptEntries = windowEntries;
+    prompts = windowEntries.map((entry) => (entry.prompt as string) ?? "");
 
     if (windowEntries.length > 0) {
-      // Session prompts exist for this window — they drive `interactions`
-      // (full Option B context) and responses come from the correlated
-      // transcript interactions.
       interactions = windowEntries.map((entry) => {
         const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
         const matched = id ? interactionsById.get(id) : undefined;
@@ -335,7 +331,10 @@ export async function recordCommitEntry(opts: {
           ),
         ),
       ];
-      transcriptLineCounts = await resolveTranscriptLineCounts(commitFileSet, transcriptMatched);
+      transcriptLineCounts = await resolveTranscriptLineCounts(
+        attributionCommitFileSet,
+        transcriptMatched,
+      );
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
@@ -347,16 +346,6 @@ export async function recordCommitEntry(opts: {
   if (hasTurnData) {
     attachFilesTouched(changeEntries, relevantPromptEntries, interactions, commitFileSet);
   }
-
-  // Line-level attribution: compute AI vs human added-line counts.
-  const lineCounts = await computeLineAttribution({
-    sessionDir,
-    commitFileSet,
-    aiFileSet: new Set(aiFiles),
-    relevantTurns,
-    hasTurnData,
-    changeEntries,
-  });
 
   // Read model from session events (SessionStart).
   const model = await readSessionModel(sessionDir);
@@ -383,7 +372,8 @@ export async function recordCommitEntry(opts: {
     interactions,
     commitFiles,
     aiFiles,
-    lineCounts: lineCounts ?? transcriptLineCounts,
+    generatedFiles,
+    lineCounts: lineAttribution.counts ?? transcriptLineCounts,
     interactionTools,
   });
 
@@ -615,6 +605,232 @@ function attachFilesTouched(
   }
 }
 
+function collectSessionEditTurns(
+  changeEntries: Record<string, unknown>[],
+  preBlobEntries: Record<string, unknown>[],
+): Set<number> {
+  const turns = new Set<number>();
+  for (const entry of [...changeEntries, ...preBlobEntries]) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    const file = entry.file as string | undefined;
+    if (turn > 0 && file) turns.add(turn);
+  }
+  return turns;
+}
+
+function collectTranscriptEditTurns(
+  interactions: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+): Set<number> {
+  const promptTurnById = new Map<string, number>();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
+  }
+
+  const turns = new Set<number>();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id || (interaction.files_touched?.length ?? 0) === 0) continue;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (turn > 0) turns.add(turn);
+  }
+  return turns;
+}
+
+function selectPromptWindowEntries(
+  promptEntries: Record<string, unknown>[],
+  primaryTurns: Set<number>,
+  editTurns: Set<number>,
+  maxConsumedTurn: number,
+): Record<string, unknown>[] {
+  if (primaryTurns.size === 0) return [];
+
+  const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  if (orderedPrimaryTurns.length === 0) return [];
+
+  const minPrimaryTurn = orderedPrimaryTurns[0];
+  const maxPrimaryTurn = orderedPrimaryTurns[orderedPrimaryTurns.length - 1];
+  const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+
+  let lowerBoundary = 0;
+  for (const turn of orderedEditTurns) {
+    if (turn < minPrimaryTurn && !primaryTurns.has(turn)) {
+      lowerBoundary = turn;
+    }
+  }
+
+  let upperBoundary = Number.POSITIVE_INFINITY;
+  for (const turn of orderedEditTurns) {
+    if (turn > maxPrimaryTurn && !primaryTurns.has(turn)) {
+      upperBoundary = turn;
+      break;
+    }
+  }
+
+  return promptEntries.filter((entry) => {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (turn <= lowerBoundary || turn >= upperBoundary) return false;
+    if (turn < minPrimaryTurn || turn > maxPrimaryTurn) {
+      return turn > maxConsumedTurn;
+    }
+    return turn > maxConsumedTurn || primaryTurns.has(turn);
+  });
+}
+
+async function selectTranscriptPrimaryTurns(
+  transcriptMatched: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+): Promise<Set<number>> {
+  const promptTurnById = new Map<string, number>();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
+  }
+
+  const matchedTurns = new Set<number>();
+  for (const interaction of transcriptMatched) {
+    if (!interaction.prompt_id) continue;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (turn > 0) matchedTurns.add(turn);
+  }
+  if (matchedTurns.size === 0) return matchedTurns;
+
+  const committedDiffCounts = await readCommittedDiffCounts(commitFileSet);
+  if (committedDiffCounts.size !== commitFileSet.size) return matchedTurns;
+
+  const cumulative = new Map<string, { added: number; deleted: number }>();
+  const suffixTurns = new Set<number>();
+
+  for (let index = transcriptMatched.length - 1; index >= 0; index--) {
+    const interaction = transcriptMatched[index];
+    let contributedStats = false;
+    for (const [file, stats] of Object.entries(interaction.line_stats ?? {})) {
+      if (!commitFileSet.has(file)) continue;
+      contributedStats = true;
+      const previous = cumulative.get(file) ?? { added: 0, deleted: 0 };
+      cumulative.set(file, {
+        added: previous.added + stats.added,
+        deleted: previous.deleted + stats.deleted,
+      });
+    }
+
+    if (interaction.prompt_id) {
+      const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+      if (turn > 0 && contributedStats) suffixTurns.add(turn);
+    }
+
+    if (matchesDiffCounts(cumulative, committedDiffCounts) && suffixTurns.size > 0) {
+      return suffixTurns;
+    }
+  }
+
+  return matchedTurns;
+}
+
+function matchesDiffCounts(
+  actual: Map<string, { added: number; deleted: number }>,
+  expected: Map<string, { added: number; deleted: number }>,
+): boolean {
+  if (actual.size !== expected.size) return false;
+  for (const [file, expectedCounts] of expected) {
+    const actualCounts = actual.get(file);
+    if (!actualCounts) return false;
+    if (
+      actualCounts.added !== expectedCounts.added ||
+      actualCounts.deleted !== expectedCounts.deleted
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): Promise<string[]> {
+  const generated = new Set<string>();
+
+  for (const file of commitFiles) {
+    if (isGeneratedArtifactPath(file)) {
+      generated.add(file);
+      continue;
+    }
+
+    const content = await readCommittedFilePrefix(commitSha, file);
+    if (content && hasGeneratedArtifactMarkers(content)) {
+      generated.add(file);
+    }
+  }
+
+  return [...generated];
+}
+
+async function readCommittedFilePrefix(
+  commitSha: string,
+  file: string,
+  maxBytes = 2048,
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    const child = spawn("git", ["show", `${commitSha}:${file}`], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const stdout = child.stdout;
+    if (!stdout) {
+      resolve(null);
+      return;
+    }
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    let stoppedEarly = false;
+    let sawBinaryData = false;
+    let settled = false;
+
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    child.on("error", () => finish(null));
+
+    stdout.on("data", (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      if (buffer.includes(0)) {
+        sawBinaryData = true;
+        stoppedEarly = true;
+        child.kill();
+        return;
+      }
+
+      if (totalBytes < maxBytes) {
+        const remaining = maxBytes - totalBytes;
+        const prefix = buffer.subarray(0, remaining);
+        chunks.push(prefix);
+        totalBytes += prefix.length;
+      }
+
+      if (totalBytes >= maxBytes) {
+        stoppedEarly = true;
+        child.kill();
+      }
+    });
+
+    child.on("close", (code) => {
+      if (sawBinaryData) {
+        finish(null);
+        return;
+      }
+      if (!stoppedEarly && code !== 0) {
+        finish(null);
+        return;
+      }
+      finish(Buffer.concat(chunks).toString("utf-8"));
+    });
+  });
+}
+
 /**
  * Read entries from the current JSONL file and all rotated archives (stem-*.jsonl).
  * Rotated files are those renamed by the rotation mechanism on UserPromptSubmit.
@@ -658,21 +874,32 @@ async function computeLineAttribution(opts: {
   sessionDir: string;
   commitFileSet: Set<string>;
   aiFileSet: Set<string>;
+  generatedFileSet: Set<string>;
   relevantTurns: Set<number>;
   hasTurnData: boolean;
   changeEntries: Record<string, unknown>[];
-}): Promise<LineCounts | null> {
-  const { sessionDir, commitFileSet, aiFileSet, relevantTurns, hasTurnData, changeEntries } = opts;
+}): Promise<{ counts: LineCounts | null; contributingTurns: Set<number> }> {
+  const {
+    sessionDir,
+    commitFileSet,
+    aiFileSet,
+    generatedFileSet,
+    relevantTurns,
+    hasTurnData,
+    changeEntries,
+  } = opts;
 
   // Parse parent↔committed blob hashes from git diff-tree.
   let diffTreeOutput: string;
   try {
     diffTreeOutput = await git(["diff-tree", "--raw", "--root", "-r", "HEAD"]);
   } catch {
-    return null;
+    return { counts: null, contributingTurns: new Set<number>() };
   }
   const committedBlobs = parseDiffTreeBlobs(diffTreeOutput);
-  if (committedBlobs.size === 0) return null;
+  if (committedBlobs.size === 0) {
+    return { counts: null, contributingTurns: new Set<number>() };
+  }
 
   // Write EMPTY_BLOB into the object store so new-file diffs work.
   // (blobHash returns EMPTY_BLOB as a constant without writing it to the store.)
@@ -685,17 +912,21 @@ async function computeLineAttribution(opts: {
   // attribution and return null so the caller falls back to file-level ratio.
   const hasPreBlobData = preBlobEntries.some((e) => e.blob);
   const hasPostBlobData = changeEntries.some((e) => e.blob);
-  if (!hasPreBlobData && !hasPostBlobData) return null;
+  if (!hasPreBlobData && !hasPostBlobData) {
+    return { counts: null, contributingTurns: new Set<number>() };
+  }
 
   const committedDiffCounts = await readCommittedDiffCounts(commitFileSet);
-  if (committedDiffCounts.size !== commitFileSet.size) return null;
+  if (committedDiffCounts.size !== commitFileSet.size) {
+    return { counts: null, contributingTurns: new Set<number>() };
+  }
 
   // Build map: tool_use_id → pre-blob info (file, blob, turn captured synchronously).
   // tool_use_id is the stable correlation key between PreToolUse and PostToolUse events.
   // Using it avoids FIFO ordering assumptions broken by async PostToolUse hooks.
   const preBlobById = new Map<string, { file: string; blob: string; turn: number }>();
   // Fallback: file → ordered preBlobs for entries without tool_use_id.
-  const preBlobsFallback = new Map<string, string[]>();
+  const preBlobsFallback = new Map<string, Array<{ blob: string; turn: number }>>();
 
   for (const entry of preBlobEntries) {
     const file = entry.file as string;
@@ -710,17 +941,21 @@ async function computeLineAttribution(opts: {
     } else {
       // No tool_use_id — fall back to FIFO ordering per file.
       if (!preBlobsFallback.has(file)) preBlobsFallback.set(file, []);
-      preBlobsFallback.get(file)?.push((entry.blob as string) || "");
+      preBlobsFallback.get(file)?.push({ blob: (entry.blob as string) || "", turn });
     }
   }
 
   // Build turnPairs per file by joining pre/post blobs on tool_use_id.
-  const turnPairsByFile = new Map<string, { preBlob: string; postBlob: string }[]>();
-  const hadNewFileEditByFile = new Map<string, boolean>();
+  const turnPairsByFile = new Map<
+    string,
+    Array<{ turn: number; preBlob: string; postBlob: string }>
+  >();
+  const hadNewFileEditTurnsByFile = new Map<string, Set<number>>();
   const exactCursorEditCountFiles = new Set<string>();
+  const exactCursorTurnsByFile = new Map<string, Set<number>>();
   const lastPostBlobByFile = new Map<string, string>();
   // Fallback: postBlobs per file for entries without tool_use_id.
-  const postBlobsFallback = new Map<string, string[]>();
+  const postBlobsFallback = new Map<string, Array<{ blob: string; turn: number }>>();
   const cursorEditCountsByFile = new Map<string, { added: number; deleted: number }>();
 
   for (const entry of changeEntries) {
@@ -742,6 +977,8 @@ async function computeLineAttribution(opts: {
         added: previous.added + editAdded,
         deleted: previous.deleted + editDeleted,
       });
+      if (!exactCursorTurnsByFile.has(file)) exactCursorTurnsByFile.set(file, new Set());
+      exactCursorTurnsByFile.get(file)?.add(id ? (preBlobById.get(id)?.turn ?? turn) : turn);
     }
     lastPostBlobByFile.set(file, postBlob);
 
@@ -751,16 +988,17 @@ async function computeLineAttribution(opts: {
       // Use turn from pre_blob (sync capture) for relevantTurns check.
       if (hasTurnData && !relevantTurns.has(pre.turn)) continue;
       if (!pre.blob) {
-        hadNewFileEditByFile.set(file, true);
+        if (!hadNewFileEditTurnsByFile.has(file)) hadNewFileEditTurnsByFile.set(file, new Set());
+        hadNewFileEditTurnsByFile.get(file)?.add(pre.turn);
       } else {
         if (!turnPairsByFile.has(file)) turnPairsByFile.set(file, []);
-        turnPairsByFile.get(file)?.push({ preBlob: pre.blob, postBlob });
+        turnPairsByFile.get(file)?.push({ turn: pre.turn, preBlob: pre.blob, postBlob });
       }
     } else {
       // No tool_use_id — fall back to FIFO.
       if (hasTurnData && !relevantTurns.has(turn)) continue;
       if (!postBlobsFallback.has(file)) postBlobsFallback.set(file, []);
-      postBlobsFallback.get(file)?.push(postBlob);
+      postBlobsFallback.get(file)?.push({ blob: postBlob, turn });
     }
   }
 
@@ -769,13 +1007,15 @@ async function computeLineAttribution(opts: {
     const preBlobs = preBlobsFallback.get(file) ?? [];
     const pairCount = Math.min(preBlobs.length, postBlobs.length);
     for (let i = 0; i < pairCount; i++) {
-      const pre = preBlobs[i] || "";
-      const post = postBlobs[i] || "";
+      const pre = preBlobs[i]?.blob || "";
+      const preTurn = preBlobs[i]?.turn ?? 0;
+      const post = postBlobs[i]?.blob || "";
       if (!pre) {
-        hadNewFileEditByFile.set(file, true);
+        if (!hadNewFileEditTurnsByFile.has(file)) hadNewFileEditTurnsByFile.set(file, new Set());
+        hadNewFileEditTurnsByFile.get(file)?.add(preTurn);
       } else if (post) {
         if (!turnPairsByFile.has(file)) turnPairsByFile.set(file, []);
-        turnPairsByFile.get(file)?.push({ preBlob: pre, postBlob: post });
+        turnPairsByFile.get(file)?.push({ turn: preTurn, preBlob: pre, postBlob: post });
       }
     }
   }
@@ -785,9 +1025,10 @@ async function computeLineAttribution(opts: {
   // Having only post blobs (PreToolUse hook not yet active) is not enough — it would
   // produce 0% AI ratio instead of falling back to file-level.
   for (const file of aiFileSet) {
+    if (generatedFileSet.has(file)) continue;
     if (!commitFileSet.has(file)) continue;
     const hasPairs = (turnPairsByFile.get(file) ?? []).length > 0;
-    const hasNewFileEdit = hadNewFileEditByFile.get(file) ?? false;
+    const hasNewFileEdit = (hadNewFileEditTurnsByFile.get(file)?.size ?? 0) > 0;
     const cursorEditCounts = cursorEditCountsByFile.get(file);
     const committedCounts = committedDiffCounts.get(file);
     const committedBlob = committedBlobs.get(file)?.committedBlob ?? null;
@@ -804,35 +1045,46 @@ async function computeLineAttribution(opts: {
     }
     if (!hasPairs && !hasNewFileEdit && !hasExactCursorEditCounts) {
       // No complete blob pair for this AI file — fall back to file-level for the whole commit.
-      return null;
+      return { counts: null, contributingTurns: new Set<number>() };
     }
   }
 
   let totalAiAdded = 0;
   let totalAdded = 0;
   let totalDeleted = 0;
+  const contributingTurns = new Set<number>();
 
   for (const file of commitFileSet) {
+    if (generatedFileSet.has(file)) continue;
     const blobs = committedBlobs.get(file);
     if (!blobs) continue;
 
     const { parentBlob, committedBlob } = blobs;
     const turnPairs = turnPairsByFile.get(file) ?? [];
-    const hadNewFileEdit = hadNewFileEditByFile.get(file) ?? false;
+    const hadNewFileEditTurns = hadNewFileEditTurnsByFile.get(file) ?? new Set<number>();
 
     try {
       const result = await computePositionAttribution(parentBlob, committedBlob, turnPairs);
 
       // New file created by AI from scratch: attribute all added lines to AI.
-      if (hadNewFileEdit && aiFileSet.has(file) && turnPairs.length === 0) {
+      if (hadNewFileEditTurns.size > 0 && aiFileSet.has(file) && turnPairs.length === 0) {
         totalAiAdded += result.totalAddedLines;
+        for (const turn of hadNewFileEditTurns) {
+          if (turn > 0) contributingTurns.add(turn);
+        }
       } else if (exactCursorEditCountFiles.has(file)) {
         // Cursor only exposes edit snippets today. If their aggregate line counts
         // exactly match the final commit diff, we can safely attribute the file's
         // added lines to AI without guessing positions.
         totalAiAdded += result.totalAddedLines;
+        for (const turn of exactCursorTurnsByFile.get(file) ?? []) {
+          if (turn > 0) contributingTurns.add(turn);
+        }
       } else {
         totalAiAdded += result.aiAddedLines;
+        for (const turn of result.contributingTurns) {
+          if (turn > 0) contributingTurns.add(turn);
+        }
       }
       totalAdded += result.totalAddedLines;
       totalDeleted += result.deletedLines;
@@ -841,7 +1093,14 @@ async function computeLineAttribution(opts: {
     }
   }
 
-  return { aiAddedLines: totalAiAdded, totalAddedLines: totalAdded, deletedLines: totalDeleted };
+  return {
+    counts: {
+      aiAddedLines: totalAiAdded,
+      totalAddedLines: totalAdded,
+      deletedLines: totalDeleted,
+    },
+    contributingTurns,
+  };
 }
 
 /**
@@ -955,8 +1214,8 @@ async function recordConsumedPairs(
   }
   // Record prompt-only consumed turns so transcript-driven agents (Codex)
   // advance maxConsumedTurn even with no file_change/pre_blob entries.
-  // Without this, each Codex commit re-includes every prior session prompt
-  // in its unbilled window.
+  // Without this, each Codex commit can keep dragging earlier prompt-only
+  // context back into later causal windows.
   const promptSeen = new Set<string>();
   for (const entry of consumedPromptEntries) {
     const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
@@ -1014,7 +1273,8 @@ async function readSessionModel(sessionDir: string): Promise<string | null> {
 /**
  * Aggregate per-interaction tools from changeEntries.
  * Returns a Map from interaction index → tools array (file-edit tools only).
- * Returns null tools for interactions with no observed file-edit events.
+ * Interactions with no observed file-edit tools are omitted so transcript-
+ * derived tools can still flow through unchanged.
  */
 function buildInteractionTools(
   changeEntries: Record<string, unknown>[],
@@ -1039,7 +1299,9 @@ function buildInteractionTools(
     if (!promptEntry) continue;
     const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
     const tools = toolsByTurn.get(turn);
-    result.set(i, tools ? [...tools] : null);
+    if (tools && tools.size > 0) {
+      result.set(i, [...tools]);
+    }
   }
   return result;
 }

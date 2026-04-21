@@ -230,27 +230,29 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 A commit note records a list of `interactions` (prompt + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
-**Options considered:**
+**Current: causal window.** Agent Note keeps the prompt list centered on the turns that actually survive into the final commit, then expands just enough to preserve nearby planning / follow-up context.
 
-- **A. Edit-linked only** — include only prompts whose turn produced a file change matching the commit.
-- **B. All prompts since last rotation** — include every prompt in the session window covered by this commit, regardless of whether that turn edited any committed file.
-- **C. Primary + context split** — two lists: `primary` (edit-linked) and `context` (others). Schema change.
-- **D. Edit-linked + N preceding** — edit-linked plus the N prompts immediately before each edit-linked prompt.
+**Step 1 — derive primary turns.**
 
-**Current: Option B.** A commit report usually needs the full reasoning chain — exploration, planning, Q&A prompts that shape the code but don't themselves edit files. Option A was technically correct for attribution but dropped conversational context. Option B keeps attribution at the edit-linked turn level (unchanged) and widens only the prompt list used for `interactions`.
+- **Session-driven agents** (`Claude`, `Gemini`, partial `Cursor`): use line-level attribution when blob data is available. Turns that still own added lines in the final diff become the primary turns. If line-level attribution is unavailable, fall back to the commit's edit-linked turns.
+- **Transcript-driven agents** (`Codex`): use transcript `files_touched` + `line_stats`. Agent Note searches backward for the smallest suffix of transcript edits whose cumulative line counts match the committed diff. Those turns become the primary turns. If an exact suffix cannot be proven, fall back to transcript turns that touched the commit's files.
 
-**Boundary — the "unbilled window":** a naive "all prompts since last rotation" would leak earlier commits' prompts into later commits in the same long-lived session, because rotation archives persist for split-commit support. Option B trims the window using `consumed_pairs`:
+**Step 2 — expand to a causal prompt window.**
 
-- Each commit records its consumed `(turn, file)` pairs along with the turn number.
-- For a new commit, `maxConsumedTurn` is the highest turn any prior commit already attributed.
-- Prompts are included iff `turn > maxConsumedTurn` **or** `turn ∈ relevantTurns` (the commit's own edit-linked turns).
+- Find the nearest earlier edit turn that is **not** primary.
+- Find the nearest later edit turn that is **not** primary.
+- Include prompts between those two boundaries.
+- Within that block, prompts from turns already consumed by earlier commits stay out unless the turn itself is primary.
 
-The `turn ∈ relevantTurns` clause preserves split-commit semantics: two commits sharing turn N both show turn N's prompts, because that turn is edit-linked for both.
+This keeps nearby prompt-only context such as planning, clarification, or commit / conflict follow-up, but drops older overwritten edit bursts that no longer explain the final diff.
 
-**Trade-off:** in mixed-topic sessions within a single unbilled window, prompts from unrelated sub-topics can still appear. Mitigations:
+**Split-commit semantics are preserved.**
 
-- The `files_touched` field per interaction flags which prompts actually edited the commit's files — readers can still tell the "primary" prompts apart.
-- Commits with zero AI edits get no prompts (empty-note skip) so purely human commits are never decorated with AI prompts.
+- Each commit records consumed `(turn, file)` pairs and prompt ids in `committed_pairs.jsonl`.
+- `maxConsumedTurn` trims spent context from later commits in the same session.
+- A turn that is primary for the current commit is still allowed through even if an earlier split commit already consumed the same turn.
+
+**Trade-off:** the causal window is intentionally narrower than the old full-session window, but it can still include prompt-only turns near the active edit block. This is deliberate: the goal is "causal conversation", not "edit-only prompts".
 
 ### Line-level AI attribution
 
@@ -610,6 +612,15 @@ If multiple Claude Code sessions run in the same repo simultaneously, `.git/agen
 ### ai_ratio accuracy depends on blob data
 
 `ai_ratio` uses line-level attribution when `pre_blobs.jsonl` data is available (sessions recorded with hook v2+). Cursor preview can also upgrade to line-level when `afterFileEdit` / `afterTabFileEdit` edit counts match and the final committed blob still matches the last AI edit for an AI-touched file. For older sessions or when those signals are unavailable, it falls back to file-count ratio. Deletions are always excluded from the attribution denominator — only added lines are classified as AI or human.
+
+Agent Note excludes common generated artifacts from the AI ratio denominator on a best-effort basis for both line-level and file-level attribution. The heuristic combines:
+
+- well-known generated paths such as `dist/`, `build/`, `.dart_tool/`, `target/`, `.next/`, `bazel-out/`
+- common generated suffixes such as `.generated.ts`, `.g.dart`, `.pb.go`, `.pb.rs`, `.generated.swift`, `.generated.kt`
+- committed file names such as `GeneratedPluginRegistrant.swift` and `generated_plugin_registrant.dart`
+- committed file headers that contain markers like `Code generated ... DO NOT EDIT`, `Generated by SwiftGen`, `@generated`, or `automatically generated by rust-bindgen`
+
+Generated files still appear in the note's `files[]` list, but they do not drag the file-level `ai_ratio` toward human attribution.
 
 ## Multi-agent extensibility
 

@@ -1,0 +1,131 @@
+---
+title: Cómo funciona
+description: Cómo Agent Note captura los datos de la sesión de IA y los adjunta a los commits de git.
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Flujo de datos
+
+<Steps>
+1. Envías un prompt a tu coding agent → los hooks capturan el prompt
+2. El agente escribe código → los hooks o transcripts registran los archivos tocados y las señales de atribución
+3. Ejecutas `git commit` o `agent-note commit` → se inyecta el trailer y se registra la note
+4. Ejecutas `git push` → las notes se envían automáticamente al remote
+</Steps>
+
+No hacen falta comandos extra cuando los git hooks locales del repositorio están instalados. Cursor preview también restaura pares prompt / response desde response hooks o transcripts locales, y sus shell hooks ofrecen una ruta fallback cuando los git hooks no están disponibles.
+
+## Almacenamiento
+
+<CardGrid>
+  <Card title="Capa 1: temporal local" icon="laptop">
+    Datos de sesión en `.git/agentnote/sessions/`. Archivos JSONL para prompts, cambios y blob hashes. Se rotan después de cada commit. Nunca se envían.
+  </Card>
+  <Card title="Capa 2: Git Notes" icon="document">
+    Registro permanente en `refs/notes/agentnote`. Un JSON por commit. Se puede hacer push, fetch y compartir con el equipo.
+  </Card>
+</CardGrid>
+
+### Archivos de sesión
+
+| Archivo | Propósito |
+|---|---|
+| `prompts.jsonl` | Un prompt por línea con número de turn |
+| `changes.jsonl` | Archivos tocados por la IA con blob hashes después de la edición |
+| `pre_blobs.jsonl` | Estado del archivo antes de cada edición de la IA |
+| `heartbeat` | Marca temporal de actividad de la sesión |
+| `turn` | Contador monotónico que aumenta con cada prompt |
+
+### Note Schema
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "Implementa middleware JWT auth",
+      "response": "Crearé el middleware...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Modos de atribución
+
+Claude Code calcula la autoría de IA por línea usando un algoritmo de posiciones con 3 diffs:
+
+| Diff | Desde | Hasta | Qué captura |
+|---|---|---|---|
+| diff1 | commit padre | archivo committed | Todos los cambios de este commit |
+| diff2 | antes de la edición de IA | archivo committed | Edición de IA + ediciones humanas posteriores |
+| diff3 | después de la edición de IA | archivo committed | Solo ediciones humanas |
+
+**Posiciones de IA = posiciones de diff2 que NO están en diff3**
+
+Los tres diffs apuntan al committed blob, así que las posiciones son directamente comparables.
+
+<Aside type="tip">
+  Las eliminaciones se siguen por separado; no se atribuyen ni a la IA ni a la persona. Cuando no hay blob data, se hace fallback automático a atribución por archivo.
+</Aside>
+
+Codex CLI usa atribución guiada por transcript. Cuando los conteos de líneas de `apply_patch` en el transcript coinciden con el diff final del commit, Agent Note eleva los commits de Codex a `method: "line"`. Si no coinciden, hace fallback a `method: "file"` para evitar falsos positivos. Las ediciones shell-only que nunca aparecen como patch data en el transcript se mantienen en el lado seguro: Agent Note puede conservar el par prompt / response y las herramientas Codex observadas, pero no adivina `files_touched` ni AI-authored files a partir de pasos de shell. Por eso esos commits se quedan en `method: "file"` con `0%` de atribución de IA, salvo que otra señal primaria vincule archivos al agente. Si el transcript no puede leerse al hacer commit, Agent Note muestra una advertencia y omite la creación de la note en vez de guardar datos de atribución inciertos.
+
+Cursor preview usa los hooks `afterFileEdit` y `afterTabFileEdit` para la atribución. Cuando sus conteos de edición coinciden y el blob committed final sigue coincidiendo con la última edición de IA, Agent Note eleva con seguridad esos archivos a `method: "line"`. En caso contrario, vuelve a `method: "file"`, manteniendo aun así la recuperación de pares prompt / response desde response hooks de Cursor o transcripts locales cuando existen.
+
+Gemini CLI preview usa hooks `BeforeTool`/`AfterTool` sobre las herramientas `write_file` y `replace` para atribución por archivo. La detección de commit utiliza el patrón pending-commit mediante `BeforeTool`/`AfterTool` sobre `run_shell_command`. La recuperación de prompts y respuestas viene de los hooks `BeforeAgent`/`AfterAgent` y del parseo de transcripts JSONL.
+
+<Aside type="tip">
+  Las listas de prompts salen de la conversación causal alrededor del diff final, no de todo el historial de la sesión. Agent Note también excluye, en la medida de lo posible, los artefactos generados habituales del denominador de `AI ratio`, incluidos los resultados de build web, los registrants de Flutter, el codegen de Dart, los protobufs de Go, los bindings de Rust y las fuentes generadas de Swift / Kotlin.
+</Aside>
+
+## Ciclo de vida de la sesión
+
+| Evento | Qué ocurre |
+|---|---|
+| **SessionStart** | Crea el directorio de sesión y escribe el heartbeat |
+| **UserPromptSubmit** | Añade el prompt, incrementa el contador de turn y rota logs |
+| **PreToolUse Edit/Write** | Captura el pre-edit blob hash de forma síncrona |
+| **PostToolUse Edit/Write** | Captura el post-edit blob hash y la ruta del archivo |
+| **Stop** | Registra el evento stop (el heartbeat sigue activo — Stop = fin de la respuesta, no fin de la sesión) |
+
+<Aside>
+  Los git hooks verifican la frescura de la sesión mediante el heartbeat antes de inyectar trailers o registrar notes. El heartbeat se actualiza en SessionStart y en cada prompt.
+</Aside>
+
+<Aside type="tip">
+  Agent Note conoce el agente activo. Los metadatos de sesión guardan el adapter activo, así `show`, `status` y el registro del commit pueden resolver después el formato correcto del transcript.
+</Aside>
+
+## Git Notes
+
+Git notes no aparecen en listados de ramas, en la UI de GitHub ni en CI, pero sí se pueden hacer push y fetch.
+
+```bash
+# Compartir con el equipo
+git push origin refs/notes/agentnote
+
+# Traer desde remote
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# Ver una note
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agent-note init` configura el auto-fetch y el hook `pre-push` se encarga del auto-push. No hacen falta comandos manuales.
+</Aside>

@@ -1,0 +1,131 @@
+---
+title: 運作方式
+description: Agent Note 如何擷取 AI 工作階段資料，並把它附加到 git commit 上。
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## 資料流程
+
+<Steps>
+1. 你向 coding agent 送出 prompt → hooks 會擷取這個 prompt
+2. agent 撰寫程式碼 → hooks 或 transcripts 會追蹤被修改的檔案與 attribution signals
+3. 你執行 `git commit` 或 `agent-note commit` → 會注入 trailer 並記錄 note
+4. 你執行 `git push` → notes 會自動推送到 remote
+</Steps>
+
+只要 repo-local git hooks 已安裝，就不需要額外命令。Cursor preview 也能從 response hooks 或本機 transcripts 還原 prompt / response 配對；當 git hooks 無法使用時，它的 shell hooks 也會提供 fallback 路徑。
+
+## 儲存
+
+<CardGrid>
+  <Card title="第 1 層：本機暫存資料" icon="laptop">
+    `.git/agentnote/sessions/` 內的工作階段資料。這裡保存 prompts、changes 與 blob hashes 對應的 JSONL 檔案。每次 commit 後都會 rotate，永遠不會被 push。
+  </Card>
+  <Card title="第 2 層：Git Notes" icon="document">
+    `refs/notes/agentnote` 中的永久紀錄。每個 commit 一份 JSON。可 push、可 fetch，也可與團隊共享。
+  </Card>
+</CardGrid>
+
+### 工作階段檔案
+
+| 檔案 | 用途 |
+|---|---|
+| `prompts.jsonl` | 每行一個 prompt，並附帶 turn 編號 |
+| `changes.jsonl` | AI 編輯過的檔案，以及 post-edit blob hashes |
+| `pre_blobs.jsonl` | 每次 AI edit 前的檔案狀態 |
+| `heartbeat` | 工作階段活動時間戳 |
+| `turn` | 每次 prompt 都會遞增的單調計數器 |
+
+### Note Schema
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "實作 JWT auth middleware",
+      "response": "我會建立這個 middleware...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Attribution 模式
+
+Claude Code 使用 3-diff position algorithm 逐行計算 AI authorship：
+
+| Diff | From | To | 捕捉內容 |
+|---|---|---|---|
+| diff1 | 父 commit | committed file | 此 commit 的所有變更 |
+| diff2 | AI edit 之前 | committed file | AI edit + 後續的人類 edit |
+| diff3 | AI edit 之後 | committed file | 僅人類 edit |
+
+**AI positions = diff2 中存在、但 diff3 中不存在的位置**
+
+三個 diff 都以 committed blob 為目標，因此位置可以直接比較。
+
+<Aside type="tip">
+  刪除行會被另外追蹤，不會歸屬於 AI 或人類。當 blob data 不可用時，會自動回退到 file-level attribution。
+</Aside>
+
+Codex CLI 採用 transcript-driven attribution。當 transcript 中 `apply_patch` 的行數與最終 commit diff 一致時，Agent Note 會把 Codex commit 升級為 `method: "line"`。否則會回退到 `method: "file"`，以避免 false positives。對於從未在 transcript 中出現為 patch data 的 shell-only edits，Agent Note 會維持保守策略：它仍然可以保留 prompt / response 配對與觀察到的 Codex tools，但不會只根據 shell steps 推測 `files_touched` 或 AI-authored files。因此，這類 commit 會維持在 `method: "file"` 且 `AI attribution` 為 `0%`，除非有其他 primary signal 將檔案與 agent 關聯起來。如果在 commit 時無法讀取 transcript，Agent Note 會顯示 warning，並跳過 note 建立，而不是記錄不確定的 attribution data。
+
+Cursor preview 使用 `afterFileEdit` 與 `afterTabFileEdit` hooks 進行 attribution。當它們的 edit counts 一致，且最終 committed blob 仍與最後一次 AI edit 相同時，Agent Note 會安全地將這些檔案升級為 `method: "line"`。否則會回退到 `method: "file"`，同時在可用時仍從 Cursor response hooks 或本機 transcripts 還原 prompt / response 配對。
+
+Gemini CLI preview 使用 `write_file` 與 `replace` 工具上的 `BeforeTool`/`AfterTool` hooks 來做 file-level attribution。commit 偵測透過 `run_shell_command` 上的 `BeforeTool`/`AfterTool` pending-commit pattern 完成。prompt 與 response 的還原則來自 `BeforeAgent`/`AfterAgent` hooks 與 JSONL transcript parsing。
+
+<Aside type="tip">
+  prompt 清單來自最終 diff 周圍具有因果關係的對話，而不是整個 session backlog。Agent Note 也會盡量把常見的生成產物排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
+</Aside>
+
+## Session 生命週期
+
+| 事件 | 發生內容 |
+|---|---|
+| **SessionStart** | 建立 session 目錄並寫入 heartbeat |
+| **UserPromptSubmit** | 追加 prompt、遞增 turn counter，並輪換 logs |
+| **PreToolUse Edit/Write** | 同步擷取 pre-edit blob hash |
+| **PostToolUse Edit/Write** | 擷取 post-edit blob hash 與檔案路徑 |
+| **Stop** | 記錄 stop 事件（heartbeat 會保持有效 —— Stop = response 結束，不是 session 結束） |
+
+<Aside>
+  Git hooks 在注入 trailers 或記錄 notes 之前，會透過 heartbeat 驗證 session 是否仍然新鮮。heartbeat 會在 SessionStart 與每次 prompt 時更新。
+</Aside>
+
+<Aside type="tip">
+  Agent Note 會識別目前的 agent。session metadata 會保存目前的 adapter，因此 `show`、`status` 與 commit recording 之後都能解析正確的 transcript format。
+</Aside>
+
+## Git Notes
+
+Git notes 不會出現在 branch 清單、GitHub UI 或 CI 中，但依然可以 push 與 fetch。
+
+```bash
+# 與團隊共享
+git push origin refs/notes/agentnote
+
+# 從 remote 取回
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# 查看 note
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agent-note init` 會設定 auto-fetch，而 `pre-push` hook 會處理 auto-push。不需要手動命令。
+</Aside>

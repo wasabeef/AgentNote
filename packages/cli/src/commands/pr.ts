@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../core/constants.js";
 import type { Attribution } from "../core/entry.js";
+import { countAiRatioEligibleFiles } from "../core/entry.js";
 import { readNote } from "../core/storage.js";
 import { git, gitSafe } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
@@ -84,7 +85,7 @@ async function collectReport(base: string, headRef = "HEAD"): Promise<PrReport |
     }
 
     const entry = normalizeEntry(note);
-    const aiCount = entry.files.filter((f) => f.by_ai).length;
+    const eligibleCounts = countAiRatioEligibleFiles(entry.files);
 
     commits.push({
       sha,
@@ -95,8 +96,8 @@ async function collectReport(base: string, headRef = "HEAD"): Promise<PrReport |
       ai_ratio: entry.attribution.ai_ratio,
       attribution_method: entry.attribution.method,
       prompts_count: entry.interactions.length,
-      files_total: entry.files.length,
-      files_ai: aiCount,
+      files_total: eligibleCounts.total,
+      files_ai: eligibleCounts.ai,
       files: entry.files,
       interactions: entry.interactions,
       attribution: entry.attribution,

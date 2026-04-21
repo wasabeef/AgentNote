@@ -4,7 +4,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { AGENTNOTE_DIR, CHANGES_FILE, PROMPTS_FILE, SESSIONS_DIR, TURN_FILE } from "./constants.js";
+import {
+  AGENTNOTE_DIR,
+  CHANGES_FILE,
+  EMPTY_BLOB,
+  PRE_BLOBS_FILE,
+  PROMPTS_FILE,
+  SESSIONS_DIR,
+  TURN_FILE,
+} from "./constants.js";
 import { recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
@@ -25,6 +33,14 @@ function setupGitRepo(): { repoDir: string; agentnoteDirPath: string; sessionDir
   writeFileSync(join(sessionDir, "agent"), "claude\n");
 
   return { repoDir, agentnoteDirPath, sessionDir };
+}
+
+function hashBlob(repoDir: string, content: string): string {
+  return execSync("git hash-object -w --stdin", {
+    cwd: repoDir,
+    encoding: "utf-8",
+    input: content,
+  }).trim();
 }
 
 describe("recordCommitEntry", () => {
@@ -274,9 +290,8 @@ describe("recordCommitEntry", () => {
   });
 
   it("includes context prompts (non-edit-linked) in interactions when commit has AI edits", async () => {
-    // Option B: a commit note keeps the full conversation window. Earlier
-    // discussion / planning prompts that did not themselves edit files
-    // should appear as interactions alongside the edit-linked prompt.
+    // The causal window should keep nearby planning prompts that lead into
+    // the surviving edit block, even when those prompts did not edit files.
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","prompt":"read the spec","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
@@ -316,10 +331,252 @@ describe("recordCommitEntry", () => {
     assert.deepEqual(interactions[2].files_touched, ["impl.ts"]);
   });
 
+  it("excludes older overwritten edit turns from the causal prompt window", async () => {
+    const draftBlob = hashBlob(repoDir, "export const note = 'draft';\n");
+    const finalBlob = hashBlob(repoDir, "export const note = 'final';\n");
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"rough draft","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"ship the final version","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PRE_BLOBS_FILE),
+      `{"event":"pre_edit","file":"impl.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n` +
+        `{"event":"pre_edit","file":"impl.ts","turn":2,"tool_use_id":"t2","blob":"${draftBlob}"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"impl.ts","turn":1,"tool_use_id":"t1","blob":"${draftBlob}"}\n` +
+        `{"event":"file_change","tool":"Write","file":"impl.ts","turn":2,"tool_use_id":"t2","blob":"${finalBlob}"}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    writeFileSync(join(repoDir, "impl.ts"), "export const note = 'final';\n");
+    execSync("git add impl.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: finalize impl"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["ship the final version"]);
+  });
+
+  it("keeps prompt-only fallback for overwritten cross-turn Codex commits when transcript is missing", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    // Force this session onto the Codex adapter.
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const draftBlob = hashBlob(repoDir, "export const note = 'draft';\n");
+      const finalBlob = hashBlob(repoDir, "export const note = 'final';\n");
+      const missingTranscript = join(codexHome, "sessions", "missing.jsonl");
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"rough draft","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+          '{"event":"prompt","prompt":"ship the final version","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, PRE_BLOBS_FILE),
+        `{"event":"pre_edit","file":"impl.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n` +
+          `{"event":"pre_edit","file":"impl.ts","turn":2,"tool_use_id":"t2","blob":"${draftBlob}"}\n`,
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        `{"event":"file_change","tool":"Write","file":"impl.ts","turn":1,"tool_use_id":"t1","blob":"${draftBlob}"}\n` +
+          `{"event":"file_change","tool":"Write","file":"impl.ts","turn":2,"tool_use_id":"t2","blob":"${finalBlob}"}\n`,
+      );
+      // The commit spans turns 1 and 2, but the final diff only keeps turn 2.
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "impl.ts"), "export const note = 'final';\n");
+      execSync("git add impl.ts", { cwd: repoDir });
+      execSync('git commit -m "feat: codex fallback"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath: missingTranscript,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null, "missing transcript should still leave a prompt-only note");
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+        files_touched?: string[];
+        tools?: string[] | null;
+      }>;
+      assert.deepEqual(
+        interactions,
+        [
+          {
+            prompt: "ship the final version",
+            response: null,
+            files_touched: ["impl.ts"],
+            tools: ["Write"],
+          },
+        ],
+        "overwritten earlier turns should not disable cross-turn fallback",
+      );
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("excludes generated artifacts from line-level AI ratio", async () => {
+    const sourceBlob = hashBlob(repoDir, "export const status = 'done';\n");
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"finish service.ts","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PRE_BLOBS_FILE),
+      `{"event":"pre_edit","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${sourceBlob}"}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    mkdirSync(join(repoDir, "dist"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "service.ts"), "export const status = 'done';\n");
+    writeFileSync(join(repoDir, "dist", "index.js"), "/* compiled */\n");
+    execSync("git add src/service.ts dist/index.js", { cwd: repoDir });
+    execSync('git commit -m "feat: generated line attribution"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const typedNote = note as {
+      attribution: { method: string; ai_ratio: number };
+      files: Array<{ path: string; generated?: boolean }>;
+    };
+    assert.equal(typedNote.attribution.method, "line");
+    assert.equal(
+      typedNote.attribution.ai_ratio,
+      100,
+      "generated files should be ignored even when line-level attribution is available",
+    );
+    const files = typedNote.files;
+    assert.equal(files.find((file) => file.path === "dist/index.js")?.generated, true);
+  });
+
+  it("marks generated files from committed content without reading the whole blob into attribution", async () => {
+    const source = `// Code generated by sqlc. DO NOT EDIT.\n${"x".repeat(8192)}\n`;
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"check generated client","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"snapshots/client.txt","turn":1}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    mkdirSync(join(repoDir, "snapshots"), { recursive: true });
+    writeFileSync(join(repoDir, "snapshots", "client.txt"), source);
+    execSync("git add snapshots/client.txt", { cwd: repoDir });
+    execSync('git commit -m "test: generated content markers"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const files = note.files as Array<{ path: string; generated?: boolean }>;
+    assert.equal(files.find((file) => file.path === "snapshots/client.txt")?.generated, true);
+    assert.equal(
+      (note.attribution as { ai_ratio: number }).ai_ratio,
+      0,
+      "content-marked generated files should be excluded from AI ratio",
+    );
+  });
+
+  it("preserves turn ownership for FIFO blob pairing without tool_use_id", async () => {
+    const draftBlob = hashBlob(repoDir, "export const parser = 'draft';\n");
+    const finalBlob = hashBlob(repoDir, "export const parser = 'final';\n");
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"draft parser","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"ship final parser","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PRE_BLOBS_FILE),
+      `{"event":"pre_edit","file":"parser.ts","turn":1,"blob":"${EMPTY_BLOB}"}\n` +
+        `{"event":"pre_edit","file":"parser.ts","turn":2,"blob":"${draftBlob}"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"write_file","file":"parser.ts","turn":1,"blob":"${draftBlob}"}\n` +
+        `{"event":"file_change","tool":"replace","file":"parser.ts","turn":2,"blob":"${finalBlob}"}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    writeFileSync(join(repoDir, "parser.ts"), "export const parser = 'final';\n");
+    execSync("git add parser.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: fifo fallback turns"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(
+      prompts,
+      ["ship final parser"],
+      "FIFO blob pairing should still attribute surviving lines to the latest turn",
+    );
+  });
+
   it("skips writing note when a commit has no AI-edited files, even if session has prompts", async () => {
-    // Guard for Option B: a purely human commit sharing a session with prior
-    // AI work should not inherit those prompts. Without this guard the empty-
-    // note skip would no longer fire for human commits in split scenarios.
+    // A purely human commit sharing a session with prior AI work should not
+    // inherit that AI conversation.
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","prompt":"AI please write feature.ts","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
@@ -346,7 +603,7 @@ describe("recordCommitEntry", () => {
     assert.equal(note, null, "human-only commit should not inherit unrelated AI prompts");
   });
 
-  it("does not leak prompts from prior commits in the same session (Option B unbilled window)", async () => {
+  it("does not leak prompts from prior commits in the same session", async () => {
     // Session spans two commits. Prompts from turns <= first commit's max turn
     // must not appear in the second commit's note — each commit owns its own
     // slice of the conversation.
@@ -412,8 +669,8 @@ describe("recordCommitEntry", () => {
 
   it("human-only commit in Codex-style session with transcript for other files does not get a note", async () => {
     // Reviewer scenario: the transcript records AI editing file A, but the
-    // commit only includes human-only.ts. Option B's empty-prompt shortcut
-    // must stop `findTranscriptPromptWindow` from pulling the other file's
+    // commit only includes human-only.ts. The empty-prompt shortcut must stop
+    // the prompt window from pulling the other file's
     // interaction into this commit's note.
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
@@ -477,8 +734,8 @@ describe("recordCommitEntry", () => {
     // Reviewer scenario: a commit's PostToolUse (→ changes.jsonl) was dropped
     // async, but PreToolUse (→ pre_blobs.jsonl) survived. relevantTurns still
     // forms via pre_blobs, so the note is written — but without also recording
-    // pre-blob turns as consumed, the next commit's Option B window leaks
-    // those prompts.
+    // pre-blob turns as consumed, the next commit's causal window can still
+    // leak those prompts.
 
     // --- First commit: turn 1, only pre_blobs for first.ts (no change entry) ---
     writeFileSync(
@@ -757,12 +1014,10 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("transcript-driven (Codex) commit carries full Option B context, not just edit-linked", async () => {
-    // Codex has no file_change events, so relevantTurns stays empty. The
-    // transcript-driven branch must still honor Option B: include every
-    // prompt in the unbilled window as `interactions`, paired with transcript
-    // responses via prompt_id. Edit-linked interactions drive attribution
-    // only.
+  it("transcript-driven (Codex) commit keeps nearby prompt-only context", async () => {
+    // Codex has no file_change events, so transcript interactions define the
+    // primary edit turns. Prompt-only context immediately before that edit
+    // block should still appear in `interactions`.
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
@@ -876,8 +1131,11 @@ describe("recordCommitEntry", () => {
       const firstNote = await readNote(firstSha);
       assert.ok(firstNote !== null);
       const firstInteractions = firstNote.interactions as Array<{ prompt: string }>;
-      // Both prompts are in the window on first commit.
-      assert.equal(firstInteractions.length, 2);
+      assert.deepEqual(
+        firstInteractions.map((interaction) => interaction.prompt),
+        ["edit first"],
+        "first commit keeps only its causal prompt block",
+      );
 
       // --- Commit 2: second.ts only ---
       writeFileSync(join(repoDir, "second.ts"), "export const s = 2;\n");
@@ -900,6 +1158,84 @@ describe("recordCommitEntry", () => {
         "commit 2 must not re-include the prompt already billed to commit 1",
       );
       assert.deepEqual(prompts, ["edit second"], "commit 2 shows only its edit-linked prompt");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex ignores generated files when selecting primary turns", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      writeFileSync(join(repoDir, "target.ts"), "export const note = 'baseline';\n");
+      execSync("git add target.ts", { cwd: repoDir });
+      execSync('git commit -m "baseline"', { cwd: repoDir });
+
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "generated.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T10:30:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T10:30:00Z"}}`,
+          '{"timestamp":"2026-04-15T10:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"draft target"}]}}',
+          '{"timestamp":"2026-04-15T10:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"drafting"}]}}',
+          '{"timestamp":"2026-04-15T10:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: target.ts\\\\n@@\\\\n-export const note = \'baseline\';\\\\n+export const note = \'draft\';\\\\n*** End Patch\\\\n\\"}"}}',
+          '{"timestamp":"2026-04-15T10:30:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"ship final target"}]}}',
+          '{"timestamp":"2026-04-15T10:30:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"finalizing"}]}}',
+          '{"timestamp":"2026-04-15T10:30:06Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c2","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: target.ts\\\\n@@\\\\n-export const note = \'draft\';\\\\n+export const note = \'final\';\\\\n*** End Patch\\\\n\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"draft target","prompt_id":"id-draft","turn":1,"timestamp":"2026-04-15T10:30:01Z"}\n' +
+          '{"event":"prompt","prompt":"ship final target","prompt_id":"id-final","turn":2,"timestamp":"2026-04-15T10:30:04Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      mkdirSync(join(repoDir, "proto"), { recursive: true });
+      writeFileSync(join(repoDir, "target.ts"), "export const note = 'final';\n");
+      writeFileSync(
+        join(repoDir, "proto", "service.pb.go"),
+        "// Code generated by protoc-gen-go. DO NOT EDIT.\npackage proto\n",
+      );
+      execSync("git add target.ts proto/service.pb.go", { cwd: repoDir });
+      execSync('git commit -m "codex generated"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const prompts = (note.interactions as Array<{ prompt: string }>).map(
+        (interaction) => interaction.prompt,
+      );
+      assert.deepEqual(
+        prompts,
+        ["ship final target"],
+        "generated files should not force transcript-driven selection to widen back to all turns",
+      );
+      const typedNote = note as {
+        attribution: { ai_ratio: number };
+        files: Array<{ path: string; generated?: boolean }>;
+      };
+      const files = typedNote.files;
+      assert.equal(files.find((file) => file.path === "proto/service.pb.go")?.generated, true);
+      assert.equal(typedNote.attribution.ai_ratio, 100);
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
