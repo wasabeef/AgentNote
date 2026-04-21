@@ -90,7 +90,7 @@ Cursor preview verwendet `afterFileEdit` und `afterTabFileEdit` Hooks für Attri
 Gemini CLI preview verwendet `BeforeTool`/`AfterTool` Hooks für die Tools `write_file` und `replace` für dateibasierte Attribution. Die Commit-Erkennung nutzt das Pending-Commit-Muster über `BeforeTool`/`AfterTool` auf `run_shell_command`. Die Wiederherstellung von Prompt und Response erfolgt über `BeforeAgent`/`AfterAgent` Hooks und das Parsen von JSONL-Transcripts.
 
 <Aside type="tip">
-  Prompt-Listen stammen aus der kausalen Konversation rund um den finalen Diff, nicht aus dem gesamten Sitzungsverlauf. Agent Note schließt außerdem nach bestem Wissen gängige generierte Artefakte aus dem Nenner von `AI ratio` aus, darunter Web-Build-Outputs, Flutter-Registrants, Dart-Codegen, Go-Protobufs, Rust-Bindings und generierte Swift-/Kotlin-Quellen.
+  Prompt-Listen stammen aus der kausalen Konversation rund um den finalen Diff, nicht aus dem gesamten Sitzungsverlauf. Wenn Agent Note auf `method: "file"` zurückfällt, verankert es dieses Fenster am latest touch turn jeder committed file und behält nur den prompt-only context, der zu diesen finalen Edits führt. Ältere same-file edits und nachgelagerter follow-up chatter bleiben draußen. Agent Note schließt außerdem nach bestem Wissen gängige generierte Artefakte aus dem Nenner von `AI ratio` aus, darunter Web-Build-Outputs, Flutter-Registrants, Dart-Codegen, Go-Protobufs, Rust-Bindings und generierte Swift-/Kotlin-Quellen.
 </Aside>
 
 ## Sitzungslebenszyklus

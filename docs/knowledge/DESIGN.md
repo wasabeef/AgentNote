@@ -230,7 +230,7 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 A commit note records a list of `interactions` (prompt + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
-**Current: causal window.** Agent Note keeps the prompt list centered on the turns that actually survive into the final commit, then expands just enough to preserve nearby planning / follow-up context.
+**Current: causal window.** Agent Note keeps the prompt list centered on the turns that actually survive into the final commit, then expands just enough to preserve the prompt-only context that leads into those edits.
 
 **Step 1 — derive primary turns.**
 
@@ -239,12 +239,12 @@ A commit note records a list of `interactions` (prompt + response + `files_touch
 
 **Step 2 — expand to a causal prompt window.**
 
-- Build contiguous **clusters** of primary edit turns.
-- For each cluster, stop when the nearest earlier or later edit turn is **not** primary.
-- Include prompts only inside those cluster-local boundaries.
-- Within a cluster, prompts from turns already consumed by earlier commits stay out unless the turn itself is primary.
+- Keep each primary turn itself.
+- Walk backward from that turn until the previous edit turn (or `maxConsumedTurn`) and keep only the **prompt-only** turns in that slice.
+- Do **not** pull in non-primary edit turns, even if they touched the same file earlier in the session.
+- Do **not** pull in trailing prompt-only turns after the final edit turn in the window.
 
-This keeps nearby prompt-only context such as planning, clarification, or commit / conflict follow-up, but drops older overwritten edit bursts and stale same-file work that no longer explain the final diff.
+This keeps nearby planning / clarification context such as “adjust the env defaults before the final README edit”, but drops older overwritten edit bursts, stale same-file work, and post-edit chatter that no longer explain the final diff.
 
 **Split-commit semantics are preserved.**
 

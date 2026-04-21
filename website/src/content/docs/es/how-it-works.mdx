@@ -90,7 +90,7 @@ Cursor preview usa los hooks `afterFileEdit` y `afterTabFileEdit` para la atribu
 Gemini CLI preview usa hooks `BeforeTool`/`AfterTool` sobre las herramientas `write_file` y `replace` para atribución por archivo. La detección de commit utiliza el patrón pending-commit mediante `BeforeTool`/`AfterTool` sobre `run_shell_command`. La recuperación de prompts y respuestas viene de los hooks `BeforeAgent`/`AfterAgent` y del parseo de transcripts JSONL.
 
 <Aside type="tip">
-  Las listas de prompts salen de la conversación causal alrededor del diff final, no de todo el historial de la sesión. Agent Note también excluye, en la medida de lo posible, los artefactos generados habituales del denominador de `AI ratio`, incluidos los resultados de build web, los registrants de Flutter, el codegen de Dart, los protobufs de Go, los bindings de Rust y las fuentes generadas de Swift / Kotlin.
+  Las listas de prompts salen de la conversación causal alrededor del diff final, no de todo el historial de la sesión. Cuando Agent Note hace fallback a `method: "file"`, ancla esa ventana al latest touch turn de cada committed file y conserva solo el prompt-only context que lleva a esas ediciones finales. Las same-file edits antiguas y el follow-up chatter posterior quedan fuera. Agent Note también excluye, en la medida de lo posible, los artefactos generados habituales del denominador de `AI ratio`, incluidos los resultados de build web, los registrants de Flutter, el codegen de Dart, los protobufs de Go, los bindings de Rust y las fuentes generadas de Swift / Kotlin.
 </Aside>
 
 ## Ciclo de vida de la sesión

@@ -78,5 +78,5 @@ Cursor preview は `afterFileEdit` / `afterTabFileEdit` hook を attribution に
 Gemini CLI preview は `BeforeTool`/`AfterTool` hook（`write_file` と `replace` ツール）でファイル単位の attribution を行います。commit 検出は `run_shell_command` の `BeforeTool`/`AfterTool` による pending-commit パターンを使用します。prompt / response の復元は `BeforeAgent`/`AfterAgent` hook と JSONL transcript のパースで行います。
 
 <Aside type="tip">
-  prompt の一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。`method: "file"` にフォールバックする場合も、各 committed file の latest touch turn を起点に、近い context cluster だけを残します。また、Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source などの代表的な generated artifact は、line-level / file-level を問わず best-effort で `AI ratio` の分母から除外されます。
+  prompt の一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。`method: "file"` にフォールバックする場合も、各 committed file の latest touch turn を起点に、その最終 edit へつながる prompt-only context だけを残します。古い same-file edit や、edit 後に続いた follow-up の会話は拾いません。また、Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source などの代表的な generated artifact は、line-level / file-level を問わず best-effort で `AI ratio` の分母から除外されます。
 </Aside>

@@ -679,59 +679,28 @@ function selectPromptWindowEntries(
   if (orderedPrimaryTurns.length === 0) return [];
 
   const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
-  const primaryTurnSet = new Set(orderedPrimaryTurns);
-  const clusters: Array<{
-    lowerBoundary: number;
-    upperBoundary: number;
-    primaryTurns: Set<number>;
-  }> = [];
+  const selectedTurns = new Set<number>();
 
-  let lastEditTurn = 0;
-  let activeCluster: {
-    lowerBoundary: number;
-    primaryTurns: Set<number>;
-  } | null = null;
+  for (const primaryTurn of orderedPrimaryTurns) {
+    selectedTurns.add(primaryTurn);
 
-  for (const turn of orderedEditTurns) {
-    if (primaryTurnSet.has(turn)) {
-      if (!activeCluster) {
-        activeCluster = {
-          lowerBoundary: lastEditTurn,
-          primaryTurns: new Set<number>(),
-        };
-      }
-      activeCluster.primaryTurns.add(turn);
-    } else if (activeCluster) {
-      clusters.push({
-        lowerBoundary: activeCluster.lowerBoundary,
-        upperBoundary: turn,
-        primaryTurns: activeCluster.primaryTurns,
-      });
-      activeCluster = null;
+    let lowerBoundary = maxConsumedTurn;
+    for (let index = orderedEditTurns.length - 1; index >= 0; index--) {
+      const editTurn = orderedEditTurns[index];
+      if (editTurn >= primaryTurn) continue;
+      lowerBoundary = Math.max(editTurn, maxConsumedTurn);
+      break;
     }
 
-    lastEditTurn = turn;
-  }
-
-  if (activeCluster) {
-    clusters.push({
-      lowerBoundary: activeCluster.lowerBoundary,
-      upperBoundary: Number.POSITIVE_INFINITY,
-      primaryTurns: activeCluster.primaryTurns,
-    });
+    for (let turn = primaryTurn - 1; turn > lowerBoundary; turn--) {
+      if (editTurns.has(turn)) break;
+      selectedTurns.add(turn);
+    }
   }
 
   return promptEntries.filter((entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (turn <= 0) return false;
-
-    for (const cluster of clusters) {
-      if (turn <= cluster.lowerBoundary || turn >= cluster.upperBoundary) continue;
-      if (cluster.primaryTurns.has(turn)) return true;
-      return turn > maxConsumedTurn;
-    }
-
-    return false;
+    return turn > 0 && selectedTurns.has(turn);
   });
 }
 

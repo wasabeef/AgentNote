@@ -488,6 +488,43 @@ describe("recordCommitEntry", () => {
     assert.deepEqual(prompts, ["generic deploy defaults", "repo env docs"]);
   });
 
+  it("file-level fallback keeps only backward context around the latest touch", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"old README cleanup","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"unrelated docs edit","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"clarify env defaults","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"ship final README change","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n' +
+        '{"event":"prompt","prompt":"explain the fix","turn":5,"timestamp":"2026-04-13T10:00:04Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"README.md","turn":1}\n' +
+        '{"event":"file_change","tool":"Write","file":"docs/guide.md","turn":2}\n' +
+        '{"event":"file_change","tool":"Write","file":"README.md","turn":4}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+    mkdirSync(join(repoDir, "docs"), { recursive: true });
+    writeFileSync(join(repoDir, "README.md"), "## Agent Note\n");
+    execSync("git add README.md", { cwd: repoDir });
+    execSync('git commit -m "docs: tighten README note window"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["clarify env defaults", "ship final README change"]);
+  });
+
   it("file-level fallback can keep multiple latest clusters without leaking unrelated edits", async () => {
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
@@ -523,6 +560,41 @@ describe("recordCommitEntry", () => {
       (interaction) => interaction.prompt,
     );
     assert.deepEqual(prompts, ["touch a.ts", "touch b.ts"]);
+  });
+
+  it("file-level fallback keeps prompt-only context between primary turns", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"touch a.ts","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"bridge the follow-up change","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"touch b.ts","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"summarize the commit","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"a.ts","turn":1}\n' +
+        '{"event":"file_change","tool":"Write","file":"b.ts","turn":3}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    writeFileSync(join(repoDir, "a.ts"), "export const a = 1;\n");
+    writeFileSync(join(repoDir, "b.ts"), "export const b = 1;\n");
+    execSync("git add a.ts b.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: keep bridge context only"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["touch a.ts", "bridge the follow-up change", "touch b.ts"]);
   });
 
   it("excludes generated artifacts from line-level AI ratio", async () => {
