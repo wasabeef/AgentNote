@@ -1,0 +1,131 @@
+---
+title: Cara kerjanya
+description: Bagaimana Agent Note menangkap data sesi AI dan menempelkannya ke commit git.
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Alur data
+
+<Steps>
+1. Anda mengirim prompt ke coding agent → hooks menangkap prompt tersebut
+2. Agent menulis kode → hooks atau transcript melacak file yang diubah dan sinyal attribution
+3. Anda menjalankan `git commit` atau `agent-note commit` → trailer disisipkan, note direkam
+4. Anda menjalankan `git push` → notes otomatis dipush ke remote
+</Steps>
+
+Tidak ada perintah tambahan yang dibutuhkan jika repo-local git hook sudah terpasang. Cursor preview juga memulihkan pasangan prompt / response dari response hook atau transcript lokal, dan shell hook-nya menyediakan jalur fallback saat git hook tidak tersedia.
+
+## Penyimpanan
+
+<CardGrid>
+  <Card title="Lapisan 1: data sementara lokal" icon="laptop">
+    Data sesi di `.git/agentnote/sessions/`. File JSONL untuk prompt, perubahan, dan blob hash. Dirotasi setelah setiap commit. Tidak pernah dipush.
+  </Card>
+  <Card title="Lapisan 2: Git Notes" icon="document">
+    Catatan permanen di `refs/notes/agentnote`. Satu JSON per commit. Bisa dipush, difetch, dan dibagikan ke tim.
+  </Card>
+</CardGrid>
+
+### File sesi
+
+| File | Tujuan |
+|---|---|
+| `prompts.jsonl` | Satu prompt per baris dengan nomor turn |
+| `changes.jsonl` | File yang disentuh AI dengan post-edit blob hash |
+| `pre_blobs.jsonl` | Keadaan file sebelum setiap edit AI |
+| `heartbeat` | Stempel waktu aktivitas sesi |
+| `turn` | Penghitung monoton yang bertambah di setiap prompt |
+
+### Note Schema
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "Implementasikan middleware auth JWT",
+      "response": "Saya akan membuat middleware-nya...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Mode atribusi
+
+Claude Code menghitung autoria AI per baris menggunakan algoritme posisi 3-diff:
+
+| Diff | Dari | Ke | Apa yang ditangkap |
+|---|---|---|---|
+| diff1 | parent commit | file yang dicommit | Semua perubahan di commit ini |
+| diff2 | sebelum AI edit | file yang dicommit | AI edit + human edit setelahnya |
+| diff3 | sesudah AI edit | file yang dicommit | Hanya human edit |
+
+**Posisi AI = posisi pada diff2 yang TIDAK ada di diff3**
+
+Ketiga diff menarget committed blob yang sama, jadi posisinya bisa dibandingkan langsung.
+
+<Aside type="tip">
+  Penghapusan dilacak terpisah dan tidak diatribusikan ke AI maupun manusia. Saat blob data tidak tersedia, Agent Note otomatis fallback ke attribution berbasis file.
+</Aside>
+
+Codex CLI menggunakan attribution berbasis transcript. Saat jumlah baris `apply_patch` di transcript cocok dengan final commit diff, Agent Note menaikkan commit Codex ke `method: "line"`. Jika tidak cocok, Agent Note fallback ke `method: "file"` untuk menghindari false positive. Shell-only edit yang tidak pernah muncul sebagai patch data di transcript tetap di jalur aman: Agent Note masih bisa menyimpan pasangan prompt / response dan Codex tools yang teramati, tetapi tidak menebak `files_touched` atau AI-authored files hanya dari shell step. Karena itu commit seperti ini tetap berada di `method: "file"` dengan `0%` AI attribution kecuali ada primary signal lain yang mengikat file ke agent. Jika transcript tidak bisa dibaca saat commit, Agent Note memberi warning dan melewati pembuatan note daripada menyimpan attribution yang tidak pasti.
+
+Cursor preview menggunakan hook `afterFileEdit` dan `afterTabFileEdit` untuk attribution. Jika jumlah edit-nya cocok dan final committed blob masih sama dengan AI edit terakhir, Agent Note dengan aman menaikkan file itu ke `method: "line"`. Jika tidak, Agent Note fallback ke `method: "file"`, sambil tetap memulihkan pasangan prompt / response dari Cursor response hook atau transcript lokal jika tersedia.
+
+Gemini CLI preview menggunakan hook `BeforeTool`/`AfterTool` pada tool `write_file` dan `replace` untuk attribution berbasis file. Deteksi commit memakai pola pending-commit melalui `BeforeTool`/`AfterTool` pada `run_shell_command`. Pemulihan prompt dan response berasal dari hook `BeforeAgent`/`AfterAgent` dan parsing transcript JSONL.
+
+<Aside type="tip">
+  Daftar prompt diambil dari percakapan kausal di sekitar final diff, bukan dari seluruh riwayat sesi. Agent Note juga sebisa mungkin mengecualikan artefak hasil generate yang umum dari denominator `AI ratio`, termasuk output build web, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, dan source generated Swift / Kotlin.
+</Aside>
+
+## Siklus hidup sesi
+
+| Event | Yang terjadi |
+|---|---|
+| **SessionStart** | Membuat direktori sesi dan menulis heartbeat |
+| **UserPromptSubmit** | Menambahkan prompt, menaikkan counter turn, dan merotasi log |
+| **PreToolUse Edit/Write** | Menangkap pre-edit blob hash secara sinkron |
+| **PostToolUse Edit/Write** | Menangkap post-edit blob hash dan path file |
+| **Stop** | Mencatat event stop (heartbeat tetap aktif — Stop = akhir response, bukan akhir sesi) |
+
+<Aside>
+  Git hook memverifikasi kesegaran sesi melalui heartbeat sebelum menyisipkan trailer atau merekam notes. Heartbeat diperbarui pada SessionStart dan setiap prompt.
+</Aside>
+
+<Aside type="tip">
+  Agent Note memahami agent yang sedang aktif. Metadata sesi menyimpan adapter aktif, sehingga `show`, `status`, dan perekaman commit nanti bisa menyelesaikan format transcript yang benar.
+</Aside>
+
+## Git Notes
+
+Git notes tidak terlihat di daftar branch, UI GitHub, atau CI — tetapi bisa dipush dan difetch.
+
+```bash
+# Bagikan ke tim
+git push origin refs/notes/agentnote
+
+# Ambil dari remote
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# Lihat note
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agent-note init` menyiapkan auto-fetch, dan hook `pre-push` menangani auto-push. Tidak perlu perintah manual.
+</Aside>

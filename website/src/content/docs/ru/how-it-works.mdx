@@ -1,0 +1,131 @@
+---
+title: Как это работает
+description: Как Agent Note собирает данные AI-сессии и привязывает их к git commit.
+---
+
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Поток данных
+
+<Steps>
+1. Вы отправляете prompt своему coding agent → hooks захватывают этот prompt
+2. Агент пишет код → hooks или transcripts отслеживают изменённые файлы и сигналы attribution
+3. Вы запускаете `git commit` или `agent-note commit` → вставляется trailer и записывается note
+4. Вы запускаете `git push` → notes автоматически отправляются в remote
+</Steps>
+
+Если repo-local git hooks установлены, дополнительные команды не нужны. Cursor preview также восстанавливает пары prompt / response из response hooks или локальных transcripts, а его shell hooks дают fallback-путь, когда git hooks недоступны.
+
+## Хранилище
+
+<CardGrid>
+  <Card title="Слой 1: локальные временные данные" icon="laptop">
+    Данные сессии в `.git/agentnote/sessions/`. JSONL-файлы для prompts, changes и blob hashes. Ротируются после каждого commit и никогда не pushатся.
+  </Card>
+  <Card title="Слой 2: Git Notes" icon="document">
+    Постоянная запись в `refs/notes/agentnote`. Один JSON на commit. Можно push, fetch и делиться с командой.
+  </Card>
+</CardGrid>
+
+### Файлы сессии
+
+| Файл | Назначение |
+|---|---|
+| `prompts.jsonl` | Один prompt на строку с номером turn |
+| `changes.jsonl` | Файлы, которых коснулась AI, с post-edit blob hashes |
+| `pre_blobs.jsonl` | Состояние файла до каждого AI edit |
+| `heartbeat` | Timestamp активности сессии |
+| `turn` | Монотонный счетчик, увеличивающийся с каждым prompt |
+
+### Note Schema
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "a1b2c3d4-...",
+  "model": "claude-sonnet-4-20250514",
+  "interactions": [
+    {
+      "prompt": "Реализуй JWT auth middleware",
+      "response": "Я создам middleware...",
+      "files_touched": ["src/auth.ts"],
+      "tools": ["Edit"]
+    }
+  ],
+  "files": [
+    { "path": "src/auth.ts", "by_ai": true },
+    { "path": "CHANGELOG.md", "by_ai": false }
+  ],
+  "attribution": {
+    "ai_ratio": 73,
+    "method": "line",
+    "lines": { "ai_added": 146, "total_added": 200, "deleted": 12 }
+  }
+}
+```
+
+## Режимы атрибуции
+
+Claude Code вычисляет AI authorship построчно с помощью 3-diff position algorithm:
+
+| Diff | Откуда | Куда | Что захватывает |
+|---|---|---|---|
+| diff1 | parent commit | committed file | Все изменения в этом commit |
+| diff2 | до AI edit | committed file | AI edit + human edits после него |
+| diff3 | после AI edit | committed file | Только human edits |
+
+**AI positions = позиции из diff2, которых НЕТ в diff3**
+
+Все три diff нацелены на committed blob, поэтому позиции можно сравнивать напрямую.
+
+<Aside type="tip">
+  Удаления отслеживаются отдельно и не приписываются ни AI, ни человеку. Если blob data недоступны, Agent Note автоматически делает fallback на file-level attribution.
+</Aside>
+
+Codex CLI использует transcript-driven attribution. Когда числа строк `apply_patch` в transcript совпадают с final commit diff, Agent Note повышает Codex commits до `method: "line"`. Иначе он откатывается к `method: "file"`, чтобы избежать false positives. Shell-only edits, которые не проявляются как patch data в transcript, остаются на безопасной стороне: Agent Note всё ещё может сохранить пару prompt / response и замеченные Codex tools, но не угадывает `files_touched` или AI-authored files только по shell step. Поэтому такие commits остаются на `method: "file"` с `0%` AI attribution, если другой primary signal не связывает файлы с агентом. Если transcript нельзя прочитать во время commit, Agent Note выдаёт warning и пропускает создание note вместо записи ненадёжных attribution data.
+
+Cursor preview использует hooks `afterFileEdit` и `afterTabFileEdit` для attribution. Когда их edit counts совпадают и final committed blob всё ещё совпадает с последним AI edit, Agent Note безопасно повышает такие файлы до `method: "line"`. Иначе он откатывается к `method: "file"`, при этом продолжая восстанавливать пары prompt / response из Cursor response hooks или локальных transcripts, когда они доступны.
+
+Gemini CLI preview использует hooks `BeforeTool`/`AfterTool` на инструментах `write_file` и `replace` для file-level attribution. Детекция commit использует pending-commit pattern через `BeforeTool`/`AfterTool` на `run_shell_command`. Восстановление prompts и responses идёт из hooks `BeforeAgent`/`AfterAgent` и из парсинга JSONL transcripts.
+
+<Aside type="tip">
+  Списки prompt берутся из причинно связанного диалога вокруг final diff, а не из всего backlog сессии. Agent Note также по возможности исключает распространённые сгенерированные артефакты из знаменателя `AI ratio`, включая web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings и generated sources для Swift / Kotlin.
+</Aside>
+
+## Жизненный цикл сессии
+
+| Событие | Что происходит |
+|---|---|
+| **SessionStart** | Создаёт директорию сессии и записывает heartbeat |
+| **UserPromptSubmit** | Добавляет prompt, увеличивает turn counter и ротирует logs |
+| **PreToolUse Edit/Write** | Синхронно захватывает pre-edit blob hash |
+| **PostToolUse Edit/Write** | Захватывает post-edit blob hash и путь к файлу |
+| **Stop** | Логирует событие stop (heartbeat остаётся активным — Stop = конец response, а не конец сессии) |
+
+<Aside>
+  Git hooks проверяют свежесть сессии по heartbeat перед вставкой trailers или записью notes. Heartbeat обновляется на SessionStart и при каждом prompt.
+</Aside>
+
+<Aside type="tip">
+  Agent Note знает, какой agent активен. Метаданные сессии хранят текущий adapter, поэтому `show`, `status` и запись commit позже могут определить правильный формат transcript.
+</Aside>
+
+## Git Notes
+
+Git notes невидимы в списках веток, в UI GitHub и в CI, но их можно push и fetch.
+
+```bash
+# Поделиться с командой
+git push origin refs/notes/agentnote
+
+# Забрать из remote
+git fetch origin refs/notes/agentnote:refs/notes/agentnote
+
+# Посмотреть note
+git notes --ref=agentnote show <commit>
+```
+
+<Aside type="tip">
+  `agent-note init` настраивает auto-fetch, а hook `pre-push` отвечает за auto-push. Ручные команды не нужны.
+</Aside>
