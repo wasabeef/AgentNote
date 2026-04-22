@@ -156,7 +156,7 @@ This posts an AI session report to the PR description:
 ## 🧑💬🤖 Agent Note
 
 **Total AI Ratio:** ████████ 73%
-Model: `claude-sonnet-4-20250514`
+**Model:** `claude-sonnet-4-20250514`
 
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
