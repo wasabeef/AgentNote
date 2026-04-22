@@ -272,12 +272,7 @@ describe("agentnote deinit", () => {
     execSync(`node ${cliPath} init --agent claude --dashboard`, { cwd: dir });
 
     const prWorkflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
-    const dashboardWorkflowPath = join(
-      dir,
-      ".github",
-      "workflows",
-      "agentnote-dashboard.yml",
-    );
+    const dashboardWorkflowPath = join(dir, ".github", "workflows", "agentnote-dashboard.yml");
     assert.ok(existsSync(prWorkflowPath), "PR workflow should exist after init");
     assert.ok(existsSync(dashboardWorkflowPath), "dashboard workflow should exist after init");
 

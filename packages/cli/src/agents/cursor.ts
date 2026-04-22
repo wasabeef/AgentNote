@@ -333,9 +333,7 @@ function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {
     Object.entries(config.hooks)
       .map(([event, entries]) => [
         event,
-        entries.filter(
-          (entry) => !entry.command.includes("agent-note hook"),
-        ),
+        entries.filter((entry) => !entry.command.includes("agent-note hook")),
       ])
       .filter(([, entries]) => entries.length > 0),
   );

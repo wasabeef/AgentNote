@@ -230,10 +230,7 @@ function stripAgentnoteHooks(config: CodexHooksFile): CodexHooksFile {
         const filteredGroups = groups
           .map((group) => ({
             ...group,
-            hooks: group.hooks.filter(
-              (hook) =>
-                !hook.command.includes("agent-note hook"),
-            ),
+            hooks: group.hooks.filter((hook) => !hook.command.includes("agent-note hook")),
           }))
           .filter((group) => group.hooks.length > 0);
         return [event, filteredGroups];

@@ -201,9 +201,7 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      hooks: group.hooks.filter(
-        (hook) => !hook.command.includes("agent-note hook"),
-      ),
+      hooks: group.hooks.filter((hook) => !hook.command.includes("agent-note hook")),
     }))
     .filter((group) => group.hooks.length > 0);
 }

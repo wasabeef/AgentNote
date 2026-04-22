@@ -590,7 +590,9 @@ export async function init(args: string[]): Promise<void> {
     await mkdir(workflowDir, { recursive: true });
 
     if (existsSync(prReportWorkflowPath)) {
-      results.push(`  · workflow already exists at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`);
+      results.push(
+        `  · workflow already exists at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`,
+      );
     } else {
       await writeFile(prReportWorkflowPath, PR_REPORT_WORKFLOW_TEMPLATE);
       results.push(`  ✓ workflow created at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`);
@@ -638,7 +640,12 @@ export async function init(args: string[]): Promise<void> {
     }
   }
   if (!skipAction && !hooksOnly) {
-    const prReportWorkflowPath = join(repoRoot, ".github", "workflows", PR_REPORT_WORKFLOW_FILENAME);
+    const prReportWorkflowPath = join(
+      repoRoot,
+      ".github",
+      "workflows",
+      PR_REPORT_WORKFLOW_FILENAME,
+    );
     if (existsSync(prReportWorkflowPath)) {
       toCommit.push(`.github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`);
     }

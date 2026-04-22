@@ -45,12 +45,7 @@ describe("agentnote init", () => {
     );
 
     // Workflow
-    const workflowPath = join(
-      testDir,
-      ".github",
-      "workflows",
-      "agentnote-pr-report.yml",
-    );
+    const workflowPath = join(testDir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
     assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
@@ -304,7 +299,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should build from the shared Dashboard source directory",
     );
     assert.ok(
-      dashboardWorkflow.includes("DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}"),
+      dashboardWorkflow.includes(`DEFAULT_BRANCH: \${{ github.event.repository.default_branch }}`),
       "dashboard workflow should infer the repository default branch",
     );
     assert.ok(
@@ -312,7 +307,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should not hardcode main as the deploy branch",
     );
     assert.ok(
-      prReportWorkflow.includes("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"),
+      prReportWorkflow.includes(`GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`),
       "PR report workflow should pass GITHUB_TOKEN to the action",
     );
 

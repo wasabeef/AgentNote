@@ -108,10 +108,7 @@ export const claude: AgentAdapter = {
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
         const text = JSON.stringify(entry);
-        return (
-          !text.includes("agent-note hook") &&
-          !text.includes("cli.js hook")
-        );
+        return !text.includes("agent-note hook") && !text.includes("cli.js hook");
       });
       if (hooks[event].length === 0) delete hooks[event];
     }
@@ -134,10 +131,7 @@ export const claude: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return (
-            !text.includes("agent-note hook") &&
-            !text.includes("cli.js hook")
-          );
+          return !text.includes("agent-note hook") && !text.includes("cli.js hook");
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
