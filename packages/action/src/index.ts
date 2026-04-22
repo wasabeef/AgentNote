@@ -15,6 +15,7 @@ import {
 } from "./helpers.js";
 
 type PrOutputMode = "description" | "comment" | "none";
+const DEFAULT_DASHBOARD_DIR = "packages/dashboard/public";
 
 /**
  * Resolve the agentnote CLI command.
@@ -114,15 +115,14 @@ async function removeDashboardNotesForPr(
 
 async function writeDashboardBundle(
 	report: Record<string, unknown>,
-	dashboardDirInput: string,
 ): Promise<{ dir: string; commits: number }> {
 	const pullRequest = github.context.payload.pull_request;
 	if (!pullRequest) {
 		core.info("No pull request context available. Skipping dashboard bundle.");
-		return { dir: resolve(dashboardDirInput), commits: 0 };
+		return { dir: resolve(DEFAULT_DASHBOARD_DIR), commits: 0 };
 	}
 
-	const dashboardDir = resolve(dashboardDirInput);
+	const dashboardDir = resolve(DEFAULT_DASHBOARD_DIR);
 	const notesDir = join(dashboardDir, "notes");
 	await mkdir(notesDir, { recursive: true });
 	await removeDashboardNotesForPr(notesDir, pullRequest.number);
@@ -240,8 +240,6 @@ async function run(): Promise<void> {
 			core.getInput("comment"),
 		);
 		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-		const dashboardDirInput =
-			core.getInput("dashboard_dir") || "packages/dashboard/public";
 		const dashboardUrlInput = core.getInput("dashboard_url");
 
 		let json = "";
@@ -310,7 +308,7 @@ async function run(): Promise<void> {
 		let dashboardDir = "";
 		let dashboardUrl = "";
 		if (dashboardEnabled) {
-			const result = await writeDashboardBundle(report, dashboardDirInput);
+			const result = await writeDashboardBundle(report);
 			dashboardCommits = result.commits;
 			dashboardDir = result.dir;
 			if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
@@ -321,7 +319,6 @@ async function run(): Promise<void> {
 			markdown = withDashboardLink(markdown, dashboardUrl);
 		}
 		core.setOutput("markdown", markdown);
-		core.setOutput("dashboard_dir", dashboardDir);
 		core.setOutput("dashboard_commits", String(dashboardCommits));
 		core.setOutput("dashboard_url", dashboardUrl);
 

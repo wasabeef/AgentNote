@@ -4,6 +4,9 @@ import starlight from "@astrojs/starlight";
 export default defineConfig({
   site: "https://wasabeef.github.io",
   base: "/AgentNote",
+  devToolbar: {
+    enabled: false,
+  },
   integrations: [
     starlight({
       title: "Agent Note",
@@ -62,10 +65,18 @@ export default defineConfig({
         "pt-br": { label: "Português (BR)", lang: "pt-BR" },
       },
       sidebar: [
-        { slug: "getting-started" },
-        { slug: "how-it-works" },
-        { slug: "commands" },
-        { slug: "github-action" },
+        {
+          label: "Basics",
+          items: [
+            { slug: "getting-started" },
+            { slug: "how-it-works" },
+            { slug: "commands" },
+          ],
+        },
+        {
+          label: "GitHub",
+          items: [{ slug: "github-action" }, { slug: "dashboard" }],
+        },
       ],
       editLink: {
         baseUrl: "https://github.com/wasabeef/AgentNote/edit/main/website/",

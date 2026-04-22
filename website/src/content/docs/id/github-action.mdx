@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Posting AI session report secara otomatis ke pull request.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Tambahkan workflow ini, yang dibuat otomatis oleh `agent-note init`:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Itu saja. Setiap PR akan mendapatkan AI session report.
+
+## Inputs
+
+| Input | Default | Deskripsi |
+|---|---|---|
+| `base` | PR base branch | Branch dasar untuk dibandingkan |
+| `pr_output` | `description` | Tujuan PR report: `description`, `comment`, atau `none` |
+| `dashboard` | `false` | Juga menulis dashboard snapshot untuk PR saat ini |
+| `dashboard_url` | — | URL dashboard publik yang akan ditautkan dari PR report ketika dashboard sudah ter-deploy |
+| `output` | — | Alias legacy untuk `pr_output` (`description` atau `comment`) |
+| `comment` | `true` | Legacy: set `false` untuk mematikan posting PR report |
+
+### Posting sebagai comment, bukan description
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Menghasilkan dashboard data bersama PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Optional. Setel ini hanya setelah dashboard sudah public.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Saat `dashboard: true` aktif, Action akan otomatis membuat atau memperbarui `packages/dashboard/public/notes/*.json`. Jika dashboard notes ditulis, PR report juga dapat menambahkan link `Open dashboard` di bagian atas ketika Anda mengatur `dashboard_url`.
+
+<Aside type="tip">
+  Aktifkan ini hanya jika Anda juga ingin dashboard bersama. Setup lengkap untuk bundle, Pages sync, dan deploy ada di panduan [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Tipe | Deskripsi |
+|---|---|---|
+| `overall_ai_ratio` | number | AI ratio seluruh PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed`, atau `none` |
+| `tracked_commits` | number | Jumlah commit dengan data agent-note |
+| `total_commits` | number | Total commit di PR |
+| `total_prompts` | number | Total prompt di semua commit |
+| `json` | string | Report terstruktur lengkap |
+| `markdown` | string | Report markdown yang sudah dirender |
+| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke dashboard bundle |
+| `dashboard_url` | string | URL dashboard publik yang ditautkan dari PR report jika diatur secara eksplisit |
+
+### Menggunakan outputs di workflow
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Format report
+
+PR report mencakup:
+
+- **Header** — `Total AI Ratio` dengan progress bar, plus baris plain-text `Model`
+- **Dashboard link** — hanya ditambahkan ketika Action menulis dashboard notes dan Anda mengatur `dashboard_url`
+- **Table** — AI ratio per commit, jumlah prompt, dan files dengan attribution
+- **Prompts** — bagian collapsible dengan pasangan prompt / response per commit
+
+<Aside type="tip">
+  Hash commit di report akan menaut ke halaman commit di GitHub.
+</Aside>
+
+## Notes Sharing
+
+Action akan mengambil `refs/notes/agentnote` dari remote. Git hook `pre-push` yang dipasang oleh `agent-note init` otomatis melakukan push notes setiap kali `git push`, tanpa langkah manual.
+
+## Langkah berikutnya
+
+Jika Anda juga ingin tampilan Pages bersama untuk riwayat PR open dan merged, lanjutkan ke panduan [Dashboard](./dashboard/).

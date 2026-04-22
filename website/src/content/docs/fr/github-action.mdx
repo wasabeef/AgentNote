@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Publiez automatiquement des AI session reports dans les pull requests.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Ajoutez ce workflow, créé automatiquement par `agent-note init` :
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+C'est tout. Chaque PR reçoit un AI session report.
+
+## Inputs
+
+| Input | Default | Description |
+|---|---|---|
+| `base` | PR base branch | Branche de base pour la comparaison |
+| `pr_output` | `description` | Destination du PR report : `description`, `comment` ou `none` |
+| `dashboard` | `false` | Écrit aussi des dashboard snapshots pour la PR courante |
+| `dashboard_url` | — | URL publique du dashboard à lier depuis le PR report quand le dashboard est déjà déployé |
+| `output` | — | Alias legacy de `pr_output` (`description` ou `comment`) |
+| `comment` | `true` | Legacy : définissez `false` pour désactiver la publication du PR report |
+
+### Publier en comment au lieu de description
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Générer des dashboard data en même temps que le PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Optionnel. À définir seulement quand le dashboard est déjà public.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Quand `dashboard: true` est activé, l'Action crée ou met à jour automatiquement `packages/dashboard/public/notes/*.json`. Si des dashboard notes ont été écrites, le PR report peut aussi ajouter un lien `Open dashboard` en haut quand vous définissez `dashboard_url`.
+
+<Aside type="tip">
+  Activez cela seulement si vous voulez aussi le dashboard partagé. Toute la configuration bundle, Pages sync et deploy est détaillée dans le guide [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Type | Description |
+|---|---|---|
+| `overall_ai_ratio` | number | AI ratio globale de la PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` ou `none` |
+| `tracked_commits` | number | Nombre de commits avec des données agent-note |
+| `total_commits` | number | Nombre total de commits dans la PR |
+| `total_prompts` | number | Nombre total de prompts sur tous les commits |
+| `json` | string | Rapport structuré complet |
+| `markdown` | string | Rapport markdown rendu |
+| `dashboard_commits` | number | Nombre de tracked commits écrits dans le dashboard bundle |
+| `dashboard_url` | string | URL publique du dashboard liée dans le PR report quand elle est explicitement configurée |
+
+### Utiliser les outputs dans le workflow
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+Le PR report contient :
+
+- **Header** — `Total AI Ratio` avec une progress bar, plus une ligne texte séparée `Model`
+- **Dashboard link** — ajouté seulement quand l'Action écrit des dashboard notes et que `dashboard_url` est explicitement configuré
+- **Table** — AI ratio par commit, nombre de prompts et files avec attribution
+- **Prompts** — section repliable avec les paires prompt / response par commit
+
+<Aside type="tip">
+  Les hashes de commit dans le report pointent directement vers la page GitHub du commit.
+</Aside>
+
+## Notes Sharing
+
+L'Action récupère `refs/notes/agentnote` depuis le remote. Le Git hook `pre-push` installé par `agent-note init` pousse automatiquement les notes à chaque `git push`, sans commande manuelle.
+
+## Étape suivante
+
+Si vous voulez aussi une vue Pages partagée pour l'historique des PR ouvertes et fusionnées, passez au guide [Dashboard](./dashboard/).

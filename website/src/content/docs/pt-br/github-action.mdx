@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Publique AI session reports automaticamente em pull requests.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Adicione este workflow, criado automaticamente por `agent-note init`:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+É só isso. Toda PR recebe um AI session report.
+
+## Inputs
+
+| Input | Default | Descrição |
+|---|---|---|
+| `base` | PR base branch | Branch base para comparação |
+| `pr_output` | `description` | Destino do PR report: `description`, `comment` ou `none` |
+| `dashboard` | `false` | Também escreve dashboard snapshots para a PR atual |
+| `dashboard_url` | — | URL pública do dashboard que será linkada a partir do PR report quando o dashboard já estiver deployado |
+| `output` | — | Alias legacy de `pr_output` (`description` ou `comment`) |
+| `comment` | `true` | Legacy: defina `false` para desativar a publicação do PR report |
+
+### Publicar como comment em vez de description
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Gerar dashboard data junto com o PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Opcional. Defina isso somente quando o dashboard já estiver público.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Quando `dashboard: true` está ativo, a Action cria ou atualiza `packages/dashboard/public/notes/*.json` automaticamente. Se dashboard notes forem escritas, o PR report também pode adicionar um link `Open dashboard` no topo quando você configurar `dashboard_url`.
+
+<Aside type="tip">
+  Ative isso apenas se você também quiser o dashboard compartilhado. O setup completo de bundle, Pages sync e deploy está no guia [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Tipo | Descrição |
+|---|---|---|
+| `overall_ai_ratio` | number | AI ratio total da PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` ou `none` |
+| `tracked_commits` | number | Número de commits com dados de agent-note |
+| `total_commits` | number | Número total de commits na PR |
+| `total_prompts` | number | Número total de prompts em todos os commits |
+| `json` | string | Report estruturado completo |
+| `markdown` | string | Report markdown renderizado |
+| `dashboard_commits` | number | Número de tracked commits escritos no dashboard bundle |
+| `dashboard_url` | string | URL pública do dashboard linkada a partir do PR report quando configurada explicitamente |
+
+### Usando outputs no workflow
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+O PR report inclui:
+
+- **Header** — `Total AI Ratio` com progress bar e uma linha separada em plain text para `Model`
+- **Dashboard link** — adicionado somente quando a Action escreve dashboard notes e você configura `dashboard_url`
+- **Table** — AI ratio por commit, quantidade de prompts e files com attribution
+- **Prompts** — seção recolhível com pares de prompt / response por commit
+
+<Aside type="tip">
+  Os hashes de commit no report apontam diretamente para a página do commit no GitHub.
+</Aside>
+
+## Notes Sharing
+
+A Action busca `refs/notes/agentnote` do remote. O Git hook `pre-push` instalado por `agent-note init` faz push automático das notes a cada `git push`, sem etapas manuais.
+
+## Próximo passo
+
+Se você também quiser uma visão compartilhada em Pages para o histórico de PRs open e merged, siga para o guia [Dashboard](./dashboard/).

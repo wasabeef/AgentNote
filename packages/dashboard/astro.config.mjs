@@ -12,4 +12,7 @@ const site = process.env.SITE;
 export default defineConfig({
   ...(site ? { site } : {}),
   base: normalizeBase(process.env.BASE),
+  devToolbar: {
+    enabled: false,
+  },
 });

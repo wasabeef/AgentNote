@@ -23,10 +23,6 @@ inputs:
     description: "Write/update dashboard snapshot files for the current PR"
     required: false
     default: "false"
-  dashboard_dir:
-    description: "Directory where dashboard notes/*.json will be written"
-    required: false
-    default: "packages/dashboard/public"
   dashboard_url:
     description: "Public dashboard URL to link from the PR report when the dashboard is already deployed"
     required: false
@@ -47,8 +43,6 @@ outputs:
     description: "Full structured report as JSON"
   markdown:
     description: "Rendered markdown report"
-  dashboard_dir:
-    description: "Dashboard snapshot directory written by the action"
   dashboard_commits:
     description: "Number of tracked commits written into the dashboard snapshot"
   dashboard_url:

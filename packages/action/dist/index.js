@@ -30081,6 +30081,7 @@ const fs_1 = __nccwpck_require__(9896);
 const promises_1 = __nccwpck_require__(1943);
 const path_1 = __nccwpck_require__(6928);
 const helpers_js_1 = __nccwpck_require__(1979);
+const DEFAULT_DASHBOARD_DIR = "packages/dashboard/public";
 /**
  * Resolve the agentnote CLI command.
  * Prefers the local monorepo build (no version skew), falls back to npx.
@@ -30164,13 +30165,13 @@ async function removeDashboardNotesForPr(notesDir, prNumber) {
         }
     }
 }
-async function writeDashboardBundle(report, dashboardDirInput) {
+async function writeDashboardBundle(report) {
     const pullRequest = github.context.payload.pull_request;
     if (!pullRequest) {
         core.info("No pull request context available. Skipping dashboard bundle.");
-        return { dir: (0, path_1.resolve)(dashboardDirInput), commits: 0 };
+        return { dir: (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR), commits: 0 };
     }
-    const dashboardDir = (0, path_1.resolve)(dashboardDirInput);
+    const dashboardDir = (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR);
     const notesDir = (0, path_1.join)(dashboardDir, "notes");
     await (0, promises_1.mkdir)(notesDir, { recursive: true });
     await removeDashboardNotesForPr(notesDir, pullRequest.number);
@@ -30262,7 +30263,6 @@ async function run() {
         const cliCmd = resolveCliCommand();
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-        const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public";
         const dashboardUrlInput = core.getInput("dashboard_url");
         let json = "";
         let report = null;
@@ -30320,7 +30320,7 @@ async function run() {
         let dashboardDir = "";
         let dashboardUrl = "";
         if (dashboardEnabled) {
-            const result = await writeDashboardBundle(report, dashboardDirInput);
+            const result = await writeDashboardBundle(report);
             dashboardCommits = result.commits;
             dashboardDir = result.dir;
             if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
@@ -30331,7 +30331,6 @@ async function run() {
             markdown = (0, helpers_js_1.withDashboardLink)(markdown, dashboardUrl);
         }
         core.setOutput("markdown", markdown);
-        core.setOutput("dashboard_dir", dashboardDir);
         core.setOutput("dashboard_commits", String(dashboardCommits));
         core.setOutput("dashboard_url", dashboardUrl);
         await postPrReport(prOutputMode, markdown);

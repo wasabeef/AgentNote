@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Автоматическая публикация AI session reports в pull requests.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Добавьте этот workflow, который автоматически создается через `agent-note init`:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Этого достаточно. Каждая PR получит AI session report.
+
+## Inputs
+
+| Input | Default | Описание |
+|---|---|---|
+| `base` | PR base branch | Базовая ветка для сравнения |
+| `pr_output` | `description` | Куда выводить PR report: `description`, `comment` или `none` |
+| `dashboard` | `false` | Также записывает dashboard snapshots для текущей PR |
+| `dashboard_url` | — | Публичный URL dashboard, на который будет ссылка из PR report, когда dashboard уже deploy |
+| `output` | — | Legacy alias для `pr_output` (`description` или `comment`) |
+| `comment` | `true` | Legacy: установите `false`, чтобы отключить публикацию PR report |
+
+### Публиковать как comment вместо description
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Генерировать dashboard data вместе с PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Optional. Указывайте только когда dashboard уже доступен публично.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Когда включен `dashboard: true`, Action автоматически создает или обновляет `packages/dashboard/public/notes/*.json`. Если dashboard notes были записаны, PR report также может добавить сверху ссылку `Open dashboard`, когда вы явно задаете `dashboard_url`.
+
+<Aside type="tip">
+  Включайте это только если вам нужен и общий dashboard. Полная настройка bundle, Pages sync и deploy описана в гайде [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Тип | Описание |
+|---|---|---|
+| `overall_ai_ratio` | number | Общая AI ratio для PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` или `none` |
+| `tracked_commits` | number | Количество commits с данными agent-note |
+| `total_commits` | number | Общее количество commits в PR |
+| `total_prompts` | number | Общее количество prompts по всем commits |
+| `json` | string | Полный структурированный report |
+| `markdown` | string | Сгенерированный markdown report |
+| `dashboard_commits` | number | Количество tracked commits, записанных в dashboard bundle |
+| `dashboard_url` | string | Публичный URL dashboard, на который PR report ссылается при явной настройке |
+
+### Использование outputs в workflow
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+PR report включает:
+
+- **Header** — `Total AI Ratio` с progress bar и отдельной plain-text строкой `Model`
+- **Dashboard link** — добавляется только когда Action пишет dashboard notes и вы указываете `dashboard_url`
+- **Table** — AI ratio по commit, количество prompts и files с attribution
+- **Prompts** — сворачиваемый блок с парами prompt / response по commit
+
+<Aside type="tip">
+  Хэши commit в report ведут прямо на страницу commit в GitHub.
+</Aside>
+
+## Notes Sharing
+
+Action получает `refs/notes/agentnote` с remote. Git hook `pre-push`, установленный через `agent-note init`, автоматически отправляет notes при каждом `git push`, без ручных команд.
+
+## Следующий шаг
+
+Если вам также нужен общий Pages view для истории open и merged PR, переходите к гайду [Dashboard](./dashboard/).

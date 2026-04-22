@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: 自动把 AI session report 发布到 pull request。
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+添加下面这个 workflow。`agent-note init` 会自动生成它：
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+就这些。每个 PR 都会得到一个 AI session report。
+
+## Inputs
+
+| Input | Default | 说明 |
+|---|---|---|
+| `base` | PR base branch | 用来比较的 base branch |
+| `pr_output` | `description` | PR report 的输出位置：`description`、`comment` 或 `none` |
+| `dashboard` | `false` | 同时为当前 PR 写出 dashboard snapshots |
+| `dashboard_url` | — | 当 dashboard 已经部署后，从 PR report 跳转过去的 public dashboard URL |
+| `output` | — | `pr_output` 的 legacy alias（`description` 或 `comment`） |
+| `comment` | `true` | legacy：设为 `false` 可关闭 PR report 发布 |
+
+### 作为 comment 而不是 description 发布
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 与 PR report 一起生成 dashboard data
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Optional. 只有在 dashboard 已经公开后再设置。
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+当 `dashboard: true` 打开后，Action 会自动创建或更新 `packages/dashboard/public/notes/*.json`。如果 dashboard notes 已经写出，并且你显式设置了 `dashboard_url`，PR report 顶部还会增加一个 `Open dashboard` link。
+
+<Aside type="tip">
+  只有在你也想使用共享 Dashboard 时才需要开启它。完整的 bundle、Pages sync 和 deploy 配置在 [Dashboard](./dashboard/) 指南里。
+</Aside>
+
+## Outputs
+
+| Output | 类型 | 说明 |
+|---|---|---|
+| `overall_ai_ratio` | number | PR 级别的 AI ratio（0-100） |
+| `overall_method` | string | `line`、`file`、`mixed` 或 `none` |
+| `tracked_commits` | number | 带有 agent-note 数据的 commit 数 |
+| `total_commits` | number | PR 中的 commit 总数 |
+| `total_prompts` | number | 所有 commit 的 prompt 总数 |
+| `json` | string | 完整的结构化 report |
+| `markdown` | string | 已渲染的 markdown report |
+| `dashboard_commits` | number | 写入 dashboard bundle 的 tracked commit 数 |
+| `dashboard_url` | string | 显式配置后会在 PR report 中链接的 public dashboard URL |
+
+### 在 workflow 中使用 outputs
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+PR report 包含以下内容：
+
+- **Header** — 带有 progress bar 的 `Total AI Ratio`，以及单独一行纯文本 `Model`
+- **Dashboard link** — 只有在 Action 写出 dashboard notes 且显式配置了 `dashboard_url` 时才会出现
+- **Table** — 每个 commit 的 AI ratio、prompt 数以及带 attribution 的 files
+- **Prompts** — 可折叠的 prompt / response 明细
+
+<Aside type="tip">
+  report 里的 commit hash 会直接链接到 GitHub commit 页面。
+</Aside>
+
+## Notes Sharing
+
+Action 会从 remote 获取 `refs/notes/agentnote`。`agent-note init` 安装的 `pre-push` Git hook 会在每次 `git push` 时自动 push notes，不需要手动执行额外命令。
+
+## 下一步
+
+如果你还想要一个展示 open / merged PR 历史的共享 Pages 视图，请继续阅读 [Dashboard](./dashboard/) 指南。

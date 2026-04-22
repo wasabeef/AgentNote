@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Poste AI session reports automatisch in Pull Requests.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Füge diesen workflow hinzu, der von `agent-note init` automatisch erzeugt wird:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Mehr brauchst du nicht. Jede PR bekommt einen AI session report.
+
+## Inputs
+
+| Input | Default | Beschreibung |
+|---|---|---|
+| `base` | PR base branch | Basis-Branch für den Vergleich |
+| `pr_output` | `description` | Ziel des PR Reports: `description`, `comment` oder `none` |
+| `dashboard` | `false` | Schreibt zusätzlich Dashboard-Snapshots für die aktuelle PR |
+| `dashboard_url` | — | Öffentliche Dashboard URL, auf die der PR Report verlinken soll, wenn das Dashboard bereits deployed ist |
+| `output` | — | Legacy Alias für `pr_output` (`description` oder `comment`) |
+| `comment` | `true` | Legacy: mit `false` wird das Posten des PR Reports deaktiviert |
+
+### Als Comment statt als Description posten
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Dashboard-Daten zusammen mit dem PR Report erzeugen
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Optional. Erst setzen, wenn das Dashboard öffentlich erreichbar ist.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Wenn `dashboard: true` aktiv ist, erstellt oder aktualisiert die Action automatisch `packages/dashboard/public/notes/*.json`. Wenn Dashboard-Notes geschrieben wurden, kann der PR Report oben außerdem einen `Open dashboard` Link ergänzen, sobald du `dashboard_url` explizit setzt.
+
+<Aside type="tip">
+  Aktiviere das nur, wenn du auch das gemeinsame Dashboard nutzen willst. Das vollständige Setup für Bundle, Pages sync und Deploy steht im Guide [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Typ | Beschreibung |
+|---|---|---|
+| `overall_ai_ratio` | number | PR-weite AI Ratio (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` oder `none` |
+| `tracked_commits` | number | Anzahl der Commits mit agent-note Daten |
+| `total_commits` | number | Gesamtzahl der Commits in der PR |
+| `total_prompts` | number | Gesamtzahl der Prompts über alle Commits |
+| `json` | string | Voller strukturierter Report |
+| `markdown` | string | Gerenderter Markdown Report |
+| `dashboard_commits` | number | Anzahl der tracked Commits, die in das Dashboard-Bundle geschrieben wurden |
+| `dashboard_url` | string | Öffentliche Dashboard URL, die im PR Report verlinkt wird, wenn sie explizit gesetzt ist |
+
+### Outputs im workflow verwenden
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+Der PR Report enthält:
+
+- **Header** — `Total AI Ratio` mit Progress Bar und eine separate Textzeile `Model`
+- **Dashboard link** — nur wenn die Action Dashboard-Notes schreibt und `dashboard_url` explizit gesetzt ist
+- **Table** — AI Ratio pro Commit, Prompt-Anzahl und Files mit Attribution
+- **Prompts** — einklappbarer Bereich mit Prompt/Response Paaren pro Commit
+
+<Aside type="tip">
+  Commit-Hashes im Report verlinken direkt auf die GitHub Commit-Seite.
+</Aside>
+
+## Notes Sharing
+
+Die Action holt `refs/notes/agentnote` vom Remote. Der von `agent-note init` installierte `pre-push` Git Hook pusht Notes automatisch bei jedem `git push`, ohne weitere manuelle Schritte.
+
+## Nächster Schritt
+
+Wenn du zusätzlich eine gemeinsame Pages Ansicht für offene und gemergte PR-Historie willst, lies weiter im Guide [Dashboard](./dashboard/).

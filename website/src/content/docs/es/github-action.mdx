@@ -1,0 +1,118 @@
+---
+title: GitHub Action
+description: Publica AI session reports automáticamente en pull requests.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+Agrega este workflow, creado automáticamente por `agent-note init`:
+
+```yaml
+# .github/workflows/agentnote.yml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Eso es todo. Cada PR recibe un AI session report.
+
+## Inputs
+
+| Input | Default | Descripción |
+|---|---|---|
+| `base` | PR base branch | Rama base para comparar |
+| `pr_output` | `description` | Destino del PR report: `description`, `comment` o `none` |
+| `dashboard` | `false` | También escribe dashboard snapshots para la PR actual |
+| `dashboard_url` | — | URL pública del dashboard que se enlaza desde el PR report cuando el dashboard ya está desplegado |
+| `output` | — | Alias legacy para `pr_output` (`description` o `comment`) |
+| `comment` | `true` | Legacy: usa `false` para desactivar la publicación del PR report |
+
+### Publicar como comment en lugar de description
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    pr_output: comment
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Generar dashboard data junto con el PR report
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    # Opcional. Configúralo solo cuando el dashboard ya sea público.
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Cuando `dashboard: true` está activado, la Action crea o actualiza `packages/dashboard/public/notes/*.json` automáticamente. Si se escribieron dashboard notes, el PR report también puede añadir un link `Open dashboard` en la parte superior cuando configuras `dashboard_url`.
+
+<Aside type="tip">
+  Actívalo solo si también quieres el dashboard compartido. La configuración completa de bundle, Pages sync y deploy está en la guía [Dashboard](./dashboard/).
+</Aside>
+
+## Outputs
+
+| Output | Tipo | Descripción |
+|---|---|---|
+| `overall_ai_ratio` | number | AI ratio total del PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` o `none` |
+| `tracked_commits` | number | Número de commits con datos de agent-note |
+| `total_commits` | number | Número total de commits en el PR |
+| `total_prompts` | number | Número total de prompts en todos los commits |
+| `json` | string | Reporte estructurado completo |
+| `markdown` | string | Reporte renderizado en markdown |
+| `dashboard_commits` | number | Número de tracked commits escritos en el dashboard bundle |
+| `dashboard_url` | string | URL pública del dashboard enlazada desde el PR report cuando se configura explícitamente |
+
+### Usar outputs en el workflow
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    base: main
+
+- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+```
+
+## Report Format
+
+El PR report incluye:
+
+- **Header** — `Total AI Ratio` con una progress bar y una línea de texto separada para `Model`
+- **Dashboard link** — solo cuando la Action escribe dashboard notes y configuras `dashboard_url`
+- **Table** — AI ratio por commit, número de prompts y files con attribution
+- **Prompts** — sección plegable con pares de prompt / response por commit
+
+<Aside type="tip">
+  Los hashes de commit en el reporte enlazan directamente a la página del commit en GitHub.
+</Aside>
+
+## Notes Sharing
+
+La Action obtiene `refs/notes/agentnote` desde el remote. El Git hook `pre-push` instalado por `agent-note init` hace auto-push de las notes en cada `git push`, sin pasos manuales adicionales.
+
+## Siguiente paso
+
+Si además quieres una vista compartida en Pages para historial de PR abiertas y mergeadas, sigue con la guía [Dashboard](./dashboard/).
