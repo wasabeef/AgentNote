@@ -7,11 +7,7 @@ function isStructuredEntry(raw: unknown): raw is AgentnoteEntry {
     files?: unknown;
     attribution?: unknown;
   };
-  return (
-    Array.isArray(entry.interactions) &&
-    Array.isArray(entry.files) &&
-    !!entry.attribution
-  );
+  return Array.isArray(entry.interactions) && Array.isArray(entry.files) && !!entry.attribution;
 }
 
 /**
