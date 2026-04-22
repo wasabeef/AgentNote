@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: Pubblica il dashboard condiviso di Agent Note con GitHub Pages.
+description: Pubblica il Dashboard condiviso di Agent Note con GitHub Pages.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -11,7 +11,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Cosa ottieni
 
-Il dashboard offre al tuo team un'unica URL condivisa per la cronologia di Agent Note.
+Il Dashboard offre al tuo team un'unica URL condivisa per la cronologia di Agent Note.
 
 - Vedere la cronologia delle PR aperte e mergeate in un solo posto
 - Controllare commit, prompt e attribution senza aprire ogni PR
@@ -21,14 +21,14 @@ Usalo quando il PR report non basta più e vuoi una vista condivisa per il team.
 
 ## Prima di iniziare
 
-Ti serve il dashboard solo se vuoi una vista web condivisa.
+Ti serve il Dashboard solo se vuoi una vista web condivisa.
 
 - Se ti bastano gli AI session report dentro le pull request, fermati a [GitHub Action](./github-action/).
 - Se vuoi una vista Pages condivisa per la cronologia open e merged, continua qui.
 
 ## Quick Setup
 
-Per prima cosa, fai in modo che la Action scriva i dashboard bundle per ogni PR:
+Per prima cosa, fai in modo che la Action scriva i Dashboard bundle per ogni PR:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -36,20 +36,15 @@ Per prima cosa, fai in modo che la Action scriva i dashboard bundle per ogni PR:
   with:
     pr_output: description
     dashboard: true
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Questo crea o aggiorna `packages/dashboard/public/notes/*.json` per la PR corrente. Poi il tuo Pages workflow può ripristinare, persistere e pubblicare quei file.
 
-<Aside type="tip">
-  `dashboard_url` è opzionale. Impostalo solo quando il dashboard è già pubblico, così il PR report non punta a un link morto.
-</Aside>
-
 ## URL pubblica
 
-Di solito il dashboard viene pubblicato qui:
+Di solito il Dashboard viene pubblicato qui:
 
 - `https://<owner>.github.io/<repo>/dashboard/`
 
@@ -75,11 +70,11 @@ Così il package resta generico ma produce comunque gli URL pubblici corretti pe
 3. Su `pull_request` (`opened`, `reopened`, `synchronize`), riscrivi i note files di quella PR e persisti il risultato in `gh-pages`.
 4. Su `push` verso `main`, marca le PR notes corrispondenti come `merged`, ricostruisci il sito e fai deploy dell'URL condiviso.
 
-In questo modo `main` resta pulito dal JSON generato, mentre il dashboard condiviso può comunque mostrare la cronologia delle PR aperte e mergeate.
+In questo modo `main` resta pulito dal JSON generato, mentre il Dashboard condiviso può comunque mostrare la cronologia delle PR aperte e mergeate.
 
 ## Primo deploy
 
-Un repo nuovo può accumulare dashboard data prima del primo deploy in production, ma la URL pubblica di Pages appare solo dopo il primo deploy da `main`.
+Un repo nuovo può accumulare Dashboard data prima del primo deploy in production, ma la URL pubblica di Pages appare solo dopo il primo deploy da `main`.
 
 ## Come funziona
 
@@ -87,4 +82,4 @@ Un repo nuovo può accumulare dashboard data prima del primo deploy in productio
 - `packages/dashboard/public/notes/*.json` è il working bundle usato in fase di build
 - `gh-pages/dashboard/notes/*.json` è il durable store della cronologia condivisa
 
-Il repository non include sample dashboard JSON. Un dashboard nuovo resta vuoto finché il tuo workflow non ripristina o genera i note files.
+Il repository non include sample Dashboard JSON. Un Dashboard nuovo resta vuoto finché il tuo workflow non ripristina o genera i note files.

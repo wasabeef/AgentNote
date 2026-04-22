@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: GitHub Pages で shared Agent Note dashboard を公開する方法
+description: GitHub Pages で shared Agent Note Dashboard を公開する方法
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -28,7 +28,7 @@ shared な web view が必要なときだけ Dashboard を使います。
 
 ## クイックセットアップ
 
-まずは Action 側で PR ごとの dashboard bundle を書き出せるようにします。
+まずは Action 側で PR ごとの Dashboard bundle を書き出せるようにします。
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -36,16 +36,11 @@ shared な web view が必要なときだけ Dashboard を使います。
   with:
     pr_output: description
     dashboard: true
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 これで現在の PR に対して `packages/dashboard/public/notes/*.json` が作成・更新されます。そのファイルを restore / persist / deploy するのは Pages workflow 側です。
-
-<Aside type="tip">
-  `dashboard_url` は optional です。dashboard がすでに public に見える状態になってから設定し、PR レポートが dead link を出さないようにします。
-</Aside>
 
 ## 公開 URL
 
@@ -75,11 +70,11 @@ shared な web view が必要なときだけ Dashboard を使います。
 3. `pull_request` (`opened`, `reopened`, `synchronize`) で、その PR の note file を書き直して `gh-pages` に永続化する
 4. `main` push で、対応する PR note を `merged` に更新し、site を build / deploy する
 
-これで `main` を generated JSON で汚さずに、1 つの shared dashboard から open / merged 両方の PR 履歴を見られます。
+これで `main` を generated JSON で汚さずに、1 つの shared Dashboard から open / merged 両方の PR 履歴を見られます。
 
 ## 最初の deploy
 
-brand-new repo でも最初の production deploy 前から dashboard data 自体は蓄積できますが、public な Pages URL が生えるのは最初の `main` deploy 後です。
+brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL が生えるのは最初の `main` deploy 後です。
 
 ## 仕組み
 
@@ -87,4 +82,4 @@ brand-new repo でも最初の production deploy 前から dashboard data 自体
 - `packages/dashboard/public/notes/*.json` が build 時に読む working bundle
 - `gh-pages/dashboard/notes/*.json` が shared 履歴の durable store
 
-repo 自体には sample dashboard JSON を置きません。fresh な dashboard は、workflow が note file を復元または生成するまで空のままです。
+repo 自体には sample Dashboard JSON を置きません。fresh な Dashboard は、workflow が note file を復元または生成するまで空のままです。

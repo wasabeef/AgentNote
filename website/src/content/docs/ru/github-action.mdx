@@ -36,10 +36,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | Базовая ветка для сравнения |
 | `pr_output` | `description` | Куда выводить PR report: `description`, `comment` или `none` |
-| `dashboard` | `false` | Также записывает dashboard snapshots для текущей PR |
-| `dashboard_url` | — | Публичный URL dashboard, на который будет ссылка из PR report, когда dashboard уже deploy |
-| `output` | — | Legacy alias для `pr_output` (`description` или `comment`) |
-| `comment` | `true` | Legacy: установите `false`, чтобы отключить публикацию PR report |
+| `dashboard` | `false` | Также записывает Dashboard snapshots для текущей PR |
 
 ### Публиковать как comment вместо description
 
@@ -51,7 +48,7 @@ jobs:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Генерировать dashboard data вместе с PR report
+### Генерировать Dashboard data вместе с PR report
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ jobs:
   with:
     pr_output: description
     dashboard: true
-    # Optional. Указывайте только когда dashboard уже доступен публично.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Когда включен `dashboard: true`, Action автоматически создает или обновляет `packages/dashboard/public/notes/*.json`. Если dashboard notes были записаны, PR report также может добавить сверху ссылку `Open dashboard`, когда вы явно задаете `dashboard_url`.
-
 <Aside type="tip">
-  Включайте это только если вам нужен и общий dashboard. Полная настройка bundle, Pages sync и deploy описана в гайде [Dashboard](./dashboard/).
+  Включайте это только если вам нужен и общий Dashboard. Полная настройка bundle, Pages sync и deploy описана в гайде [Dashboard](./dashboard/).
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ jobs:
 | `total_prompts` | number | Общее количество prompts по всем commits |
 | `json` | string | Полный структурированный report |
 | `markdown` | string | Сгенерированный markdown report |
-| `dashboard_commits` | number | Количество tracked commits, записанных в dashboard bundle |
-| `dashboard_url` | string | Публичный URL dashboard, на который PR report ссылается при явной настройке |
+| `dashboard_commits` | number | Количество tracked commits, записанных в Dashboard bundle |
 
 ### Использование outputs в workflow
 
@@ -101,7 +93,6 @@ jobs:
 PR report включает:
 
 - **Header** — `Total AI Ratio` с progress bar и отдельной plain-text строкой `Model`
-- **Dashboard link** — добавляется только когда Action пишет dashboard notes и вы указываете `dashboard_url`
 - **Table** — AI ratio по commit, количество prompts и files с attribution
 - **Prompts** — сворачиваемый блок с парами prompt / response по commit
 

@@ -36,10 +36,7 @@ Itu saja. Setiap PR akan mendapatkan AI session report.
 |---|---|---|
 | `base` | PR base branch | Branch dasar untuk dibandingkan |
 | `pr_output` | `description` | Tujuan PR report: `description`, `comment`, atau `none` |
-| `dashboard` | `false` | Juga menulis dashboard snapshot untuk PR saat ini |
-| `dashboard_url` | — | URL dashboard publik yang akan ditautkan dari PR report ketika dashboard sudah ter-deploy |
-| `output` | — | Alias legacy untuk `pr_output` (`description` atau `comment`) |
-| `comment` | `true` | Legacy: set `false` untuk mematikan posting PR report |
+| `dashboard` | `false` | Juga menulis Dashboard snapshot untuk PR saat ini |
 
 ### Posting sebagai comment, bukan description
 
@@ -51,7 +48,7 @@ Itu saja. Setiap PR akan mendapatkan AI session report.
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Menghasilkan dashboard data bersama PR report
+### Menghasilkan Dashboard data bersama PR report
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ Itu saja. Setiap PR akan mendapatkan AI session report.
   with:
     pr_output: description
     dashboard: true
-    # Optional. Setel ini hanya setelah dashboard sudah public.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Saat `dashboard: true` aktif, Action akan otomatis membuat atau memperbarui `packages/dashboard/public/notes/*.json`. Jika dashboard notes ditulis, PR report juga dapat menambahkan link `Open dashboard` di bagian atas ketika Anda mengatur `dashboard_url`.
-
 <Aside type="tip">
-  Aktifkan ini hanya jika Anda juga ingin dashboard bersama. Setup lengkap untuk bundle, Pages sync, dan deploy ada di panduan [Dashboard](./dashboard/).
+  Aktifkan ini hanya jika Anda juga ingin Dashboard bersama. Setup lengkap untuk bundle, Pages sync, dan deploy ada di panduan [Dashboard](./dashboard/).
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ Saat `dashboard: true` aktif, Action akan otomatis membuat atau memperbarui `pac
 | `total_prompts` | number | Total prompt di semua commit |
 | `json` | string | Report terstruktur lengkap |
 | `markdown` | string | Report markdown yang sudah dirender |
-| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke dashboard bundle |
-| `dashboard_url` | string | URL dashboard publik yang ditautkan dari PR report jika diatur secara eksplisit |
+| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke Dashboard bundle |
 
 ### Menggunakan outputs di workflow
 
@@ -101,7 +93,6 @@ Saat `dashboard: true` aktif, Action akan otomatis membuat atau memperbarui `pac
 PR report mencakup:
 
 - **Header** — `Total AI Ratio` dengan progress bar, plus baris plain-text `Model`
-- **Dashboard link** — hanya ditambahkan ketika Action menulis dashboard notes dan Anda mengatur `dashboard_url`
 - **Table** — AI ratio per commit, jumlah prompt, dan files dengan attribution
 - **Prompts** — bagian collapsible dengan pasangan prompt / response per commit
 

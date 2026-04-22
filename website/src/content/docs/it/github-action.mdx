@@ -36,10 +36,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | Branch base da confrontare |
 | `pr_output` | `description` | Destinazione del PR report: `description`, `comment` o `none` |
-| `dashboard` | `false` | Scrive anche dashboard snapshot per la PR corrente |
-| `dashboard_url` | — | URL pubblica del dashboard da linkare dal PR report quando il dashboard è già deployato |
-| `output` | — | Alias legacy di `pr_output` (`description` o `comment`) |
-| `comment` | `true` | Legacy: imposta `false` per disabilitare la pubblicazione del PR report |
+| `dashboard` | `false` | Scrive anche Dashboard snapshot per la PR corrente |
 
 ### Pubblicare come comment invece che nella description
 
@@ -51,7 +48,7 @@ jobs:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Generare dashboard data insieme al PR report
+### Generare Dashboard data insieme al PR report
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ jobs:
   with:
     pr_output: description
     dashboard: true
-    # Opzionale. Impostalo solo quando il dashboard è già pubblico.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Quando `dashboard: true` è attivo, la Action crea o aggiorna automaticamente `packages/dashboard/public/notes/*.json`. Se vengono scritte dashboard notes, il PR report può anche aggiungere in alto un link `Open dashboard` quando imposti `dashboard_url`.
-
 <Aside type="tip">
-  Attivalo solo se vuoi anche il dashboard condiviso. Il setup completo per bundle, Pages sync e deploy è nella guida [Dashboard](./dashboard/).
+  Attivalo solo se vuoi anche il Dashboard condiviso. Il setup completo per bundle, Pages sync e deploy è nella guida [Dashboard](./dashboard/).
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ Quando `dashboard: true` è attivo, la Action crea o aggiorna automaticamente `p
 | `total_prompts` | number | Numero totale di prompt su tutti i commit |
 | `json` | string | Report strutturato completo |
 | `markdown` | string | Report markdown renderizzato |
-| `dashboard_commits` | number | Numero di tracked commit scritti nel dashboard bundle |
-| `dashboard_url` | string | URL pubblica del dashboard linkata nel PR report quando configurata esplicitamente |
+| `dashboard_commits` | number | Numero di tracked commit scritti nel Dashboard bundle |
 
 ### Usare gli output nel workflow
 
@@ -101,7 +93,6 @@ Quando `dashboard: true` è attivo, la Action crea o aggiorna automaticamente `p
 Il PR report include:
 
 - **Header** — `Total AI Ratio` con progress bar e una riga separata in plain text per `Model`
-- **Dashboard link** — aggiunto solo quando la Action scrive dashboard notes e configuri `dashboard_url`
 - **Table** — AI ratio per commit, numero di prompt e files con attribution
 - **Prompts** — sezione collapsible con coppie prompt / response per commit
 

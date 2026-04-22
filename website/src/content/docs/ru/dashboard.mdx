@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: Публикация общего dashboard Agent Note через GitHub Pages.
+description: Публикация общего Dashboard Agent Note через GitHub Pages.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -28,7 +28,7 @@ Dashboard нужен только если вам нужен общий web view
 
 ## Quick Setup
 
-Сначала включите запись dashboard bundles для каждой PR в Action:
+Сначала включите запись Dashboard bundles для каждой PR в Action:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -36,20 +36,15 @@ Dashboard нужен только если вам нужен общий web view
   with:
     pr_output: description
     dashboard: true
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Это создаст или обновит `packages/dashboard/public/notes/*.json` для текущей PR. Затем ваш Pages workflow сможет восстановить, сохранить и опубликовать эти файлы.
 
-<Aside type="tip">
-  `dashboard_url` — optional. Указывайте его только после того, как dashboard уже доступен публично, чтобы PR report не вел на неработающую ссылку.
-</Aside>
-
 ## Публичный URL
 
-Обычно dashboard публикуется здесь:
+Обычно Dashboard публикуется здесь:
 
 - `https://<owner>.github.io/<repo>/dashboard/`
 
@@ -75,11 +70,11 @@ Dashboard нужен только если вам нужен общий web view
 3. На `pull_request` (`opened`, `reopened`, `synchronize`) переписывайте note files этой PR и сохраняйте их обратно в `gh-pages`.
 4. На `push` в `main` помечайте соответствующие PR notes как `merged`, пересобирайте сайт и deploy общий Pages URL.
 
-Так `main` остается чистым от generated JSON, а общий dashboard все равно показывает историю open и merged PR.
+Так `main` остается чистым от generated JSON, а общий Dashboard все равно показывает историю open и merged PR.
 
 ## Первый deploy
 
-Новый repo может накапливать dashboard data еще до первого production deploy, но публичный Pages URL появится только после первого deploy из `main`.
+Новый repo может накапливать Dashboard data еще до первого production deploy, но публичный Pages URL появится только после первого deploy из `main`.
 
 ## Как это работает
 
@@ -87,4 +82,4 @@ Dashboard нужен только если вам нужен общий web view
 - `packages/dashboard/public/notes/*.json` — working bundle, который читается во время build
 - `gh-pages/dashboard/notes/*.json` — durable store для общей истории
 
-Репозиторий не содержит sample dashboard JSON. Новый dashboard остается пустым, пока ваш workflow не восстановит или не создаст note files.
+Репозиторий не содержит sample Dashboard JSON. Новый Dashboard остается пустым, пока ваш workflow не восстановит или не создаст note files.

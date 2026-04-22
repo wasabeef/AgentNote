@@ -36,16 +36,11 @@ Aktiviere zuerst in der Action die Ausgabe der Dashboard-Bundles pro PR:
   with:
     pr_output: description
     dashboard: true
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Dadurch werden für die aktuelle PR `packages/dashboard/public/notes/*.json` erstellt oder aktualisiert. Dein Pages workflow stellt diese Dateien dann wieder her, persistiert sie und veröffentlicht sie.
-
-<Aside type="tip">
-  `dashboard_url` ist optional. Setze ihn erst, wenn das Dashboard bereits öffentlich erreichbar ist, damit der PR Report nicht auf einen toten Link zeigt.
-</Aside>
 
 ## Öffentliche URL
 

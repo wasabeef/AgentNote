@@ -28,7 +28,7 @@ Dashboard 会给团队一个共享的 Agent Note 历史页面。
 
 ## Quick Setup
 
-先让 Action 为每个 PR 写出 dashboard bundle：
+先让 Action 为每个 PR 写出 Dashboard bundle：
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -36,16 +36,11 @@ Dashboard 会给团队一个共享的 Agent Note 历史页面。
   with:
     pr_output: description
     dashboard: true
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 这样会为当前 PR 创建或更新 `packages/dashboard/public/notes/*.json`。之后你的 Pages workflow 再去恢复、持久化并发布这些文件。
-
-<Aside type="tip">
-  `dashboard_url` 是 optional 的。只有在 dashboard 已经公开可访问之后再设置，避免 PR report 指向死链接。
-</Aside>
 
 ## 公开 URL
 
@@ -79,7 +74,7 @@ Dashboard 通常会发布到这里：
 
 ## 首次 deploy
 
-一个全新的 repo 在第一次 production deploy 之前也可以先累积 dashboard data，但 public 的 Pages URL 只有在第一次 `main` deploy 之后才会出现。
+一个全新的 repo 在第一次 production deploy 之前也可以先累积 Dashboard data，但 public 的 Pages URL 只有在第一次 `main` deploy 之后才会出现。
 
 ## 工作原理
 
@@ -87,4 +82,4 @@ Dashboard 通常会发布到这里：
 - `packages/dashboard/public/notes/*.json` 是 build 时读取的 working bundle
 - `gh-pages/dashboard/notes/*.json` 是共享历史的 durable store
 
-这个仓库不会附带 sample dashboard JSON。新的 dashboard 会一直保持空白，直到 workflow 恢复或生成 note files。
+这个仓库不会附带 sample Dashboard JSON。新的 Dashboard 会一直保持空白，直到 workflow 恢复或生成 note files。

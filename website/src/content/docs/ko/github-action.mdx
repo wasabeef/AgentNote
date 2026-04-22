@@ -36,10 +36,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | 비교 기준이 되는 base branch |
 | `pr_output` | `description` | PR report 출력 위치: `description`, `comment`, `none` |
-| `dashboard` | `false` | 현재 PR 에 대한 dashboard snapshot 도 함께 씁니다 |
-| `dashboard_url` | — | dashboard 가 이미 deploy 된 경우 PR report 에서 연결할 public dashboard URL |
-| `output` | — | `pr_output` 의 legacy alias (`description` 또는 `comment`) |
-| `comment` | `true` | legacy: `false` 로 설정하면 PR report 게시를 끕니다 |
+| `dashboard` | `false` | 현재 PR 에 대한 Dashboard snapshot 도 함께 씁니다 |
 
 ### description 대신 comment 로 게시하기
 
@@ -51,7 +48,7 @@ jobs:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### PR report 와 함께 dashboard data 생성하기
+### PR report 와 함께 Dashboard data 생성하기
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ jobs:
   with:
     pr_output: description
     dashboard: true
-    # Optional. dashboard 가 이미 public 일 때만 설정하세요.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-`dashboard: true` 를 켜면 Action 이 `packages/dashboard/public/notes/*.json` 를 자동으로 생성 또는 갱신합니다. dashboard notes 가 작성되었고 `dashboard_url` 까지 명시했다면, PR report 상단에 `Open dashboard` link 도 추가될 수 있습니다.
-
 <Aside type="tip">
-  shared dashboard 가 필요할 때만 이 옵션을 켜세요. bundle, Pages sync, deploy 전체 흐름은 [Dashboard](./dashboard/) 가이드에 정리되어 있습니다.
+  shared Dashboard 가 필요할 때만 이 옵션을 켜세요. bundle, Pages sync, deploy 전체 흐름은 [Dashboard](./dashboard/) 가이드에 정리되어 있습니다.
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ jobs:
 | `total_prompts` | number | 모든 commit 에 걸친 전체 prompt 수 |
 | `json` | string | 전체 구조화 report |
 | `markdown` | string | 렌더링된 markdown report |
-| `dashboard_commits` | number | dashboard bundle 에 기록된 tracked commit 수 |
-| `dashboard_url` | string | 명시적으로 설정했을 때 PR report 에 연결되는 public dashboard URL |
+| `dashboard_commits` | number | Dashboard bundle 에 기록된 tracked commit 수 |
 
 ### workflow 에서 outputs 사용하기
 
@@ -101,7 +93,6 @@ jobs:
 PR report 에는 다음이 포함됩니다.
 
 - **Header** — `Total AI Ratio` progress bar 와 별도의 plain-text `Model` 줄
-- **Dashboard link** — Action 이 dashboard notes 를 쓰고 `dashboard_url` 을 명시했을 때만 추가
 - **Table** — commit 별 AI ratio, prompt 수, attribution 이 붙은 files
 - **Prompts** — commit 별 prompt / response 쌍을 접을 수 있는 섹션
 

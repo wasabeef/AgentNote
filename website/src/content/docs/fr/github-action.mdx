@@ -36,10 +36,7 @@ C'est tout. Chaque PR reçoit un AI session report.
 |---|---|---|
 | `base` | PR base branch | Branche de base pour la comparaison |
 | `pr_output` | `description` | Destination du PR report : `description`, `comment` ou `none` |
-| `dashboard` | `false` | Écrit aussi des dashboard snapshots pour la PR courante |
-| `dashboard_url` | — | URL publique du dashboard à lier depuis le PR report quand le dashboard est déjà déployé |
-| `output` | — | Alias legacy de `pr_output` (`description` ou `comment`) |
-| `comment` | `true` | Legacy : définissez `false` pour désactiver la publication du PR report |
+| `dashboard` | `false` | Écrit aussi des Dashboard snapshots pour la PR courante |
 
 ### Publier en comment au lieu de description
 
@@ -51,7 +48,7 @@ C'est tout. Chaque PR reçoit un AI session report.
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Générer des dashboard data en même temps que le PR report
+### Générer des Dashboard data en même temps que le PR report
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ C'est tout. Chaque PR reçoit un AI session report.
   with:
     pr_output: description
     dashboard: true
-    # Optionnel. À définir seulement quand le dashboard est déjà public.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Quand `dashboard: true` est activé, l'Action crée ou met à jour automatiquement `packages/dashboard/public/notes/*.json`. Si des dashboard notes ont été écrites, le PR report peut aussi ajouter un lien `Open dashboard` en haut quand vous définissez `dashboard_url`.
-
 <Aside type="tip">
-  Activez cela seulement si vous voulez aussi le dashboard partagé. Toute la configuration bundle, Pages sync et deploy est détaillée dans le guide [Dashboard](./dashboard/).
+  Activez cela seulement si vous voulez aussi le Dashboard partagé. Toute la configuration bundle, Pages sync et deploy est détaillée dans le guide [Dashboard](./dashboard/).
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ Quand `dashboard: true` est activé, l'Action crée ou met à jour automatiqueme
 | `total_prompts` | number | Nombre total de prompts sur tous les commits |
 | `json` | string | Rapport structuré complet |
 | `markdown` | string | Rapport markdown rendu |
-| `dashboard_commits` | number | Nombre de tracked commits écrits dans le dashboard bundle |
-| `dashboard_url` | string | URL publique du dashboard liée dans le PR report quand elle est explicitement configurée |
+| `dashboard_commits` | number | Nombre de tracked commits écrits dans le Dashboard bundle |
 
 ### Utiliser les outputs dans le workflow
 
@@ -101,7 +93,6 @@ Quand `dashboard: true` est activé, l'Action crée ou met à jour automatiqueme
 Le PR report contient :
 
 - **Header** — `Total AI Ratio` avec une progress bar, plus une ligne texte séparée `Model`
-- **Dashboard link** — ajouté seulement quand l'Action écrit des dashboard notes et que `dashboard_url` est explicitement configuré
 - **Table** — AI ratio par commit, nombre de prompts et files avec attribution
 - **Prompts** — section repliable avec les paires prompt / response par commit
 

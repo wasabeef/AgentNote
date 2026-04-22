@@ -36,10 +36,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | 用來比較的 base branch |
 | `pr_output` | `description` | PR report 的輸出位置：`description`、`comment` 或 `none` |
-| `dashboard` | `false` | 同時為目前 PR 寫出 dashboard snapshots |
-| `dashboard_url` | — | 當 dashboard 已經 deploy 後，從 PR report 連過去的 public dashboard URL |
-| `output` | — | `pr_output` 的 legacy alias（`description` 或 `comment`） |
-| `comment` | `true` | legacy：設為 `false` 可停用 PR report 發佈 |
+| `dashboard` | `false` | 同時為目前 PR 寫出 Dashboard snapshots |
 
 ### 以 comment 而不是 description 發佈
 
@@ -51,7 +48,7 @@ jobs:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 與 PR report 一起產生 dashboard data
+### 與 PR report 一起產生 Dashboard data
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,13 +56,9 @@ jobs:
   with:
     pr_output: description
     dashboard: true
-    # Optional. 只有在 dashboard 已經公開後再設定。
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-當 `dashboard: true` 啟用後，Action 會自動建立或更新 `packages/dashboard/public/notes/*.json`。如果 dashboard notes 已經寫出，而且你明確設定了 `dashboard_url`，PR report 頂部還會加上一個 `Open dashboard` link。
 
 <Aside type="tip">
   只有在你也想使用共享 Dashboard 時才需要開啟它。完整的 bundle、Pages sync 與 deploy 設定都放在 [Dashboard](./dashboard/) 指南裡。
@@ -82,8 +75,7 @@ jobs:
 | `total_prompts` | number | 所有 commit 的 prompt 總數 |
 | `json` | string | 完整的結構化 report |
 | `markdown` | string | 已渲染好的 markdown report |
-| `dashboard_commits` | number | 寫入 dashboard bundle 的 tracked commit 數 |
-| `dashboard_url` | string | 顯式設定後會在 PR report 中連結的 public dashboard URL |
+| `dashboard_commits` | number | 寫入 Dashboard bundle 的 tracked commit 數 |
 
 ### 在 workflow 中使用 outputs
 
@@ -101,7 +93,6 @@ jobs:
 PR report 包含：
 
 - **Header** — 帶有 progress bar 的 `Total AI Ratio`，以及單獨一行純文字 `Model`
-- **Dashboard link** — 只有在 Action 寫出 dashboard notes 且明確設定 `dashboard_url` 時才會出現
 - **Table** — 每個 commit 的 AI ratio、prompt 數與帶 attribution 的 files
 - **Prompts** — 可折疊的 prompt / response 明細
 

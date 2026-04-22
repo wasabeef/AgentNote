@@ -35,12 +35,9 @@ jobs:
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
 | `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
-| `dashboard` | `false` | PR レポートに加えて dashboard snapshot も書き出す |
-| `dashboard_url` | — | dashboard がすでに公開されているときに、PR レポートから link する公開 URL |
-| `output` | — | レガシー: `pr_output` の旧名 |
-| `comment` | `true` | レガシー: `false` で PR レポート投稿を無効化 |
+| `dashboard` | `false` | PR レポートに加えて Dashboard snapshot も書き出す |
 
-### PR Description と dashboard を同時に使う
+### PR Description と Dashboard を同時に使う
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -48,16 +45,12 @@ jobs:
   with:
     pr_output: description
     dashboard: true
-    # Optional. dashboard が public に使える状態になってから指定します。
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-`dashboard: true` を有効にすると、Action は `packages/dashboard/public/notes/*.json` を自動で作成・更新します。dashboard note が書けていて、さらに `dashboard_url` を明示したときだけ、PR レポートの上部に `Open dashboard` link も追加されます。
-
 <Aside type="tip">
-  共有 dashboard まで使いたいときだけ `dashboard: true` を有効にしてください。bundle / Pages sync / deploy の全体像は <a href="./dashboard/">Dashboard</a> ページに分けています。
+  共有 Dashboard まで使いたいときだけ `dashboard: true` を有効にしてください。bundle / Pages sync / deploy の全体像は <a href="./dashboard/">Dashboard</a> ページに分けています。
 </Aside>
 
 ## 出力
@@ -71,15 +64,13 @@ jobs:
 | `total_prompts` | number | 全プロンプト数 |
 | `json` | string | 構造化レポート全体 |
 | `markdown` | string | レンダリング済みのマークダウンレポート |
-| `dashboard_commits` | number | dashboard bundle に書き出した tracked commit 数 |
-| `dashboard_url` | string | 明示設定したときに PR レポートから link する公開 dashboard URL |
+| `dashboard_commits` | number | Dashboard bundle に書き出した tracked commit 数 |
 
 ## レポート形式
 
 PR レポートには次が含まれます。
 
 - **Header** — `Total AI Ratio` と progress bar、さらに plain text の別行 `Model`
-- **Dashboard link** — Action が dashboard note を書き出し、かつ `dashboard_url` を明示したときに追加
 - **Table** — commit ごとの AI ratio、prompt 数、attribution 付き files
 - **Prompts** — commit ごとの prompt / response をたたんで表示
 

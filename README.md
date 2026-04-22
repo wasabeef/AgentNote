@@ -213,30 +213,28 @@ Examples in this section assume `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` is s
 
 ### Dashboard data
 
-The optional dashboard package lives in `packages/dashboard/`. If you want a static dashboard on GitHub Pages:
+The optional Dashboard package lives in `packages/dashboard/`. If you want a static Dashboard on GitHub Pages:
 
-1. Enable dashboard bundle output in the action.
+1. Enable Dashboard bundle output in the action.
 2. Configure your Pages workflow to restore and persist `gh-pages/dashboard/notes/*.json`.
 
-The action writes `notes/*.json` into the dashboard package automatically.
+The action writes `notes/*.json` into the Dashboard package automatically.
 
-`packages/dashboard` keeps its local default at `/`. Set `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL` in your Pages workflow so the deployed dashboard points at the right URL and GitHub repository.
+`packages/dashboard` keeps its local default at `/`. Set `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL` in your Pages workflow so the deployed Dashboard points at the right URL and GitHub repository.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
-    # Optional. Set this only after the dashboard is publicly available.
-    dashboard_url: https://docs.example.com/dashboard/
 ```
 
-Agent Note does not commit sample dashboard data to the repository. A new dashboard starts out empty. For a live GitHub Pages dashboard, use a workflow that:
+Agent Note does not commit sample Dashboard data to the repository. A new Dashboard starts out empty. For a live GitHub Pages Dashboard, use a workflow that:
 
 - restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrites the current PR's note set and persists it back to `gh-pages`
 - on `push` to `main`, rebuilds the site, persists merged note state, and deploys the public Pages artifact
 
-This keeps generated JSON off `main` while still letting dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `main` deployment.
+This keeps generated JSON off `main` while still letting Dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `main` deployment.
 
 <details>
 <summary>Full example with outputs</summary>

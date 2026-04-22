@@ -36,10 +36,7 @@ That's it. Every PR gets an AI session report.
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR report destination: `description`, `comment`, or `none` |
-| `dashboard` | `false` | Also write/update dashboard snapshot files for the current PR |
-| `dashboard_url` | — | Public dashboard URL to link from the PR report after the dashboard is already deployed |
-| `output` | — | Legacy alias for `pr_output` (`description` or `comment`) |
-| `comment` | `true` | Legacy: set to `false` to disable PR report posting |
+| `dashboard` | `false` | Also write/update Dashboard snapshot files for the current PR |
 
 ### Post as comment instead of description
 
@@ -51,7 +48,7 @@ That's it. Every PR gets an AI session report.
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Generate dashboard data alongside the PR report
+### Generate Dashboard data alongside the PR report
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -59,16 +56,12 @@ That's it. Every PR gets an AI session report.
   with:
     pr_output: description
     dashboard: true
-    # Optional. Set this only after the dashboard is publicly available.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-When `dashboard: true` is enabled, the action creates or updates `packages/dashboard/public/notes/*.json` automatically. When dashboard notes were written, the PR report can also add an `Open dashboard` link near the top if you explicitly provide `dashboard_url`.
-
 <Aside type="tip">
-  Use this only when you also want the shared dashboard. The full bundle, Pages sync, and deploy setup live in the <a href="./dashboard/">Dashboard</a> guide.
+  Use this only when you also want the shared Dashboard. The full bundle, Pages sync, and deploy setup live in the <a href="./dashboard/">Dashboard</a> guide.
 </Aside>
 
 ## Outputs
@@ -82,8 +75,7 @@ When `dashboard: true` is enabled, the action creates or updates `packages/dashb
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report |
 | `markdown` | string | Rendered markdown report |
-| `dashboard_commits` | number | Number of tracked commits written to the dashboard bundle |
-| `dashboard_url` | string | Public dashboard URL linked from the PR report when explicitly configured |
+| `dashboard_commits` | number | Number of tracked commits written to the Dashboard bundle |
 
 ### Use outputs in workflow
 
@@ -101,7 +93,6 @@ When `dashboard: true` is enabled, the action creates or updates `packages/dashb
 The PR report includes:
 
 - **Header** — `Total AI Ratio` with a progress bar, plus a separate plain-text `Model` line
-- **Dashboard link** — added only when the action writes dashboard notes and you explicitly configure `dashboard_url`
 - **Table** — per-commit AI ratio, prompt count, and files with attribution
 - **Prompts** — collapsible section with per-commit prompt/response pairs
 

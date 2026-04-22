@@ -37,9 +37,6 @@ Mehr brauchst du nicht. Jede PR bekommt einen AI session report.
 | `base` | PR base branch | Basis-Branch für den Vergleich |
 | `pr_output` | `description` | Ziel des PR Reports: `description`, `comment` oder `none` |
 | `dashboard` | `false` | Schreibt zusätzlich Dashboard-Snapshots für die aktuelle PR |
-| `dashboard_url` | — | Öffentliche Dashboard URL, auf die der PR Report verlinken soll, wenn das Dashboard bereits deployed ist |
-| `output` | — | Legacy Alias für `pr_output` (`description` oder `comment`) |
-| `comment` | `true` | Legacy: mit `false` wird das Posten des PR Reports deaktiviert |
 
 ### Als Comment statt als Description posten
 
@@ -59,13 +56,9 @@ Mehr brauchst du nicht. Jede PR bekommt einen AI session report.
   with:
     pr_output: description
     dashboard: true
-    # Optional. Erst setzen, wenn das Dashboard öffentlich erreichbar ist.
-    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-Wenn `dashboard: true` aktiv ist, erstellt oder aktualisiert die Action automatisch `packages/dashboard/public/notes/*.json`. Wenn Dashboard-Notes geschrieben wurden, kann der PR Report oben außerdem einen `Open dashboard` Link ergänzen, sobald du `dashboard_url` explizit setzt.
 
 <Aside type="tip">
   Aktiviere das nur, wenn du auch das gemeinsame Dashboard nutzen willst. Das vollständige Setup für Bundle, Pages sync und Deploy steht im Guide [Dashboard](./dashboard/).
@@ -83,7 +76,6 @@ Wenn `dashboard: true` aktiv ist, erstellt oder aktualisiert die Action automati
 | `json` | string | Voller strukturierter Report |
 | `markdown` | string | Gerenderter Markdown Report |
 | `dashboard_commits` | number | Anzahl der tracked Commits, die in das Dashboard-Bundle geschrieben wurden |
-| `dashboard_url` | string | Öffentliche Dashboard URL, die im PR Report verlinkt wird, wenn sie explizit gesetzt ist |
 
 ### Outputs im workflow verwenden
 
@@ -101,7 +93,6 @@ Wenn `dashboard: true` aktiv ist, erstellt oder aktualisiert die Action automati
 Der PR Report enthält:
 
 - **Header** — `Total AI Ratio` mit Progress Bar und eine separate Textzeile `Model`
-- **Dashboard link** — nur wenn die Action Dashboard-Notes schreibt und `dashboard_url` explizit gesetzt ist
 - **Table** — AI Ratio pro Commit, Prompt-Anzahl und Files mit Attribution
 - **Prompts** — einklappbarer Bereich mit Prompt/Response Paaren pro Commit
 
