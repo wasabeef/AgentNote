@@ -1,0 +1,91 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-04-22T11:55:49.263Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "Total AI Ratio: ████████ 97%\nModel: gpt-5.4\n\n\nModel も太字にして",
+      "response": "`Model:` 行の表示を `**Model:**` に揃えます。実装本体と、docs のサンプル表記も一緒に直します。\n`PR report` 本体と docs の sample をまとめて直します。`Model:` 行だけなので、差分は小さく済みます。\n表示だけの変更ですが、`CLI` と `website` の build は通しておきます。\n`website` build の完走だけ拾います。\n`y`、`Model` も太字にしました。\n\n反映内容:\n- `packages/cli/src/commands/pr.ts`\n  - `Model: \\`...\\`` → `**Model:** \\`...\\``\n- `README.md`\n- `website` の landing page sample\n  - `root / ja / de / es / fr / id / it / ko / pt-br / ru / zh-cn / zh-tw`\n\n確認済み:\n- `npm run build --prefix packages/cli`\n- `npm run build --prefix website`\n\nいまの表示はこうなります。\n\n```md\n**Total AI Ratio:** ████████ 97%\n**Model:** `gpt-5.4`\n```",
+      "files_touched": [
+        "README.md",
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
