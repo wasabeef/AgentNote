@@ -203,7 +203,7 @@ function renderHeader(report: PrReport): string[] {
   // Line 1: progress bar + ratio
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
   if (!report.model) return [line1];
-  return [line1, `Model: \`${report.model}\``];
+  return [line1, `**Model:** \`${report.model}\``];
 }
 
 /** Format commit hash as a link if repo URL is available. */
