@@ -29929,7 +29929,6 @@ function wrappy (fn, cb) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DESCRIPTION_END = exports.DESCRIPTION_BEGIN = exports.COMMENT_MARKER = void 0;
-exports.resolveOutputMode = resolveOutputMode;
 exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
@@ -29940,32 +29939,15 @@ exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
 /**
- * Resolve the legacy PR output mode from action inputs.
+ * Resolve PR output mode from the action input.
  */
-function resolveOutputMode(outputInput, commentInput) {
-    if (outputInput === "description" || outputInput === "comment") {
-        return outputInput;
-    }
-    if (commentInput === "false") {
-        return "none";
-    }
-    return "description"; // default
-}
-/**
- * Resolve PR output mode from modern and legacy action inputs.
- * `comment=false` remains a hard opt-out for backward compatibility.
- * Otherwise `pr_output` takes precedence, then `output`.
- */
-function resolvePrOutputMode(prOutputInput, outputInput, commentInput) {
-    if (commentInput === "false") {
-        return "none";
-    }
+function resolvePrOutputMode(prOutputInput) {
     if (prOutputInput === "description" ||
         prOutputInput === "comment" ||
         prOutputInput === "none") {
         return prOutputInput;
     }
-    return resolveOutputMode(outputInput, commentInput);
+    return "description";
 }
 /**
  * Upsert the agentnote markdown section into a PR description body.
@@ -30268,7 +30250,7 @@ async function run() {
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
         const headSha = github.context.payload.pull_request?.head?.sha;
         const cliCmd = resolveCliCommand();
-        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
+        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
         let json = "";
         let report = null;

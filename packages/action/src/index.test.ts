@@ -7,51 +7,26 @@ import {
 	DESCRIPTION_END,
 	inferDashboardUrl,
 	resolvePrOutputMode,
-	resolveOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
 	withDashboardLink,
 } from "./helpers.js";
 
-describe("resolveOutputMode", () => {
-	it('returns "description" when output is "description"', () => {
-		assert.equal(resolveOutputMode("description", ""), "description");
-	});
-
-	it('returns "comment" when output is "comment"', () => {
-		assert.equal(resolveOutputMode("comment", ""), "comment");
-	});
-
-	it('returns "none" when output is unset and comment is "false"', () => {
-		assert.equal(resolveOutputMode("", "false"), "none");
-	});
-
-	it('returns "description" by default when both inputs are empty', () => {
-		assert.equal(resolveOutputMode("", ""), "description");
-	});
-
-	it("ignores comment input when output is explicitly set", () => {
-		assert.equal(resolveOutputMode("comment", "false"), "comment");
-	});
-});
-
 describe("resolvePrOutputMode", () => {
 	it('returns "none" when pr_output is "none"', () => {
-		assert.equal(resolvePrOutputMode("none", "", ""), "none");
+		assert.equal(resolvePrOutputMode("none"), "none");
 	});
 
-	it('prefers "pr_output" over legacy "output"', () => {
-		assert.equal(resolvePrOutputMode("description", "comment", ""), "description");
+	it('returns "description" when pr_output is "description"', () => {
+		assert.equal(resolvePrOutputMode("description"), "description");
 	});
 
-	it('treats "comment=false" as a hard opt-out even when outputs are set', () => {
-		assert.equal(resolvePrOutputMode("description", "", "false"), "none");
-		assert.equal(resolvePrOutputMode("", "comment", "false"), "none");
+	it('returns "comment" when pr_output is "comment"', () => {
+		assert.equal(resolvePrOutputMode("comment"), "comment");
 	});
 
-	it("falls back to legacy inputs when pr_output is unset", () => {
-		assert.equal(resolvePrOutputMode("", "comment", ""), "comment");
-		assert.equal(resolvePrOutputMode("", "", "false"), "none");
+	it('defaults to "description" when pr_output is empty', () => {
+		assert.equal(resolvePrOutputMode(""), "description");
 	});
 });
 

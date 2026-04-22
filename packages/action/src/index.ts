@@ -234,11 +234,7 @@ async function run(): Promise<void> {
 		const headSha = github.context.payload.pull_request?.head?.sha;
 		const cliCmd = resolveCliCommand();
 
-		const prOutputMode = resolvePrOutputMode(
-			core.getInput("pr_output"),
-			core.getInput("output"),
-			core.getInput("comment"),
-		);
+		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
 		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
 
 		let json = "";
