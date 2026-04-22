@@ -5,7 +5,7 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
-	resolveModelIconDataUrl,
+	resolveModelIconUrl,
 	resolveDashboardUrl,
 	resolvePrOutputMode,
 	resolveOutputMode,
@@ -200,14 +200,29 @@ describe("withDashboardLink", () => {
 	});
 });
 
-describe("resolveModelIconDataUrl", () => {
-	it("loads a base64 png for supported model families", () => {
-		const dataUrl = resolveModelIconDataUrl("gpt-5.4");
-		assert.ok(dataUrl.startsWith("data:image/png;base64,"));
+describe("resolveModelIconUrl", () => {
+	it("returns a raw GitHub asset url for supported model families", () => {
+		const iconUrl = resolveModelIconUrl(
+			"gpt-5.4",
+			"wasabeef/AgentNote",
+			"abc1234",
+		);
+		assert.equal(
+			iconUrl,
+			"https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png",
+		);
 	});
 
 	it("returns an empty string for unknown model families", () => {
-		assert.equal(resolveModelIconDataUrl("mystery-model"), "");
+		assert.equal(
+			resolveModelIconUrl("mystery-model", "wasabeef/AgentNote", "abc1234"),
+			"",
+		);
+	});
+
+	it("returns an empty string when repo or ref is missing", () => {
+		assert.equal(resolveModelIconUrl("gpt-5.4", "", "abc1234"), "");
+		assert.equal(resolveModelIconUrl("gpt-5.4", "wasabeef/AgentNote", ""), "");
 	});
 });
 
@@ -216,12 +231,12 @@ describe("withModelIcon", () => {
 		const result = withModelIcon(
 			["## 🧑💬🤖 Agent Note", "", "Model: `gpt-5.4`"].join("\n"),
 			"gpt-5.4",
-			"data:image/png;base64,abc123",
+			"https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png",
 		);
 
 		assert.ok(
 			result.includes(
-				'Model: <img src="data:image/png;base64,abc123" alt="gpt-5.4" width="16" height="16"> `gpt-5.4`',
+				'Model: <img src="https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png" alt="gpt-5.4" width="16" height="16"> `gpt-5.4`',
 			),
 		);
 	});

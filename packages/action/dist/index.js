@@ -29923,7 +29923,7 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 1979:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
@@ -29936,10 +29936,8 @@ exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
 exports.resolveDashboardUrl = resolveDashboardUrl;
 exports.withDashboardLink = withDashboardLink;
-exports.resolveModelIconDataUrl = resolveModelIconDataUrl;
+exports.resolveModelIconUrl = resolveModelIconUrl;
 exports.withModelIcon = withModelIcon;
-const node_fs_1 = __nccwpck_require__(3024);
-const node_path_1 = __nccwpck_require__(6760);
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -30054,26 +30052,25 @@ function normalizeModelIconKey(model) {
     return null;
 }
 /**
- * Load a dashboard model icon and return it as a base64 data URL so PR
- * descriptions do not depend on the dashboard being deployed yet.
+ * Resolve a raw GitHub URL for a shared model icon so PR descriptions can
+ * render it without depending on dashboard deployment.
  */
-function resolveModelIconDataUrl(model) {
+function resolveModelIconUrl(model, repositoryFullName, ref) {
     const key = normalizeModelIconKey(model);
     if (!key)
         return "";
-    const iconPath = (0, node_path_1.resolve)("packages/dashboard/public/model-icons", `${key}.png`);
-    if (!(0, node_fs_1.existsSync)(iconPath))
+    if (!repositoryFullName.trim() || !ref.trim())
         return "";
-    return `data:image/png;base64,${(0, node_fs_1.readFileSync)(iconPath).toString("base64")}`;
+    return `https://raw.githubusercontent.com/${repositoryFullName}/${ref}/packages/dashboard/public/model-icons/${key}.png`;
 }
 /**
  * Replace the plain Model line with an inline icon + model label.
  */
-function withModelIcon(markdown, model, iconDataUrl) {
-    if (!markdown.trim() || !model.trim() || !iconDataUrl.trim())
+function withModelIcon(markdown, model, iconUrl) {
+    if (!markdown.trim() || !model.trim() || !iconUrl.trim())
         return markdown;
     const modelLine = `Model: \`${model}\``;
-    const iconLine = `Model: <img src="${iconDataUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
+    const iconLine = `Model: <img src="${iconUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
     return markdown.includes(modelLine)
         ? markdown.replace(modelLine, iconLine)
         : markdown;
@@ -30359,7 +30356,8 @@ async function run() {
         }
         const reportModel = typeof report.model === "string" ? report.model.trim() : "";
         if (reportModel) {
-            markdown = (0, helpers_js_1.withModelIcon)(markdown, reportModel, (0, helpers_js_1.resolveModelIconDataUrl)(reportModel));
+            const iconRef = headSha || github.context.sha;
+            markdown = (0, helpers_js_1.withModelIcon)(markdown, reportModel, (0, helpers_js_1.resolveModelIconUrl)(reportModel, `${github.context.repo.owner}/${github.context.repo.repo}`, iconRef));
         }
         let dashboardCommits = 0;
         let dashboardDir = "";
@@ -30517,22 +30515,6 @@ module.exports = require("node:crypto");
 
 "use strict";
 module.exports = require("node:events");
-
-/***/ }),
-
-/***/ 3024:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:fs");
-
-/***/ }),
-
-/***/ 6760:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:path");
 
 /***/ }),
 

@@ -7,7 +7,7 @@ import { join, resolve } from "path";
 import {
 	buildPrReportCommand,
 	COMMENT_MARKER,
-	resolveModelIconDataUrl,
+	resolveModelIconUrl,
 	resolveDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
@@ -303,10 +303,15 @@ async function run(): Promise<void> {
 		const reportModel =
 			typeof report.model === "string" ? report.model.trim() : "";
 		if (reportModel) {
+			const iconRef = headSha || github.context.sha;
 			markdown = withModelIcon(
 				markdown,
 				reportModel,
-				resolveModelIconDataUrl(reportModel),
+				resolveModelIconUrl(
+					reportModel,
+					`${github.context.repo.owner}/${github.context.repo.repo}`,
+					iconRef,
+				),
 			);
 		}
 

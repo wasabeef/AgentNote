@@ -1,6 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 export const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -153,20 +150,18 @@ function normalizeModelIconKey(model: string): "claude" | "cursor" | "gemini" | 
 }
 
 /**
- * Load a dashboard model icon and return it as a base64 data URL so PR
- * descriptions do not depend on the dashboard being deployed yet.
+ * Resolve a raw GitHub URL for a shared model icon so PR descriptions can
+ * render it without depending on dashboard deployment.
  */
-export function resolveModelIconDataUrl(model: string): string {
+export function resolveModelIconUrl(
+	model: string,
+	repositoryFullName: string,
+	ref: string,
+): string {
 	const key = normalizeModelIconKey(model);
 	if (!key) return "";
-
-	const iconPath = [
-		resolve("packages/dashboard/public/model-icons", `${key}.png`),
-		resolve("../dashboard/public/model-icons", `${key}.png`),
-	].find((candidate) => existsSync(candidate));
-	if (!iconPath) return "";
-
-	return `data:image/png;base64,${readFileSync(iconPath).toString("base64")}`;
+	if (!repositoryFullName.trim() || !ref.trim()) return "";
+	return `https://raw.githubusercontent.com/${repositoryFullName}/${ref}/packages/dashboard/public/model-icons/${key}.png`;
 }
 
 /**
@@ -175,12 +170,12 @@ export function resolveModelIconDataUrl(model: string): string {
 export function withModelIcon(
 	markdown: string,
 	model: string,
-	iconDataUrl: string,
+	iconUrl: string,
 ): string {
-	if (!markdown.trim() || !model.trim() || !iconDataUrl.trim()) return markdown;
+	if (!markdown.trim() || !model.trim() || !iconUrl.trim()) return markdown;
 
 	const modelLine = `Model: \`${model}\``;
-	const iconLine = `Model: <img src="${iconDataUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
+	const iconLine = `Model: <img src="${iconUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
 	return markdown.includes(modelLine)
 		? markdown.replace(modelLine, iconLine)
 		: markdown;
