@@ -1,0 +1,69 @@
+---
+title: Dashboard
+description: GitHub Pages で Agent Note Dashboard を公開する方法
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<div style="margin: 0 0 2rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
+## できること
+
+Dashboard は、Agent Note の履歴をチームで共有するための 1 つの URL です。
+
+- open / merged 両方の PR 履歴を 1 か所で見られる
+- commit、prompt、attribution をまとめてたどれる
+- GitHub Pages の `/dashboard/` 配下に 1 つの共有 URL として公開できる
+
+PR Description だけでは足りず、チーム向けの一覧画面がほしいときに使います。
+
+## 先に決めること
+
+Dashboard は web の共有画面が必要なときだけ使います。
+
+- PR の中に AI レポートが出れば十分なら、[GitHub Action](./github-action/) だけで OK です。
+- open / merged 履歴をまとめて見たいなら、このページの設定を足します。
+
+## クイックセットアップ
+
+まずは Action 側で、PR ごとの Dashboard bundle を書き出せるようにします。
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+これで現在の PR に対して `packages/dashboard/public/notes/*.json` が作成・更新されます。復元、保存、公開は Pages workflow 側で行います。
+
+## 公開 URL
+
+通常は次の URL に公開します。
+
+- `https://<owner>.github.io/<repo>/dashboard/`
+
+たとえば:
+
+- `https://wasabeef.github.io/AgentNote/dashboard/`
+
+<Aside type="tip">
+  GitHub Pages で公開する場合は、Pages workflow 側で `SITE` と `BASE` の repo 固有値を build 時に渡します。多くの repo では example workflow をそのまま使えます。
+</Aside>
+
+## 最初の deploy
+
+brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL ができるのは最初の `main` deploy 後です。
+
+## 仕組み
+
+- `packages/dashboard/` が Astro 製の閲覧アプリ
+- `packages/dashboard/public/notes/*.json` が build 時に読む bundle
+- `gh-pages/dashboard/notes/*.json` が共有履歴を残す永続保存先
+
+repo 自体には sample Dashboard JSON を置きません。fresh な Dashboard は、workflow が note file を復元または生成するまで空です。多くの運用では `pull_request` で PR の note を更新し、`main` で merged 状態を公開します。

@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: Menambahkan laporan sesi AI ke setiap pull request secara otomatis.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick setup
+
+Gunakan workflow yang dibuat oleh `agent-note init`:
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Itu saja. Setiap PR akan otomatis mendapat laporan sesi AI.
+
+## Inputs
+
+| Input | Default | Deskripsi |
+|---|---|---|
+| `base` | Branch dasar PR | Branch pembanding |
+| `pr_output` | `description` | Tujuan laporan PR: `description`, `comment`, atau `none` |
+| `dashboard` | `false` | Juga menulis file Dashboard untuk PR saat ini |
+
+### Menggunakan PR Description dan Dashboard sekaligus
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  Aktifkan `dashboard: true` hanya jika Anda juga ingin Dashboard bersama. Cara kerja bundle, sinkronisasi Pages, dan deploy dijelaskan di <a href="./dashboard/">Dashboard</a>.
+</Aside>
+
+## Outputs
+
+| Output | Tipe | Deskripsi |
+|---|---|---|
+| `overall_ai_ratio` | number | Rasio AI untuk seluruh PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed`, atau `none` |
+| `tracked_commits` | number | Jumlah commit yang punya data agent-note |
+| `total_commits` | number | Jumlah total commit dalam PR |
+| `total_prompts` | number | Jumlah total prompt di semua commit |
+| `json` | string | Laporan terstruktur lengkap |
+| `markdown` | string | Laporan Markdown yang sudah dirender |
+| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke bundle Dashboard |
+
+## Isi laporan
+
+Laporan PR berisi:
+
+- **Header** — `Total AI Ratio` dengan bar, lalu `Model` di bawahnya
+- **Tabel** — rasio AI, jumlah prompt, dan file per commit
+- **Prompts** — pasangan prompt / response per commit dalam bagian yang bisa dilipat
+
+<Aside type="tip">
+  Hash commit di laporan langsung menaut ke halaman commit di GitHub.
+</Aside>
+
+## Langkah berikutnya
+
+Jika Anda juga ingin tampilan Pages bersama untuk PR terbuka dan merged, lanjutkan ke <a href="./dashboard/">Dashboard</a>.

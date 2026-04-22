@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: Adiciona automaticamente um relatório de sessão de IA a cada pull request.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Configuração rápida
+
+Use o workflow criado por `agent-note init`:
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Isso basta. Cada PR recebe automaticamente um relatório de sessão de IA.
+
+## Inputs
+
+| Input | Default | Descrição |
+|---|---|---|
+| `base` | Branch base da PR | Branch usada para comparação |
+| `pr_output` | `description` | Destino do relatório da PR: `description`, `comment` ou `none` |
+| `dashboard` | `false` | Também grava os arquivos do Dashboard para a PR atual |
+
+### Usar PR Description e Dashboard ao mesmo tempo
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  Ative `dashboard: true` apenas se você também quiser o Dashboard compartilhado. A página <a href="./dashboard/">Dashboard</a> explica como bundle, sync com Pages e deploy funcionam juntos.
+</Aside>
+
+## Outputs
+
+| Output | Tipo | Descrição |
+|---|---|---|
+| `overall_ai_ratio` | number | Razão de IA do PR inteiro (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` ou `none` |
+| `tracked_commits` | number | Número de commits com dados de agent-note |
+| `total_commits` | number | Número total de commits no PR |
+| `total_prompts` | number | Número total de prompts em todos os commits |
+| `json` | string | Relatório estruturado completo |
+| `markdown` | string | Relatório em Markdown já renderizado |
+| `dashboard_commits` | number | Número de tracked commits escritos no bundle do Dashboard |
+
+## O que o relatório inclui
+
+O relatório do PR inclui:
+
+- **Header** — `Total AI Ratio` com barra e, abaixo, `Model`
+- **Tabela** — razão de IA, quantidade de prompts e arquivos por commit
+- **Prompts** — pares de prompt / response por commit em uma seção recolhível
+
+<Aside type="tip">
+  Os hashes de commit do relatório apontam diretamente para a página do commit no GitHub.
+</Aside>
+
+## Próximo passo
+
+Se você também quiser uma visão compartilhada em Pages para PRs abertas e mergeadas, siga para <a href="./dashboard/">Dashboard</a>.

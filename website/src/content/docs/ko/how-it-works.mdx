@@ -3,18 +3,37 @@ title: 동작 방식
 description: Agent Note 가 AI 세션 데이터를 수집해 git commit 에 연결하는 방식
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 데이터 흐름
 
-<Steps>
-1. coding agent 에 prompt 를 보냄 → hooks 가 prompt 를 수집
-2. agent 가 코드를 작성 → hooks 또는 transcripts 가 수정된 파일과 attribution signal 을 추적
-3. `git commit` 또는 `agent-note commit` 실행 → trailer 가 주입되고 note 가 기록됨
-4. `git push` 실행 → notes 가 remote 로 자동 push 됨
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note 가 prompt 부터 shared git notes 까지 이어지는 흐름">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>coding agent 에 요청한다</strong>
+    <p>hooks 가 prompt 와 turn id 를 기록합니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI 가 파일을 수정한다</strong>
+    <p>hooks 또는 transcripts 가 변경된 file 과 attribution 에 쓰는 단서를 남깁니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>note 를 기록한다</strong>
+    <p><code>git commit</code> 또는 <code>agent-note commit</code> 이 trailer 를 넣고 git note 를 씁니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>코드와 함께 공유한다</strong>
+    <p><code>git push</code> 로 <code>refs/notes/agentnote</code> 를 remote 로 보냅니다.</p>
+  </div>
+</div>
 
-repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니다. Cursor preview 는 response hook 또는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없는 환경에서는 shell hook 이 fallback 경로를 제공합니다.
+생성된 git hook 이 설치되어 있으면 대부분의 repo 에서는 평소처럼 `git commit` 과 `git push` 를 쓰면 됩니다. Cursor Preview 는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없어도 shell hook 으로 commit 추적을 이어갈 수 있습니다.
 
 ## 저장소
 
@@ -67,30 +86,43 @@ repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니
 
 ## Attribution 방식
 
-Claude Code 는 3-diff position algorithm 으로 AI authorship 을 줄 단위로 계산합니다.
-
-| Diff | From | To | 캡처하는 내용 |
-|---|---|---|---|
-| diff1 | parent commit | committed file | 이 commit 의 모든 변경 |
-| diff2 | AI edit 전 | committed file | AI edit + 이후 human edit |
-| diff3 | AI edit 후 | committed file | human edit 만 |
-
-**AI position = diff2 에 있고 diff3 에는 없는 위치**
-
-세 diff 모두 committed blob 을 대상으로 하므로 위치를 직접 비교할 수 있습니다.
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>보통은 line-level 입니다. Agent Note 는 각 AI edit 전후의 file 상태를 비교하고, 나중에 들어간 human edit 를 final diff 에서 다시 빼서 계산합니다.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>처음에는 file-level 입니다. transcript patch count 가 final commit diff 와 맞을 때만 line-level 로 올라갑니다.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>처음에는 file-level 입니다. edit count 가 맞고 final file 이 마지막 AI edit 와 그대로 같을 때만 line-level 로 올라갑니다.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>hook 과 transcript parsing 으로 prompt / response 와 file-level attribution 을 기록합니다. line-level 은 아직 없습니다.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  삭제 라인은 별도로 추적되며 AI 나 human 어느 쪽에도 attribution 되지 않습니다. blob data 를 사용할 수 없으면 file-level attribution 으로 자동 fallback 합니다.
+  prompt 목록은 session 전체가 아니라 final diff 로 이어진 대화에서 가져옵니다. file-level 모드에서는 마지막 edit 경로와, 그 경로를 설명하는 가까운 문맥만 남깁니다.
 </Aside>
 
-Codex CLI 는 transcript-driven attribution 을 사용합니다. transcript 의 `apply_patch` line count 가 final commit diff 와 일치하면 Agent Note 는 Codex commit 을 `method: "line"` 으로 올립니다. 그렇지 않으면 false positive 를 피하기 위해 `method: "file"` 로 fallback 합니다. transcript 에 patch data 로 나타나지 않는 shell-only edit 는 안전한 쪽으로 유지됩니다. Agent Note 는 prompt / response pair 와 관측된 Codex tool 은 보존할 수 있지만, shell step 만으로 `files_touched` 나 AI-authored files 를 추측하지는 않습니다. 따라서 다른 primary signal 이 file 을 agent 와 연결하지 않는 한, 그런 commit 은 `method: "file"` 과 `0%` AI attribution 에 머뭅니다. commit 시점에 transcript 를 읽을 수 없으면 Agent Note 는 warning 을 출력하고, 불확실한 attribution data 를 기록하는 대신 note 생성을 건너뜁니다.
-
-Cursor preview 는 `afterFileEdit` 와 `afterTabFileEdit` hook 을 attribution 에 사용합니다. edit count 가 맞고 final committed blob 이 마지막 AI edit 와 여전히 일치할 때만 Agent Note 는 해당 file 을 안전하게 `method: "line"` 으로 승격합니다. 그렇지 않으면 `method: "file"` 로 fallback 하며, Cursor response hook 또는 local transcript 가 있으면 prompt / response pair 복원은 계속 수행합니다.
-
-Gemini CLI preview 는 `write_file` 및 `replace` tool 에 대한 `BeforeTool`/`AfterTool` hook 으로 file-level attribution 을 수행합니다. commit detection 은 `run_shell_command` 에 대한 `BeforeTool`/`AfterTool` 의 pending-commit pattern 을 사용합니다. prompt 와 response 복원은 `BeforeAgent`/`AfterAgent` hook 및 JSONL transcript parsing 에서 옵니다.
-
-<Aside type="tip">
-  prompt 목록은 전체 session backlog 가 아니라 final diff 주변의 인과 관계가 있는 대화에서 선택됩니다. Agent Note 가 `method: "file"` 로 fallback 할 때도, 각 committed file 의 latest touch turn 을 기준으로 그 final edit 으로 이어지는 prompt-only context 만 남깁니다. 오래된 same-file edit 나 edit 이후의 follow-up chatter 는 포함하지 않습니다. Agent Note 는 또한 가능한 범위에서 Web build output, Flutter registrant, Dart codegen, Go protobuf, Rust binding, Swift / Kotlin generated source 같은 대표적인 생성 산출물을 `AI ratio` 분모에서 제외합니다.
+<Aside>
+  Web build output, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, Swift / Kotlin generated source 같은 대표적인 generated artifact 는 best-effort 로 `AI ratio` 분모에서 제외됩니다.
 </Aside>
 
 ## 세션 라이프사이클

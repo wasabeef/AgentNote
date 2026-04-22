@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">Jadi saya mulai melampirkan percakapan AI ke setiap commit.</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## Apa yang dilakukan
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     Rasio AI, jumlah prompt, hash commit. Reviewer melihat konteks sebelum kode.
   </Card>
   <Card title="Hanya ditulis ke git notes" icon="setting">
-    Branch tetap bersih. Push / fetch untuk berbagi dengan tim, plus dashboard statis opsional di GitHub Pages.
+    Branch tetap bersih. Push / fetch untuk berbagi dengan tim, plus Dashboard statis opsional di GitHub Pages.
   </Card>
 </CardGrid>
 
@@ -70,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: commit `.gemini/settings.json`
 
 3. Code dengan AI.
-   `git commit` biasa berfungsi ketika git hook yang dihasilkan sudah terpasang.
-   `agent-note commit -m "..."` tetap menjadi fallback bila git hook tidak tersedia.
+   Jika git hook yang dihasilkan sudah terpasang, cukup gunakan `git commit` seperti biasa.
+   `agent-note commit -m "..."` hanya dipakai sebagai jalur cadangan saat git hook tidak tersedia.
 </Steps>
 
 ## Periksa Setup Anda
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` menampilkan adapter yang aktif, `capture:` merangkum apa yang dikumpulkan hook agen aktif, `git:` menunjukkan apakah git hook lokal repositori sudah terpasang, dan `commit:` menunjukkan apakah `git commit` normal adalah jalur utama atau mode fallback yang aktif.
+`agent:` menampilkan adapter yang aktif, `capture:` merangkum apa yang dikumpulkan hook aktif, `git:` menunjukkan apakah git hook yang dikelola sudah terpasang, dan `commit:` menunjukkan apakah `git commit` normal adalah jalur utama.
 
 ## Lihat Langsung
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` sebagai cadangan</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

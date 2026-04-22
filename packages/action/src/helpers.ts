@@ -3,34 +3,11 @@ export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
 /**
- * Resolve the legacy PR output mode from action inputs.
- */
-export function resolveOutputMode(
-	outputInput: string,
-	commentInput: string,
-): "description" | "comment" | "none" {
-	if (outputInput === "description" || outputInput === "comment") {
-		return outputInput;
-	}
-	if (commentInput === "false") {
-		return "none";
-	}
-	return "description"; // default
-}
-
-/**
- * Resolve PR output mode from modern and legacy action inputs.
- * `comment=false` remains a hard opt-out for backward compatibility.
- * Otherwise `pr_output` takes precedence, then `output`.
+ * Resolve PR output mode from the action input.
  */
 export function resolvePrOutputMode(
 	prOutputInput: string,
-	outputInput: string,
-	commentInput: string,
 ): "description" | "comment" | "none" {
-	if (commentInput === "false") {
-		return "none";
-	}
 	if (
 		prOutputInput === "description" ||
 		prOutputInput === "comment" ||
@@ -38,7 +15,7 @@ export function resolvePrOutputMode(
 	) {
 		return prOutputInput;
 	}
-	return resolveOutputMode(outputInput, commentInput);
+	return "description";
 }
 
 /**
@@ -100,13 +77,21 @@ function ensureTrailingSlash(url: string): string {
 }
 
 /**
- * Resolve the public dashboard URL used in PR descriptions.
- * Only use an explicit input so we do not emit a broken link before the
- * dashboard has actually been deployed.
+ * Infer the public dashboard URL from the repository name using the standard
+ * GitHub Pages project-site convention.
  */
-export function resolveDashboardUrl(dashboardUrlInput: string): string {
-	const explicit = dashboardUrlInput.trim();
-	return explicit ? ensureTrailingSlash(explicit) : "";
+export function inferDashboardUrl(repository: string): string {
+	const trimmed = repository.trim();
+	if (!trimmed.includes("/")) return "";
+
+	const [owner, repo] = trimmed.split("/", 2);
+	if (!owner || !repo) return "";
+
+	if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
+		return `https://${owner}.github.io/dashboard/`;
+	}
+
+	return `https://${owner}.github.io/${repo}/dashboard/`;
 }
 
 /**

@@ -3,12 +3,12 @@ title: Getting Started
 description: Set up Agent Note in your repository in one command.
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Installation
 
 <Steps>
-1. **Run init** in your repository
+1. **Run `init`** in your repository
 
    ```bash
    npx agent-note init --agent claude
@@ -38,7 +38,7 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    npx agent-note init --agent claude --agent cursor
    ```
 
-   This configures:
+   Agent Note sets up:
    - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI)
    - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Action workflow (`.github/workflows/agentnote.yml`)
@@ -56,15 +56,14 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
    Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote.yml`.
    Gemini CLI repositories commit `.gemini/settings.json` and `.github/workflows/agentnote.yml`.
 
-3. **Done.** Start coding with your agent.
-   Claude Code and Codex can use normal `git commit`.
-   Cursor preview also works with normal `git commit` when the generated git hooks are installed.
-   Use `agent-note commit -m "..."` as a fallback when git hooks are unavailable.
+3. **You're ready.** Start coding with your agent.
+   Normal `git commit` works when the generated git hooks are installed.
+   Use `agent-note commit -m "..."` only when git hooks are unavailable.
 </Steps>
 
-## New Clone Setup
+## Set Up Each Clone
 
-Each developer runs init after cloning to install local git hooks:
+Every developer should run `init` after cloning to install local git hooks:
 
 ```bash
 git clone <repo> && cd <repo>
@@ -72,12 +71,12 @@ npx agent-note init --agent claude
 ```
 
 <Aside>
-  Git hooks are local to `.git/` and not committed. Every developer must run `init` once per clone.
+  Git hooks live inside `.git/`, so they are never committed. Each clone needs one local `init`.
 </Aside>
 
 ## What Happens Automatically
 
-After init, plain `git commit` will:
+After setup, plain `git commit` will:
 
 1. **Inject** an `Agentnote-Session` trailer into the commit message
 2. **Record** prompts, responses, and file attribution as a git note
@@ -128,7 +127,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` confirms the enabled adapter, `capture:` shows what the active agent hooks collect, `git:` confirms the managed repo-local git hooks, and `commit:` tells you whether normal `git commit` is the primary path or whether you should use the fallback wrapper.
+`agent:` shows the enabled adapter, `capture:` shows what the active hooks collect, `git:` confirms the repo-local git hooks, and `commit:` tells you whether plain `git commit` is the primary path.
 
 ## Init Flags
 
@@ -142,15 +141,38 @@ linked:  3/20 recent commits
 | `--action` | Only create workflow |
 | `--agent <name>` | Choose the agent adapter, for example `claude`, `codex`, `cursor`, or `gemini` |
 
-## Agent Capabilities
+## What Each Agent Supports
 
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-|---|---|---|---|---|
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
-| Default attribution | Line-level | File-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
+<CardGrid>
+  <Card>
+    <div class="agent-capability-card">
+      <div class="agent-capability-card__title">Claude Code</div>
+      Plain `git commit` works with the generated git hooks. Prompt / response recovery is hook-native, and attribution starts at line-level.
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-capability-card">
+      <div class="agent-capability-card__title">Codex CLI</div>
+      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from the local transcript, and attribution upgrades to line-level only when transcript patch counts match the commit.
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-capability-card">
+      <div class="agent-capability-card__title">Cursor Preview</div>
+      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final blob still match.
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-capability-card">
+      <div class="agent-capability-card__title">Gemini CLI Preview</div>
+      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from `BeforeAgent` / `AfterAgent` hooks, and attribution currently stays at file-level.
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 ## Uninstall
 

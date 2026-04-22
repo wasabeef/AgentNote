@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: 모든 pull request 에 AI 세션 리포트를 자동으로 추가합니다.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Quick Setup
+
+`agent-note init` 이 만들어 주는 workflow 를 그대로 사용하면 됩니다.
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+이것만으로 충분합니다. 모든 PR 에 AI 세션 리포트가 자동으로 추가됩니다.
+
+## Inputs
+
+| Input | Default | 설명 |
+|---|---|---|
+| `base` | PR base branch | 비교 기준 branch |
+| `pr_output` | `description` | PR 리포트의 출력 위치: `description`, `comment`, `none` |
+| `dashboard` | `false` | 현재 PR 용 Dashboard 파일도 함께 씁니다 |
+
+### PR Description 과 Dashboard 를 함께 쓰기
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  `dashboard: true` 는 공유 Dashboard 도 함께 쓸 때만 켜면 됩니다. bundle, Pages sync, deploy 의 관계는 <a href="./dashboard/">Dashboard</a> 페이지에 정리했습니다.
+</Aside>
+
+## Outputs
+
+| Output | 타입 | 설명 |
+|---|---|---|
+| `overall_ai_ratio` | number | PR 전체 AI 비율 (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed`, `none` |
+| `tracked_commits` | number | agent-note 데이터가 있는 commit 수 |
+| `total_commits` | number | PR 안의 전체 commit 수 |
+| `total_prompts` | number | 모든 commit 의 전체 prompt 수 |
+| `json` | string | 전체 구조화 리포트 |
+| `markdown` | string | 렌더링된 Markdown 리포트 |
+| `dashboard_commits` | number | Dashboard bundle 에 쓴 tracked commit 수 |
+
+## 리포트 구성
+
+PR 리포트에는 다음이 들어갑니다.
+
+- **Header** — `Total AI Ratio` 와 bar, 그리고 그 아래 `Model`
+- **Table** — commit 별 AI 비율, prompt 수, file 목록
+- **Prompts** — commit 별 prompt / response 를 접어서 보여주는 섹션
+
+<Aside type="tip">
+  리포트 안의 commit hash 는 GitHub 의 commit 페이지로 바로 연결됩니다.
+</Aside>
+
+## 다음 단계
+
+open / merged PR 기록을 Pages 에서 함께 보고 싶다면 <a href="./dashboard/">Dashboard</a> 로 이어서 보세요.

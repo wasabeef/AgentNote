@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">그래서 AI와의 대화를 모든 커밋에 붙이기 시작했다.</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## 하는 일
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     AI 비율, 프롬프트 수, 커밋 해시. 리뷰어가 코드보다 먼저 맥락을 본다.
   </Card>
   <Card title="git notes에만 기록" icon="setting">
-    브랜치는 깨끗하게 유지된다. push / fetch로 팀과 공유하고, 선택적으로 GitHub Pages에 static dashboard를 공개할 수 있다.
+    브랜치는 깨끗하게 유지된다. push / fetch로 팀과 공유하고, 선택적으로 GitHub Pages에 static Dashboard를 공개할 수 있다.
   </Card>
 </CardGrid>
 
@@ -70,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: `.gemini/settings.json` 을 커밋
 
 3. AI와 함께 코딩하세요.
-   생성된 git hook이 설치되어 있으면 평소 `git commit`이 그대로 동작합니다.
-   git hook을 쓸 수 없을 때는 `agent-note commit -m "..."` 을 fallback으로 사용합니다.
+   생성된 git hook 이 설치되어 있으면 평소처럼 `git commit` 을 쓰면 됩니다.
+   git hook 을 쓸 수 없을 때만 `agent-note commit -m "..."` 을 대체 경로로 사용합니다.
 </Steps>
 
 ## 설정 확인
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 는 활성 adapter, `capture:` 는 활성 agent hook이 수집하는 것, `git:` 는 repo 로컬 git hook 설치 여부, `commit:` 는 일반 `git commit` 이 주 경로인지 fallback 모드인지를 나타냅니다.
+`agent:` 는 활성 adapter, `capture:` 는 활성 hook 이 수집하는 내용, `git:` 는 관리되는 git hook 설치 여부, `commit:` 는 일반 `git commit` 이 주 경로인지 보여줍니다.
 
 ## 직접 확인해 보세요
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` 대체 경로</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

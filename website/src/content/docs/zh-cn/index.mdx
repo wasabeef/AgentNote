@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">于是我开始把 AI 对话附加到每一个 commit 上。</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## 它能做什么
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     AI 比例、提示词数量、commit 哈希。审查者在看代码之前就能看到上下文。
   </Card>
   <Card title="仅写入 git notes" icon="setting">
-    分支保持干净。push / fetch 与团队共享，也可以在 GitHub Pages 上发布可选的静态 dashboard。
+    分支保持干净。push / fetch 与团队共享，也可以在 GitHub Pages 上发布可选的静态 Dashboard。
   </Card>
 </CardGrid>
 
@@ -70,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: 提交 `.gemini/settings.json`
 
 3. 用 AI 编写代码。
-   安装生成的 git hook 后，普通 `git commit` 即可正常工作。
-   如果 git hook 不可用，`agent-note commit -m "..."` 仍可作为 fallback。
+   装好生成的 git hook 后，直接继续使用普通 `git commit` 即可。
+   只有在 git hook 不可用时，才需要把 `agent-note commit -m "..."` 当作备用路径。
 </Steps>
 
 ## 检查配置
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 显示已启用的 adapter，`capture:` 汇总活跃 agent hook 收集的内容，`git:` 显示 repo 本地 git hook 是否已安装，`commit:` 显示普通 `git commit` 是否为主路径或 fallback 模式是否激活。
+`agent:` 显示已启用的 adapter，`capture:` 汇总当前 hook 收集的内容，`git:` 显示受管理的 git hook 是否已安装，`commit:` 显示普通 `git commit` 是否为主路径。
 
 ## 实际效果
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` 作为备用路径</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

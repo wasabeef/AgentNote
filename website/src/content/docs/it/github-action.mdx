@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: Aggiunge automaticamente un report della sessione IA a ogni pull request.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Setup rapido
+
+Usa semplicemente il workflow creato da `agent-note init`:
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+È sufficiente. Ogni PR riceve automaticamente un report della sessione IA.
+
+## Inputs
+
+| Input | Default | Descrizione |
+|---|---|---|
+| `base` | Branch base della PR | Branch usato per il confronto |
+| `pr_output` | `description` | Destinazione del report della PR: `description`, `comment` o `none` |
+| `dashboard` | `false` | Scrive anche i file del Dashboard per la PR corrente |
+
+### Usare insieme PR description e Dashboard
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  Attiva `dashboard: true` solo se vuoi anche il Dashboard condiviso. La pagina <a href="./dashboard/">Dashboard</a> spiega come funzionano bundle, sincronizzazione Pages e deploy.
+</Aside>
+
+## Outputs
+
+| Output | Tipo | Descrizione |
+|---|---|---|
+| `overall_ai_ratio` | number | Rapporto IA sull’intera PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` o `none` |
+| `tracked_commits` | number | Numero di commit con dati agent-note |
+| `total_commits` | number | Numero totale di commit nella PR |
+| `total_prompts` | number | Numero totale di prompt su tutti i commit |
+| `json` | string | Report strutturato completo |
+| `markdown` | string | Report Markdown renderizzato |
+| `dashboard_commits` | number | Numero di tracked commit scritti nel bundle del Dashboard |
+
+## Contenuto del report
+
+Il report della PR include:
+
+- **Header** — `Total AI Ratio` con barra, e sotto `Model`
+- **Tabella** — rapporto IA, numero di prompt e file per commit
+- **Prompts** — coppie prompt / response per commit in una sezione comprimibile
+
+<Aside type="tip">
+  Gli hash dei commit nel report puntano direttamente alla pagina del commit su GitHub.
+</Aside>
+
+## Passo successivo
+
+Se vuoi anche una vista Pages condivisa per PR aperte e mergeate, continua con <a href="./dashboard/">Dashboard</a>.

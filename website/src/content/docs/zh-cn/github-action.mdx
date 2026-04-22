@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: 自动为每个 pull request 添加 AI 会话报告。
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## 快速设置
+
+直接使用 `agent-note init` 创建的 workflow：
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+这样就够了。每个 PR 都会自动收到一份 AI 会话报告。
+
+## Inputs
+
+| Input | Default | 说明 |
+|---|---|---|
+| `base` | PR 的 base branch | 用于比较的分支 |
+| `pr_output` | `description` | PR 报告的输出位置：`description`、`comment` 或 `none` |
+| `dashboard` | `false` | 同时为当前 PR 写出 Dashboard 文件 |
+
+### 同时使用 PR Description 和 Dashboard
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  只有在你也想使用共享 Dashboard 时，才需要启用 `dashboard: true`。bundle、Pages 同步和 deploy 的关系在 <a href="./dashboard/">Dashboard</a> 页面里有完整说明。
+</Aside>
+
+## Outputs
+
+| Output | 类型 | 说明 |
+|---|---|---|
+| `overall_ai_ratio` | number | 整个 PR 的 AI ratio (0-100) |
+| `overall_method` | string | `line`、`file`、`mixed` 或 `none` |
+| `tracked_commits` | number | 带有 agent-note 数据的 commit 数 |
+| `total_commits` | number | PR 中的 commit 总数 |
+| `total_prompts` | number | 所有 commit 的 prompt 总数 |
+| `json` | string | 完整的结构化报告 |
+| `markdown` | string | 已渲染的 Markdown 报告 |
+| `dashboard_commits` | number | 写入 Dashboard bundle 的 tracked commit 数 |
+
+## 报告内容
+
+PR 报告包含：
+
+- **Header** — `Total AI Ratio` 与进度条，以及下一行的 `Model`
+- **表格** — 每个 commit 的 AI ratio、prompt 数和文件列表
+- **Prompts** — 可折叠的 prompt / response 区块
+
+<Aside type="tip">
+  报告里的 commit hash 会直接链接到 GitHub 上对应的 commit 页面。
+</Aside>
+
+## 下一步
+
+如果你还想要一个共享的 Pages 视图来查看 open 和 merged 的 PR 历史，请继续阅读 <a href="./dashboard/">Dashboard</a>。

@@ -1,0 +1,69 @@
+---
+title: Dashboard
+description: GitHub Pages 로 Agent Note Dashboard 를 공개하는 방법
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<div style="margin: 0 0 2rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
+## 무엇을 할 수 있나
+
+Dashboard 는 팀이 Agent Note 기록을 함께 볼 수 있는 하나의 공유 URL 입니다.
+
+- open / merged 된 PR 기록을 한곳에서 볼 수 있습니다
+- 각 PR 을 열지 않고도 commit, prompt, attribution 을 확인할 수 있습니다
+- 보통 `/dashboard/` 아래의 GitHub Pages URL 하나를 팀과 공유할 수 있습니다
+
+PR Description 만으로는 부족하고, 팀이 함께 보는 화면이 필요할 때 쓰면 좋습니다.
+
+## 시작 전에
+
+Dashboard 는 공유된 웹 화면이 필요할 때만 쓰면 됩니다.
+
+- pull request 안의 AI report 만으로 충분하다면 [GitHub Action](./github-action/) 에서 멈추면 됩니다.
+- open / merged 기록을 함께 보는 Pages 화면이 필요하다면 여기서 계속 진행하면 됩니다.
+
+## Quick Setup
+
+먼저 Action 이 PR 별 Dashboard 파일을 쓰도록 설정합니다.
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+이렇게 하면 현재 PR 에 대해 `packages/dashboard/public/notes/*.json` 이 생성되거나 갱신됩니다. 이후 복원, 저장, 공개는 Pages workflow 가 처리합니다.
+
+## 공개 URL
+
+보통 Dashboard 는 다음 URL 에 공개합니다.
+
+- `https://<owner>.github.io/<repo>/dashboard/`
+
+예시:
+
+- `https://wasabeef.github.io/AgentNote/dashboard/`
+
+<Aside type="tip">
+  GitHub Pages 로 공개할 때는 Pages workflow 가 build 시점에 `SITE` 와 `BASE` 값을 전달합니다. 대부분의 repo 에서는 example workflow 를 그대로 써도 `packages/dashboard` 를 더 손댈 필요가 없습니다.
+</Aside>
+
+## 첫 deploy
+
+새 repo 도 첫 production deploy 전까지 Dashboard data 를 쌓을 수 있지만, public Pages URL 은 첫 `main` deploy 이후에 생깁니다.
+
+## 동작 방식
+
+- `packages/dashboard/` 는 Dashboard 를 보여주는 Astro 앱입니다
+- `packages/dashboard/public/notes/*.json` 는 build 때 읽는 bundle 입니다
+- `gh-pages/dashboard/notes/*.json` 는 공유 기록을 남기는 영구 저장소입니다
+
+이 repo 는 sample Dashboard JSON 을 포함하지 않습니다. 새 Dashboard 는 workflow 가 note files 를 복원하거나 생성하기 전까지 비어 있습니다. 많은 팀은 `pull_request` 에서 PR note 를 갱신하고, `main` 에서 merged 상태를 공개합니다.

@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">Поэтому я начал прикреплять разговор с ИИ к каждому коммиту.</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## Что он делает
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     Доля ИИ, количество промптов, хеши коммитов. Ревьюеры видят контекст перед кодом.
   </Card>
   <Card title="Записывается только в git notes" icon="setting">
-    Ветки остаются чистыми. Push / fetch для совместного использования командой, плюс опциональный статический dashboard на GitHub Pages.
+    Ветки остаются чистыми. Push / fetch для совместного использования командой, плюс опциональный статический Dashboard на GitHub Pages.
   </Card>
 </CardGrid>
 
@@ -70,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: закоммитить `.gemini/settings.json`
 
 3. Пишите код с ИИ.
-   Обычный `git commit` работает, когда сгенерированные git hooks установлены.
-   `agent-note commit -m "..."` остаётся fallback-вариантом, если git hooks недоступны.
+   Если сгенерированные git hooks установлены, достаточно обычного `git commit`.
+   `agent-note commit -m "..."` нужен только как запасной путь, когда git hooks недоступны.
 </Steps>
 
 ## Проверьте настройку
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` показывает активный адаптер, `capture:` суммирует, что собирают хуки активного агента, `git:` показывает, установлены ли локальные git hooks репозитория, а `commit:` указывает, является ли обычный `git commit` основным путём или активен режим fallback.
+`agent:` показывает активный адаптер, `capture:` суммирует, что собирают активные hooks, `git:` показывает, установлены ли управляемые git hooks, а `commit:` указывает, является ли обычный `git commit` основным путём.
 
 ## Посмотрите в действии
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` как запасной путь</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

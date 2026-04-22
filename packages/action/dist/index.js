@@ -29929,43 +29929,25 @@ function wrappy (fn, cb) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DESCRIPTION_END = exports.DESCRIPTION_BEGIN = exports.COMMENT_MARKER = void 0;
-exports.resolveOutputMode = resolveOutputMode;
 exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
-exports.resolveDashboardUrl = resolveDashboardUrl;
+exports.inferDashboardUrl = inferDashboardUrl;
 exports.withDashboardLink = withDashboardLink;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
 /**
- * Resolve the legacy PR output mode from action inputs.
+ * Resolve PR output mode from the action input.
  */
-function resolveOutputMode(outputInput, commentInput) {
-    if (outputInput === "description" || outputInput === "comment") {
-        return outputInput;
-    }
-    if (commentInput === "false") {
-        return "none";
-    }
-    return "description"; // default
-}
-/**
- * Resolve PR output mode from modern and legacy action inputs.
- * `comment=false` remains a hard opt-out for backward compatibility.
- * Otherwise `pr_output` takes precedence, then `output`.
- */
-function resolvePrOutputMode(prOutputInput, outputInput, commentInput) {
-    if (commentInput === "false") {
-        return "none";
-    }
+function resolvePrOutputMode(prOutputInput) {
     if (prOutputInput === "description" ||
         prOutputInput === "comment" ||
         prOutputInput === "none") {
         return prOutputInput;
     }
-    return resolveOutputMode(outputInput, commentInput);
+    return "description";
 }
 /**
  * Upsert the agentnote markdown section into a PR description body.
@@ -30004,13 +29986,20 @@ function ensureTrailingSlash(url) {
     return url.endsWith("/") ? url : `${url}/`;
 }
 /**
- * Resolve the public dashboard URL used in PR descriptions.
- * Only use an explicit input so we do not emit a broken link before the
- * dashboard has actually been deployed.
+ * Infer the public dashboard URL from the repository name using the standard
+ * GitHub Pages project-site convention.
  */
-function resolveDashboardUrl(dashboardUrlInput) {
-    const explicit = dashboardUrlInput.trim();
-    return explicit ? ensureTrailingSlash(explicit) : "";
+function inferDashboardUrl(repository) {
+    const trimmed = repository.trim();
+    if (!trimmed.includes("/"))
+        return "";
+    const [owner, repo] = trimmed.split("/", 2);
+    if (!owner || !repo)
+        return "";
+    if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
+        return `https://${owner}.github.io/dashboard/`;
+    }
+    return `https://${owner}.github.io/${repo}/dashboard/`;
 }
 /**
  * Insert a dashboard link near the top of the rendered PR report.
@@ -30081,6 +30070,7 @@ const fs_1 = __nccwpck_require__(9896);
 const promises_1 = __nccwpck_require__(1943);
 const path_1 = __nccwpck_require__(6928);
 const helpers_js_1 = __nccwpck_require__(1979);
+const DEFAULT_DASHBOARD_DIR = "packages/dashboard/public";
 /**
  * Resolve the agentnote CLI command.
  * Prefers the local monorepo build (no version skew), falls back to npx.
@@ -30164,13 +30154,13 @@ async function removeDashboardNotesForPr(notesDir, prNumber) {
         }
     }
 }
-async function writeDashboardBundle(report, dashboardDirInput) {
+async function writeDashboardBundle(report) {
     const pullRequest = github.context.payload.pull_request;
     if (!pullRequest) {
         core.info("No pull request context available. Skipping dashboard bundle.");
-        return { dir: (0, path_1.resolve)(dashboardDirInput), commits: 0 };
+        return { dir: (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR), commits: 0 };
     }
-    const dashboardDir = (0, path_1.resolve)(dashboardDirInput);
+    const dashboardDir = (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR);
     const notesDir = (0, path_1.join)(dashboardDir, "notes");
     await (0, promises_1.mkdir)(notesDir, { recursive: true });
     await removeDashboardNotesForPr(notesDir, pullRequest.number);
@@ -30260,10 +30250,8 @@ async function run() {
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
         const headSha = github.context.payload.pull_request?.head?.sha;
         const cliCmd = resolveCliCommand();
-        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
+        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-        const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public";
-        const dashboardUrlInput = core.getInput("dashboard_url");
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30320,18 +30308,19 @@ async function run() {
         let dashboardDir = "";
         let dashboardUrl = "";
         if (dashboardEnabled) {
-            const result = await writeDashboardBundle(report, dashboardDirInput);
+            const result = await writeDashboardBundle(report);
             dashboardCommits = result.commits;
             dashboardDir = result.dir;
-            if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
-                dashboardUrl = (0, helpers_js_1.resolveDashboardUrl)(dashboardUrlInput);
+            if (dashboardCommits > 0) {
+                dashboardUrl = (0, helpers_js_1.inferDashboardUrl)(github.context.repo.owner && github.context.repo.repo
+                    ? `${github.context.repo.owner}/${github.context.repo.repo}`
+                    : "");
             }
         }
         if (dashboardUrl) {
             markdown = (0, helpers_js_1.withDashboardLink)(markdown, dashboardUrl);
         }
         core.setOutput("markdown", markdown);
-        core.setOutput("dashboard_dir", dashboardDir);
         core.setOutput("dashboard_commits", String(dashboardCommits));
         core.setOutput("dashboard_url", dashboardUrl);
         await postPrReport(prOutputMode, markdown);

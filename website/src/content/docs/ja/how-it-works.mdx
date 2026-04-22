@@ -1,20 +1,39 @@
 ---
 title: 仕組み
-description: Agent Note が AI セッションデータを git コミットに紐づける仕組み
+description: Agent Note が AI セッションデータを git commit に紐づける仕組み
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## データの流れ
 
-<Steps>
-1. 対応エージェントにプロンプトを送る → フックがプロンプトを記録
-2. エージェントがコードを書く → フックまたは transcript が変更ファイルと著作判定用の情報を記録
-3. `git commit` または `agent-note commit` を実行 → トレーラーが挿入され、note が記録される
-4. `git push` を実行 → notes が自動的にリモートに push される
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note が prompt から git note 共有まで進む流れ">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>エージェントに依頼する</strong>
+    <p>hook が prompt と turn id を記録します。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI がファイルを更新する</strong>
+    <p>hook または transcript が、変更された file と attribution の手がかりを残します。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>note を記録する</strong>
+    <p><code>git commit</code> または <code>agent-note commit</code> で trailer を差し込み、git note を書き込みます。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>コードと一緒に共有する</strong>
+    <p><code>git push</code> で <code>refs/notes/agentnote</code> を remote に送ります。</p>
+  </div>
+</div>
 
-生成された repo-local git hook が入っていれば、特別なコマンドは不要です。Cursor preview では response hook または local transcript があれば prompt / response を復元でき、git hook が使えない環境では Cursor shell hook が fallback として働きます。
+生成された git hook が入っていれば、ふだんどおり `git commit` と `git push` を使うだけで動きます。Cursor Preview は local transcript から prompt / response を復元でき、git hook が使えない環境でも shell hook で追跡を続けられます。
 
 ## ストレージ
 
@@ -57,26 +76,41 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 帰属判定の仕組み
 
-Claude Code の AI 著作は 3-diff ポジションアルゴリズムで行単位に計算されます:
-
-| Diff | From | To | 内容 |
-|---|---|---|---|
-| diff1 | 親コミット | コミットされたファイル | このコミットの全変更 |
-| diff2 | AI 編集前 | コミットされたファイル | AI の編集 + その後の人間の編集 |
-| diff3 | AI 編集後 | コミットされたファイル | 人間の編集のみ |
-
-**AI のポジション = diff2 にあり diff3 にないポジション**
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>通常は line-level です。AI edit の前後の file 状態を比べ、あとから入った人間の edit を最終 diff から差し引いて計算します。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>最初は file-level です。transcript の patch 行数が最終 commit diff と一致したときだけ line-level に上がります。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>最初は file-level です。edit 行数が合い、最後の AI edit 後の file がそのまま残っているときだけ line-level に上がります。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>hook と transcript 解析で prompt / response と file-level attribution を記録します。line-level はまだありません。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  削除行は別途追跡されます — AI にも人間にも帰属しません。blob データが利用できない場合はファイル単位の帰属に自動フォールバックします。
+  prompt 一覧はセッション全体ではなく、最終 diff につながった会話から選ばれます。file-level の場合も、最後の edit と、それを説明する近い文脈だけを残します。
 </Aside>
 
-Codex CLI は transcript ベースで判定します。transcript の `apply_patch` 行数と最終 commit diff が一致した場合は `method: "line"`、一致しない場合は安全側に倒して `method: "file"` を使います。shell-only の編集で transcript に patch 情報が残らない場合も安全側を優先し、prompt / response と観測できた Codex tools は残しつつ、shell 実行だけから `files_touched` や AI-authored files は推測しません。そのため、そのような commit は別の primary signal がない限り `method: "file"` のまま `0%` AI attribution になります。commit 時に transcript が読めない場合は warning を出して note 作成をスキップし、不確かな attribution を保存しないようにしています。
-
-Cursor preview は `afterFileEdit` / `afterTabFileEdit` hook を attribution に使います。edit 行数が合い、かつ最後の AI edit 後の blob がそのまま commit に残っているファイルだけは安全に `method: "line"` へ昇格し、それ以外は `method: "file"` にフォールバックします。response hook または local transcript があれば prompt / response の復元も行えます。
-
-Gemini CLI preview は `BeforeTool`/`AfterTool` hook（`write_file` と `replace` ツール）でファイル単位の attribution を行います。commit 検出は `run_shell_command` の `BeforeTool`/`AfterTool` による pending-commit パターンを使用します。prompt / response の復元は `BeforeAgent`/`AfterAgent` hook と JSONL transcript のパースで行います。
-
-<Aside type="tip">
-  prompt の一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。`method: "file"` にフォールバックする場合も、各 committed file の latest touch turn を起点に、その最終 edit へつながる prompt-only context だけを残します。古い same-file edit や、edit 後に続いた follow-up の会話は拾いません。また、Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source などの代表的な generated artifact は、line-level / file-level を問わず best-effort で `AI ratio` の分母から除外されます。
+<Aside>
+  Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source など、代表的な generated artifact は best-effort で `AI ratio` の分母から除外されます。
 </Aside>

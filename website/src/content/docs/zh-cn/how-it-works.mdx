@@ -3,18 +3,37 @@ title: 工作原理
 description: Agent Note 如何捕获 AI 会话数据，并把它附加到 git commit 上。
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 数据流
 
-<Steps>
-1. 你向 coding agent 提交 prompt → hooks 会捕获这个 prompt
-2. agent 编写代码 → hooks 或 transcripts 会跟踪被修改的文件和 attribution signals
-3. 你执行 `git commit` 或 `agent-note commit` → 会注入 trailer 并记录 note
-4. 你执行 `git push` → notes 会自动推送到 remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note 从 prompt 到共享 git notes 的流程">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>向 coding agent 发出请求</strong>
+    <p>hooks 会记录 prompt 和 turn id。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI 更新文件</strong>
+    <p>hooks 或 transcripts 会记录发生变化的文件，以及用于 attribution 的线索。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>写入 note</strong>
+    <p><code>git commit</code> 或 <code>agent-note commit</code> 会注入 trailer 并写入 git note。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>随代码共享</strong>
+    <p><code>git push</code> 会把 <code>refs/notes/agentnote</code> 发送到 remote。</p>
+  </div>
+</div>
 
-只要 repo-local git hooks 已安装，就不需要额外命令。Cursor preview 也能从 response hooks 或本地 transcripts 恢复 prompt / response 对；当 git hooks 不可用时，它的 shell hooks 会提供 fallback 路径。
+只要生成的 git hook 已安装，大多数仓库里就继续正常使用 `git commit` 和 `git push` 即可。Cursor Preview 也能从本地 transcript 恢复 prompt / response，对 git hook 不可用的环境也能继续跟踪 commit。
 
 ## 存储
 
@@ -67,30 +86,43 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Attribution 模式
 
-Claude Code 使用 3-diff position algorithm 按行计算 AI authorship：
-
-| Diff | From | To | 捕获内容 |
-|---|---|---|---|
-| diff1 | 父 commit | committed file | 本次 commit 的全部变更 |
-| diff2 | AI edit 之前 | committed file | AI edit + 之后的人类 edit |
-| diff3 | AI edit 之后 | committed file | 仅人类 edit |
-
-**AI positions = 在 diff2 中但不在 diff3 中的位置**
-
-三个 diff 都以 committed blob 为目标，因此位置可以直接比较。
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>通常是 line-level。Agent Note 会比较每次 AI edit 前后的文件状态，再把之后出现的人类 edit 从最终 diff 里扣掉。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>起点是 file-level。只有 transcript 中的 patch 计数与最终 commit diff 一致时，才会升到 line-level。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>起点是 file-level。只有 edit 计数匹配，并且最终文件仍与最后一次 AI edit 一致时，才会升到 line-level。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>通过 hooks 和 transcript 解析记录 prompt / response 与 file-level attribution。暂时还没有 line-level 归因。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  删除行会单独跟踪，不会归属于 AI 或人类。当无法取得 blob data 时，会自动回退到 file-level attribution。
+  prompt 列表来自真正导向最终 diff 的那段对话，而不是整个 session backlog。在 file-level 模式下，Agent Note 只保留最后一条 edit 路径，以及解释它的近邻上下文。
 </Aside>
 
-Codex CLI 使用 transcript-driven attribution。当 transcript 中 `apply_patch` 的行数与最终 commit diff 匹配时，Agent Note 会将 Codex commit 升级为 `method: "line"`。否则会回退到 `method: "file"`，以避免 false positives。对于从未在 transcript 中显示为 patch data 的 shell-only edits，Agent Note 会保持保守：它仍然可以保留 prompt / response 对和观察到的 Codex tools，但不会仅凭 shell steps 去猜测 `files_touched` 或 AI-authored files。因此，这类 commit 会保持在 `method: "file"` 且 `AI attribution` 为 `0%`，除非有其他 primary signal 将文件与 agent 关联起来。如果在 commit 时无法读取 transcript，Agent Note 会给出 warning，并跳过 note 创建，而不是记录不可靠的 attribution data。
-
-Cursor preview 使用 `afterFileEdit` 和 `afterTabFileEdit` hooks 来做 attribution。当它们的 edit counts 匹配，并且最终 committed blob 仍然与最后一次 AI edit 一致时，Agent Note 会安全地把这些文件升级为 `method: "line"`。否则会回退到 `method: "file"`，同时在可用时仍会从 Cursor response hooks 或本地 transcripts 中恢复 prompt / response 对。
-
-Gemini CLI preview 使用 `write_file` 和 `replace` 工具上的 `BeforeTool`/`AfterTool` hooks 来做 file-level attribution。commit 检测通过 `run_shell_command` 上的 `BeforeTool`/`AfterTool` pending-commit pattern 完成。prompt 和 response 的恢复来自 `BeforeAgent`/`AfterAgent` hooks 以及 JSONL transcript parsing。
-
-<Aside type="tip">
-  prompt 列表来自最终 diff 周围具有因果关系的对话，而不是整个 session backlog。即使 Agent Note 回退到 `method: "file"`，也会以每个 committed file 的 latest touch turn 为锚点，只保留通向这些最终 edit 的 prompt-only context。较早的 same-file edit，以及 edit 之后的 follow-up chatter，都不会被带进 note。Agent Note 还会尽量把常见的生成产物排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
+<Aside>
+  常见的 generated artifacts 会以 best-effort 的方式排除在 `AI ratio` 分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
 </Aside>
 
 ## Session 生命周期

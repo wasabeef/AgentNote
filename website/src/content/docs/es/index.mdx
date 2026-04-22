@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">Así que empecé a adjuntar la conversación con la IA a cada commit.</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## Qué hace
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     Proporción de IA, cantidad de prompts, hashes de commits. Los revisores ven el contexto antes del código.
   </Card>
   <Card title="Escrito solo en git notes" icon="setting">
-    Las ramas se mantienen limpias. Push / fetch para compartir con el equipo y un dashboard estático opcional en GitHub Pages.
+    Las ramas se mantienen limpias. Push / fetch para compartir con el equipo y Un Dashboard estático opcional en GitHub Pages.
   </Card>
 </CardGrid>
 
@@ -70,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: versionar `.gemini/settings.json`
 
 3. Codifica con IA.
-   El `git commit` normal funciona cuando los git hooks generados están instalados.
-   `agent-note commit -m "..."` sigue siendo el fallback si los git hooks no están disponibles.
+   Con los git hooks generados instalados, basta con usar `git commit` normalmente.
+   `agent-note commit -m "..."` queda como alternativa cuando los git hooks no están disponibles.
 </Steps>
 
 ## Verifica tu configuración
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` muestra el adaptador activo, `capture:` resume qué recopilan los hooks del agente activo, `git:` muestra si los git hooks locales del repositorio están instalados, y `commit:` indica si el `git commit` normal es la ruta principal o si el modo fallback está activo.
+`agent:` muestra el adaptador activo, `capture:` resume lo que recopilan los hooks activos, `git:` muestra si los git hooks administrados están instalados, y `commit:` indica si el `git commit` normal es la ruta principal.
 
 ## Míralo en acción
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` como alternativa</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

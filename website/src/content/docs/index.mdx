@@ -26,6 +26,10 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
   <p class="origin-note__kicker">So I started attaching the AI conversation to every commit.</p>
 </div>
 
+<div style="margin: 1.75rem 0 2.5rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
 ## What it does
 
 <CardGrid stagger>
@@ -39,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     AI ratio, prompt count, commit hashes. Reviewers see context before code.
   </Card>
   <Card title="Written only to git notes" icon="setting">
-    Branches stay clean. Push / fetch to share with the team, or publish an optional static dashboard on GitHub Pages.
+    Branches stay clean. Share through push / fetch, or publish a Dashboard on GitHub Pages when your team wants a shared web view.
   </Card>
 </CardGrid>
 
@@ -69,9 +73,9 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Cursor: commit `.cursor/hooks.json`
    - Gemini CLI: commit `.gemini/settings.json`
 
-3. Code with AI.
+3. Start coding with your agent.
    Plain `git commit` works when the generated git hooks are installed.
-   `agent-note commit -m "..."` remains the fallback wrapper if git hooks are unavailable.
+   Use `agent-note commit -m "..."` only when git hooks are unavailable.
 </Steps>
 
 ## Check Your Setup
@@ -92,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` shows the enabled adapter, `capture:` summarizes what the active agent hooks collect, `git:` shows whether the managed repo-local git hooks are installed, and `commit:` shows whether normal `git commit` is the primary path or whether fallback mode is active.
+`agent:` shows the enabled adapter, `capture:` shows what the active hooks collect, `git:` shows whether the managed git hooks are installed, and `commit:` shows whether plain `git commit` is the main path.
 
 ## See It In Action
 
@@ -124,7 +128,7 @@ linked:  3/20 recent commits
   ## 🧑💬🤖 Agent Note
 
   **Total AI Ratio:** ████████ 73%
-  Model: `claude-sonnet-4-20250514`
+  **Model:** `claude-sonnet-4-20250514`
 
   | Commit | AI Ratio | Prompts | Files |
   |---|---|---|---|
@@ -172,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` as backup</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

@@ -1,0 +1,83 @@
+---
+title: GitHub Action
+description: Автоматически добавляет отчёт о сессии ИИ в каждый pull request.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Быстрая настройка
+
+Используйте workflow, который создаёт `agent-note init`:
+
+```yaml
+name: Agent Note
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wasabeef/AgentNote@v0
+```
+
+Этого достаточно. Каждый PR автоматически получает отчёт о сессии ИИ.
+
+## Inputs
+
+| Input | Значение по умолчанию | Описание |
+|---|---|---|
+| `base` | Базовая ветка PR | Ветка для сравнения |
+| `pr_output` | `description` | Куда выводить отчёт PR: `description`, `comment` или `none` |
+| `dashboard` | `false` | Дополнительно записывает файлы Dashboard для текущего PR |
+
+### Использовать PR Description и Dashboard вместе
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+<Aside type="tip">
+  Включайте `dashboard: true` только если вам нужен и общий Dashboard. Как связаны bundle, синхронизация Pages и deploy, описано на странице <a href="./dashboard/">Dashboard</a>.
+</Aside>
+
+## Outputs
+
+| Output | Тип | Описание |
+|---|---|---|
+| `overall_ai_ratio` | number | Общий AI ratio для PR (0-100) |
+| `overall_method` | string | `line`, `file`, `mixed` или `none` |
+| `tracked_commits` | number | Количество коммитов с данными agent-note |
+| `total_commits` | number | Общее количество коммитов в PR |
+| `total_prompts` | number | Общее число prompts во всех коммитах |
+| `json` | string | Полный структурированный отчёт |
+| `markdown` | string | Готовый Markdown-отчёт |
+| `dashboard_commits` | number | Количество tracked commits, записанных в bundle Dashboard |
+
+## Что входит в отчёт
+
+Отчёт PR включает:
+
+- **Header** — `Total AI Ratio` с полосой и строкой `Model` ниже
+- **Таблица** — AI ratio, число prompts и файлы по каждому коммиту
+- **Prompts** — пары prompt / response по коммитам в раскрывающейся секции
+
+<Aside type="tip">
+  Хэши коммитов в отчёте ведут прямо на страницу коммита в GitHub.
+</Aside>
+
+## Следующий шаг
+
+Если вам нужна и общая Pages-витрина для открытых и смерженных PR, переходите к <a href="./dashboard/">Dashboard</a>.
