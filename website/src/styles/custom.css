@@ -75,7 +75,7 @@ starlight-theme-select {
   max-width: 720px;
   margin: 0 auto 3rem;
   aspect-ratio: 3/2;
-  background: url("/AgentNote/hero.png") center/contain no-repeat;
+  background: url("../assets/hero.png") center/contain no-repeat;
   border-radius: 16px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.4),
@@ -245,7 +245,8 @@ nav.sidebar .top-level > li > a {
   border-collapse: separate;
   border-spacing: 0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--sl-color-gray-4);
   background: var(--sl-color-black);
 }
@@ -279,9 +280,18 @@ nav.sidebar .top-level > li > a {
 }
 
 /* First column: bolder, like a label */
+.sl-markdown-content table th:first-child,
 .sl-markdown-content table td:first-child {
   font-weight: 600;
   color: var(--sl-color-white);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.sl-markdown-content table :is(th, td):first-child code {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 /* Status badges — using :has() to target cells containing status keywords */
