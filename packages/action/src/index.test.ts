@@ -5,7 +5,7 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
-	resolveDashboardUrl,
+	inferDashboardUrl,
 	resolvePrOutputMode,
 	resolveOutputMode,
 	shouldRetryNotesFetch,
@@ -167,16 +167,23 @@ describe("buildPrReportCommand", () => {
 	});
 });
 
-describe("resolveDashboardUrl", () => {
-	it("prefers an explicit dashboard url input", () => {
+describe("inferDashboardUrl", () => {
+	it("infers the standard project-site dashboard url", () => {
 		assert.equal(
-			resolveDashboardUrl("https://docs.example.com/agent-note/dashboard"),
-			"https://docs.example.com/agent-note/dashboard/",
+			inferDashboardUrl("wasabeef/AgentNote"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
 		);
 	});
 
-	it("returns an empty string when the url is not configured", () => {
-		assert.equal(resolveDashboardUrl(""), "");
+	it("infers the user-site dashboard url without repeating the repo segment", () => {
+		assert.equal(
+			inferDashboardUrl("wasabeef/wasabeef.github.io"),
+			"https://wasabeef.github.io/dashboard/",
+		);
+	});
+
+	it("returns an empty string for an invalid repository string", () => {
+		assert.equal(inferDashboardUrl(""), "");
 	});
 });
 

@@ -29934,7 +29934,7 @@ exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
-exports.resolveDashboardUrl = resolveDashboardUrl;
+exports.inferDashboardUrl = inferDashboardUrl;
 exports.withDashboardLink = withDashboardLink;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
@@ -30004,13 +30004,20 @@ function ensureTrailingSlash(url) {
     return url.endsWith("/") ? url : `${url}/`;
 }
 /**
- * Resolve the public dashboard URL used in PR descriptions.
- * Only use an explicit input so we do not emit a broken link before the
- * dashboard has actually been deployed.
+ * Infer the public dashboard URL from the repository name using the standard
+ * GitHub Pages project-site convention.
  */
-function resolveDashboardUrl(dashboardUrlInput) {
-    const explicit = dashboardUrlInput.trim();
-    return explicit ? ensureTrailingSlash(explicit) : "";
+function inferDashboardUrl(repository) {
+    const trimmed = repository.trim();
+    if (!trimmed.includes("/"))
+        return "";
+    const [owner, repo] = trimmed.split("/", 2);
+    if (!owner || !repo)
+        return "";
+    if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
+        return `https://${owner}.github.io/dashboard/`;
+    }
+    return `https://${owner}.github.io/${repo}/dashboard/`;
 }
 /**
  * Insert a dashboard link near the top of the rendered PR report.
@@ -30263,7 +30270,6 @@ async function run() {
         const cliCmd = resolveCliCommand();
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-        const dashboardUrlInput = core.getInput("dashboard_url");
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30323,8 +30329,10 @@ async function run() {
             const result = await writeDashboardBundle(report);
             dashboardCommits = result.commits;
             dashboardDir = result.dir;
-            if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
-                dashboardUrl = (0, helpers_js_1.resolveDashboardUrl)(dashboardUrlInput);
+            if (dashboardCommits > 0) {
+                dashboardUrl = (0, helpers_js_1.inferDashboardUrl)(github.context.repo.owner && github.context.repo.repo
+                    ? `${github.context.repo.owner}/${github.context.repo.repo}`
+                    : "");
             }
         }
         if (dashboardUrl) {

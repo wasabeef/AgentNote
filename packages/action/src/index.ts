@@ -7,7 +7,7 @@ import { join, resolve } from "path";
 import {
 	buildPrReportCommand,
 	COMMENT_MARKER,
-	resolveDashboardUrl,
+	inferDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
@@ -240,7 +240,6 @@ async function run(): Promise<void> {
 			core.getInput("comment"),
 		);
 		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
-		const dashboardUrlInput = core.getInput("dashboard_url");
 
 		let json = "";
 		let report: Record<string, unknown> | null = null;
@@ -311,8 +310,12 @@ async function run(): Promise<void> {
 			const result = await writeDashboardBundle(report);
 			dashboardCommits = result.commits;
 			dashboardDir = result.dir;
-			if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
-				dashboardUrl = resolveDashboardUrl(dashboardUrlInput);
+			if (dashboardCommits > 0) {
+				dashboardUrl = inferDashboardUrl(
+					github.context.repo.owner && github.context.repo.repo
+						? `${github.context.repo.owner}/${github.context.repo.repo}`
+						: "",
+				);
 			}
 		}
 		if (dashboardUrl) {

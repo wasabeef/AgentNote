@@ -23,10 +23,6 @@ inputs:
     description: "Write/update dashboard snapshot files for the current PR"
     required: false
     default: "false"
-  dashboard_url:
-    description: "Public dashboard URL to link from the PR report when the dashboard is already deployed"
-    required: false
-    default: ""
 
 outputs:
   overall_ai_ratio:
@@ -46,7 +42,7 @@ outputs:
   dashboard_commits:
     description: "Number of tracked commits written into the dashboard snapshot"
   dashboard_url:
-    description: "Public dashboard URL linked from the PR report when explicitly configured"
+    description: "Public dashboard URL inferred from the repository's standard GitHub Pages path"
 
 runs:
   using: "node24"

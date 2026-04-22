@@ -100,13 +100,21 @@ function ensureTrailingSlash(url: string): string {
 }
 
 /**
- * Resolve the public dashboard URL used in PR descriptions.
- * Only use an explicit input so we do not emit a broken link before the
- * dashboard has actually been deployed.
+ * Infer the public dashboard URL from the repository name using the standard
+ * GitHub Pages project-site convention.
  */
-export function resolveDashboardUrl(dashboardUrlInput: string): string {
-	const explicit = dashboardUrlInput.trim();
-	return explicit ? ensureTrailingSlash(explicit) : "";
+export function inferDashboardUrl(repository: string): string {
+	const trimmed = repository.trim();
+	if (!trimmed.includes("/")) return "";
+
+	const [owner, repo] = trimmed.split("/", 2);
+	if (!owner || !repo) return "";
+
+	if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
+		return `https://${owner}.github.io/dashboard/`;
+	}
+
+	return `https://${owner}.github.io/${repo}/dashboard/`;
 }
 
 /**
