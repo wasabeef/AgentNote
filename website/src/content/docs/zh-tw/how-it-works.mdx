@@ -86,30 +86,43 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Attribution 模式
 
-Claude Code 使用 3-diff position algorithm 逐行計算 AI authorship：
-
-| Diff | From | To | 捕捉內容 |
-|---|---|---|---|
-| diff1 | 父 commit | committed file | 此 commit 的所有變更 |
-| diff2 | AI edit 之前 | committed file | AI edit + 後續的人類 edit |
-| diff3 | AI edit 之後 | committed file | 僅人類 edit |
-
-**AI positions = diff2 中存在、但 diff3 中不存在的位置**
-
-三個 diff 都以 committed blob 為目標，因此位置可以直接比較。
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>預設是 line-level。Agent Note 會記錄每次 AI edit 前後的檔案狀態，並把之後出現的人類 edit 從最終 diff 中扣掉。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>起點是 file-level。只有 transcript 中的 patch 計數與最終 commit diff 一致時，才會升級成 line-level。shell-only edits 會維持保守，讀不到 transcript 時會跳過 note 建立。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>起點是 file-level。只有 `afterFileEdit` / `afterTabFileEdit` 一致，且最終 blob 仍與最後一次 AI edit 相同時，才會升級成 line-level。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>透過 `BeforeTool` / `AfterTool` 與 transcript 解析記錄 prompt / response 與 file-level attribution。目前還沒有 line-level upgrade。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  刪除行會被另外追蹤，不會歸屬於 AI 或人類。當 blob data 不可用時，會自動回退到 file-level attribution。
+  prompt 清單來自最終 diff 周圍具有因果關係的對話，而不是整個 session backlog。在 file-level 模式下，Agent Note 只保留最後一條 edit 路徑，以及通往它的 prompt-only context。
 </Aside>
 
-Codex CLI 採用 transcript-driven attribution。當 transcript 中 `apply_patch` 的行數與最終 commit diff 一致時，Agent Note 會把 Codex commit 升級為 `method: "line"`。否則會回退到 `method: "file"`，以避免 false positives。對於從未在 transcript 中出現為 patch data 的 shell-only edits，Agent Note 會維持保守策略：它仍然可以保留 prompt / response 配對與觀察到的 Codex tools，但不會只根據 shell steps 推測 `files_touched` 或 AI-authored files。因此，這類 commit 會維持在 `method: "file"` 且 `AI attribution` 為 `0%`，除非有其他 primary signal 將檔案與 agent 關聯起來。如果在 commit 時無法讀取 transcript，Agent Note 會顯示 warning，並跳過 note 建立，而不是記錄不確定的 attribution data。
-
-Cursor preview 使用 `afterFileEdit` 與 `afterTabFileEdit` hooks 進行 attribution。當它們的 edit counts 一致，且最終 committed blob 仍與最後一次 AI edit 相同時，Agent Note 會安全地將這些檔案升級為 `method: "line"`。否則會回退到 `method: "file"`，同時在可用時仍從 Cursor response hooks 或本機 transcripts 還原 prompt / response 配對。
-
-Gemini CLI preview 使用 `write_file` 與 `replace` 工具上的 `BeforeTool`/`AfterTool` hooks 來做 file-level attribution。commit 偵測透過 `run_shell_command` 上的 `BeforeTool`/`AfterTool` pending-commit pattern 完成。prompt 與 response 的還原則來自 `BeforeAgent`/`AfterAgent` hooks 與 JSONL transcript parsing。
-
-<Aside type="tip">
-  prompt 清單來自最終 diff 周圍具有因果關係的對話，而不是整個 session backlog。即使 Agent Note 回退到 `method: "file"`，也會以每個 committed file 的 latest touch turn 為錨點，只保留通往那些最終 edit 的 prompt-only context。較早的 same-file edit，以及 edit 之後的 follow-up chatter，都不會被帶進 note。Agent Note 也會盡量把常見的生成產物排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
+<Aside>
+  常見的 generated artifacts 會以 best-effort 的方式排除在 `AI ratio` 的分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
 </Aside>
 
 ## Session 生命週期

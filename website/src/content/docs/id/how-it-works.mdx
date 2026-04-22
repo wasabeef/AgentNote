@@ -86,30 +86,43 @@ Tidak ada perintah tambahan yang dibutuhkan jika repo-local git hook sudah terpa
 
 ## Mode atribusi
 
-Claude Code menghitung autoria AI per baris menggunakan algoritme posisi 3-diff:
-
-| Diff | Dari | Ke | Apa yang ditangkap |
-|---|---|---|---|
-| diff1 | parent commit | file yang dicommit | Semua perubahan di commit ini |
-| diff2 | sebelum AI edit | file yang dicommit | AI edit + human edit setelahnya |
-| diff3 | sesudah AI edit | file yang dicommit | Hanya human edit |
-
-**Posisi AI = posisi pada diff2 yang TIDAK ada di diff3**
-
-Ketiga diff menarget committed blob yang sama, jadi posisinya bisa dibandingkan langsung.
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>Default-nya line-level. Agent Note menyimpan kondisi file sebelum dan sesudah setiap edit AI, lalu mengurangi human edit yang masuk setelahnya dari final diff.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>Mulai dari file-level. Naik ke line-level hanya jika jumlah patch di transcript cocok dengan final commit diff. Shell-only edit tetap di sisi aman, dan transcript yang tidak bisa dibaca akan melewati pembuatan note.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>Mulai dari file-level. Naik ke line-level hanya ketika `afterFileEdit` / `afterTabFileEdit` cocok dan final blob masih sama dengan edit AI terakhir.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>Mencatat prompt / response dan attribution level file lewat `BeforeTool` / `AfterTool` serta parsing transcript. Upgrade ke line-level belum tersedia.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  Penghapusan dilacak terpisah dan tidak diatribusikan ke AI maupun manusia. Saat blob data tidak tersedia, Agent Note otomatis fallback ke attribution berbasis file.
+  Daftar prompt berasal dari percakapan kausal di sekitar final diff, bukan dari seluruh backlog sesi. Dalam mode file-level, Agent Note hanya menyimpan jalur edit terakhir dan prompt-only context yang mengarah ke sana.
 </Aside>
 
-Codex CLI menggunakan attribution berbasis transcript. Saat jumlah baris `apply_patch` di transcript cocok dengan final commit diff, Agent Note menaikkan commit Codex ke `method: "line"`. Jika tidak cocok, Agent Note fallback ke `method: "file"` untuk menghindari false positive. Shell-only edit yang tidak pernah muncul sebagai patch data di transcript tetap di jalur aman: Agent Note masih bisa menyimpan pasangan prompt / response dan Codex tools yang teramati, tetapi tidak menebak `files_touched` atau AI-authored files hanya dari shell step. Karena itu commit seperti ini tetap berada di `method: "file"` dengan `0%` AI attribution kecuali ada primary signal lain yang mengikat file ke agent. Jika transcript tidak bisa dibaca saat commit, Agent Note memberi warning dan melewati pembuatan note daripada menyimpan attribution yang tidak pasti.
-
-Cursor preview menggunakan hook `afterFileEdit` dan `afterTabFileEdit` untuk attribution. Jika jumlah edit-nya cocok dan final committed blob masih sama dengan AI edit terakhir, Agent Note dengan aman menaikkan file itu ke `method: "line"`. Jika tidak, Agent Note fallback ke `method: "file"`, sambil tetap memulihkan pasangan prompt / response dari Cursor response hook atau transcript lokal jika tersedia.
-
-Gemini CLI preview menggunakan hook `BeforeTool`/`AfterTool` pada tool `write_file` dan `replace` untuk attribution berbasis file. Deteksi commit memakai pola pending-commit melalui `BeforeTool`/`AfterTool` pada `run_shell_command`. Pemulihan prompt dan response berasal dari hook `BeforeAgent`/`AfterAgent` dan parsing transcript JSONL.
-
-<Aside type="tip">
-  Daftar prompt diambil dari percakapan kausal di sekitar final diff, bukan dari seluruh riwayat sesi. Saat Agent Note fallback ke `method: "file"`, jendela itu di-anchor ke latest touch turn untuk tiap committed file dan hanya menyisakan prompt-only context yang mengarah ke final edit tersebut. Same-file edit lama dan follow-up chatter setelah edit tidak ikut masuk. Agent Note juga sebisa mungkin mengecualikan artefak hasil generate yang umum dari denominator `AI ratio`, termasuk output build web, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, dan source generated Swift / Kotlin.
+<Aside>
+  Generated artifact umum dikeluarkan dari denominator `AI ratio` secara best-effort, termasuk output build web, Flutter registrant, Dart codegen, Go protobuf, Rust binding, dan generated source Swift / Kotlin.
 </Aside>
 
 ## Siklus hidup sesi

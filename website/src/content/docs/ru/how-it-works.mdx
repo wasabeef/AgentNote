@@ -86,30 +86,43 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Режимы атрибуции
 
-Claude Code вычисляет AI authorship построчно с помощью 3-diff position algorithm:
-
-| Diff | Откуда | Куда | Что захватывает |
-|---|---|---|---|
-| diff1 | parent commit | committed file | Все изменения в этом commit |
-| diff2 | до AI edit | committed file | AI edit + human edits после него |
-| diff3 | после AI edit | committed file | Только human edits |
-
-**AI positions = позиции из diff2, которых НЕТ в diff3**
-
-Все три diff нацелены на committed blob, поэтому позиции можно сравнивать напрямую.
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>По умолчанию это line-level. Agent Note сохраняет состояние файла до и после каждого AI edit и вычитает из final diff человеческие edits, которые появились позже.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>Начинает с file-level. Переходит на line-level только когда patch counts в transcript совпадают с final commit diff. Shell-only edits остаются на безопасной стороне, а нечитаемый transcript пропускает создание note.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>Начинает с file-level. Переходит на line-level только когда `afterFileEdit` / `afterTabFileEdit` совпадают и final blob всё ещё соответствует последнему AI edit.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>Сохраняет prompt / response и file-level attribution через `BeforeTool` / `AfterTool` и парсинг transcript. Перехода на line-level пока нет.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  Удаления отслеживаются отдельно и не приписываются ни AI, ни человеку. Если blob data недоступны, Agent Note автоматически делает fallback на file-level attribution.
+  Списки prompt берутся из причинно связанного диалога вокруг final diff, а не из всей истории сессии. В режиме file-level Agent Note оставляет только путь последнего edit и prompt-only context, который к нему ведёт.
 </Aside>
 
-Codex CLI использует transcript-driven attribution. Когда числа строк `apply_patch` в transcript совпадают с final commit diff, Agent Note повышает Codex commits до `method: "line"`. Иначе он откатывается к `method: "file"`, чтобы избежать false positives. Shell-only edits, которые не проявляются как patch data в transcript, остаются на безопасной стороне: Agent Note всё ещё может сохранить пару prompt / response и замеченные Codex tools, но не угадывает `files_touched` или AI-authored files только по shell step. Поэтому такие commits остаются на `method: "file"` с `0%` AI attribution, если другой primary signal не связывает файлы с агентом. Если transcript нельзя прочитать во время commit, Agent Note выдаёт warning и пропускает создание note вместо записи ненадёжных attribution data.
-
-Cursor preview использует hooks `afterFileEdit` и `afterTabFileEdit` для attribution. Когда их edit counts совпадают и final committed blob всё ещё совпадает с последним AI edit, Agent Note безопасно повышает такие файлы до `method: "line"`. Иначе он откатывается к `method: "file"`, при этом продолжая восстанавливать пары prompt / response из Cursor response hooks или локальных transcripts, когда они доступны.
-
-Gemini CLI preview использует hooks `BeforeTool`/`AfterTool` на инструментах `write_file` и `replace` для file-level attribution. Детекция commit использует pending-commit pattern через `BeforeTool`/`AfterTool` на `run_shell_command`. Восстановление prompts и responses идёт из hooks `BeforeAgent`/`AfterAgent` и из парсинга JSONL transcripts.
-
-<Aside type="tip">
-  Списки prompt берутся из причинно связанного диалога вокруг final diff, а не из всего backlog сессии. Когда Agent Note откатывается к `method: "file"`, он привязывает это окно к latest touch turn для каждого committed file и оставляет только prompt-only context, который ведёт к этим final edits. Старые same-file edits и follow-up chatter после edit не попадают в note. Agent Note также по возможности исключает распространённые сгенерированные артефакты из знаменателя `AI ratio`, включая web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings и generated sources для Swift / Kotlin.
+<Aside>
+  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort, включая web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings и generated sources для Swift / Kotlin.
 </Aside>
 
 ## Жизненный цикл сессии

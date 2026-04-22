@@ -3,7 +3,7 @@ title: はじめに
 description: 1 コマンドで Agent Note をリポジトリにセットアップ
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## インストール
 
@@ -124,13 +124,36 @@ linked:  3/20 recent commits
 
 ## エージェント別 capability
 
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-|---|---|---|---|---|
-| 生成された git hook ありの通常 `git commit` | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response 復元 | Hook-native | Local transcript | Response hook または local transcript | `BeforeAgent`/`AfterAgent` フック |
-| 既定の attribution | Line-level | File-level | File-level | File-level |
-| 安全な line-level 昇格 | 既定経路 | transcript の patch 行数が commit と一致したとき | `afterFileEdit` / `afterTabFileEdit` の行数が一致し、最後の AI edit の blob がそのまま残るとき | 未対応 |
+<CardGrid>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/claude.png" alt="Claude Code icon" />
+      <div class="agent-capability-card__title">Claude Code</div>
+    </div>
+    生成された git hook があれば通常の `git commit` で動きます。prompt / response は hook-native で復元され、attribution は既定で line-level です。
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/codex.png" alt="Codex CLI icon" />
+      <div class="agent-capability-card__title">Codex CLI</div>
+    </div>
+    生成された git hook があれば通常の `git commit` で動きます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/cursor.png" alt="Cursor Preview icon" />
+      <div class="agent-capability-card__title">Cursor Preview</div>
+    </div>
+    生成された git hook があれば通常の `git commit` で動きます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/gemini.png" alt="Gemini CLI Preview icon" />
+      <div class="agent-capability-card__title">Gemini CLI Preview</div>
+    </div>
+    生成された git hook があれば通常の `git commit` で動きます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
+  </Card>
+</CardGrid>
 
 ## アンインストール
 

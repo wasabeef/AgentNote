@@ -1,12 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* Typography — shared across themes */
 :root {
-  --sl-font: 'IBM Plex Sans', sans-serif;
-  --sl-font-mono: 'JetBrains Mono', monospace;
   --sl-text-h1: 3.5rem;
-  --sl-text-h2: 2rem;
-  --sl-text-h3: 1.375rem;
+  --sl-text-h2: 2.15rem;
+  --sl-text-h3: 1.5rem;
 }
 
 @media (min-width: 72rem) {
@@ -113,7 +109,7 @@ starlight-theme-select {
 }
 
 .hero .tagline {
-  font-size: 1.375rem;
+  font-size: 1.45rem;
   line-height: 1.6;
   max-width: 52ch;
   color: var(--sl-color-gray-2) !important;
@@ -128,7 +124,7 @@ starlight-theme-select {
   justify-content: center;
   padding: 0.875rem 1.75rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
   letter-spacing: 0.01em;
   border-radius: 10px;
   transition: transform 150ms ease, box-shadow 200ms ease, background-color 200ms ease;
@@ -195,7 +191,7 @@ starlight-theme-select {
 /* Code blocks — refined with subtle border */
 pre {
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   border: 1px solid var(--sl-color-gray-4);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
@@ -211,11 +207,16 @@ nav.sidebar .top-level > li > a {
   line-height: 1.75;
 }
 
+.sl-markdown-content :is(p, li) {
+  font-size: 1.04rem;
+}
+
 /* H2 — editorial-style section divider with accent bar */
 .sl-markdown-content h2 {
   margin-top: 4rem;
   padding-top: 2rem;
   border-top: none;
+  font-size: clamp(1.95rem, 1.75rem + 0.7vw, 2.35rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   position: relative;
@@ -235,6 +236,7 @@ nav.sidebar .top-level > li > a {
 /* H3 — softer */
 .sl-markdown-content h3 {
   margin-top: 2rem;
+  font-size: clamp(1.35rem, 1.25rem + 0.35vw, 1.62rem);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -242,16 +244,16 @@ nav.sidebar .top-level > li > a {
 /* Flowchart — used on How It Works */
 .agent-flow {
   display: flex;
+  flex-direction: column;
   gap: 0.875rem;
   align-items: stretch;
   margin: 1.5rem 0 2rem;
-  overflow-x: auto;
-  padding-bottom: 0.35rem;
+  overflow-x: visible;
 }
 
 .agent-flow__step {
-  flex: 1 0 220px;
-  min-width: 220px;
+  flex: 1 0 auto;
+  min-width: 0;
   padding: 1rem 1.1rem;
   border: 1px solid var(--sl-color-gray-4);
   border-radius: 16px;
@@ -265,7 +267,7 @@ nav.sidebar .top-level > li > a {
   display: inline-block;
   margin-bottom: 0.6rem;
   color: var(--sl-color-accent-high);
-  font-size: 0.74rem;
+  font-size: 0.84rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -275,14 +277,14 @@ nav.sidebar .top-level > li > a {
   display: block;
   margin-bottom: 0.45rem;
   color: var(--sl-color-white);
-  font-size: 1rem;
+  font-size: 1.14rem;
   line-height: 1.35;
 }
 
 .agent-flow__step p {
   margin: 0;
   color: var(--sl-color-gray-2);
-  font-size: 0.94rem;
+  font-size: 1.01rem;
   line-height: 1.65;
 }
 
@@ -292,32 +294,103 @@ nav.sidebar .top-level > li > a {
 
 .agent-flow__arrow {
   flex: 0 0 auto;
-  align-self: center;
+  align-self: flex-start;
   color: var(--sl-color-accent-high);
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   line-height: 1;
+  margin-left: 1rem;
+  transform: rotate(90deg);
 }
 
-@media (max-width: 56rem) {
-  .agent-flow {
-    flex-direction: column;
-    overflow-x: visible;
-  }
+.agent-capability-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  min-height: 1.7rem;
+}
 
-  .agent-flow__step {
-    min-width: 0;
-  }
+.agent-capability-card__icon {
+  display: block;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: 0.45rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
 
-  .agent-flow__arrow {
-    align-self: flex-start;
-    margin-left: 1rem;
-    transform: rotate(90deg);
-  }
+.agent-capability-card__title {
+  display: block;
+  font-size: 1.14rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--sl-color-white);
+  letter-spacing: -0.01em;
+  transform: translateY(-2px);
+}
+
+.agent-capability-card p {
+  margin: 0;
+  color: var(--sl-color-gray-2);
+  font-size: 1.01rem;
+  line-height: 1.72;
+}
+
+.agent-attribution-card {
+  position: relative;
+  flex: 1;
+  min-height: 13.25rem;
+  padding-right: 1rem;
+  padding-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.agent-attribution-card__title {
+  margin-bottom: 0.85rem;
+  font-size: 1.14rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--sl-color-white);
+  letter-spacing: -0.01em;
+  position: relative;
+  z-index: 1;
+}
+
+.agent-attribution-card p {
+  margin: 0;
+  color: var(--sl-color-gray-2);
+  font-size: 1.01rem;
+  line-height: 1.72;
+  position: relative;
+  z-index: 1;
+}
+
+.card:has(.agent-attribution-card) {
+  height: 100%;
+}
+
+.card:has(.agent-attribution-card) .body {
+  display: flex;
+  flex: 1;
+}
+
+.agent-attribution-card__logo {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.45rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  opacity: 0.22;
+  filter: saturate(0.95);
+  z-index: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 /* Tables — refined with accent header */
 .sl-markdown-content table {
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   border-collapse: separate;
   border-spacing: 0;
   border-radius: 12px;
@@ -335,7 +408,7 @@ nav.sidebar .top-level > li > a {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.84rem;
   color: var(--sl-color-gray-2);
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--sl-color-gray-4);
@@ -398,7 +471,7 @@ nav.sidebar .top-level > li > a {
 .sl-markdown-content :not(pre) > code {
   padding: 0.15em 0.4em;
   border-radius: 5px;
-  font-size: 0.875em;
+  font-size: 0.92em;
   background: var(--sl-color-gray-6);
   border: 1px solid var(--sl-color-gray-4);
   color: var(--sl-color-accent-high);
@@ -450,14 +523,14 @@ nav.sidebar .top-level > li > a {
 
 .agent-name {
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1.12rem;
   color: var(--sl-color-white);
   letter-spacing: -0.01em;
 }
 
 .agent-badge {
   font-family: var(--sl-font-mono);
-  font-size: 0.65rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   padding: 0.2rem 0.5rem;
@@ -480,8 +553,8 @@ nav.sidebar .top-level > li > a {
 .agent-body p {
   margin: 0;
   color: var(--sl-color-gray-2);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.98rem;
+  line-height: 1.65;
 }
 
 /* ─── Capability matrix ─── */
@@ -503,7 +576,7 @@ nav.sidebar .top-level > li > a {
 .capability-header {
   background: linear-gradient(180deg, var(--sl-color-gray-6) 0%, rgba(15, 23, 42, 0.5) 100%);
   font-family: var(--sl-font);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--sl-color-white);
@@ -524,14 +597,14 @@ nav.sidebar .top-level > li > a {
   text-transform: none;
   letter-spacing: normal;
   font-family: var(--sl-font);
-  font-size: 0.9rem;
+  font-size: 0.98rem;
 }
 
 .capability-header .capability-label {
   color: var(--sl-color-gray-2);
   text-transform: none;
   letter-spacing: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-family: var(--sl-font);
   font-weight: 700;
 }
@@ -547,7 +620,7 @@ nav.sidebar .top-level > li > a {
 
 .capability-row > div:not(:first-child) {
   font-family: var(--sl-font-mono);
-  font-size: 1.1rem;
+  font-size: 1.14rem;
   font-weight: 700;
   border-left: 1px solid var(--sl-color-gray-5);
 }
@@ -569,7 +642,7 @@ nav.sidebar .top-level > li > a {
   gap: 1.5rem;
   justify-content: flex-end;
   margin-top: 0.75rem;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   color: var(--sl-color-gray-2);
   font-family: var(--sl-font-mono);
 }
@@ -606,7 +679,7 @@ nav.sidebar .top-level > li > a {
     color: var(--sl-color-gray-3);
     font-family: var(--sl-font-mono);
     text-transform: uppercase;
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     letter-spacing: 0.1em;
   }
 }
@@ -630,7 +703,7 @@ nav.sidebar .top-level > li > a {
 }
 
 .origin-note__lede {
-  font-size: 1.25rem;
+  font-size: 1.32rem;
   line-height: 1.85;
   color: var(--sl-color-gray-1);
   font-weight: 400;
@@ -654,7 +727,7 @@ nav.sidebar .top-level > li > a {
 }
 
 .origin-note__kicker {
-  font-size: 1.5rem;
+  font-size: 1.58rem;
   line-height: 1.55;
   color: var(--sl-color-white);
   font-weight: 600;

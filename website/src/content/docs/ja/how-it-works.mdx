@@ -76,26 +76,41 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 帰属判定の仕組み
 
-Claude Code の AI 著作は 3-diff ポジションアルゴリズムで行単位に計算されます:
-
-| Diff | From | To | 内容 |
-|---|---|---|---|
-| diff1 | 親コミット | コミットされたファイル | このコミットの全変更 |
-| diff2 | AI 編集前 | コミットされたファイル | AI の編集 + その後の人間の編集 |
-| diff3 | AI 編集後 | コミットされたファイル | 人間の編集のみ |
-
-**AI のポジション = diff2 にあり diff3 にないポジション**
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>既定で line-level です。AI edit の前後の file 状態を記録し、そのあとに入った人間の edit を最終 diff から差し引いて計算します。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>最初は file-level です。transcript の patch 行数と最終 commit diff が一致したときだけ line-level に上がります。shell-only edit は安全側に倒し、transcript が読めないときは不確かな note を残しません。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>最初は file-level です。`afterFileEdit` / `afterTabFileEdit` の行数が合い、最後の AI edit 後の blob がそのまま残っている file だけ line-level に昇格します。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>`BeforeTool` / `AfterTool` と transcript 解析で prompt / response と file-level attribution を記録します。line-level 昇格はまだありません。</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  削除行は別途追跡されます — AI にも人間にも帰属しません。blob データが利用できない場合はファイル単位の帰属に自動フォールバックします。
+  prompt 一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。file-level の場合も、latest touch の edit と、そこへ至る prompt-only context だけを残します。
 </Aside>
 
-Codex CLI は transcript ベースで判定します。transcript の `apply_patch` 行数と最終 commit diff が一致した場合は `method: "line"`、一致しない場合は安全側に倒して `method: "file"` を使います。shell-only の編集で transcript に patch 情報が残らない場合も安全側を優先し、prompt / response と観測できた Codex tools は残しつつ、shell 実行だけから `files_touched` や AI-authored files は推測しません。そのため、そのような commit は別の primary signal がない限り `method: "file"` のまま `0%` AI attribution になります。commit 時に transcript が読めない場合は warning を出して note 作成をスキップし、不確かな attribution を保存しないようにしています。
-
-Cursor preview は `afterFileEdit` / `afterTabFileEdit` hook を attribution に使います。edit 行数が合い、かつ最後の AI edit 後の blob がそのまま commit に残っているファイルだけは安全に `method: "line"` へ昇格し、それ以外は `method: "file"` にフォールバックします。response hook または local transcript があれば prompt / response の復元も行えます。
-
-Gemini CLI preview は `BeforeTool`/`AfterTool` hook（`write_file` と `replace` ツール）でファイル単位の attribution を行います。commit 検出は `run_shell_command` の `BeforeTool`/`AfterTool` による pending-commit パターンを使用します。prompt / response の復元は `BeforeAgent`/`AfterAgent` hook と JSONL transcript のパースで行います。
-
-<Aside type="tip">
-  prompt の一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。`method: "file"` にフォールバックする場合も、各 committed file の latest touch turn を起点に、その最終 edit へつながる prompt-only context だけを残します。古い same-file edit や、edit 後に続いた follow-up の会話は拾いません。また、Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source などの代表的な generated artifact は、line-level / file-level を問わず best-effort で `AI ratio` の分母から除外されます。
+<Aside>
+  Web の build 出力、Flutter の registrant、Dart codegen、Go protobuf、Rust bindings、Swift / Kotlin の generated source など、代表的な generated artifact は best-effort で `AI ratio` の分母から除外されます。
 </Aside>

@@ -3,7 +3,7 @@ title: Getting Started
 description: Set up Agent Note in your repository in one command.
 ---
 
-import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Installation
 
@@ -142,15 +142,38 @@ linked:  3/20 recent commits
 | `--action` | Only create workflow |
 | `--agent <name>` | Choose the agent adapter, for example `claude`, `codex`, `cursor`, or `gemini` |
 
-## Agent Capabilities
+## Agent Support
 
-| Capability | Claude Code | Codex CLI | Cursor | Gemini CLI |
-|---|---|---|---|---|
-| Plain `git commit` with generated git hooks | Yes | Yes | Yes | Yes |
-| `agent-note commit` fallback | Yes | Yes | Yes | Yes |
-| Prompt / response recovery | Hook-native | Local transcript | Response hooks or local transcripts | `BeforeAgent`/`AfterAgent` hooks |
-| Default attribution | Line-level | File-level | File-level | File-level |
-| Safe line-level upgrade | Default path | When transcript patch counts match the commit | When `afterFileEdit` / `afterTabFileEdit` counts match and the committed blob still matches the last AI edit | Not yet available |
+<CardGrid>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/claude.png" alt="Claude Code icon" />
+      <div class="agent-capability-card__title">Claude Code</div>
+    </div>
+    Plain `git commit` works with the generated git hooks. Prompt / response recovery is hook-native, and attribution starts at line-level by default.
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/codex.png" alt="Codex CLI icon" />
+      <div class="agent-capability-card__title">Codex CLI</div>
+    </div>
+    Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from the local transcript, and attribution upgrades to line-level only when transcript patch counts match the commit.
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/cursor.png" alt="Cursor Preview icon" />
+      <div class="agent-capability-card__title">Cursor Preview</div>
+    </div>
+    Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final blob still match.
+  </Card>
+  <Card>
+    <div class="agent-capability-card__head">
+      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/gemini.png" alt="Gemini CLI Preview icon" />
+      <div class="agent-capability-card__title">Gemini CLI Preview</div>
+    </div>
+    Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from `BeforeAgent` / `AfterAgent` hooks, and attribution currently stays at file-level.
+  </Card>
+</CardGrid>
 
 ## Uninstall
 

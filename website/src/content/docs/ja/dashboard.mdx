@@ -52,25 +52,9 @@ shared な web view が必要なときだけ Dashboard を使います。
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Deploy 設定
-
-`packages/dashboard` 自体の local default は `/` のままなので、Pages workflow 側で build 時に repo 固有の値を注入します。
-
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
-
-これで package 自体は generic のまま保ちつつ、repo ごとの public URL を正しく出せます。
-
-## 推奨フロー
-
-1. GitHub Action で `dashboard: true` を有効にする
-2. `gh-pages/dashboard/notes` を `packages/dashboard/public/notes` に復元する
-3. `pull_request` (`opened`, `reopened`, `synchronize`) で、その PR の note file を書き直して `gh-pages` に永続化する
-4. `main` push で、対応する PR note を `merged` に更新し、site を build / deploy する
-
-これで `main` を generated JSON で汚さずに、1 つの shared Dashboard から open / merged 両方の PR 履歴を見られます。
+<Aside type="tip">
+  GitHub Pages で公開する場合は、Pages workflow 側で `SITE` と `BASE` の repo 固有値を build 時に注入します。多くの repo では、example workflow をそのまま使えば `packages/dashboard` 側の追加調整は不要です。
+</Aside>
 
 ## 最初の deploy
 
@@ -82,4 +66,4 @@ brand-new repo でも最初の production deploy 前から Dashboard data 自体
 - `packages/dashboard/public/notes/*.json` が build 時に読む working bundle
 - `gh-pages/dashboard/notes/*.json` が shared 履歴の durable store
 
-repo 自体には sample Dashboard JSON を置きません。fresh な Dashboard は、workflow が note file を復元または生成するまで空のままです。
+repo 自体には sample Dashboard JSON を置きません。fresh な Dashboard は、workflow が note file を復元または生成するまで空のままです。多くの運用では `pull_request` で PR の note を更新し、`main` で merged 状態を公開します。

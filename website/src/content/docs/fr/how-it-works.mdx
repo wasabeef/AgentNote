@@ -86,30 +86,43 @@ Aucune commande supplémentaire n’est nécessaire lorsque les git hooks locaux
 
 ## Modes d’attribution
 
-Claude Code calcule l’auteur IA ligne par ligne via un algorithme de position basé sur 3 diffs :
-
-| Diff | De | Vers | Ce qui est capturé |
-|---|---|---|---|
-| diff1 | commit parent | fichier committed | Tous les changements de ce commit |
-| diff2 | avant l’édition IA | fichier committed | Édition IA + éditions humaines après |
-| diff3 | après l’édition IA | fichier committed | Éditions humaines uniquement |
-
-**Positions IA = positions de diff2 absentes de diff3**
-
-Les trois diffs ciblent le committed blob, donc les positions sont directement comparables.
+<CardGrid>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Claude Code</div>
+      <p>Line-level par défaut. Agent Note enregistre l’état du fichier avant et après chaque edit IA, puis retire du diff final les edits humains arrivés ensuite.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Codex CLI</div>
+      <p>Démarre en file-level. Passe en line-level uniquement si les comptes de patch du transcript correspondent au diff final du commit. Les edits shell-only restent du côté prudent, et un transcript illisible saute la création de la note.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <p>Démarre en file-level. Passe en line-level seulement lorsque `afterFileEdit` / `afterTabFileEdit` correspondent et que le blob final correspond encore au dernier edit IA.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+  <Card>
+    <div class="agent-attribution-card">
+      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <p>Enregistre prompt / response et attribution au niveau fichier via `BeforeTool` / `AfterTool` et le parsing du transcript. L’upgrade line-level n’est pas encore disponible.</p>
+      <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
+    </div>
+  </Card>
+</CardGrid>
 
 <Aside type="tip">
-  Les suppressions sont suivies séparément et ne sont attribuées ni à l’IA ni à l’humain. Quand les blob data sont indisponibles, Agent Note revient automatiquement à une attribution au niveau fichier.
+  Les listes de prompts viennent de la conversation causale autour du diff final, pas de tout l’historique de la session. En mode file-level, Agent Note garde uniquement le dernier chemin d’edit et le prompt-only context qui y mène.
 </Aside>
 
-Codex CLI utilise une attribution pilotée par transcript. Lorsque les comptes de lignes `apply_patch` du transcript correspondent au diff final du commit, Agent Note élève les commits Codex en `method: "line"`. Sinon, il revient à `method: "file"` pour éviter les faux positifs. Les éditions shell-only qui n’apparaissent jamais comme patch data dans le transcript restent du côté prudent : Agent Note peut conserver la paire prompt / response et les outils Codex observés, mais ne devine ni `files_touched` ni AI-authored files à partir d’étapes shell seules. Ces commits restent donc en `method: "file"` avec `0%` d’attribution IA, sauf si un autre signal primaire relie des fichiers à l’agent. Si le transcript ne peut pas être lu au moment du commit, Agent Note affiche un avertissement et ignore la création de la note au lieu d’enregistrer des données d’attribution incertaines.
-
-Cursor preview utilise les hooks `afterFileEdit` et `afterTabFileEdit` pour l’attribution. Quand leurs comptes d’édition correspondent et que le blob committed final correspond toujours à la dernière édition IA, Agent Note élève ces fichiers en `method: "line"` en toute sécurité. Sinon, il revient à `method: "file"`, tout en restaurant les paires prompt / response depuis les response hooks Cursor ou les transcripts locaux lorsqu’ils existent.
-
-Gemini CLI preview utilise les hooks `BeforeTool`/`AfterTool` sur les outils `write_file` et `replace` pour une attribution au niveau fichier. La détection du commit utilise le pattern pending-commit via `BeforeTool`/`AfterTool` sur `run_shell_command`. La récupération des prompts et réponses s’appuie sur les hooks `BeforeAgent`/`AfterAgent` et sur le parsing des transcripts JSONL.
-
-<Aside type="tip">
-  Les listes de prompts proviennent de la conversation causale autour du diff final, pas de tout l’historique de la session. Quand Agent Note retombe sur `method: "file"`, il ancre cette fenêtre sur le latest touch turn de chaque committed file et ne garde que le prompt-only context qui mène à ces edits finaux. Les same-file edits plus anciens et le follow-up chatter après l’edit restent dehors. Agent Note exclut aussi, dans la mesure du possible, les artefacts générés courants du dénominateur de `AI ratio`, notamment les sorties de build web, les registrants Flutter, le codegen Dart, les protobufs Go, les bindings Rust et les sources Swift / Kotlin générées.
+<Aside>
+  Les artefacts générés les plus courants sont exclus du dénominateur de `AI ratio` en best effort, notamment les sorties de build web, les registrants Flutter, le codegen Dart, les protobufs Go, les bindings Rust et les sources Swift / Kotlin générées.
 </Aside>
 
 ## Cycle de vie de la session

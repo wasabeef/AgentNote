@@ -52,25 +52,9 @@ For example:
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Deploy Config
-
-`packages/dashboard` keeps its local default at `/`, so your Pages workflow should inject repo-specific values at build time:
-
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
-
-That keeps the package generic while still producing the correct public URLs for each repository.
-
-## Recommended Flow
-
-1. Turn on `dashboard: true` in the GitHub Action.
-2. Restore `gh-pages/dashboard/notes` into `packages/dashboard/public/notes`.
-3. On `pull_request` (`opened`, `reopened`, `synchronize`), rewrite that PR's note files and persist them back to `gh-pages`.
-4. On `push` to `main`, mark matching PR notes as `merged`, rebuild the site, and deploy the shared Pages URL.
-
-This keeps `main` free of generated JSON while still letting one shared Dashboard show open and merged PR history.
+<Aside type="tip">
+  If you publish with GitHub Pages, your Pages workflow should inject repo-specific `SITE` and `BASE` values at build time. Most users can copy the example workflow and leave `packages/dashboard` itself untouched.
+</Aside>
 
 ## First Deploy
 
@@ -82,4 +66,4 @@ A brand-new repo can accumulate Dashboard note data before the first production 
 - `packages/dashboard/public/notes/*.json` is the working bundle used at build time
 - `gh-pages/dashboard/notes/*.json` is the durable store for shared history
 
-The repository does not ship sample Dashboard JSON. A fresh Dashboard stays empty until your workflow restores or generates note files.
+The repository does not ship sample Dashboard JSON. A fresh Dashboard stays empty until your workflow restores or generates note files. Most teams refresh PR notes on `pull_request` and publish the merged state on `main`.
