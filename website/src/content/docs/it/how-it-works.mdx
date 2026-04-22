@@ -3,16 +3,35 @@ title: Come funziona
 description: Come Agent Note cattura i dati di sessione dell'IA e li collega ai commit git.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Flusso dei dati
 
-<Steps>
-1. Invi un prompt al tuo coding agent → gli hook catturano il prompt
-2. L’agente scrive codice → hook o transcript tracciano i file toccati e i segnali di attribution
-3. Esegui `git commit` o `agent-note commit` → il trailer viene inserito e la note viene registrata
-4. Esegui `git push` → le notes vengono pushate automaticamente al remoto
-</Steps>
+<div class="agent-flow" role="img" aria-label="Flusso di Agent Note dal prompt alle git note condivise">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Chiedi al tuo coding agent</strong>
+    <p>Gli hook catturano il prompt e il turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>L’AI aggiorna i file</strong>
+    <p>Hook o transcript registrano file toccati e segnali di attribution.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>La note viene scritta</strong>
+    <p><code>git commit</code> o <code>agent-note commit</code> inserisce il trailer e scrive la git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Condividi insieme al codice</strong>
+    <p><code>git push</code> invia <code>refs/notes/agentnote</code> al remote.</p>
+  </div>
+</div>
 
 Non servono comandi aggiuntivi quando i git hook locali del repository sono installati. Cursor preview ripristina anche le coppie prompt / response dai response hook o dai transcript locali, e i suoi shell hook offrono un fallback quando i git hook non sono disponibili.
 

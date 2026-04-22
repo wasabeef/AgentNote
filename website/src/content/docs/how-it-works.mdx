@@ -3,16 +3,35 @@ title: How It Works
 description: How Agent Note captures AI session data and attaches it to git commits.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Data Flow
 
-<Steps>
-1. You prompt your coding agent → hooks capture the prompt
-2. The agent writes code → hooks or transcripts track files touched and attribution signals
-3. You run `git commit` or `agent-note commit` → trailer injected, note recorded
-4. You `git push` → notes auto-pushed to remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note flow from prompt to shared git notes">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Ask your coding agent</strong>
+    <p>Hooks capture the prompt and turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI changes files</strong>
+    <p>Hooks or transcripts record touched files and attribution signals.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>Record the note</strong>
+    <p><code>git commit</code> or <code>agent-note commit</code> injects the trailer and writes the git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Push notes with the code</strong>
+    <p><code>git push</code> sends <code>refs/notes/agentnote</code> to the remote.</p>
+  </div>
+</div>
 
 No extra commands are needed when the repo-local git hooks are installed. Cursor preview also restores prompt / response pairs from response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 

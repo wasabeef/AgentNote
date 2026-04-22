@@ -3,16 +3,35 @@ title: 동작 방식
 description: Agent Note 가 AI 세션 데이터를 수집해 git commit 에 연결하는 방식
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 데이터 흐름
 
-<Steps>
-1. coding agent 에 prompt 를 보냄 → hooks 가 prompt 를 수집
-2. agent 가 코드를 작성 → hooks 또는 transcripts 가 수정된 파일과 attribution signal 을 추적
-3. `git commit` 또는 `agent-note commit` 실행 → trailer 가 주입되고 note 가 기록됨
-4. `git push` 실행 → notes 가 remote 로 자동 push 됨
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note 가 prompt 부터 shared git notes 까지 이어지는 흐름">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>coding agent 에 요청한다</strong>
+    <p>hooks 가 prompt 와 turn id 를 기록합니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI 가 파일을 수정한다</strong>
+    <p>hooks 또는 transcripts 가 touched files 와 attribution signals 를 남깁니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>note 를 기록한다</strong>
+    <p><code>git commit</code> 또는 <code>agent-note commit</code> 이 trailer 를 넣고 git note 를 씁니다.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>코드와 함께 공유한다</strong>
+    <p><code>git push</code> 로 <code>refs/notes/agentnote</code> 를 remote 로 보냅니다.</p>
+  </div>
+</div>
 
 repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니다. Cursor preview 는 response hook 또는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없는 환경에서는 shell hook 이 fallback 경로를 제공합니다.
 

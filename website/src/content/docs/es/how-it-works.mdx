@@ -3,16 +3,35 @@ title: Cómo funciona
 description: Cómo Agent Note captura los datos de la sesión de IA y los adjunta a los commits de git.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Flujo de datos
 
-<Steps>
-1. Envías un prompt a tu coding agent → los hooks capturan el prompt
-2. El agente escribe código → los hooks o transcripts registran los archivos tocados y las señales de atribución
-3. Ejecutas `git commit` o `agent-note commit` → se inyecta el trailer y se registra la note
-4. Ejecutas `git push` → las notes se envían automáticamente al remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Flujo de Agent Note desde el prompt hasta las git notes compartidas">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Pide algo a tu coding agent</strong>
+    <p>Los hooks capturan el prompt y el turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>La IA cambia archivos</strong>
+    <p>Los hooks o transcripts registran archivos tocados y señales de attribution.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>Se registra la note</strong>
+    <p><code>git commit</code> o <code>agent-note commit</code> inyecta el trailer y escribe la git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Se comparte con el código</strong>
+    <p><code>git push</code> envía <code>refs/notes/agentnote</code> al remote.</p>
+  </div>
+</div>
 
 No hacen falta comandos extra cuando los git hooks locales del repositorio están instalados. Cursor preview también restaura pares prompt / response desde response hooks o transcripts locales, y sus shell hooks ofrecen una ruta fallback cuando los git hooks no están disponibles.
 

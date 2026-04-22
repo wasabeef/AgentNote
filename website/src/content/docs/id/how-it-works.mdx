@@ -3,16 +3,35 @@ title: Cara kerjanya
 description: Bagaimana Agent Note menangkap data sesi AI dan menempelkannya ke commit git.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Alur data
 
-<Steps>
-1. Anda mengirim prompt ke coding agent → hooks menangkap prompt tersebut
-2. Agent menulis kode → hooks atau transcript melacak file yang diubah dan sinyal attribution
-3. Anda menjalankan `git commit` atau `agent-note commit` → trailer disisipkan, note direkam
-4. Anda menjalankan `git push` → notes otomatis dipush ke remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Alur Agent Note dari prompt sampai git notes yang dibagikan">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Berikan tugas ke coding agent</strong>
+    <p>Hooks menangkap prompt dan turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI mengubah file</strong>
+    <p>Hooks atau transcript mencatat touched files dan sinyal attribution.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>Note direkam</strong>
+    <p><code>git commit</code> atau <code>agent-note commit</code> menyisipkan trailer dan menulis git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Bagikan bersama kode</strong>
+    <p><code>git push</code> mengirim <code>refs/notes/agentnote</code> ke remote.</p>
+  </div>
+</div>
 
 Tidak ada perintah tambahan yang dibutuhkan jika repo-local git hook sudah terpasang. Cursor preview juga memulihkan pasangan prompt / response dari response hook atau transcript lokal, dan shell hook-nya menyediakan jalur fallback saat git hook tidak tersedia.
 

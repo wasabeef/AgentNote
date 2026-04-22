@@ -3,16 +3,35 @@ title: Как это работает
 description: Как Agent Note собирает данные AI-сессии и привязывает их к git commit.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Поток данных
 
-<Steps>
-1. Вы отправляете prompt своему coding agent → hooks захватывают этот prompt
-2. Агент пишет код → hooks или transcripts отслеживают изменённые файлы и сигналы attribution
-3. Вы запускаете `git commit` или `agent-note commit` → вставляется trailer и записывается note
-4. Вы запускаете `git push` → notes автоматически отправляются в remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Поток Agent Note от prompt до общих git notes">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Попросите coding agent</strong>
+    <p>Hooks захватывают prompt и turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI меняет файлы</strong>
+    <p>Hooks или transcripts записывают затронутые файлы и сигналы attribution.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>Запишите note</strong>
+    <p><code>git commit</code> или <code>agent-note commit</code> вставляет trailer и пишет git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Поделитесь вместе с кодом</strong>
+    <p><code>git push</code> отправляет <code>refs/notes/agentnote</code> в remote.</p>
+  </div>
+</div>
 
 Если repo-local git hooks установлены, дополнительные команды не нужны. Cursor preview также восстанавливает пары prompt / response из response hooks или локальных transcripts, а его shell hooks дают fallback-путь, когда git hooks недоступны.
 

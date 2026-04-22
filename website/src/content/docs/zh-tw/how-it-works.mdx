@@ -3,16 +3,35 @@ title: 運作方式
 description: Agent Note 如何擷取 AI 工作階段資料，並把它附加到 git commit 上。
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## 資料流程
 
-<Steps>
-1. 你向 coding agent 送出 prompt → hooks 會擷取這個 prompt
-2. agent 撰寫程式碼 → hooks 或 transcripts 會追蹤被修改的檔案與 attribution signals
-3. 你執行 `git commit` 或 `agent-note commit` → 會注入 trailer 並記錄 note
-4. 你執行 `git push` → notes 會自動推送到 remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note 從 prompt 到共享 git notes 的流程">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>向 coding agent 送出請求</strong>
+    <p>hooks 會記錄 prompt 與 turn id。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI 更新檔案</strong>
+    <p>hooks 或 transcripts 會記錄 touched files 與 attribution signals。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>寫入 note</strong>
+    <p><code>git commit</code> 或 <code>agent-note commit</code> 會注入 trailer 並寫入 git note。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>隨程式碼共享</strong>
+    <p><code>git push</code> 會把 <code>refs/notes/agentnote</code> 傳送到 remote。</p>
+  </div>
+</div>
 
 只要 repo-local git hooks 已安裝，就不需要額外命令。Cursor preview 也能從 response hooks 或本機 transcripts 還原 prompt / response 配對；當 git hooks 無法使用時，它的 shell hooks 也會提供 fallback 路徑。
 

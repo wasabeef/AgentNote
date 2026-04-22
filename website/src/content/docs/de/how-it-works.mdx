@@ -3,16 +3,35 @@ title: Wie es funktioniert
 description: Wie Agent Note KI-Sitzungsdaten erfasst und an Git-Commits anhängt.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Datenfluss
 
-<Steps>
-1. Du schickst deinem Coding-Agent einen Prompt → Hooks erfassen den Prompt
-2. Der Agent schreibt Code → Hooks oder Transcripts erfassen berührte Dateien und Attribution-Signale
-3. Du führst `git commit` oder `agent-note commit` aus → Trailer wird eingefügt, Note wird geschrieben
-4. Du führst `git push` aus → Notes werden automatisch zum Remote gepusht
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note Ablauf vom Prompt bis zu geteilten Git Notes">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Frag deinen Coding-Agent</strong>
+    <p>Hooks erfassen den Prompt und die Turn-ID.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>Die KI ändert Dateien</strong>
+    <p>Hooks oder Transcripts protokollieren berührte Dateien und Attribution-Signale.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>Die Note wird geschrieben</strong>
+    <p><code>git commit</code> oder <code>agent-note commit</code> fügt den Trailer ein und schreibt die Git-Note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Mit dem Code teilen</strong>
+    <p><code>git push</code> sendet <code>refs/notes/agentnote</code> an das Remote.</p>
+  </div>
+</div>
 
 Wenn die repo-lokalen Git-Hooks installiert sind, sind keine zusätzlichen Befehle nötig. Cursor preview stellt Prompt-/Response-Paare auch aus Response-Hooks oder lokalen Transcripts wieder her, und seine Shell-Hooks bieten einen Fallback, wenn Git-Hooks nicht verfügbar sind.
 

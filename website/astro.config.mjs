@@ -69,8 +69,8 @@ export default defineConfig({
           label: "Basics",
           items: [
             { slug: "getting-started" },
-            { slug: "how-it-works" },
             { slug: "commands" },
+            { slug: "how-it-works" },
           ],
         },
         {

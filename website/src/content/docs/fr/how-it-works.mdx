@@ -3,16 +3,35 @@ title: Fonctionnement
 description: Comment Agent Note capture les données de session IA et les attache aux commits git.
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Flux de données
 
-<Steps>
-1. Vous envoyez un prompt à votre coding agent → les hooks capturent le prompt
-2. L’agent écrit du code → les hooks ou transcripts suivent les fichiers touchés et les signaux d’attribution
-3. Vous lancez `git commit` ou `agent-note commit` → le trailer est injecté, la note est enregistrée
-4. Vous lancez `git push` → les notes sont automatiquement poussées vers le remote
-</Steps>
+<div class="agent-flow" role="img" aria-label="Flux Agent Note du prompt jusqu’aux git notes partagées">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>Demandez à votre coding agent</strong>
+    <p>Les hooks capturent le prompt et le turn id.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>L’IA modifie les fichiers</strong>
+    <p>Les hooks ou transcripts enregistrent les fichiers touchés et les signaux d’attribution.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>La note est enregistrée</strong>
+    <p><code>git commit</code> ou <code>agent-note commit</code> injecte le trailer et écrit la git note.</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>Partagez avec le code</strong>
+    <p><code>git push</code> envoie <code>refs/notes/agentnote</code> vers le remote.</p>
+  </div>
+</div>
 
 Aucune commande supplémentaire n’est nécessaire lorsque les git hooks locaux au dépôt sont installés. Cursor preview restaure aussi les paires prompt / response à partir des response hooks ou des transcripts locaux, et ses shell hooks offrent un fallback quand les git hooks sont indisponibles.
 

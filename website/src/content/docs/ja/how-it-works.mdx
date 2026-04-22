@@ -3,16 +3,35 @@ title: 仕組み
 description: Agent Note が AI セッションデータを git コミットに紐づける仕組み
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## データの流れ
 
-<Steps>
-1. 対応エージェントにプロンプトを送る → フックがプロンプトを記録
-2. エージェントがコードを書く → フックまたは transcript が変更ファイルと著作判定用の情報を記録
-3. `git commit` または `agent-note commit` を実行 → トレーラーが挿入され、note が記録される
-4. `git push` を実行 → notes が自動的にリモートに push される
-</Steps>
+<div class="agent-flow" role="img" aria-label="Agent Note が prompt から git note 共有まで進む流れ">
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">1. Prompt</span>
+    <strong>エージェントに依頼する</strong>
+    <p>hook が prompt と turn id を記録します。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">2. Edit</span>
+    <strong>AI がファイルを更新する</strong>
+    <p>hook または transcript が touched files と attribution signals を残します。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">3. Commit</span>
+    <strong>note を記録する</strong>
+    <p><code>git commit</code> または <code>agent-note commit</code> で trailer を差し込み、git note を書き込みます。</p>
+  </div>
+  <div class="agent-flow__arrow" aria-hidden="true">→</div>
+  <div class="agent-flow__step">
+    <span class="agent-flow__label">4. Share</span>
+    <strong>コードと一緒に共有する</strong>
+    <p><code>git push</code> で <code>refs/notes/agentnote</code> を remote に送ります。</p>
+  </div>
+</div>
 
 生成された repo-local git hook が入っていれば、特別なコマンドは不要です。Cursor preview では response hook または local transcript があれば prompt / response を復元でき、git hook が使えない環境では Cursor shell hook が fallback として働きます。
 
