@@ -28,19 +28,23 @@ Dashboard 會給團隊一個共享 URL，用來查看 Agent Note 的歷史記錄
 
 ## 快速設定
 
-先讓 Action 為每個 PR 寫出 Dashboard 檔案：
+1. Run Dashboard setup once.
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-這會為目前的 PR 建立或更新 `packages/dashboard/public/notes/*.json`。之後由你的 Pages workflow 負責還原、保存與發佈這些檔案。
+2. Commit both workflow files.
+
+```bash
+git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
+git commit -m "chore: enable agent-note dashboard"
+git push
+```
+
+3. In GitHub Pages, choose **GitHub Actions** as the source.
+
+The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
 
 ## 公開 URL
 
@@ -58,12 +62,12 @@ Dashboard 會給團隊一個共享 URL，用來查看 Agent Note 的歷史記錄
 
 ## 第一次部署
 
-即使是全新的 repo，也能在第一次 production deploy 之前先累積 Dashboard 資料。公開的 Pages URL 則要等第一次部署到 `main` 之後才會出現。
+即使是全新的 repo，也能在第一次 production deploy 之前先累積 Dashboard 資料。公開的 Pages URL 則要等第一次部署到 `default branch` 之後才會出現。
 
 ## 運作方式
 
-- `packages/dashboard/` 是用來顯示 Dashboard 的 Astro 應用
-- `packages/dashboard/public/notes/*.json` 是 build 時讀取的 bundle
-- `gh-pages/dashboard/notes/*.json` 是共享歷史的持久儲存
+- `refs/notes/agentnote` remains the source of truth
+- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
+- GitHub Pages serves the built Dashboard at `/dashboard/`
 
-repo 本身不包含 Dashboard 的範例 JSON。新的 Dashboard 會保持為空，直到 workflow 還原或產生 note files。很多團隊會在 `pull_request` 時更新 PR notes，再從 `main` 發佈 merged 狀態。
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.

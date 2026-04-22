@@ -7,13 +7,20 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Schnellstart
 
-Nutze einfach den Workflow, den `agent-note init` anlegt:
+Run this once in your repository:
+
+```bash
+npx agent-note init --agent claude
+```
+
+That creates the PR report workflow for you:
 
 ```yaml
-name: Agent Note
+# .github/workflows/agentnote-pr-report.yml
+name: Agent Note PR Report
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 permissions:
   contents: read
   pull-requests: write
@@ -21,13 +28,19 @@ jobs:
   report:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
       - uses: wasabeef/AgentNote@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Das reicht. Jede PR bekommt automatisch einen KI-Sitzungsbericht.
+That's it. Every PR gets an AI session report.
 
 ## Eingaben
 
@@ -35,22 +48,15 @@ Das reicht. Jede PR bekommt automatisch einen KI-Sitzungsbericht.
 |---|---|---|
 | `base` | Basis-Branch der PR | Branch, gegen den verglichen wird |
 | `pr_output` | `description` | Ziel des PR-Berichts: `description`, `comment` oder `none` |
-| `dashboard` | `false` | Schreibt zusätzlich Dashboard-Dateien für die aktuelle PR |
 
-### PR-Beschreibung und Dashboard zusammen nutzen
+## Dashboard
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
 <Aside type="tip">
-  Aktiviere `dashboard: true` nur, wenn du auch das gemeinsame Dashboard nutzen willst. Wie Bundle-Dateien, Pages-Sync und Deploy zusammenspielen, erklärt die Seite <a href="./dashboard/">Dashboard</a>.
+  This also adds `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard setup.
 </Aside>
 
 ## Ausgaben
@@ -64,7 +70,6 @@ Das reicht. Jede PR bekommt automatisch einen KI-Sitzungsbericht.
 | `total_prompts` | number | Gesamtzahl der Prompts über alle Commits |
 | `json` | string | Vollständiger strukturierter Bericht |
 | `markdown` | string | Gerenderter Markdown-Bericht |
-| `dashboard_commits` | number | Anzahl der ins Dashboard-Bundle geschriebenen tracked Commits |
 
 ## Bericht
 

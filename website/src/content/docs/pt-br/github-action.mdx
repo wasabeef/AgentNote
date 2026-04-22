@@ -7,13 +7,20 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Configuração rápida
 
-Use o workflow criado por `agent-note init`:
+Run this once in your repository:
+
+```bash
+npx agent-note init --agent claude
+```
+
+That creates the PR report workflow for you:
 
 ```yaml
-name: Agent Note
+# .github/workflows/agentnote-pr-report.yml
+name: Agent Note PR Report
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 permissions:
   contents: read
   pull-requests: write
@@ -21,13 +28,19 @@ jobs:
   report:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
       - uses: wasabeef/AgentNote@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Isso basta. Cada PR recebe automaticamente um relatório de sessão de IA.
+That's it. Every PR gets an AI session report.
 
 ## Inputs
 
@@ -35,22 +48,15 @@ Isso basta. Cada PR recebe automaticamente um relatório de sessão de IA.
 |---|---|---|
 | `base` | Branch base da PR | Branch usada para comparação |
 | `pr_output` | `description` | Destino do relatório da PR: `description`, `comment` ou `none` |
-| `dashboard` | `false` | Também grava os arquivos do Dashboard para a PR atual |
 
-### Usar PR Description e Dashboard ao mesmo tempo
+## Dashboard
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
 <Aside type="tip">
-  Ative `dashboard: true` apenas se você também quiser o Dashboard compartilhado. A página <a href="./dashboard/">Dashboard</a> explica como bundle, sync com Pages e deploy funcionam juntos.
+  This also adds `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard setup.
 </Aside>
 
 ## Outputs
@@ -64,7 +70,6 @@ Isso basta. Cada PR recebe automaticamente um relatório de sessão de IA.
 | `total_prompts` | number | Número total de prompts em todos os commits |
 | `json` | string | Relatório estruturado completo |
 | `markdown` | string | Relatório em Markdown já renderizado |
-| `dashboard_commits` | number | Número de tracked commits escritos no bundle do Dashboard |
 
 ## O que o relatório inclui
 

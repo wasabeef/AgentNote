@@ -28,19 +28,23 @@ Dashboard は web の共有画面が必要なときだけ使います。
 
 ## クイックセットアップ
 
-まずは Action 側で、PR ごとの Dashboard bundle を書き出せるようにします。
+1. まずは 1 回だけ次を実行します。
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-これで現在の PR に対して `packages/dashboard/public/notes/*.json` が作成・更新されます。復元、保存、公開は Pages workflow 側で行います。
+2. 生成された 2 本の workflow をコミットします。
+
+```bash
+git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
+git commit -m "chore: enable agent-note dashboard"
+git push
+```
+
+3. GitHub の Pages 設定で、公開元に **GitHub Actions** を選びます。
+
+生成された Dashboard workflow が `gh-pages` から note data を復元し、`refs/notes/agentnote` から更新して、共有用の `/dashboard/` を公開します。
 
 ## 公開 URL
 
@@ -52,18 +56,14 @@ Dashboard は web の共有画面が必要なときだけ使います。
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-<Aside type="tip">
-  GitHub Pages で公開する場合は、Pages workflow 側で `SITE` と `BASE` の repo 固有値を build 時に渡します。多くの repo では example workflow をそのまま使えます。
-</Aside>
-
 ## 最初の deploy
 
-brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL ができるのは最初の `main` deploy 後です。
+brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL ができるのは最初の `default branch` deploy 後です。
 
 ## 仕組み
 
-- `packages/dashboard/` が Astro 製の閲覧アプリ
-- `packages/dashboard/public/notes/*.json` が build 時に読む bundle
-- `gh-pages/dashboard/notes/*.json` が共有履歴を残す永続保存先
+- `refs/notes/agentnote` が source of truth のまま残ります
+- 生成された Dashboard workflow が `gh-pages/dashboard/notes/*.json` を共有用の保存先として更新します
+- GitHub Pages が `/dashboard/` で build 済み Dashboard を配信します
 
-repo 自体には sample Dashboard JSON を置きません。fresh な Dashboard は、workflow が note file を復元または生成するまで空です。多くの運用では `pull_request` で PR の note を更新し、`main` で merged 状態を公開します。
+repo 自体には sample Dashboard JSON をコミットしません。fresh な Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で open な履歴を更新し、`default branch` で merged 状態を公開します。
