@@ -29934,6 +29934,8 @@ exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
+exports.resolveDashboardUrl = resolveDashboardUrl;
+exports.withDashboardLink = withDashboardLink;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -29997,6 +29999,37 @@ function buildPrReportCommand(cliCmd, base, headSha, options) {
     const headArg = headSha ? ` --head "${headSha}"` : "";
     const jsonArg = options?.json ? " --json" : "";
     return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
+}
+function ensureTrailingSlash(url) {
+    return url.endsWith("/") ? url : `${url}/`;
+}
+/**
+ * Resolve the public dashboard URL used in PR descriptions.
+ * Only use an explicit input so we do not emit a broken link before the
+ * dashboard has actually been deployed.
+ */
+function resolveDashboardUrl(dashboardUrlInput) {
+    const explicit = dashboardUrlInput.trim();
+    return explicit ? ensureTrailingSlash(explicit) : "";
+}
+/**
+ * Insert a dashboard link near the top of the rendered PR report.
+ */
+function withDashboardLink(markdown, dashboardUrl) {
+    if (!markdown.trim())
+        return markdown;
+    const linkLine = `🔎 [Open dashboard](${ensureTrailingSlash(dashboardUrl)})`;
+    const lines = markdown.split("\n");
+    const headingIndex = lines.findIndex((line) => line.startsWith("## "));
+    if (headingIndex === -1) {
+        return `${linkLine}\n\n${markdown}`;
+    }
+    let insertIndex = headingIndex + 1;
+    if (lines[insertIndex] === "") {
+        insertIndex += 1;
+    }
+    lines.splice(insertIndex, 0, linkLine, "");
+    return lines.join("\n");
 }
 
 
@@ -30230,6 +30263,7 @@ async function run() {
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"), core.getInput("output"), core.getInput("comment"));
         const dashboardEnabled = isEnabled(core.getInput("dashboard"));
         const dashboardDirInput = core.getInput("dashboard_dir") || "packages/dashboard/public";
+        const dashboardUrlInput = core.getInput("dashboard_url");
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30276,16 +30310,30 @@ async function run() {
         catch {
             markdown = "";
         }
-        core.setOutput("markdown", markdown);
+        // Keep PR descriptions text-only for now.
+        // The action runs against consumer repositories, so there is no stable
+        // public image URL we can rely on for model icons until those assets are
+        // published from a public host.
+        const reportModel = typeof report.model === "string" ? report.model.trim() : "";
+        void reportModel;
         let dashboardCommits = 0;
         let dashboardDir = "";
+        let dashboardUrl = "";
         if (dashboardEnabled) {
             const result = await writeDashboardBundle(report, dashboardDirInput);
             dashboardCommits = result.commits;
             dashboardDir = result.dir;
+            if (dashboardCommits > 0 && dashboardUrlInput.trim()) {
+                dashboardUrl = (0, helpers_js_1.resolveDashboardUrl)(dashboardUrlInput);
+            }
         }
+        if (dashboardUrl) {
+            markdown = (0, helpers_js_1.withDashboardLink)(markdown, dashboardUrl);
+        }
+        core.setOutput("markdown", markdown);
         core.setOutput("dashboard_dir", dashboardDir);
         core.setOutput("dashboard_commits", String(dashboardCommits));
+        core.setOutput("dashboard_url", dashboardUrl);
         await postPrReport(prOutputMode, markdown);
     }
     catch (error) {

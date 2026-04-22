@@ -94,3 +94,40 @@ export function buildPrReportCommand(
 	const jsonArg = options?.json ? " --json" : "";
 	return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
 }
+
+function ensureTrailingSlash(url: string): string {
+	return url.endsWith("/") ? url : `${url}/`;
+}
+
+/**
+ * Resolve the public dashboard URL used in PR descriptions.
+ * Only use an explicit input so we do not emit a broken link before the
+ * dashboard has actually been deployed.
+ */
+export function resolveDashboardUrl(dashboardUrlInput: string): string {
+	const explicit = dashboardUrlInput.trim();
+	return explicit ? ensureTrailingSlash(explicit) : "";
+}
+
+/**
+ * Insert a dashboard link near the top of the rendered PR report.
+ */
+export function withDashboardLink(markdown: string, dashboardUrl: string): string {
+	if (!markdown.trim()) return markdown;
+
+	const linkLine = `🔎 [Open dashboard](${ensureTrailingSlash(dashboardUrl)})`;
+	const lines = markdown.split("\n");
+	const headingIndex = lines.findIndex((line) => line.startsWith("## "));
+
+	if (headingIndex === -1) {
+		return `${linkLine}\n\n${markdown}`;
+	}
+
+	let insertIndex = headingIndex + 1;
+	if (lines[insertIndex] === "") {
+		insertIndex += 1;
+	}
+
+	lines.splice(insertIndex, 0, linkLine, "");
+	return lines.join("\n");
+}

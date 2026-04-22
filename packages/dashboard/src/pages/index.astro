@@ -870,10 +870,11 @@ const dashboardIndex = buildDashboardIndex();
         border-color: rgba(148, 163, 184, 0.35);
         box-shadow: 0 8px 20px rgba(2, 6, 23, 0.35);
       }
-      .avatar.ai-icon svg {
+      .avatar.ai-icon img {
         display: block;
         width: 100%;
         height: 100%;
+        object-fit: cover;
       }
       .avatar-inline {
         width: 18px;
@@ -1571,47 +1572,11 @@ const dashboardIndex = buildDashboardIndex();
         gemini: "Gemini",
         codex: "OpenAI Codex",
       };
-      const AGENT_SVGS = {
-        claude: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="32" height="32" rx="10" fill="#05070D"/>
-          <path fill="#D87A56" d="M8 10h16v3h3v9h-3v3h-1v4h-2v-4h-3v4h-2v-4h-4v4h-2v-4H9v-3H6v-9h2z"/>
-          <rect x="11" y="14" width="2.2" height="4.2" fill="#05070D"/>
-          <rect x="18.8" y="14" width="2.2" height="4.2" fill="#05070D"/>
-        </svg>`,
-        cursor: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="32" height="32" rx="10" fill="#05070D"/>
-          <path d="M16 4.5 26 10.7V21.3L16 27.5 6 21.3V10.7L16 4.5Z" fill="#F8FAFC"/>
-          <path d="M8.7 11.6H23.5L16.6 23.5V16.8L8.7 11.6Z" fill="#05070D"/>
-        </svg>`,
-        gemini: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="gemini-a" x1="4.5" y1="16" x2="27.5" y2="16" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#FACC15"/>
-              <stop offset="0.52" stop-color="#14B8A6"/>
-              <stop offset="1" stop-color="#3B82F6"/>
-            </linearGradient>
-            <linearGradient id="gemini-b" x1="16" y1="4.5" x2="16" y2="27.5" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#FF4D5A"/>
-              <stop offset="0.58" stop-color="#3B82F6" stop-opacity="0"/>
-              <stop offset="1" stop-color="#22C55E"/>
-            </linearGradient>
-          </defs>
-          <rect width="32" height="32" rx="10" fill="#F8FAFC"/>
-          <path d="M16 4.5C17.6 10.5 21.5 14.4 27.5 16C21.5 17.6 17.6 21.5 16 27.5C14.4 21.5 10.5 17.6 4.5 16C10.5 14.4 14.4 10.5 16 4.5Z" fill="url(#gemini-a)"/>
-          <path d="M16 4.5C17.6 10.5 21.5 14.4 27.5 16C21.5 17.6 17.6 21.5 16 27.5C14.4 21.5 10.5 17.6 4.5 16C10.5 14.4 14.4 10.5 16 4.5Z" fill="url(#gemini-b)" fill-opacity="0.9"/>
-        </svg>`,
-        codex: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="32" height="32" rx="10" fill="#05070D"/>
-          <g fill="#F8FAFC" transform="translate(16 16)">
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(0)"/>
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(60)"/>
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(120)"/>
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(180)"/>
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(240)"/>
-            <rect x="-3" y="-11.5" width="6" height="13" rx="3" transform="rotate(300)"/>
-          </g>
-          <polygon points="16,11.2 20.1,13.6 20.1,18.4 16,20.8 11.9,18.4 11.9,13.6" fill="#05070D"/>
-        </svg>`,
+      const AGENT_ICON_PATHS = {
+        claude: `${baseUrl}/model-icons/claude.png`.replace(/\/+/g, "/"),
+        cursor: `${baseUrl}/model-icons/cursor.png`.replace(/\/+/g, "/"),
+        gemini: `${baseUrl}/model-icons/gemini.png`.replace(/\/+/g, "/"),
+        codex: `${baseUrl}/model-icons/codex.png`.replace(/\/+/g, "/"),
       };
       function normalizeAgentKey(...parts) {
         const text = parts
@@ -1640,8 +1605,7 @@ const dashboardIndex = buildDashboardIndex();
           className: "avatar ai-icon" + compactClass,
           title: label,
           "aria-label": label,
-          html: AGENT_SVGS[key],
-        });
+        }, h("img", { src: AGENT_ICON_PATHS[key], alt: label, loading: "lazy", decoding: "async" }));
       }
       function formatDate(iso) {
         if (!iso) return "";

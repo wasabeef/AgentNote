@@ -38,6 +38,7 @@ That's it. Every PR gets an AI session report.
 | `pr_output` | `description` | PR report destination: `description`, `comment`, or `none` |
 | `dashboard` | `false` | Write/update dashboard snapshot files for the current PR |
 | `dashboard_dir` | `packages/dashboard/public` | Parent directory where `notes/*.json` will be written |
+| `dashboard_url` | — | Public dashboard URL to link from the PR report after the dashboard is already deployed |
 | `output` | — | Legacy alias for `pr_output` (`description` or `comment`) |
 | `comment` | `true` | Legacy: set to `false` to disable PR report posting |
 
@@ -60,11 +61,13 @@ That's it. Every PR gets an AI session report.
     pr_output: description
     dashboard: true
     dashboard_dir: packages/dashboard/public
+    # Optional. Set this only after the dashboard is publicly available.
+    dashboard_url: https://docs.example.com/dashboard/
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Use `packages/dashboard/public` as the parent directory; the action creates or updates `packages/dashboard/public/notes/*.json`.
+Use `packages/dashboard/public` as the parent directory; the action creates or updates `packages/dashboard/public/notes/*.json`. When dashboard notes were written, the PR report can also add an `Open dashboard` link near the top if you explicitly provide `dashboard_url`.
 
 ## Outputs
 
@@ -79,6 +82,7 @@ Use `packages/dashboard/public` as the parent directory; the action creates or u
 | `markdown` | string | Rendered markdown report |
 | `dashboard_dir` | string | Directory where the dashboard bundle was written |
 | `dashboard_commits` | number | Number of tracked commits written to the dashboard bundle |
+| `dashboard_url` | string | Public dashboard URL linked from the PR report when explicitly configured |
 
 ### Use outputs in workflow
 
@@ -95,8 +99,9 @@ Use `packages/dashboard/public` as the parent directory; the action creates or u
 
 The PR report includes:
 
-- **Header** — AI ratio with progress bar, line counts, commit count, prompts, model
-- **Table** — per-commit AI ratio, line counts, prompts, files with attribution
+- **Header** — `Total AI Ratio` with a progress bar, plus a separate plain-text `Model` line
+- **Dashboard link** — added only when the action writes dashboard notes and you explicitly configure `dashboard_url`
+- **Table** — per-commit AI ratio, prompt count, and files with attribution
 - **Prompts** — collapsible section with per-commit prompt/response pairs
 
 <Aside type="tip">
