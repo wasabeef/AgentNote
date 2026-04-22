@@ -29936,8 +29936,6 @@ exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
 exports.resolveDashboardUrl = resolveDashboardUrl;
 exports.withDashboardLink = withDashboardLink;
-exports.resolveModelIconUrl = resolveModelIconUrl;
-exports.withModelIcon = withModelIcon;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -30032,48 +30030,6 @@ function withDashboardLink(markdown, dashboardUrl) {
     }
     lines.splice(insertIndex, 0, linkLine, "");
     return lines.join("\n");
-}
-function normalizeModelIconKey(model) {
-    const text = model.trim().toLowerCase();
-    if (!text)
-        return null;
-    if (text.includes("claude") || text.includes("anthropic"))
-        return "claude";
-    if (text.includes("cursor"))
-        return "cursor";
-    if (text.includes("gemini"))
-        return "gemini";
-    if (text.includes("codex") ||
-        text.includes("openai") ||
-        text.includes("chatgpt") ||
-        /\bgpt\b/.test(text)) {
-        return "codex";
-    }
-    return null;
-}
-/**
- * Resolve a raw GitHub URL for a shared model icon so PR descriptions can
- * render it without depending on dashboard deployment.
- */
-function resolveModelIconUrl(model, repositoryFullName, ref) {
-    const key = normalizeModelIconKey(model);
-    if (!key)
-        return "";
-    if (!repositoryFullName.trim() || !ref.trim())
-        return "";
-    return `https://raw.githubusercontent.com/${repositoryFullName}/${ref}/packages/dashboard/public/model-icons/${key}.png`;
-}
-/**
- * Replace the plain Model line with an inline icon + model label.
- */
-function withModelIcon(markdown, model, iconUrl) {
-    if (!markdown.trim() || !model.trim() || !iconUrl.trim())
-        return markdown;
-    const modelLine = `Model: \`${model}\``;
-    const iconLine = `Model: <img src="${iconUrl}" alt="${model}" width="16" height="16"> \`${model}\``;
-    return markdown.includes(modelLine)
-        ? markdown.replace(modelLine, iconLine)
-        : markdown;
 }
 
 
@@ -30354,11 +30310,12 @@ async function run() {
         catch {
             markdown = "";
         }
+        // Keep PR descriptions text-only for now.
+        // The action runs against consumer repositories, so there is no stable
+        // public image URL we can rely on for model icons until those assets are
+        // published from a public host.
         const reportModel = typeof report.model === "string" ? report.model.trim() : "";
-        if (reportModel) {
-            const iconRef = headSha || github.context.sha;
-            markdown = (0, helpers_js_1.withModelIcon)(markdown, reportModel, (0, helpers_js_1.resolveModelIconUrl)(reportModel, `${github.context.repo.owner}/${github.context.repo.repo}`, iconRef));
-        }
+        void reportModel;
         let dashboardCommits = 0;
         let dashboardDir = "";
         let dashboardUrl = "";

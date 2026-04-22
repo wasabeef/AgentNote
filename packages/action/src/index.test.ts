@@ -5,14 +5,12 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
-	resolveModelIconUrl,
 	resolveDashboardUrl,
 	resolvePrOutputMode,
 	resolveOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
 	withDashboardLink,
-	withModelIcon,
 } from "./helpers.js";
 
 describe("resolveOutputMode", () => {
@@ -195,48 +193,6 @@ describe("withDashboardLink", () => {
 		assert.ok(
 			result.includes(
 				"## 🧑💬🤖 Agent Note\n\n🔎 [Open dashboard](https://wasabeef.github.io/AgentNote/dashboard/)\n\n**Total AI Ratio:** 100% ████████",
-			),
-		);
-	});
-});
-
-describe("resolveModelIconUrl", () => {
-	it("returns a raw GitHub asset url for supported model families", () => {
-		const iconUrl = resolveModelIconUrl(
-			"gpt-5.4",
-			"wasabeef/AgentNote",
-			"abc1234",
-		);
-		assert.equal(
-			iconUrl,
-			"https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png",
-		);
-	});
-
-	it("returns an empty string for unknown model families", () => {
-		assert.equal(
-			resolveModelIconUrl("mystery-model", "wasabeef/AgentNote", "abc1234"),
-			"",
-		);
-	});
-
-	it("returns an empty string when repo or ref is missing", () => {
-		assert.equal(resolveModelIconUrl("gpt-5.4", "", "abc1234"), "");
-		assert.equal(resolveModelIconUrl("gpt-5.4", "wasabeef/AgentNote", ""), "");
-	});
-});
-
-describe("withModelIcon", () => {
-	it("replaces the plain model line with an inline image", () => {
-		const result = withModelIcon(
-			["## 🧑💬🤖 Agent Note", "", "Model: `gpt-5.4`"].join("\n"),
-			"gpt-5.4",
-			"https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png",
-		);
-
-		assert.ok(
-			result.includes(
-				'Model: <img src="https://raw.githubusercontent.com/wasabeef/AgentNote/abc1234/packages/dashboard/public/model-icons/codex.png" alt="gpt-5.4" width="16" height="16"> `gpt-5.4`',
 			),
 		);
 	});

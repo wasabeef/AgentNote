@@ -7,13 +7,11 @@ import { join, resolve } from "path";
 import {
 	buildPrReportCommand,
 	COMMENT_MARKER,
-	resolveModelIconUrl,
 	resolveDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
 	withDashboardLink,
-	withModelIcon,
 } from "./helpers.js";
 
 type PrOutputMode = "description" | "comment" | "none";
@@ -300,20 +298,13 @@ async function run(): Promise<void> {
 		} catch {
 			markdown = "";
 		}
+		// Keep PR descriptions text-only for now.
+		// The action runs against consumer repositories, so there is no stable
+		// public image URL we can rely on for model icons until those assets are
+		// published from a public host.
 		const reportModel =
 			typeof report.model === "string" ? report.model.trim() : "";
-		if (reportModel) {
-			const iconRef = headSha || github.context.sha;
-			markdown = withModelIcon(
-				markdown,
-				reportModel,
-				resolveModelIconUrl(
-					reportModel,
-					`${github.context.repo.owner}/${github.context.repo.repo}`,
-					iconRef,
-				),
-			);
-		}
+		void reportModel;
 
 		let dashboardCommits = 0;
 		let dashboardDir = "";
