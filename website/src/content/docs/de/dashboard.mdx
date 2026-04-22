@@ -1,0 +1,90 @@
+---
+title: Dashboard
+description: Veröffentliche das gemeinsame Agent Note Dashboard mit GitHub Pages.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<div style="margin: 0 0 2rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
+## Was du bekommst
+
+Das Dashboard gibt deinem Team eine gemeinsame URL für Agent Note Verlauf.
+
+- Offene und gemergte PR-Verläufe an einem Ort
+- Commits, Prompts und Attribution ohne jede PR einzeln zu öffnen
+- Eine gemeinsame GitHub Pages URL, meist unter `/dashboard/`
+
+Nutze es, wenn der PR Report nicht mehr reicht und du eine teamweite Ansicht brauchst.
+
+## Vor dem Start
+
+Du brauchst das Dashboard nur, wenn du eine gemeinsame Web-Ansicht willst.
+
+- Wenn AI session reports direkt in Pull Requests ausreichen, bleib bei [GitHub Action](./github-action/).
+- Wenn du eine gemeinsame Pages Ansicht für offene und gemergte Historie willst, geht es hier weiter.
+
+## Quick Setup
+
+Aktiviere zuerst in der Action die Ausgabe der Dashboard-Bundles pro PR:
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Dadurch werden für die aktuelle PR `packages/dashboard/public/notes/*.json` erstellt oder aktualisiert. Dein Pages workflow stellt diese Dateien dann wieder her, persistiert sie und veröffentlicht sie.
+
+<Aside type="tip">
+  `dashboard_url` ist optional. Setze ihn erst, wenn das Dashboard bereits öffentlich erreichbar ist, damit der PR Report nicht auf einen toten Link zeigt.
+</Aside>
+
+## Öffentliche URL
+
+Typischerweise wird das Dashboard hier veröffentlicht:
+
+- `https://<owner>.github.io/<repo>/dashboard/`
+
+Zum Beispiel:
+
+- `https://wasabeef.github.io/AgentNote/dashboard/`
+
+## Deploy Konfiguration
+
+`packages/dashboard` behält lokal den Default `/`. Deshalb sollte dein Pages workflow beim Build repo-spezifische Werte setzen:
+
+- `SITE=https://<owner>.github.io`
+- `BASE=/<repo>/dashboard`
+- `PUBLIC_REPO=<owner>/<repo>`
+- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
+
+So bleibt das Package generisch und erzeugt trotzdem die richtigen öffentlichen URLs pro Repository.
+
+## Empfohlener Ablauf
+
+1. Aktiviere `dashboard: true` in der GitHub Action.
+2. Stelle `gh-pages/dashboard/notes` nach `packages/dashboard/public/notes` wieder her.
+3. Bei `pull_request` (`opened`, `reopened`, `synchronize`) schreibe die Note-Dateien dieser PR neu und persistiere sie zurück nach `gh-pages`.
+4. Bei `push` auf `main` markiere passende PR Notes als `merged`, baue die Site neu und deploye die gemeinsame Pages URL.
+
+So bleibt `main` frei von generiertem JSON, während ein gemeinsames Dashboard trotzdem offene und gemergte PR-Historie anzeigen kann.
+
+## Erstes Deploy
+
+Ein brandneues Repo kann bereits Dashboard-Daten sammeln, bevor das erste Production Deploy passiert. Die öffentliche Pages URL erscheint aber erst nach dem ersten Deploy von `main`.
+
+## Wie es funktioniert
+
+- `packages/dashboard/` ist die interaktive Astro App
+- `packages/dashboard/public/notes/*.json` ist das Working Bundle zur Build-Zeit
+- `gh-pages/dashboard/notes/*.json` ist der dauerhafte Store für gemeinsame Historie
+
+Das Repository enthält keine Beispiel-JSON für das Dashboard. Ein neues Dashboard bleibt leer, bis dein workflow Note-Dateien wiederherstellt oder erzeugt.

@@ -24,6 +24,10 @@ Think of it as <code>git log</code> plus the AI conversation behind the change.
   <a href="https://wasabeef.github.io/AgentNote/">Documentation</a>
 </p>
 
+<p align="center">
+  <img src="docs/assets/dashboard-preview.png" alt="Agent Note dashboard preview" width="1100">
+</p>
+
 ## Requirements
 
 - Git
@@ -212,10 +216,9 @@ Examples in this section assume `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` is s
 The optional dashboard package lives in `packages/dashboard/`. If you want a static dashboard on GitHub Pages:
 
 1. Enable dashboard bundle output in the action.
-2. Pass `packages/dashboard/public` as `dashboard_dir`.
-3. Configure your Pages workflow to restore and persist `gh-pages/dashboard/notes/*.json`.
+2. Configure your Pages workflow to restore and persist `gh-pages/dashboard/notes/*.json`.
 
-The action writes `notes/*.json` inside `packages/dashboard/public/`.
+The action writes `notes/*.json` into the dashboard package automatically.
 
 `packages/dashboard` keeps its local default at `/`. Set `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL` in your Pages workflow so the deployed dashboard points at the right URL and GitHub repository.
 
@@ -223,7 +226,6 @@ The action writes `notes/*.json` inside `packages/dashboard/public/`.
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
-    dashboard_dir: packages/dashboard/public
     # Optional. Set this only after the dashboard is publicly available.
     dashboard_url: https://docs.example.com/dashboard/
 ```

@@ -1,0 +1,90 @@
+---
+title: Dashboard
+description: GitHub Pages で shared Agent Note dashboard を公開する方法
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<div style="margin: 0 0 2rem;">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+</div>
+
+## できること
+
+Dashboard は、Agent Note の履歴をチームで共有するための 1 つの URL です。
+
+- open / merged 両方の PR 履歴を 1 か所で見られる
+- commit、prompt、attribution をまとめてたどれる
+- GitHub Pages の `/dashboard/` 配下に shared URL として公開できる
+
+PR Description だけでは足りず、チーム向けの一覧画面がほしいときに使います。
+
+## 先に決めること
+
+shared な web view が必要なときだけ Dashboard を使います。
+
+- PR の中に AI session report が出れば十分なら、[GitHub Action](./github-action/) だけで OK です。
+- open / merged 履歴をまとめて見たいなら、このページの設定を足します。
+
+## クイックセットアップ
+
+まずは Action 側で PR ごとの dashboard bundle を書き出せるようにします。
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  id: agent-note
+  with:
+    pr_output: description
+    dashboard: true
+    dashboard_url: https://docs.example.com/dashboard/
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+これで現在の PR に対して `packages/dashboard/public/notes/*.json` が作成・更新されます。そのファイルを restore / persist / deploy するのは Pages workflow 側です。
+
+<Aside type="tip">
+  `dashboard_url` は optional です。dashboard がすでに public に見える状態になってから設定し、PR レポートが dead link を出さないようにします。
+</Aside>
+
+## 公開 URL
+
+通常は次の URL に公開します。
+
+- `https://<owner>.github.io/<repo>/dashboard/`
+
+たとえば:
+
+- `https://wasabeef.github.io/AgentNote/dashboard/`
+
+## Deploy 設定
+
+`packages/dashboard` 自体の local default は `/` のままなので、Pages workflow 側で build 時に repo 固有の値を注入します。
+
+- `SITE=https://<owner>.github.io`
+- `BASE=/<repo>/dashboard`
+- `PUBLIC_REPO=<owner>/<repo>`
+- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
+
+これで package 自体は generic のまま保ちつつ、repo ごとの public URL を正しく出せます。
+
+## 推奨フロー
+
+1. GitHub Action で `dashboard: true` を有効にする
+2. `gh-pages/dashboard/notes` を `packages/dashboard/public/notes` に復元する
+3. `pull_request` (`opened`, `reopened`, `synchronize`) で、その PR の note file を書き直して `gh-pages` に永続化する
+4. `main` push で、対応する PR note を `merged` に更新し、site を build / deploy する
+
+これで `main` を generated JSON で汚さずに、1 つの shared dashboard から open / merged 両方の PR 履歴を見られます。
+
+## 最初の deploy
+
+brand-new repo でも最初の production deploy 前から dashboard data 自体は蓄積できますが、public な Pages URL が生えるのは最初の `main` deploy 後です。
+
+## 仕組み
+
+- `packages/dashboard/` が interactive Astro app
+- `packages/dashboard/public/notes/*.json` が build 時に読む working bundle
+- `gh-pages/dashboard/notes/*.json` が shared 履歴の durable store
+
+repo 自体には sample dashboard JSON を置きません。fresh な dashboard は、workflow が note file を復元または生成するまで空のままです。
