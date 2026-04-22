@@ -1,7 +1,17 @@
 import type { AgentnoteEntry } from "../core/entry.js";
 
-function isStructuredEntry(raw: Record<string, unknown>): raw is AgentnoteEntry {
-  return Array.isArray(raw.interactions) && Array.isArray(raw.files) && !!raw.attribution;
+function isStructuredEntry(raw: unknown): raw is AgentnoteEntry {
+  if (!raw || typeof raw !== "object") return false;
+  const entry = raw as {
+    interactions?: unknown;
+    files?: unknown;
+    attribution?: unknown;
+  };
+  return (
+    Array.isArray(entry.interactions) &&
+    Array.isArray(entry.files) &&
+    !!entry.attribution
+  );
 }
 
 /**
