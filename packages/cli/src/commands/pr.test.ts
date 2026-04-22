@@ -70,7 +70,8 @@ describe("agentnote pr", () => {
     assert.ok(!output.includes("Commits: 2 tracked / 2 total"));
     assert.ok(!output.includes("Prompts: 2"));
     assert.ok(output.includes("| Commit | AI Ratio | Prompts | Files |"));
-    assert.match(output, /\| .* \| \d+% [█░]+ \| \d+ \| .* \|/);
+    assert.match(output, /\*\*Total AI Ratio:\*\* [█░]+ \d+%/);
+    assert.match(output, /\| .* \| [█░]+ \d+% \| \d+ \| .* \|/);
     assert.ok(output.includes("feat: add A"));
     assert.ok(output.includes("feat: add B"));
     assert.ok(output.includes("🤖"));

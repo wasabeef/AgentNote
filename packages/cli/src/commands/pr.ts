@@ -195,12 +195,12 @@ function renderProgressBar(ratio: number, width = 8): string {
 }
 
 function renderRatioWithBar(ratio: number, width: number): string {
-  return `${ratio}% ${renderProgressBar(ratio, width)}`;
+  return `${renderProgressBar(ratio, width)} ${ratio}%`;
 }
 
 /** Build the header (2 lines: ratio + bar, then metadata). */
 function renderHeader(report: PrReport): string[] {
-  // Line 1: ratio + progress bar
+  // Line 1: progress bar + ratio
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
   if (!report.model) return [line1];
   return [line1, `Model: \`${report.model}\``];

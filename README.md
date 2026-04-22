@@ -151,12 +151,12 @@ This posts an AI session report to the PR description:
 ```
 ## 🧑💬🤖 Agent Note
 
-**Total AI Ratio:** 73% ████████
+**Total AI Ratio:** ████████ 73%
 Model: `claude-sonnet-4-20250514`
 
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
-| ce941f7 feat: add auth | 73% ████░ | 2 | auth.ts 🤖, token.ts 🤖 |
+| ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 ```
 
 ## How It Works
