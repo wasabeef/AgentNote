@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: commit `.gemini/settings.json`
 
 3. Code dengan AI.
-   `git commit` biasa berfungsi ketika git hook yang dihasilkan sudah terpasang.
-   `agent-note commit -m "..."` tetap menjadi fallback bila git hook tidak tersedia.
+   Jika git hook yang dihasilkan sudah terpasang, cukup gunakan `git commit` seperti biasa.
+   `agent-note commit -m "..."` hanya dipakai sebagai jalur cadangan saat git hook tidak tersedia.
 </Steps>
 
 ## Periksa Setup Anda
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` menampilkan adapter yang aktif, `capture:` merangkum apa yang dikumpulkan hook agen aktif, `git:` menunjukkan apakah git hook lokal repositori sudah terpasang, dan `commit:` menunjukkan apakah `git commit` normal adalah jalur utama atau mode fallback yang aktif.
+`agent:` menampilkan adapter yang aktif, `capture:` merangkum apa yang dikumpulkan hook aktif, `git:` menunjukkan apakah git hook yang dikelola sudah terpasang, dan `commit:` menunjukkan apakah `git commit` normal adalah jalur utama.
 
 ## Lihat Langsung
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` sebagai cadangan</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: 提交 `.gemini/settings.json`
 
 3. 用 AI 編寫程式碼。
-   安裝產生的 git hook 後，普通 `git commit` 即可正常運作。
-   若 git hook 無法使用，`agent-note commit -m "..."` 仍可作為 fallback。
+   安裝產生的 git hook 後，直接繼續使用普通 `git commit` 即可。
+   只有在 git hook 無法使用時，才需要把 `agent-note commit -m "..."` 當作備用路徑。
 </Steps>
 
 ## 檢查設定
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 顯示已啟用的 adapter，`capture:` 彙總活躍 agent hook 收集的內容，`git:` 顯示 repo 本地 git hook 是否已安裝，`commit:` 顯示普通 `git commit` 是否為主路徑或 fallback 模式是否啟用。
+`agent:` 顯示已啟用的 adapter，`capture:` 彙總目前 hook 收集的內容，`git:` 顯示受管理的 git hook 是否已安裝，`commit:` 顯示普通 `git commit` 是否為主路徑。
 
 ## 實際效果
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` 作為備用路徑</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

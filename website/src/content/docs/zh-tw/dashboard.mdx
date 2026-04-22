@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: 使用 GitHub Pages 發佈共享的 Agent Note Dashboard。
+description: 如何透過 GitHub Pages 發佈 Agent Note Dashboard。
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -11,24 +11,24 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## 你會得到什麼
 
-Dashboard 會給團隊一個共享的 Agent Note 歷史頁面。
+Dashboard 會給團隊一個共享 URL，用來查看 Agent Note 的歷史記錄。
 
-- 在同一個地方查看 open / merged 的 PR 歷史
-- 不必逐一打開 PR，也能查看 commit、prompt 與 attribution
-- 透過一個 GitHub Pages URL 對團隊分享，通常位於 `/dashboard/`
+- 在同一個地方查看 open 與 merged 的 PR 歷史
+- 不用逐一打開 PR，也能查看 commit、prompt 與 attribution
+- 一個共享的 GitHub Pages URL，通常位於 `/dashboard/`
 
-當 PR report 已經不夠用，而你需要一個面向團隊的共享檢視時，就很適合使用它。
+當 PR report 已經不夠用，而團隊需要一個共同查看的頁面時，就適合使用 Dashboard。
 
 ## 開始之前
 
-只有在你需要共享的 web 檢視時，才需要 Dashboard。
+只有在你需要共享的網頁視圖時，才需要 Dashboard。
 
-- 如果 pull request 裡的 AI session report 已經夠用，可以停在 [GitHub Action](./github-action/)。
-- 如果你想要一個展示 open / merged 歷史的共享 Pages 檢視，就繼續看這裡。
+- 如果 pull request 裡的 AI 會話報告已經夠用，就停在 [GitHub Action](./github-action/)。
+- 如果你想要一個共享的 Pages 視圖來查看 open 與 merged 歷史，就繼續看這裡。
 
-## Quick Setup
+## 快速設定
 
-先讓 Action 為每個 PR 寫出 Dashboard bundle：
+先讓 Action 為每個 PR 寫出 Dashboard 檔案：
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -40,11 +40,11 @@ Dashboard 會給團隊一個共享的 Agent Note 歷史頁面。
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-這樣會為目前的 PR 建立或更新 `packages/dashboard/public/notes/*.json`。之後你的 Pages workflow 再去恢復、持久化並發佈這些檔案。
+這會為目前的 PR 建立或更新 `packages/dashboard/public/notes/*.json`。之後由你的 Pages workflow 負責還原、保存與發佈這些檔案。
 
 ## 公開 URL
 
-Dashboard 通常會發佈在這裡：
+通常 Dashboard 會發佈在這裡：
 
 - `https://<owner>.github.io/<repo>/dashboard/`
 
@@ -52,34 +52,18 @@ Dashboard 通常會發佈在這裡：
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Deploy 設定
+<Aside type="tip">
+  如果你透過 GitHub Pages 發佈，Pages workflow 會在 build 時傳入 repo 專用的 `SITE` 與 `BASE`。對大多數 repo 來說，直接使用範例 workflow 就夠了，不需要額外調整 `packages/dashboard`。
+</Aside>
 
-`packages/dashboard` 在本地仍然維持 `/` 作為 default，所以你的 Pages workflow 需要在 build 時注入 repo 專用值：
+## 第一次部署
 
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>`（optional）
-
-這樣 package 本身仍然保持 generic，同時又能為每個 repo 產生正確的公開 URL。
-
-## 建議流程
-
-1. 在 GitHub Action 中開啟 `dashboard: true`。
-2. 把 `gh-pages/dashboard/notes` 還原到 `packages/dashboard/public/notes`。
-3. 在 `pull_request`（`opened`、`reopened`、`synchronize`）時，重寫該 PR 的 note files，並持久化回 `gh-pages`。
-4. 在 `push` 到 `main` 時，把對應的 PR notes 標記為 `merged`，重新 build 站點並 deploy 共享 Pages URL。
-
-這樣可以避免把 generated JSON 放進 `main`，同時又讓一個共享 Dashboard 顯示 open / merged 兩種 PR 歷史。
-
-## 第一次 deploy
-
-全新的 repo 在第一次 production deploy 之前也可以先累積 Dashboard data，但 public 的 Pages URL 只有在第一次 `main` deploy 之後才會出現。
+即使是全新的 repo，也能在第一次 production deploy 之前先累積 Dashboard 資料。公開的 Pages URL 則要等第一次部署到 `main` 之後才會出現。
 
 ## 運作方式
 
-- `packages/dashboard/` 是 interactive Astro app
-- `packages/dashboard/public/notes/*.json` 是 build 時讀取的 working bundle
-- `gh-pages/dashboard/notes/*.json` 是共享歷史的 durable store
+- `packages/dashboard/` 是用來顯示 Dashboard 的 Astro 應用
+- `packages/dashboard/public/notes/*.json` 是 build 時讀取的 bundle
+- `gh-pages/dashboard/notes/*.json` 是共享歷史的持久儲存
 
-這個 repo 不會附帶 sample Dashboard JSON。新的 Dashboard 會一直保持空白，直到 workflow 還原或產生 note files。
+repo 本身不包含 Dashboard 的範例 JSON。新的 Dashboard 會保持為空，直到 workflow 還原或產生 note files。很多團隊會在 `pull_request` 時更新 PR notes，再從 `main` 發佈 merged 狀態。

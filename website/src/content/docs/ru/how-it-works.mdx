@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI меняет файлы</strong>
-    <p>Hooks или transcripts записывают затронутые файлы и сигналы attribution.</p>
+    <p>Hooks или transcripts записывают изменённые файлы и сигналы, которые используются для attribution.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Если repo-local git hooks установлены, дополнительные команды не нужны. Cursor preview также восстанавливает пары prompt / response из response hooks или локальных transcripts, а его shell hooks дают fallback-путь, когда git hooks недоступны.
+Если сгенерированные git hooks установлены, в большинстве репозиториев достаточно продолжать пользоваться обычными `git commit` и `git push`. Cursor Preview также восстанавливает пары prompt / response из локальных transcripts и может продолжать отслеживать коммиты, когда git hooks недоступны.
 
 ## Хранилище
 
@@ -90,35 +90,35 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>По умолчанию это line-level. Agent Note сохраняет состояние файла до и после каждого AI edit и вычитает из final diff человеческие edits, которые появились позже.</p>
+      <p>Обычно это line-level. Agent Note сравнивает состояние файла до и после каждого AI edit и затем вычитает из final diff человеческие edits, которые появились позже.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Начинает с file-level. Переходит на line-level только когда patch counts в transcript совпадают с final commit diff. Shell-only edits остаются на безопасной стороне, а нечитаемый transcript пропускает создание note.</p>
+      <p>Начинает как file-level. Переходит на line-level только когда patch counts в transcript совпадают с final commit diff.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Начинает с file-level. Переходит на line-level только когда `afterFileEdit` / `afterTabFileEdit` совпадают и final blob всё ещё соответствует последнему AI edit.</p>
+      <p>Начинает как file-level. Переходит на line-level только когда совпадают counts правок и финальный файл всё ещё соответствует последнему AI edit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Сохраняет prompt / response и file-level attribution через `BeforeTool` / `AfterTool` и парсинг transcript. Перехода на line-level пока нет.</p>
+      <p>Сохраняет prompt / response и file-level attribution через hooks и парсинг transcript. Перехода на line-level пока нет.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Списки prompt берутся из причинно связанного диалога вокруг final diff, а не из всей истории сессии. В режиме file-level Agent Note оставляет только путь последнего edit и prompt-only context, который к нему ведёт.
+  Списки prompt берутся из разговора, который привёл к final diff, а не из всей истории сессии. В режиме file-level Agent Note оставляет только путь последнего edit и близкий контекст, который его объясняет.
 </Aside>
 
 <Aside>

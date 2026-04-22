@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: versionare `.gemini/settings.json`
 
 3. Codifica con l'IA.
-   Il normale `git commit` funziona quando i git hook generati sono installati.
-   `agent-note commit -m "..."` resta il fallback quando i git hook non sono disponibili.
+   Se i git hook generati sono installati, ti basta usare il normale `git commit`.
+   `agent-note commit -m "..."` resta solo una via alternativa quando i git hook non sono disponibili.
 </Steps>
 
 ## Verifica la configurazione
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` mostra l'adattatore abilitato, `capture:` riassume cosa raccolgono gli hook dell'agente attivo, `git:` mostra se i git hook locali del repository sono installati, e `commit:` indica se il normale `git commit` è il percorso principale o se la modalità fallback è attiva.
+`agent:` mostra l'adattatore attivo, `capture:` riassume cosa raccolgono gli hook attivi, `git:` mostra se i git hook gestiti sono installati, e `commit:` indica se il normale `git commit` è il percorso principale.
 
 ## Guardalo in azione
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` come alternativa</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

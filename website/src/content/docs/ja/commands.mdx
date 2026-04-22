@@ -1,6 +1,6 @@
 ---
 title: コマンド
-description: Agent Note CLI コマンドリファレンス
+description: Agent Note CLI の使い方とコマンド一覧
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -11,7 +11,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 - コミットに何が記録されたか見る: `agent-note show`
 - 最近の活動を一覧する: `agent-note log`
 - PR レポートを作る: `agent-note pr`
-- hook と active adapter を確認する: `agent-note status`
+- hook と有効な adapter を確認する: `agent-note status`
 
 ## agent-note init
 
@@ -87,7 +87,7 @@ PR レポートを生成します。
 
 ## agent-note status
 
-現在の tracking state を表示します。
+現在の tracking 状態を表示します。
 
 ```bash
 npx agent-note status
@@ -106,7 +106,7 @@ linked:  3/20 recent commits
 ```
 
 <Aside>
-  `agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は実際の主経路を示します。`commit:` が fallback mode のときは `agent-note commit` を使うのが安全です。
+  `agent:` は有効な adapter、`capture:` は今の hook が何を集めるか、`git:` は repo 内の git hook の状態、`commit:` は主な記録経路を示します。`commit:` が代替モードのときは `agent-note commit` を使うのが安全です。
 </Aside>
 
 ## agent-note deinit
@@ -140,6 +140,6 @@ npx agent-note commit -m "feat: add auth"
 </Aside>
 
 <Aside>
-  Cursor preview でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
-  現在は prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合のみ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が fallback として使えます。
+  Cursor Preview でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
+  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。
 </Aside>

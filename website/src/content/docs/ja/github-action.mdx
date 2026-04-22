@@ -1,13 +1,13 @@
 ---
 title: GitHub Action
-description: プルリクエストに AI セッションレポートを自動投稿
+description: プルリクエストに AI セッションレポートを自動で追加する
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 ## クイックセットアップ
 
-`agent-note init` で自動生成されるワークフローを追加:
+`agent-note init` で作られるワークフローをそのまま使います。
 
 ```yaml
 name: Agent Note
@@ -27,7 +27,7 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-これだけです。すべての PR に AI セッションレポートが投稿されます。
+これだけで、すべての PR に AI セッションレポートが追加されます。
 
 ## 入力
 
@@ -35,7 +35,7 @@ jobs:
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
 | `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
-| `dashboard` | `false` | PR レポートに加えて Dashboard snapshot も書き出す |
+| `dashboard` | `false` | PR レポートに加えて Dashboard 用の snapshot も書き出す |
 
 ### PR Description と Dashboard を同時に使う
 
@@ -50,7 +50,7 @@ jobs:
 ```
 
 <Aside type="tip">
-  共有 Dashboard まで使いたいときだけ `dashboard: true` を有効にしてください。bundle / Pages sync / deploy の全体像は <a href="./dashboard/">Dashboard</a> ページに分けています。
+  共有 Dashboard も使いたいときだけ `dashboard: true` を有効にしてください。bundle の扱い方や Pages 公開の流れは <a href="./dashboard/">Dashboard</a> にまとめています。
 </Aside>
 
 ## 出力
@@ -68,11 +68,11 @@ jobs:
 
 ## レポート形式
 
-PR レポートには次が含まれます。
+PR レポートには次が入ります。
 
-- **Header** — `Total AI Ratio` と progress bar、さらに plain text の別行 `Model`
+- **Header** — `Total AI Ratio` と bar、その下に `Model`
 - **Table** — commit ごとの AI ratio、prompt 数、attribution 付き files
-- **Prompts** — commit ごとの prompt / response をたたんで表示
+- **Prompts** — commit ごとの prompt / response を折りたたんで表示
 
 <Aside type="tip">
   レポート内のコミットハッシュは GitHub のコミットページにリンクされます。

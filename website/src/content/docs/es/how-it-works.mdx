@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>La IA cambia archivos</strong>
-    <p>Los hooks o transcripts registran archivos tocados y señales de attribution.</p>
+    <p>Los hooks o transcripts registran los archivos cambiados y las pistas usadas para la atribución.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-No hacen falta comandos extra cuando los git hooks locales del repositorio están instalados. Cursor preview también restaura pares prompt / response desde response hooks o transcripts locales, y sus shell hooks ofrecen una ruta fallback cuando los git hooks no están disponibles.
+Con los git hooks generados instalados, en la mayoría de los repos basta con seguir usando `git commit` y `git push`. Cursor Preview también recupera pares prompt / response desde transcripts locales y puede seguir registrando commits cuando los git hooks no están disponibles.
 
 ## Almacenamiento
 
@@ -97,28 +97,28 @@ No hacen falta comandos extra cuando los git hooks locales del repositorio está
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Empieza en file-level. Solo sube a line-level cuando los conteos de patch del transcript coinciden con el diff final del commit. Las ediciones shell-only se mantienen del lado seguro y los transcripts ilegibles omiten la creación de la note.</p>
+      <p>Empieza como file-level. Solo sube a line-level cuando los conteos de patch del transcript coinciden con el diff final del commit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Empieza en file-level. Solo sube a line-level cuando `afterFileEdit` / `afterTabFileEdit` coinciden y el blob final aún coincide con la última edición de IA.</p>
+      <p>Empieza como file-level. Solo sube a line-level cuando los conteos de edición coinciden y el archivo final todavía coincide con la última edición de IA.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Registra prompt / response y attribution a nivel archivo mediante `BeforeTool` / `AfterTool` y parseo de transcripts. El upgrade a line-level todavía no está disponible.</p>
+      <p>Registra prompt / response y atribución a nivel archivo mediante hooks y parseo de transcripts. El modo line-level todavía no está disponible.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Las listas de prompts vienen de la conversación causal alrededor del diff final, no de todo el historial de la sesión. En modo file-level, Agent Note conserva solo la ruta del último edit y el prompt-only context que lleva hasta ella.
+  Las listas de prompts vienen de la conversación que llevó al diff final, no de todo el historial de la sesión. En modo file-level, Agent Note conserva solo la ruta del último edit y el contexto cercano que la explica.
 </Aside>
 
 <Aside>

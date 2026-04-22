@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI mengubah file</strong>
-    <p>Hooks atau transcript mencatat touched files dan sinyal attribution.</p>
+    <p>Hooks atau transcript mencatat file yang berubah dan petunjuk yang dipakai untuk attribution.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Tidak ada perintah tambahan yang dibutuhkan jika repo-local git hook sudah terpasang. Cursor preview juga memulihkan pasangan prompt / response dari response hook atau transcript lokal, dan shell hook-nya menyediakan jalur fallback saat git hook tidak tersedia.
+Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus memakai `git commit` dan `git push` seperti biasa. Cursor Preview juga memulihkan pasangan prompt / response dari transcript lokal dan tetap bisa melacak commit saat git hook tidak tersedia.
 
 ## Penyimpanan
 
@@ -90,35 +90,35 @@ Tidak ada perintah tambahan yang dibutuhkan jika repo-local git hook sudah terpa
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>Default-nya line-level. Agent Note menyimpan kondisi file sebelum dan sesudah setiap edit AI, lalu mengurangi human edit yang masuk setelahnya dari final diff.</p>
+      <p>Biasanya line-level. Agent Note membandingkan kondisi file sebelum dan sesudah setiap edit AI, lalu mengurangi edit manusia yang masuk belakangan dari final diff.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Mulai dari file-level. Naik ke line-level hanya jika jumlah patch di transcript cocok dengan final commit diff. Shell-only edit tetap di sisi aman, dan transcript yang tidak bisa dibaca akan melewati pembuatan note.</p>
+      <p>Mulai sebagai file-level. Naik ke line-level hanya jika jumlah patch di transcript cocok dengan final commit diff.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Mulai dari file-level. Naik ke line-level hanya ketika `afterFileEdit` / `afterTabFileEdit` cocok dan final blob masih sama dengan edit AI terakhir.</p>
+      <p>Mulai sebagai file-level. Naik ke line-level hanya ketika jumlah edit cocok dan file final masih sama dengan edit AI terakhir.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Mencatat prompt / response dan attribution level file lewat `BeforeTool` / `AfterTool` serta parsing transcript. Upgrade ke line-level belum tersedia.</p>
+      <p>Mencatat prompt / response dan attribution level file lewat hook dan parsing transcript. Mode line-level belum tersedia.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Daftar prompt berasal dari percakapan kausal di sekitar final diff, bukan dari seluruh backlog sesi. Dalam mode file-level, Agent Note hanya menyimpan jalur edit terakhir dan prompt-only context yang mengarah ke sana.
+  Daftar prompt berasal dari percakapan yang menghasilkan final diff, bukan dari seluruh backlog sesi. Dalam mode file-level, Agent Note hanya menyimpan jalur edit terakhir dan konteks terdekat yang menjelaskannya.
 </Aside>
 
 <Aside>

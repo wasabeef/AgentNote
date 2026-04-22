@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>L’AI aggiorna i file</strong>
-    <p>Hook o transcript registrano file toccati e segnali di attribution.</p>
+    <p>Hook o transcript registrano i file cambiati e gli indizi usati per l’attribuzione.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Non servono comandi aggiuntivi quando i git hook locali del repository sono installati. Cursor preview ripristina anche le coppie prompt / response dai response hook o dai transcript locali, e i suoi shell hook offrono un fallback quando i git hook non sono disponibili.
+Quando i git hook generati sono installati, nella maggior parte dei repository basta continuare a usare `git commit` e `git push`. Cursor Preview recupera anche le coppie prompt / response dai transcript locali e può continuare a tracciare i commit quando i git hook non sono disponibili.
 
 ## Storage
 
@@ -90,35 +90,35 @@ Non servono comandi aggiuntivi quando i git hook locali del repository sono inst
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>Di default è line-level. Agent Note salva lo stato del file prima e dopo ogni edit IA e sottrae dal diff finale gli edit umani arrivati in seguito.</p>
+      <p>Di solito è line-level. Agent Note confronta lo stato del file prima e dopo ogni edit IA e sottrae dal diff finale gli edit umani arrivati dopo.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Parte da file-level. Sale a line-level solo quando i conteggi patch del transcript coincidono con il diff finale del commit. Gli edit shell-only restano prudenti e un transcript illeggibile salta la creazione della note.</p>
+      <p>Parte come file-level. Sale a line-level solo quando i conteggi patch del transcript coincidono con il diff finale del commit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Parte da file-level. Sale a line-level solo quando `afterFileEdit` / `afterTabFileEdit` coincidono e il blob finale corrisponde ancora all’ultimo edit IA.</p>
+      <p>Parte come file-level. Sale a line-level solo quando i conteggi degli edit coincidono e il file finale corrisponde ancora all’ultimo edit IA.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Registra prompt / response e attribution a livello file tramite `BeforeTool` / `AfterTool` e parsing del transcript. L’upgrade a line-level non è ancora disponibile.</p>
+      <p>Registra prompt / response e attribution a livello file tramite hook e parsing del transcript. Il line-level non è ancora disponibile.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Le liste di prompt arrivano dalla conversazione causale attorno al diff finale, non da tutto il backlog della sessione. In modalità file-level, Agent Note conserva solo il percorso dell’ultimo edit e il prompt-only context che lo porta lì.
+  Le liste di prompt arrivano dalla conversazione che ha portato al diff finale, non da tutto il backlog della sessione. In modalità file-level, Agent Note conserva solo il percorso dell’ultimo edit e il contesto vicino che lo spiega.
 </Aside>
 
 <Aside>

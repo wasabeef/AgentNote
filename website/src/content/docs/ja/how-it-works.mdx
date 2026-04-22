@@ -1,6 +1,6 @@
 ---
 title: 仕組み
-description: Agent Note が AI セッションデータを git コミットに紐づける仕組み
+description: Agent Note が AI セッションデータを git commit に紐づける仕組み
 ---
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI がファイルを更新する</strong>
-    <p>hook または transcript が touched files と attribution signals を残します。</p>
+    <p>hook または transcript が、変更された file と attribution の手がかりを残します。</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-生成された repo-local git hook が入っていれば、特別なコマンドは不要です。Cursor preview では response hook または local transcript があれば prompt / response を復元でき、git hook が使えない環境では Cursor shell hook が fallback として働きます。
+生成された git hook が入っていれば、ふだんどおり `git commit` と `git push` を使うだけで動きます。Cursor Preview は local transcript から prompt / response を復元でき、git hook が使えない環境でも shell hook で追跡を続けられます。
 
 ## ストレージ
 
@@ -80,35 +80,35 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>既定で line-level です。AI edit の前後の file 状態を記録し、そのあとに入った人間の edit を最終 diff から差し引いて計算します。</p>
+      <p>通常は line-level です。AI edit の前後の file 状態を比べ、あとから入った人間の edit を最終 diff から差し引いて計算します。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>最初は file-level です。transcript の patch 行数と最終 commit diff が一致したときだけ line-level に上がります。shell-only edit は安全側に倒し、transcript が読めないときは不確かな note を残しません。</p>
+      <p>最初は file-level です。transcript の patch 行数が最終 commit diff と一致したときだけ line-level に上がります。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>最初は file-level です。`afterFileEdit` / `afterTabFileEdit` の行数が合い、最後の AI edit 後の blob がそのまま残っている file だけ line-level に昇格します。</p>
+      <p>最初は file-level です。edit 行数が合い、最後の AI edit 後の file がそのまま残っているときだけ line-level に上がります。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>`BeforeTool` / `AfterTool` と transcript 解析で prompt / response と file-level attribution を記録します。line-level 昇格はまだありません。</p>
+      <p>hook と transcript 解析で prompt / response と file-level attribution を記録します。line-level はまだありません。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  prompt 一覧はセッション全体ではなく、最終 diff に因果的につながる会話ブロックから選ばれます。file-level の場合も、latest touch の edit と、そこへ至る prompt-only context だけを残します。
+  prompt 一覧はセッション全体ではなく、最終 diff につながった会話から選ばれます。file-level の場合も、最後の edit と、それを説明する近い文脈だけを残します。
 </Aside>
 
 <Aside>

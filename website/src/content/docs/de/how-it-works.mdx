@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Wenn die repo-lokalen Git-Hooks installiert sind, sind keine zusätzlichen Befehle nötig. Cursor preview stellt Prompt-/Response-Paare auch aus Response-Hooks oder lokalen Transcripts wieder her, und seine Shell-Hooks bieten einen Fallback, wenn Git-Hooks nicht verfügbar sind.
+Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Repositories einfach weiter `git commit` und `git push` verwenden. Cursor Preview stellt Prompt-/Response-Paare auch aus lokalen Transcripts wieder her und kann Commits weiter verfolgen, wenn Git-Hooks nicht verfügbar sind.
 
 ## Speicher
 
@@ -90,35 +90,35 @@ Wenn die repo-lokalen Git-Hooks installiert sind, sind keine zusätzlichen Befeh
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>Standardmäßig line-level. Agent Note speichert den Dateistand vor und nach jedem KI-Edit und rechnet spätere menschliche Änderungen aus dem finalen Diff heraus.</p>
+      <p>Meist line-level. Agent Note vergleicht den Dateistand vor und nach jedem KI-Edit und zieht spätere menschliche Änderungen wieder vom finalen Diff ab.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Startet auf file-level. Wechselt nur dann zu line-level, wenn die Patch-Zahlen im Transcript zum finalen Commit-Diff passen. Shell-only-Edits bleiben auf der sicheren Seite, und unlesbare Transcripts überspringen die Note-Erstellung.</p>
+      <p>Startet als file-level. Auf line-level wechselt es nur, wenn die Patch-Zahlen im Transcript zum finalen Commit-Diff passen.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Startet auf file-level. Wechselt nur dann zu line-level, wenn `afterFileEdit` / `afterTabFileEdit` passen und der finale Blob noch dem letzten KI-Edit entspricht.</p>
+      <p>Startet als file-level. Auf line-level wechselt es nur, wenn die Edit-Zahlen passen und die finale Datei noch dem letzten KI-Edit entspricht.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Zeichnet Prompt / Response und file-level Attribution über `BeforeTool` / `AfterTool` und Transcript-Parsing auf. Ein line-level Upgrade gibt es noch nicht.</p>
+      <p>Zeichnet Prompt / Response und file-level Attribution über Hooks und Transcript-Parsing auf. Ein line-level Upgrade gibt es noch nicht.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Prompt-Listen stammen aus der kausalen Konversation rund um den finalen Diff, nicht aus dem gesamten Sitzungsverlauf. Im file-level Modus behält Agent Note nur den letzten Edit-Pfad und den prompt-only context, der dorthin führt.
+  Prompt-Listen stammen aus der Konversation, die zum finalen Diff geführt hat, nicht aus dem gesamten Sitzungsverlauf. Im file-level Modus behält Agent Note nur den letzten Edit-Pfad und den nahen Kontext, der ihn erklärt.
 </Aside>
 
 <Aside>

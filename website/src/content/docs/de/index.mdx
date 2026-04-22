@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: `.gemini/settings.json` committen
 
 3. Code mit KI.
-   Normales `git commit` funktioniert, wenn die generierten Git-Hooks installiert sind.
-   `agent-note commit -m "..."` bleibt der Fallback, wenn Git-Hooks nicht verfügbar sind.
+   Wenn die generierten Git-Hooks installiert sind, reicht das normale `git commit`.
+   `agent-note commit -m "..."` brauchst du nur als Ausweichweg, wenn Git-Hooks nicht verfügbar sind.
 </Steps>
 
 ## Einrichtung prüfen
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` zeigt den aktiven Adapter, `capture:` fasst zusammen, was die aktiven Agent-Hooks erfassen, `git:` zeigt, ob die verwalteten repo-lokalen Git-Hooks installiert sind, und `commit:` zeigt, ob normales `git commit` der primäre Weg ist oder ob der Fallback-Modus aktiv ist.
+`agent:` zeigt den aktiven Adapter, `capture:` fasst zusammen, was die aktiven Hooks erfassen, `git:` zeigt, ob die verwalteten Git-Hooks installiert sind, und `commit:` zeigt, ob normales `git commit` der Hauptweg ist.
 
 ## In Aktion erleben
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` Fallback</div>
+    <div class="capability-label">`agent-note commit` als Ausweichweg</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

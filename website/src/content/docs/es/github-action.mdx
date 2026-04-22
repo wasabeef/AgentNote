@@ -1,16 +1,15 @@
 ---
 title: GitHub Action
-description: Publica AI session reports automáticamente en pull requests.
+description: Añade automáticamente un informe de sesión de IA a cada pull request.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-## Quick Setup
+## Configuración rápida
 
-Agrega este workflow, creado automáticamente por `agent-note init`:
+Usa el workflow que crea `agent-note init`:
 
 ```yaml
-# .github/workflows/agentnote.yml
 name: Agent Note
 on:
   pull_request:
@@ -28,27 +27,17 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-Eso es todo. Cada PR recibe un AI session report.
+Eso basta. Cada PR recibe automáticamente un informe de sesión de IA.
 
 ## Inputs
 
 | Input | Default | Descripción |
 |---|---|---|
-| `base` | PR base branch | Rama base para comparar |
-| `pr_output` | `description` | Destino del PR report: `description`, `comment` o `none` |
-| `dashboard` | `false` | También escribe Dashboard snapshots para la PR actual |
+| `base` | Rama base del PR | Rama contra la que se compara |
+| `pr_output` | `description` | Destino del informe del PR: `description`, `comment` o `none` |
+| `dashboard` | `false` | También escribe archivos del Dashboard para la PR actual |
 
-### Publicar como comment en lugar de description
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    pr_output: comment
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Generar Dashboard data junto con el PR report
+### Usar PR Description y Dashboard al mismo tiempo
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -61,7 +50,7 @@ Eso es todo. Cada PR recibe un AI session report.
 ```
 
 <Aside type="tip">
-  Actívalo solo si también quieres el Dashboard compartido. La configuración completa de bundle, Pages sync y deploy está en la guía [Dashboard](./dashboard/).
+  Activa `dashboard: true` solo si también quieres el Dashboard compartido. La relación entre bundle, Pages sync y deploy está explicada en <a href="./dashboard/">Dashboard</a>.
 </Aside>
 
 ## Outputs
@@ -74,36 +63,21 @@ Eso es todo. Cada PR recibe un AI session report.
 | `total_commits` | number | Número total de commits en el PR |
 | `total_prompts` | number | Número total de prompts en todos los commits |
 | `json` | string | Reporte estructurado completo |
-| `markdown` | string | Reporte renderizado en markdown |
-| `dashboard_commits` | number | Número de tracked commits escritos en el Dashboard bundle |
+| `markdown` | string | Reporte renderizado en Markdown |
+| `dashboard_commits` | number | Número de tracked commits escritos en el bundle del Dashboard |
 
-### Usar outputs en el workflow
+## Qué incluye el reporte
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    base: main
+El reporte del PR incluye:
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
-```
-
-## Report Format
-
-El PR report incluye:
-
-- **Header** — `Total AI Ratio` con una progress bar y una línea de texto separada para `Model`
-- **Table** — AI ratio por commit, número de prompts y files con attribution
-- **Prompts** — sección plegable con pares de prompt / response por commit
+- **Header** — `Total AI Ratio` con barra y, debajo, `Model`
+- **Tabla** — AI ratio, cantidad de prompts y archivos por commit
+- **Prompts** — pares de prompt / response por commit en una sección plegable
 
 <Aside type="tip">
-  Los hashes de commit en el reporte enlazan directamente a la página del commit en GitHub.
+  Los hashes de commit del reporte enlazan directamente a la página del commit en GitHub.
 </Aside>
-
-## Notes Sharing
-
-La Action obtiene `refs/notes/agentnote` desde el remote. El Git hook `pre-push` instalado por `agent-note init` hace auto-push de las notes en cada `git push`, sin pasos manuales adicionales.
 
 ## Siguiente paso
 
-Si además quieres una vista compartida en Pages para historial de PR abiertas y mergeadas, sigue con la guía [Dashboard](./dashboard/).
+Si además quieres una vista compartida en Pages para PR abiertas y mergeadas, sigue con <a href="./dashboard/">Dashboard</a>.

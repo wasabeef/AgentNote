@@ -1,16 +1,15 @@
 ---
 title: GitHub Action
-description: pull request 에 AI session report 를 자동으로 게시합니다.
+description: 모든 pull request 에 AI 세션 리포트를 자동으로 추가합니다.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 ## Quick Setup
 
-`agent-note init` 가 자동 생성하는 다음 workflow 를 추가합니다.
+`agent-note init` 이 만들어 주는 workflow 를 그대로 사용하면 됩니다.
 
 ```yaml
-# .github/workflows/agentnote.yml
 name: Agent Note
 on:
   pull_request:
@@ -28,27 +27,17 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-이것만으로 충분합니다. 모든 PR 에 AI session report 가 게시됩니다.
+이것만으로 충분합니다. 모든 PR 에 AI 세션 리포트가 자동으로 추가됩니다.
 
 ## Inputs
 
 | Input | Default | 설명 |
 |---|---|---|
-| `base` | PR base branch | 비교 기준이 되는 base branch |
-| `pr_output` | `description` | PR report 출력 위치: `description`, `comment`, `none` |
-| `dashboard` | `false` | 현재 PR 에 대한 Dashboard snapshot 도 함께 씁니다 |
+| `base` | PR base branch | 비교 기준 branch |
+| `pr_output` | `description` | PR 리포트의 출력 위치: `description`, `comment`, `none` |
+| `dashboard` | `false` | 현재 PR 용 Dashboard 파일도 함께 씁니다 |
 
-### description 대신 comment 로 게시하기
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    pr_output: comment
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### PR report 와 함께 Dashboard data 생성하기
+### PR Description 과 Dashboard 를 함께 쓰기
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -61,49 +50,34 @@ jobs:
 ```
 
 <Aside type="tip">
-  shared Dashboard 가 필요할 때만 이 옵션을 켜세요. bundle, Pages sync, deploy 전체 흐름은 [Dashboard](./dashboard/) 가이드에 정리되어 있습니다.
+  `dashboard: true` 는 공유 Dashboard 도 함께 쓸 때만 켜면 됩니다. bundle, Pages sync, deploy 의 관계는 <a href="./dashboard/">Dashboard</a> 페이지에 정리했습니다.
 </Aside>
 
 ## Outputs
 
 | Output | 타입 | 설명 |
 |---|---|---|
-| `overall_ai_ratio` | number | PR 전체 AI ratio (0-100) |
+| `overall_ai_ratio` | number | PR 전체 AI 비율 (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed`, `none` |
 | `tracked_commits` | number | agent-note 데이터가 있는 commit 수 |
 | `total_commits` | number | PR 안의 전체 commit 수 |
-| `total_prompts` | number | 모든 commit 에 걸친 전체 prompt 수 |
-| `json` | string | 전체 구조화 report |
-| `markdown` | string | 렌더링된 markdown report |
-| `dashboard_commits` | number | Dashboard bundle 에 기록된 tracked commit 수 |
+| `total_prompts` | number | 모든 commit 의 전체 prompt 수 |
+| `json` | string | 전체 구조화 리포트 |
+| `markdown` | string | 렌더링된 Markdown 리포트 |
+| `dashboard_commits` | number | Dashboard bundle 에 쓴 tracked commit 수 |
 
-### workflow 에서 outputs 사용하기
+## 리포트 구성
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    base: main
+PR 리포트에는 다음이 들어갑니다.
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
-```
-
-## Report Format
-
-PR report 에는 다음이 포함됩니다.
-
-- **Header** — `Total AI Ratio` progress bar 와 별도의 plain-text `Model` 줄
-- **Table** — commit 별 AI ratio, prompt 수, attribution 이 붙은 files
-- **Prompts** — commit 별 prompt / response 쌍을 접을 수 있는 섹션
+- **Header** — `Total AI Ratio` 와 bar, 그리고 그 아래 `Model`
+- **Table** — commit 별 AI 비율, prompt 수, file 목록
+- **Prompts** — commit 별 prompt / response 를 접어서 보여주는 섹션
 
 <Aside type="tip">
-  report 안의 commit hash 는 GitHub commit 페이지로 연결됩니다.
+  리포트 안의 commit hash 는 GitHub 의 commit 페이지로 바로 연결됩니다.
 </Aside>
-
-## Notes Sharing
-
-Action 은 remote 에서 `refs/notes/agentnote` 를 가져옵니다. `agent-note init` 가 설치하는 `pre-push` Git hook 이 매 `git push` 때 notes 도 자동으로 push 하므로 수동 작업이 필요 없습니다.
 
 ## 다음 단계
 
-open / merged PR 기록을 함께 보는 Pages 화면도 원한다면, 이어서 [Dashboard](./dashboard/) 가이드를 읽어보세요.
+open / merged PR 기록을 Pages 에서 함께 보고 싶다면 <a href="./dashboard/">Dashboard</a> 로 이어서 보세요.

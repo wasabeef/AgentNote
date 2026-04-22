@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI 가 파일을 수정한다</strong>
-    <p>hooks 또는 transcripts 가 touched files 와 attribution signals 를 남깁니다.</p>
+    <p>hooks 또는 transcripts 가 변경된 file 과 attribution 에 쓰는 단서를 남깁니다.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니다. Cursor preview 는 response hook 또는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없는 환경에서는 shell hook 이 fallback 경로를 제공합니다.
+생성된 git hook 이 설치되어 있으면 대부분의 repo 에서는 평소처럼 `git commit` 과 `git push` 를 쓰면 됩니다. Cursor Preview 는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없어도 shell hook 으로 commit 추적을 이어갈 수 있습니다.
 
 ## 저장소
 
@@ -90,35 +90,35 @@ repo-local git hook 이 설치되어 있으면 추가 명령은 필요 없습니
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>기본은 line-level 입니다. Agent Note 는 각 AI edit 전후의 file 상태를 저장하고, 그 뒤에 들어간 human edit 를 final diff 에서 빼서 계산합니다.</p>
+      <p>보통은 line-level 입니다. Agent Note 는 각 AI edit 전후의 file 상태를 비교하고, 나중에 들어간 human edit 를 final diff 에서 다시 빼서 계산합니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>시작은 file-level 입니다. transcript patch count 가 final commit diff 와 맞을 때만 line-level 로 올라갑니다. shell-only edit 는 안전한 쪽에 남고, transcript 를 읽지 못하면 note 생성을 건너뜁니다.</p>
+      <p>처음에는 file-level 입니다. transcript patch count 가 final commit diff 와 맞을 때만 line-level 로 올라갑니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>시작은 file-level 입니다. `afterFileEdit` / `afterTabFileEdit` 가 맞고 final blob 이 마지막 AI edit 와 그대로 같을 때만 line-level 로 올라갑니다.</p>
+      <p>처음에는 file-level 입니다. edit count 가 맞고 final file 이 마지막 AI edit 와 그대로 같을 때만 line-level 로 올라갑니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>`BeforeTool` / `AfterTool` 과 transcript parsing 으로 prompt / response 와 file-level attribution 을 기록합니다. line-level upgrade 는 아직 없습니다.</p>
+      <p>hook 과 transcript parsing 으로 prompt / response 와 file-level attribution 을 기록합니다. line-level 은 아직 없습니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  prompt 목록은 session 전체가 아니라 final diff 로 이어지는 causal conversation 에서 가져옵니다. file-level 모드에서는 마지막 edit 경로와 그곳으로 이어지는 prompt-only context 만 남깁니다.
+  prompt 목록은 session 전체가 아니라 final diff 로 이어진 대화에서 가져옵니다. file-level 모드에서는 마지막 edit 경로와, 그 경로를 설명하는 가까운 문맥만 남깁니다.
 </Aside>
 
 <Aside>

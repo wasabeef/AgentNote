@@ -8,7 +8,7 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 ## インストール
 
 <Steps>
-1. **init を実行**
+1. **`init` を実行**
 
    ```bash
    npx agent-note init --agent claude
@@ -38,13 +38,13 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
    npx agent-note init --agent claude --agent cursor
    ```
 
-   以下が設定されます:
+   Agent Note は次を設定します:
    - エージェントフック (`.claude/settings.json`、Codex CLI では `.codex/config.toml` と `.codex/hooks.json`、Cursor では `.cursor/hooks.json`、Gemini CLI では `.gemini/settings.json`)
    - Git フック (`prepare-commit-msg`, `post-commit`, `pre-push`)
    - GitHub Actions ワークフロー (`.github/workflows/agentnote.yml`)
    - notes の自動 fetch 設定
 
-2. **生成ファイルをコミット**
+2. **生成されたファイルをコミット**
 
    ```bash
    git add .claude/settings.json .github/workflows/agentnote.yml
@@ -56,13 +56,13 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
    Cursor では `.cursor/hooks.json` をコミットします。
    Gemini CLI では `.gemini/settings.json` をコミットします。
 
-3. **完了。** 生成された git hook が入っていれば、Cursor preview を含めて通常の `git commit` で追跡されます。
-   git hook が使えない環境では `agent-note commit -m "..."` を fallback として使えます。
+3. **準備完了。** 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
+   git hook が使えない環境だけ `agent-note commit -m "..."` を代替手段として使います。
 </Steps>
 
-## 新しいクローン
+## セットアップ
 
-各開発者はクローン後に init を実行してローカルの git フックをインストールします:
+クローンしたら、各開発者が一度 `init` を実行してローカルの git hook を入れます。
 
 ```bash
 git clone <repo> && cd <repo>
@@ -70,19 +70,19 @@ npx agent-note init --agent claude
 ```
 
 <Aside>
-  Git フックは `.git/` 内に配置されるため、コミットされません。開発者ごとに一度 `init` を実行する必要があります。
+  git hook は `.git/` の中に置かれるため、コミットされません。クローンごとに一度だけ `init` が必要です。
 </Aside>
 
 ## 自動で行われること
 
-init 後は通常の `git commit` で:
+セットアップ後は、通常の `git commit` で次が行われます。
 
 1. **Inject** `Agentnote-Session` trailer をコミットメッセージに追加
 2. **Record** prompts、responses、file attribution を git note として保存
 3. **Push** `git push` 時に notes も自動で送信
 
-Cursor preview では response hook または local transcript による prompt / response 復元も行われます。
-git hook が使えない環境では `agent-note commit` が fallback です。
+Cursor Preview では response hook または local transcript から prompt / response も復元されます。
+git hook が使えない環境では `agent-note commit` を使います。
 
 ## 動作確認
 
@@ -120,9 +120,9 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は通常の `git commit` が主経路か、fallback を使うべきかを示します。
+`agent:` は有効な adapter、`capture:` は今の hook が何を集めるか、`git:` は repo 内の git hook の状態、`commit:` は通常の `git commit` が主経路かどうかを示します。
 
-## エージェント別 capability
+## 各エージェントの機能
 
 <CardGrid>
   <Card>
@@ -130,28 +130,28 @@ linked:  3/20 recent commits
       <img class="agent-capability-card__icon" src="/AgentNote/model-icons/claude.png" alt="Claude Code icon" />
       <div class="agent-capability-card__title">Claude Code</div>
     </div>
-    生成された git hook があれば通常の `git commit` で動きます。prompt / response は hook-native で復元され、attribution は既定で line-level です。
+    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は hook から復元され、attribution は既定で line-level です。
   </Card>
   <Card>
     <div class="agent-capability-card__head">
       <img class="agent-capability-card__icon" src="/AgentNote/model-icons/codex.png" alt="Codex CLI icon" />
       <div class="agent-capability-card__title">Codex CLI</div>
     </div>
-    生成された git hook があれば通常の `git commit` で動きます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
+    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
   </Card>
   <Card>
     <div class="agent-capability-card__head">
       <img class="agent-capability-card__icon" src="/AgentNote/model-icons/cursor.png" alt="Cursor Preview icon" />
       <div class="agent-capability-card__title">Cursor Preview</div>
     </div>
-    生成された git hook があれば通常の `git commit` で動きます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
+    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
   </Card>
   <Card>
     <div class="agent-capability-card__head">
       <img class="agent-capability-card__icon" src="/AgentNote/model-icons/gemini.png" alt="Gemini CLI Preview icon" />
       <div class="agent-capability-card__title">Gemini CLI Preview</div>
     </div>
-    生成された git hook があれば通常の `git commit` で動きます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
+    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
   </Card>
 </CardGrid>
 

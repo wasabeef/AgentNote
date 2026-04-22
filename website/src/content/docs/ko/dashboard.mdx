@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: GitHub Pages 로 공유 Agent Note Dashboard 를 공개하는 방법
+description: GitHub Pages 로 Agent Note Dashboard 를 공개하는 방법
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -17,18 +17,18 @@ Dashboard 는 팀이 Agent Note 기록을 함께 볼 수 있는 하나의 공유
 - 각 PR 을 열지 않고도 commit, prompt, attribution 을 확인할 수 있습니다
 - 보통 `/dashboard/` 아래의 GitHub Pages URL 하나를 팀과 공유할 수 있습니다
 
-PR Description 만으로는 부족하고, 팀 전체가 보는 목록 화면이 필요할 때 사용하면 좋습니다.
+PR Description 만으로는 부족하고, 팀이 함께 보는 화면이 필요할 때 쓰면 좋습니다.
 
 ## 시작 전에
 
-공유된 웹 화면이 필요할 때만 Dashboard 를 쓰면 됩니다.
+Dashboard 는 공유된 웹 화면이 필요할 때만 쓰면 됩니다.
 
-- pull request 안의 AI session report 만으로 충분하다면 [GitHub Action](./github-action/) 에서 멈추면 됩니다.
+- pull request 안의 AI report 만으로 충분하다면 [GitHub Action](./github-action/) 에서 멈추면 됩니다.
 - open / merged 기록을 함께 보는 Pages 화면이 필요하다면 여기서 계속 진행하면 됩니다.
 
 ## Quick Setup
 
-먼저 Action 이 PR 별 Dashboard bundle 을 쓰도록 설정합니다.
+먼저 Action 이 PR 별 Dashboard 파일을 쓰도록 설정합니다.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -40,11 +40,11 @@ PR Description 만으로는 부족하고, 팀 전체가 보는 목록 화면이 
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-이렇게 하면 현재 PR 에 대해 `packages/dashboard/public/notes/*.json` 이 생성 또는 갱신됩니다. 이후 Pages workflow 가 이 파일을 restore, persist, deploy 합니다.
+이렇게 하면 현재 PR 에 대해 `packages/dashboard/public/notes/*.json` 이 생성되거나 갱신됩니다. 이후 복원, 저장, 공개는 Pages workflow 가 처리합니다.
 
 ## 공개 URL
 
-보통 dashboard 는 다음 URL 에 공개합니다.
+보통 Dashboard 는 다음 URL 에 공개합니다.
 
 - `https://<owner>.github.io/<repo>/dashboard/`
 
@@ -52,25 +52,9 @@ PR Description 만으로는 부족하고, 팀 전체가 보는 목록 화면이 
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Deploy 설정
-
-`packages/dashboard` 는 로컬 default 로 `/` 를 유지하므로, Pages workflow 쪽에서 build 시 repo 전용 값을 주입해야 합니다.
-
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
-
-이렇게 하면 package 자체는 generic 하게 유지하면서도, repo 별 public URL 을 정확하게 만들 수 있습니다.
-
-## 권장 흐름
-
-1. GitHub Action 에서 `dashboard: true` 를 켭니다.
-2. `gh-pages/dashboard/notes` 를 `packages/dashboard/public/notes` 로 restore 합니다.
-3. `pull_request` (`opened`, `reopened`, `synchronize`) 에서 해당 PR 의 note files 를 다시 쓰고 `gh-pages` 로 persist 합니다.
-4. `main` 으로 `push` 되면 해당 PR notes 를 `merged` 로 갱신하고, site 를 다시 build / deploy 합니다.
-
-이 흐름이면 `main` 을 generated JSON 으로 더럽히지 않으면서도, 하나의 shared Dashboard 에서 open / merged PR 기록을 모두 볼 수 있습니다.
+<Aside type="tip">
+  GitHub Pages 로 공개할 때는 Pages workflow 가 build 시점에 `SITE` 와 `BASE` 값을 전달합니다. 대부분의 repo 에서는 example workflow 를 그대로 써도 `packages/dashboard` 를 더 손댈 필요가 없습니다.
+</Aside>
 
 ## 첫 deploy
 
@@ -78,8 +62,8 @@ PR Description 만으로는 부족하고, 팀 전체가 보는 목록 화면이 
 
 ## 동작 방식
 
-- `packages/dashboard/` 는 interactive Astro app 입니다
-- `packages/dashboard/public/notes/*.json` 는 build 때 읽는 working bundle 입니다
-- `gh-pages/dashboard/notes/*.json` 는 shared 기록을 위한 durable store 입니다
+- `packages/dashboard/` 는 Dashboard 를 보여주는 Astro 앱입니다
+- `packages/dashboard/public/notes/*.json` 는 build 때 읽는 bundle 입니다
+- `gh-pages/dashboard/notes/*.json` 는 공유 기록을 남기는 영구 저장소입니다
 
-이 repository 는 sample Dashboard JSON 을 포함하지 않습니다. 새 Dashboard 는 workflow 가 note files 를 restore 하거나 생성하기 전까지 비어 있습니다.
+이 repo 는 sample Dashboard JSON 을 포함하지 않습니다. 새 Dashboard 는 workflow 가 note files 를 복원하거나 생성하기 전까지 비어 있습니다. 많은 팀은 `pull_request` 에서 PR note 를 갱신하고, `main` 에서 merged 상태를 공개합니다.

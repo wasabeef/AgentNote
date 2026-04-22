@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: Publica el Dashboard compartido de Agent Note con GitHub Pages.
+description: Cómo publicar el Dashboard de Agent Note con GitHub Pages.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -11,24 +11,24 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Qué obtienes
 
-El Dashboard le da a tu equipo una URL compartida para el historial de Agent Note.
+El Dashboard le da a tu equipo una única URL compartida para el historial de Agent Note.
 
-- Ver historial de PR abiertas y mergeadas en un solo lugar
-- Revisar commits, prompts y attribution sin abrir cada PR
-- Compartir una sola URL de GitHub Pages, normalmente bajo `/dashboard/`
+- Historial de PR abiertas y merged en un solo lugar
+- Commits, prompts y attribution sin abrir cada PR por separado
+- Una única URL de GitHub Pages, normalmente bajo `/dashboard/`
 
-Úsalo cuando el PR report ya no alcance y necesites una vista compartida para el equipo.
+Úsalo cuando el PR report ya no sea suficiente y quieras una vista compartida para el equipo.
 
 ## Antes de empezar
 
 Solo necesitas el Dashboard si quieres una vista web compartida.
 
-- Si te basta con AI session reports dentro de pull requests, quédate en [GitHub Action](./github-action/).
-- Si quieres una vista compartida en Pages para historial abierto y mergeado, sigue aquí.
+- Si los informes de sesión de IA dentro de las pull requests te alcanzan, quédate con [GitHub Action](./github-action/).
+- Si quieres una vista compartida en Pages para historial abierto y merged, sigue aquí.
 
-## Quick Setup
+## Configuración rápida
 
-Primero, haz que la Action escriba Dashboard bundles para cada PR:
+Primero deja que la Action escriba los archivos del Dashboard para cada PR:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -40,7 +40,7 @@ Primero, haz que la Action escriba Dashboard bundles para cada PR:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Esto crea o actualiza `packages/dashboard/public/notes/*.json` para la PR actual. Después tu Pages workflow puede restaurar, persistir y publicar esos archivos.
+Esto crea o actualiza `packages/dashboard/public/notes/*.json` para la PR actual. Después, tu workflow de Pages se encarga de restaurar, guardar y publicar esos archivos.
 
 ## URL pública
 
@@ -52,34 +52,18 @@ Por ejemplo:
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Configuración de deploy
-
-`packages/dashboard` mantiene `/` como default local, así que tu Pages workflow debería inyectar valores específicos del repo al hacer build:
-
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (opcional)
-
-Así el package sigue siendo genérico, pero produce las URLs públicas correctas para cada repositorio.
-
-## Flujo recomendado
-
-1. Activa `dashboard: true` en la GitHub Action.
-2. Restaura `gh-pages/dashboard/notes` en `packages/dashboard/public/notes`.
-3. En `pull_request` (`opened`, `reopened`, `synchronize`), reescribe los note files de esa PR y persístelos de vuelta en `gh-pages`.
-4. En `push` a `main`, marca las PR notes correspondientes como `merged`, reconstruye el sitio y despliega la URL compartida.
-
-Así `main` queda libre de JSON generado y el Dashboard compartido puede mostrar historial de PR abiertas y mergeadas.
+<Aside type="tip">
+  Si publicas con GitHub Pages, tu workflow de Pages pasa los valores específicos del repo para `SITE` y `BASE` durante el build. En la mayoría de los repositorios puedes usar el workflow de ejemplo sin tocar `packages/dashboard`.
+</Aside>
 
 ## Primer deploy
 
-Un repo nuevo puede acumular Dashboard data antes del primer deploy a production, pero la URL pública de Pages solo aparece después del primer deploy de `main`.
+Incluso en un repo nuevo, el Dashboard puede acumular datos antes del primer deploy de producción. La URL pública de Pages aparece recién después del primer deploy a `main`.
 
 ## Cómo funciona
 
-- `packages/dashboard/` es la Astro app interactiva
-- `packages/dashboard/public/notes/*.json` es el working bundle que se usa en build
-- `gh-pages/dashboard/notes/*.json` es el durable store del historial compartido
+- `packages/dashboard/` es la app Astro de la interfaz
+- `packages/dashboard/public/notes/*.json` es el bundle que se lee durante el build
+- `gh-pages/dashboard/notes/*.json` es el almacenamiento permanente del historial compartido
 
-El repositorio no incluye sample Dashboard JSON. Un Dashboard nuevo queda vacío hasta que tu workflow restaura o genera los note files.
+El repositorio no incluye JSON de ejemplo para el Dashboard. Un Dashboard nuevo permanece vacío hasta que tu workflow restaura o genera note files. En muchos equipos se actualizan las PR notes en `pull_request` y se publica el estado merged en `main`.

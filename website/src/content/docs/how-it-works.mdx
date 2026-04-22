@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI changes files</strong>
-    <p>Hooks or transcripts record touched files and attribution signals.</p>
+    <p>Hooks or transcripts record the changed files and the clues used for attribution.</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-No extra commands are needed when the repo-local git hooks are installed. Cursor preview also restores prompt / response pairs from response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
+With the generated git hooks installed, most repos can keep using plain `git commit` and `git push`. Cursor Preview can also recover prompt / response pairs from local transcripts, and its shell hooks can keep tracking commits when git hooks are unavailable.
 
 ## Storage
 
@@ -90,35 +90,35 @@ No extra commands are needed when the repo-local git hooks are installed. Cursor
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>Line-level by default. Agent Note records the file before and after each AI edit, then subtracts later human edits from the final diff.</p>
+      <p>Usually line-level. Agent Note compares the file before and after each AI edit, then removes later human edits from the final diff.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Starts at file-level. Upgrades to line-level when transcript patch counts match the final commit diff. Shell-only edits stay on the safe side, and unreadable transcripts skip note creation instead of saving uncertain attribution.</p>
+      <p>Starts as file-level. It upgrades to line-level only when the transcript patch count matches the final commit diff.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Starts at file-level. Upgrades to line-level only when `afterFileEdit` / `afterTabFileEdit` counts match and the final blob still matches the last AI edit.</p>
+      <p>Starts as file-level. It upgrades to line-level only when edit counts match and the final file still matches the last AI edit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Records prompt / response and file-level attribution through `BeforeTool` / `AfterTool` and transcript parsing. Line-level upgrade is not available yet.</p>
+      <p>Records prompt / response and file-level attribution from hooks and transcripts. Line-level attribution is not available yet.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Prompt lists come from the causal conversation around the final diff, not the whole session backlog. In file-level mode, Agent Note keeps only the latest-touch edit path and the prompt-only context that leads into it.
+  Prompt lists come from the conversation that led to the final diff, not the whole session backlog. In file-level mode, Agent Note keeps only the latest edit path and the nearby prompt context needed to explain it.
 </Aside>
 
 <Aside>

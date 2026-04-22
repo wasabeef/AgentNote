@@ -1,16 +1,15 @@
 ---
 title: GitHub Action
-description: Publique AI session reports automaticamente em pull requests.
+description: Adiciona automaticamente um relatório de sessão de IA a cada pull request.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-## Quick Setup
+## Configuração rápida
 
-Adicione este workflow, criado automaticamente por `agent-note init`:
+Use o workflow criado por `agent-note init`:
 
 ```yaml
-# .github/workflows/agentnote.yml
 name: Agent Note
 on:
   pull_request:
@@ -28,27 +27,17 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-É só isso. Toda PR recebe um AI session report.
+Isso basta. Cada PR recebe automaticamente um relatório de sessão de IA.
 
 ## Inputs
 
 | Input | Default | Descrição |
 |---|---|---|
-| `base` | PR base branch | Branch base para comparação |
-| `pr_output` | `description` | Destino do PR report: `description`, `comment` ou `none` |
-| `dashboard` | `false` | Também escreve Dashboard snapshots para a PR atual |
+| `base` | Branch base da PR | Branch usada para comparação |
+| `pr_output` | `description` | Destino do relatório da PR: `description`, `comment` ou `none` |
+| `dashboard` | `false` | Também grava os arquivos do Dashboard para a PR atual |
 
-### Publicar como comment em vez de description
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    pr_output: comment
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Gerar Dashboard data junto com o PR report
+### Usar PR Description e Dashboard ao mesmo tempo
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -61,49 +50,34 @@ jobs:
 ```
 
 <Aside type="tip">
-  Ative isso apenas se você também quiser o Dashboard compartilhado. O setup completo de bundle, Pages sync e deploy está no guia [Dashboard](./dashboard/).
+  Ative `dashboard: true` apenas se você também quiser o Dashboard compartilhado. A página <a href="./dashboard/">Dashboard</a> explica como bundle, sync com Pages e deploy funcionam juntos.
 </Aside>
 
 ## Outputs
 
 | Output | Tipo | Descrição |
 |---|---|---|
-| `overall_ai_ratio` | number | AI ratio total da PR (0-100) |
+| `overall_ai_ratio` | number | Razão de IA do PR inteiro (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed` ou `none` |
 | `tracked_commits` | number | Número de commits com dados de agent-note |
-| `total_commits` | number | Número total de commits na PR |
+| `total_commits` | number | Número total de commits no PR |
 | `total_prompts` | number | Número total de prompts em todos os commits |
-| `json` | string | Report estruturado completo |
-| `markdown` | string | Report markdown renderizado |
-| `dashboard_commits` | number | Número de tracked commits escritos no Dashboard bundle |
+| `json` | string | Relatório estruturado completo |
+| `markdown` | string | Relatório em Markdown já renderizado |
+| `dashboard_commits` | number | Número de tracked commits escritos no bundle do Dashboard |
 
-### Usando outputs no workflow
+## O que o relatório inclui
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    base: main
+O relatório do PR inclui:
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
-```
-
-## Report Format
-
-O PR report inclui:
-
-- **Header** — `Total AI Ratio` com progress bar e uma linha separada em plain text para `Model`
-- **Table** — AI ratio por commit, quantidade de prompts e files com attribution
-- **Prompts** — seção recolhível com pares de prompt / response por commit
+- **Header** — `Total AI Ratio` com barra e, abaixo, `Model`
+- **Tabela** — razão de IA, quantidade de prompts e arquivos por commit
+- **Prompts** — pares de prompt / response por commit em uma seção recolhível
 
 <Aside type="tip">
-  Os hashes de commit no report apontam diretamente para a página do commit no GitHub.
+  Os hashes de commit do relatório apontam diretamente para a página do commit no GitHub.
 </Aside>
-
-## Notes Sharing
-
-A Action busca `refs/notes/agentnote` do remote. O Git hook `pre-push` instalado por `agent-note init` faz push automático das notes a cada `git push`, sem etapas manuais.
 
 ## Próximo passo
 
-Se você também quiser uma visão compartilhada em Pages para o histórico de PRs open e merged, siga para o guia [Dashboard](./dashboard/).
+Se você também quiser uma visão compartilhada em Pages para PRs abertas e mergeadas, siga para <a href="./dashboard/">Dashboard</a>.

@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: `.gemini/settings.json` 을 커밋
 
 3. AI와 함께 코딩하세요.
-   생성된 git hook이 설치되어 있으면 평소 `git commit`이 그대로 동작합니다.
-   git hook을 쓸 수 없을 때는 `agent-note commit -m "..."` 을 fallback으로 사용합니다.
+   생성된 git hook 이 설치되어 있으면 평소처럼 `git commit` 을 쓰면 됩니다.
+   git hook 을 쓸 수 없을 때만 `agent-note commit -m "..."` 을 대체 경로로 사용합니다.
 </Steps>
 
 ## 설정 확인
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 는 활성 adapter, `capture:` 는 활성 agent hook이 수집하는 것, `git:` 는 repo 로컬 git hook 설치 여부, `commit:` 는 일반 `git commit` 이 주 경로인지 fallback 모드인지를 나타냅니다.
+`agent:` 는 활성 adapter, `capture:` 는 활성 hook 이 수집하는 내용, `git:` 는 관리되는 git hook 설치 여부, `commit:` 는 일반 `git commit` 이 주 경로인지 보여줍니다.
 
 ## 직접 확인해 보세요
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` 대체 경로</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

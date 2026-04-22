@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <div class="agent-flow__step">
     <span class="agent-flow__label">2. Edit</span>
     <strong>AI 更新文件</strong>
-    <p>hooks 或 transcripts 会记录 touched files 和 attribution signals。</p>
+    <p>hooks 或 transcripts 会记录发生变化的文件，以及用于 attribution 的线索。</p>
   </div>
   <div class="agent-flow__arrow" aria-hidden="true">→</div>
   <div class="agent-flow__step">
@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-只要 repo-local git hooks 已安装，就不需要额外命令。Cursor preview 也能从 response hooks 或本地 transcripts 恢复 prompt / response 对；当 git hooks 不可用时，它的 shell hooks 会提供 fallback 路径。
+只要生成的 git hook 已安装，大多数仓库里就继续正常使用 `git commit` 和 `git push` 即可。Cursor Preview 也能从本地 transcript 恢复 prompt / response，对 git hook 不可用的环境也能继续跟踪 commit。
 
 ## 存储
 
@@ -90,35 +90,35 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Claude Code</div>
-      <p>默认是 line-level。Agent Note 会记录每次 AI edit 前后的文件状态，并把之后出现的人类 edit 从最终 diff 里扣掉。</p>
+      <p>通常是 line-level。Agent Note 会比较每次 AI edit 前后的文件状态，再把之后出现的人类 edit 从最终 diff 里扣掉。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>起点是 file-level。只有 transcript 中的 patch 计数与最终 commit diff 一致时，才会升到 line-level。shell-only edits 会保持保守，读不到 transcript 时会跳过 note 创建。</p>
+      <p>起点是 file-level。只有 transcript 中的 patch 计数与最终 commit diff 一致时，才会升到 line-level。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>起点是 file-level。只有 `afterFileEdit` / `afterTabFileEdit` 匹配，并且最终 blob 仍与最后一次 AI edit 一致时，才会升到 line-level。</p>
+      <p>起点是 file-level。只有 edit 计数匹配，并且最终文件仍与最后一次 AI edit 一致时，才会升到 line-level。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>通过 `BeforeTool` / `AfterTool` 和 transcript 解析记录 prompt / response 与 file-level attribution。暂时还没有 line-level upgrade。</p>
+      <p>通过 hooks 和 transcript 解析记录 prompt / response 与 file-level attribution。暂时还没有 line-level 归因。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  prompt 列表来自最终 diff 周围有因果关系的对话，而不是整个 session backlog。在 file-level 模式下，Agent Note 只保留最后一条 edit 路径，以及通向它的 prompt-only context。
+  prompt 列表来自真正导向最终 diff 的那段对话，而不是整个 session backlog。在 file-level 模式下，Agent Note 只保留最后一条 edit 路径，以及解释它的近邻上下文。
 </Aside>
 
 <Aside>

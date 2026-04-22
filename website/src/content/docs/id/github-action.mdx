@@ -1,16 +1,15 @@
 ---
 title: GitHub Action
-description: Posting AI session report secara otomatis ke pull request.
+description: Menambahkan laporan sesi AI ke setiap pull request secara otomatis.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-## Quick Setup
+## Quick setup
 
-Tambahkan workflow ini, yang dibuat otomatis oleh `agent-note init`:
+Gunakan workflow yang dibuat oleh `agent-note init`:
 
 ```yaml
-# .github/workflows/agentnote.yml
 name: Agent Note
 on:
   pull_request:
@@ -28,27 +27,17 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-Itu saja. Setiap PR akan mendapatkan AI session report.
+Itu saja. Setiap PR akan otomatis mendapat laporan sesi AI.
 
 ## Inputs
 
 | Input | Default | Deskripsi |
 |---|---|---|
-| `base` | PR base branch | Branch dasar untuk dibandingkan |
-| `pr_output` | `description` | Tujuan PR report: `description`, `comment`, atau `none` |
-| `dashboard` | `false` | Juga menulis Dashboard snapshot untuk PR saat ini |
+| `base` | Branch dasar PR | Branch pembanding |
+| `pr_output` | `description` | Tujuan laporan PR: `description`, `comment`, atau `none` |
+| `dashboard` | `false` | Juga menulis file Dashboard untuk PR saat ini |
 
-### Posting sebagai comment, bukan description
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    pr_output: comment
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Menghasilkan Dashboard data bersama PR report
+### Menggunakan PR Description dan Dashboard sekaligus
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -61,49 +50,34 @@ Itu saja. Setiap PR akan mendapatkan AI session report.
 ```
 
 <Aside type="tip">
-  Aktifkan ini hanya jika Anda juga ingin Dashboard bersama. Setup lengkap untuk bundle, Pages sync, dan deploy ada di panduan [Dashboard](./dashboard/).
+  Aktifkan `dashboard: true` hanya jika Anda juga ingin Dashboard bersama. Cara kerja bundle, sinkronisasi Pages, dan deploy dijelaskan di <a href="./dashboard/">Dashboard</a>.
 </Aside>
 
 ## Outputs
 
 | Output | Tipe | Deskripsi |
 |---|---|---|
-| `overall_ai_ratio` | number | AI ratio seluruh PR (0-100) |
+| `overall_ai_ratio` | number | Rasio AI untuk seluruh PR (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed`, atau `none` |
-| `tracked_commits` | number | Jumlah commit dengan data agent-note |
-| `total_commits` | number | Total commit di PR |
-| `total_prompts` | number | Total prompt di semua commit |
-| `json` | string | Report terstruktur lengkap |
-| `markdown` | string | Report markdown yang sudah dirender |
-| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke Dashboard bundle |
+| `tracked_commits` | number | Jumlah commit yang punya data agent-note |
+| `total_commits` | number | Jumlah total commit dalam PR |
+| `total_prompts` | number | Jumlah total prompt di semua commit |
+| `json` | string | Laporan terstruktur lengkap |
+| `markdown` | string | Laporan Markdown yang sudah dirender |
+| `dashboard_commits` | number | Jumlah tracked commit yang ditulis ke bundle Dashboard |
 
-### Menggunakan outputs di workflow
+## Isi laporan
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    base: main
+Laporan PR berisi:
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
-```
-
-## Format report
-
-PR report mencakup:
-
-- **Header** — `Total AI Ratio` dengan progress bar, plus baris plain-text `Model`
-- **Table** — AI ratio per commit, jumlah prompt, dan files dengan attribution
-- **Prompts** — bagian collapsible dengan pasangan prompt / response per commit
+- **Header** — `Total AI Ratio` dengan bar, lalu `Model` di bawahnya
+- **Tabel** — rasio AI, jumlah prompt, dan file per commit
+- **Prompts** — pasangan prompt / response per commit dalam bagian yang bisa dilipat
 
 <Aside type="tip">
-  Hash commit di report akan menaut ke halaman commit di GitHub.
+  Hash commit di laporan langsung menaut ke halaman commit di GitHub.
 </Aside>
-
-## Notes Sharing
-
-Action akan mengambil `refs/notes/agentnote` dari remote. Git hook `pre-push` yang dipasang oleh `agent-note init` otomatis melakukan push notes setiap kali `git push`, tanpa langkah manual.
 
 ## Langkah berikutnya
 
-Jika Anda juga ingin tampilan Pages bersama untuk riwayat PR open dan merged, lanjutkan ke panduan [Dashboard](./dashboard/).
+Jika Anda juga ingin tampilan Pages bersama untuk PR terbuka dan merged, lanjutkan ke <a href="./dashboard/">Dashboard</a>.

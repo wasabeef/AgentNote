@@ -1,6 +1,6 @@
 ---
 title: Dashboard
-description: Publikasikan Dashboard bersama Agent Note dengan GitHub Pages.
+description: Cara memublikasikan Dashboard Agent Note dengan GitHub Pages.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -9,26 +9,26 @@ import { Aside } from '@astrojs/starlight/components';
   <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note dashboard preview" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
 </div>
 
-## Yang Anda Dapatkan
+## Yang akan Anda dapatkan
 
-Dashboard memberi tim Anda satu URL bersama untuk riwayat Agent Note.
+Dashboard memberi tim Anda satu URL bersama untuk melihat riwayat Agent Note.
 
-- Melihat riwayat PR yang open dan merged di satu tempat
-- Meninjau commit, prompt, dan attribution tanpa membuka setiap PR
-- Membagikan satu URL GitHub Pages, biasanya di bawah `/dashboard/`
+- Riwayat PR terbuka dan merged di satu tempat
+- Commit, prompt, dan attribution tanpa membuka setiap PR satu per satu
+- Satu URL GitHub Pages bersama, biasanya di bawah `/dashboard/`
 
-Gunakan ini ketika PR report saja tidak lagi cukup dan Anda membutuhkan tampilan bersama untuk tim.
+Gunakan ini ketika PR report saja belum cukup dan tim membutuhkan tampilan bersama.
 
-## Sebelum Mulai
+## Sebelum mulai
 
-Anda hanya perlu Dashboard jika ingin tampilan web bersama.
+Anda hanya perlu Dashboard jika memang ingin tampilan web bersama.
 
-- Jika AI session report di pull request sudah cukup, berhenti di [GitHub Action](./github-action/).
-- Jika ingin tampilan Pages bersama untuk riwayat open dan merged, lanjutkan di sini.
+- Jika laporan sesi AI di dalam pull request sudah cukup, berhenti di [GitHub Action](./github-action/).
+- Jika ingin tampilan Pages bersama untuk riwayat terbuka dan merged, lanjutkan di sini.
 
-## Quick Setup
+## Quick setup
 
-Pertama, biarkan Action menulis Dashboard bundle untuk setiap PR:
+Pertama, biarkan Action menulis file Dashboard untuk setiap PR:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -40,7 +40,7 @@ Pertama, biarkan Action menulis Dashboard bundle untuk setiap PR:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Ini akan membuat atau memperbarui `packages/dashboard/public/notes/*.json` untuk PR saat ini. Setelah itu Pages workflow Anda bisa me-restore, menyimpan, dan mem-publish file tersebut.
+Ini akan membuat atau memperbarui `packages/dashboard/public/notes/*.json` untuk PR saat ini. Setelah itu workflow Pages Anda menangani restore, persist, dan publish file tersebut.
 
 ## URL publik
 
@@ -52,34 +52,18 @@ Contoh:
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-## Konfigurasi deploy
-
-`packages/dashboard` tetap memakai default lokal `/`, jadi Pages workflow Anda harus menyuntikkan nilai khusus repo saat build:
-
-- `SITE=https://<owner>.github.io`
-- `BASE=/<repo>/dashboard`
-- `PUBLIC_REPO=<owner>/<repo>`
-- `PUBLIC_REPO_URL=https://github.com/<owner>/<repo>` (optional)
-
-Dengan begitu package tetap generic, tetapi URL publik untuk tiap repository tetap benar.
-
-## Alur yang disarankan
-
-1. Aktifkan `dashboard: true` di GitHub Action.
-2. Restore `gh-pages/dashboard/notes` ke `packages/dashboard/public/notes`.
-3. Pada `pull_request` (`opened`, `reopened`, `synchronize`), tulis ulang note files untuk PR tersebut lalu simpan kembali ke `gh-pages`.
-4. Pada `push` ke `main`, tandai PR notes yang cocok sebagai `merged`, build ulang site, lalu deploy shared Pages URL.
-
-Ini menjaga `main` tetap bersih dari JSON generated, sambil tetap memungkinkan satu Dashboard bersama menampilkan riwayat PR open dan merged.
+<Aside type="tip">
+  Jika Anda memublikasikan dengan GitHub Pages, workflow Pages akan mengirim nilai `SITE` dan `BASE` yang spesifik untuk repo saat build. Pada kebanyakan repo, workflow contoh bisa dipakai tanpa mengubah `packages/dashboard`.
+</Aside>
 
 ## Deploy pertama
 
-Repo yang benar-benar baru tetap bisa mengumpulkan Dashboard data sebelum deploy production pertama, tetapi URL public Pages baru muncul setelah deploy pertama dari `main`.
+Bahkan repo baru bisa mulai mengumpulkan data Dashboard sebelum deploy produksi pertama. URL publik Pages baru muncul setelah deploy pertama ke `main`.
 
 ## Cara kerjanya
 
-- `packages/dashboard/` adalah Astro app interaktif
-- `packages/dashboard/public/notes/*.json` adalah working bundle yang dipakai saat build
-- `gh-pages/dashboard/notes/*.json` adalah durable store untuk riwayat bersama
+- `packages/dashboard/` adalah aplikasi Astro untuk tampilan Dashboard
+- `packages/dashboard/public/notes/*.json` adalah bundle yang dibaca saat build
+- `gh-pages/dashboard/notes/*.json` adalah penyimpanan permanen untuk riwayat bersama
 
-Repository ini tidak menyertakan sample Dashboard JSON. Dashboard baru akan tetap kosong sampai workflow Anda me-restore atau membuat note files.
+Repo ini tidak menyertakan JSON contoh untuk Dashboard. Dashboard baru akan tetap kosong sampai workflow Anda me-restore atau menghasilkan note files. Banyak tim memperbarui PR notes di `pull_request`, lalu memublikasikan status merged dari `main`.

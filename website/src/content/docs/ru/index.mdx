@@ -74,8 +74,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: закоммитить `.gemini/settings.json`
 
 3. Пишите код с ИИ.
-   Обычный `git commit` работает, когда сгенерированные git hooks установлены.
-   `agent-note commit -m "..."` остаётся fallback-вариантом, если git hooks недоступны.
+   Если сгенерированные git hooks установлены, достаточно обычного `git commit`.
+   `agent-note commit -m "..."` нужен только как запасной путь, когда git hooks недоступны.
 </Steps>
 
 ## Проверьте настройку
@@ -96,7 +96,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` показывает активный адаптер, `capture:` суммирует, что собирают хуки активного агента, `git:` показывает, установлены ли локальные git hooks репозитория, а `commit:` указывает, является ли обычный `git commit` основным путём или активен режим fallback.
+`agent:` показывает активный адаптер, `capture:` суммирует, что собирают активные hooks, `git:` показывает, установлены ли управляемые git hooks, а `commit:` указывает, является ли обычный `git commit` основным путём.
 
 ## Посмотрите в действии
 
@@ -176,7 +176,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Fallback `agent-note commit`</div>
+    <div class="capability-label">`agent-note commit` как запасной путь</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

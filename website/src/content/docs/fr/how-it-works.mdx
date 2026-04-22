@@ -33,7 +33,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Aucune commande supplémentaire n’est nécessaire lorsque les git hooks locaux au dépôt sont installés. Cursor preview restaure aussi les paires prompt / response à partir des response hooks ou des transcripts locaux, et ses shell hooks offrent un fallback quand les git hooks sont indisponibles.
+Une fois les git hooks générés installés, la plupart des dépôts peuvent continuer à utiliser simplement `git commit` et `git push`. Cursor Preview récupère aussi les paires prompt / response depuis les transcripts locaux et peut continuer à suivre les commits quand les git hooks ne sont pas disponibles.
 
 ## Stockage
 
@@ -97,28 +97,28 @@ Aucune commande supplémentaire n’est nécessaire lorsque les git hooks locaux
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Codex CLI</div>
-      <p>Démarre en file-level. Passe en line-level uniquement si les comptes de patch du transcript correspondent au diff final du commit. Les edits shell-only restent du côté prudent, et un transcript illisible saute la création de la note.</p>
+      <p>Démarre en file-level. Passe en line-level uniquement si les comptes de patch du transcript correspondent au diff final du commit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Cursor Preview</div>
-      <p>Démarre en file-level. Passe en line-level seulement lorsque `afterFileEdit` / `afterTabFileEdit` correspondent et que le blob final correspond encore au dernier edit IA.</p>
+      <p>Démarre en file-level. Passe en line-level seulement lorsque les comptes d’édition correspondent et que le fichier final correspond encore au dernier edit IA.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
       <div class="agent-attribution-card__title">Gemini CLI Preview</div>
-      <p>Enregistre prompt / response et attribution au niveau fichier via `BeforeTool` / `AfterTool` et le parsing du transcript. L’upgrade line-level n’est pas encore disponible.</p>
+      <p>Enregistre prompt / response et attribution au niveau fichier via les hooks et le parsing du transcript. Le mode line-level n’est pas encore disponible.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
   </Card>
 </CardGrid>
 
 <Aside type="tip">
-  Les listes de prompts viennent de la conversation causale autour du diff final, pas de tout l’historique de la session. En mode file-level, Agent Note garde uniquement le dernier chemin d’edit et le prompt-only context qui y mène.
+  Les listes de prompts viennent de la conversation qui a mené au diff final, pas de tout l’historique de la session. En mode file-level, Agent Note garde uniquement le dernier chemin d’edit et le contexte proche qui l’explique.
 </Aside>
 
 <Aside>

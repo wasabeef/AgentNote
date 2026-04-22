@@ -43,7 +43,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
     AI 比率、プロンプト数、コミットハッシュ。レビュアーが最初に見る画面に文脈が載る。
   </Card>
   <Card title="git notes にだけ書く" icon="setting">
-    ブランチには混ざらない。push / fetch でチーム共有しつつ、optional な static Dashboard を GitHub Pages に publish できる。
+    ブランチには混ざらない。push / fetch でチーム共有しつつ、必要なら GitHub Pages に Dashboard を公開できる。
   </Card>
 </CardGrid>
 
@@ -74,7 +74,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Gemini CLI: `.gemini/settings.json` をコミット
 
 3. 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
-   git hook が使えない環境では `agent-note commit -m "..."` を fallback として使えます。
+   git hook が使えない環境だけ `agent-note commit -m "..."` を代替手段として使います。
 </Steps>
 
 ## セットアップ確認
@@ -95,7 +95,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` は有効な adapter、`capture:` は active な agent hook が何を集めるか、`git:` は managed な repo-local git hook、`commit:` は通常の `git commit` が主経路か fallback mode かを示します。
+`agent:` は有効な adapter、`capture:` は今の hook が何を集めるか、`git:` は管理対象の git hook が入っているか、`commit:` は通常の `git commit` が主経路かどうかを示します。
 
 ## 実際の表示
 
@@ -175,7 +175,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">✓</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` fallback</div>
+    <div class="capability-label">`agent-note commit` の代替利用</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>
     <div class="cap-yes">✓</div>

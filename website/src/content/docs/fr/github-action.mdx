@@ -1,16 +1,15 @@
 ---
 title: GitHub Action
-description: Publiez automatiquement des AI session reports dans les pull requests.
+description: Ajoute automatiquement un rapport de session IA à chaque pull request.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-## Quick Setup
+## Mise en place rapide
 
-Ajoutez ce workflow, créé automatiquement par `agent-note init` :
+Utilisez simplement le workflow créé par `agent-note init` :
 
 ```yaml
-# .github/workflows/agentnote.yml
 name: Agent Note
 on:
   pull_request:
@@ -28,27 +27,17 @@ jobs:
       - uses: wasabeef/AgentNote@v0
 ```
 
-C'est tout. Chaque PR reçoit un AI session report.
+C’est suffisant. Chaque PR reçoit automatiquement un rapport de session IA.
 
 ## Inputs
 
-| Input | Default | Description |
+| Input | Valeur par défaut | Description |
 |---|---|---|
-| `base` | PR base branch | Branche de base pour la comparaison |
-| `pr_output` | `description` | Destination du PR report : `description`, `comment` ou `none` |
-| `dashboard` | `false` | Écrit aussi des Dashboard snapshots pour la PR courante |
+| `base` | Branche de base de la PR | Branche utilisée pour la comparaison |
+| `pr_output` | `description` | Destination du rapport de PR : `description`, `comment` ou `none` |
+| `dashboard` | `false` | Écrit aussi les fichiers du Dashboard pour la PR en cours |
 
-### Publier en comment au lieu de description
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    pr_output: comment
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Générer des Dashboard data en même temps que le PR report
+### Utiliser la PR description et le Dashboard en même temps
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -61,49 +50,34 @@ C'est tout. Chaque PR reçoit un AI session report.
 ```
 
 <Aside type="tip">
-  Activez cela seulement si vous voulez aussi le Dashboard partagé. Toute la configuration bundle, Pages sync et deploy est détaillée dans le guide [Dashboard](./dashboard/).
+  Activez `dashboard: true` uniquement si vous voulez aussi le Dashboard partagé. La page <a href="./dashboard/">Dashboard</a> explique comment s’articulent bundle, synchronisation Pages et déploiement.
 </Aside>
 
 ## Outputs
 
 | Output | Type | Description |
 |---|---|---|
-| `overall_ai_ratio` | number | AI ratio globale de la PR (0-100) |
+| `overall_ai_ratio` | number | Ratio IA sur l’ensemble de la PR (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed` ou `none` |
 | `tracked_commits` | number | Nombre de commits avec des données agent-note |
 | `total_commits` | number | Nombre total de commits dans la PR |
 | `total_prompts` | number | Nombre total de prompts sur tous les commits |
 | `json` | string | Rapport structuré complet |
-| `markdown` | string | Rapport markdown rendu |
-| `dashboard_commits` | number | Nombre de tracked commits écrits dans le Dashboard bundle |
+| `markdown` | string | Rapport Markdown rendu |
+| `dashboard_commits` | number | Nombre de tracked commits écrits dans le bundle du Dashboard |
 
-### Utiliser les outputs dans le workflow
+## Ce que contient le rapport
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    base: main
+Le rapport de PR contient :
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
-```
-
-## Report Format
-
-Le PR report contient :
-
-- **Header** — `Total AI Ratio` avec une progress bar, plus une ligne texte séparée `Model`
-- **Table** — AI ratio par commit, nombre de prompts et files avec attribution
-- **Prompts** — section repliable avec les paires prompt / response par commit
+- **Header** — `Total AI Ratio` avec une barre, puis `Model` en dessous
+- **Tableau** — ratio IA, nombre de prompts et fichiers par commit
+- **Prompts** — paires prompt / response par commit dans une section repliable
 
 <Aside type="tip">
-  Les hashes de commit dans le report pointent directement vers la page GitHub du commit.
+  Les hashes de commit du rapport pointent directement vers la page du commit sur GitHub.
 </Aside>
-
-## Notes Sharing
-
-L'Action récupère `refs/notes/agentnote` depuis le remote. Le Git hook `pre-push` installé par `agent-note init` pousse automatiquement les notes à chaque `git push`, sans commande manuelle.
 
 ## Étape suivante
 
-Si vous voulez aussi une vue Pages partagée pour l'historique des PR ouvertes et fusionnées, passez au guide [Dashboard](./dashboard/).
+Si vous voulez aussi une vue Pages partagée pour les PR ouvertes et mergées, continuez avec <a href="./dashboard/">Dashboard</a>.
