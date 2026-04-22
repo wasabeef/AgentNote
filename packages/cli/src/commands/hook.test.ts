@@ -14,7 +14,7 @@ import {
   TRAILER_KEY,
 } from "../core/constants.js";
 
-describe("agentnote hook", () => {
+describe("agent-note hook", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 

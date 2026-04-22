@@ -29933,8 +29933,6 @@ exports.resolvePrOutputMode = resolvePrOutputMode;
 exports.upsertDescription = upsertDescription;
 exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
 exports.buildPrReportCommand = buildPrReportCommand;
-exports.inferDashboardUrl = inferDashboardUrl;
-exports.withDashboardLink = withDashboardLink;
 exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 exports.DESCRIPTION_END = "<!-- agentnote-end -->";
@@ -29981,44 +29979,6 @@ function buildPrReportCommand(cliCmd, base, headSha, options) {
     const headArg = headSha ? ` --head "${headSha}"` : "";
     const jsonArg = options?.json ? " --json" : "";
     return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
-}
-function ensureTrailingSlash(url) {
-    return url.endsWith("/") ? url : `${url}/`;
-}
-/**
- * Infer the public dashboard URL from the repository name using the standard
- * GitHub Pages project-site convention.
- */
-function inferDashboardUrl(repository) {
-    const trimmed = repository.trim();
-    if (!trimmed.includes("/"))
-        return "";
-    const [owner, repo] = trimmed.split("/", 2);
-    if (!owner || !repo)
-        return "";
-    if (repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
-        return `https://${owner}.github.io/dashboard/`;
-    }
-    return `https://${owner}.github.io/${repo}/dashboard/`;
-}
-/**
- * Insert a dashboard link near the top of the rendered PR report.
- */
-function withDashboardLink(markdown, dashboardUrl) {
-    if (!markdown.trim())
-        return markdown;
-    const linkLine = `🔎 [Open dashboard](${ensureTrailingSlash(dashboardUrl)})`;
-    const lines = markdown.split("\n");
-    const headingIndex = lines.findIndex((line) => line.startsWith("## "));
-    if (headingIndex === -1) {
-        return `${linkLine}\n\n${markdown}`;
-    }
-    let insertIndex = headingIndex + 1;
-    if (lines[insertIndex] === "") {
-        insertIndex += 1;
-    }
-    lines.splice(insertIndex, 0, linkLine, "");
-    return lines.join("\n");
 }
 
 
@@ -30067,10 +30027,8 @@ const core = __importStar(__nccwpck_require__(7184));
 const github = __importStar(__nccwpck_require__(5683));
 const child_process_1 = __nccwpck_require__(5317);
 const fs_1 = __nccwpck_require__(9896);
-const promises_1 = __nccwpck_require__(1943);
 const path_1 = __nccwpck_require__(6928);
 const helpers_js_1 = __nccwpck_require__(1979);
-const DEFAULT_DASHBOARD_DIR = "packages/dashboard/public";
 /**
  * Resolve the agentnote CLI command.
  * Prefers the local monorepo build (no version skew), falls back to npx.
@@ -30102,92 +30060,6 @@ function fetchAgentnoteNotes() {
 }
 function isEnabled(value) {
     return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
-}
-function readGitNote(commitSha) {
-    try {
-        const raw = (0, child_process_1.execSync)(`git notes --ref=agentnote show "${commitSha}"`, {
-            encoding: "utf-8",
-            stdio: ["pipe", "pipe", "pipe"],
-        }).trim();
-        if (!raw)
-            return null;
-        return JSON.parse(raw);
-    }
-    catch {
-        return null;
-    }
-}
-function withDashboardMetadata(note, commitSha, pullRequest) {
-    const commit = (note.commit ?? {});
-    const shortSha = typeof commit.short_sha === "string" && commit.short_sha
-        ? commit.short_sha
-        : commitSha.slice(0, 7);
-    return {
-        ...note,
-        commit: {
-            ...commit,
-            sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
-            short_sha: shortSha,
-        },
-        pull_request: {
-            number: pullRequest.number,
-            title: pullRequest.title,
-        },
-    };
-}
-async function removeDashboardNotesForPr(notesDir, prNumber) {
-    if (!(0, fs_1.existsSync)(notesDir))
-        return;
-    for (const name of await (0, promises_1.readdir)(notesDir)) {
-        if (!name.endsWith(".json"))
-            continue;
-        const path = (0, path_1.join)(notesDir, name);
-        try {
-            const note = JSON.parse(await (0, promises_1.readFile)(path, "utf-8"));
-            const pullRequest = (note.pull_request ?? {});
-            if (pullRequest.number === prNumber) {
-                await (0, promises_1.rm)(path, { force: true });
-            }
-        }
-        catch {
-            // Ignore malformed dashboard files and leave them untouched.
-        }
-    }
-}
-async function writeDashboardBundle(report) {
-    const pullRequest = github.context.payload.pull_request;
-    if (!pullRequest) {
-        core.info("No pull request context available. Skipping dashboard bundle.");
-        return { dir: (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR), commits: 0 };
-    }
-    const dashboardDir = (0, path_1.resolve)(DEFAULT_DASHBOARD_DIR);
-    const notesDir = (0, path_1.join)(dashboardDir, "notes");
-    await (0, promises_1.mkdir)(notesDir, { recursive: true });
-    await removeDashboardNotesForPr(notesDir, pullRequest.number);
-    let writtenCommits = 0;
-    const commits = Array.isArray(report.commits)
-        ? report.commits
-        : [];
-    for (const commit of commits) {
-        const sha = typeof commit.sha === "string" ? commit.sha : "";
-        if (!sha)
-            continue;
-        const note = readGitNote(sha);
-        if (!note)
-            continue;
-        const dashboardNote = withDashboardMetadata(note, sha, {
-            number: pullRequest.number,
-            title: pullRequest.title,
-        });
-        const commitInfo = (dashboardNote.commit ?? {});
-        const shortSha = typeof commitInfo.short_sha === "string" && commitInfo.short_sha
-            ? commitInfo.short_sha
-            : sha.slice(0, 7);
-        await (0, promises_1.writeFile)((0, path_1.join)(notesDir, `${shortSha}.json`), `${JSON.stringify(dashboardNote, null, 2)}\n`);
-        writtenCommits += 1;
-    }
-    core.info(`Agent Note dashboard notes updated at ${notesDir} (${writtenCommits} commits).`);
-    return { dir: dashboardDir, commits: writtenCommits };
 }
 async function postPrReport(outputMode, markdown) {
     if (outputMode === "none")
@@ -30251,7 +30123,6 @@ async function run() {
         const headSha = github.context.payload.pull_request?.head?.sha;
         const cliCmd = resolveCliCommand();
         const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"));
-        const dashboardEnabled = isEnabled(core.getInput("dashboard"));
         let json = "";
         let report = null;
         const maxAttempts = 3;
@@ -30304,25 +30175,7 @@ async function run() {
         // published from a public host.
         const reportModel = typeof report.model === "string" ? report.model.trim() : "";
         void reportModel;
-        let dashboardCommits = 0;
-        let dashboardDir = "";
-        let dashboardUrl = "";
-        if (dashboardEnabled) {
-            const result = await writeDashboardBundle(report);
-            dashboardCommits = result.commits;
-            dashboardDir = result.dir;
-            if (dashboardCommits > 0) {
-                dashboardUrl = (0, helpers_js_1.inferDashboardUrl)(github.context.repo.owner && github.context.repo.repo
-                    ? `${github.context.repo.owner}/${github.context.repo.repo}`
-                    : "");
-            }
-        }
-        if (dashboardUrl) {
-            markdown = (0, helpers_js_1.withDashboardLink)(markdown, dashboardUrl);
-        }
         core.setOutput("markdown", markdown);
-        core.setOutput("dashboard_commits", String(dashboardCommits));
-        core.setOutput("dashboard_url", dashboardUrl);
         await postPrReport(prOutputMode, markdown);
     }
     catch (error) {
@@ -30405,14 +30258,6 @@ module.exports = require("events");
 
 "use strict";
 module.exports = require("fs");
-
-/***/ }),
-
-/***/ 1943:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("fs/promises");
 
 /***/ }),
 

@@ -150,10 +150,7 @@ async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]>
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some(
-          (hook) =>
-            hook.command?.includes("agent-note hook") || hook.command?.includes("agentnote hook"),
-        ),
+        (group.hooks ?? []).some((hook) => hook.command?.includes("agent-note hook")),
       );
 
     const capabilities: string[] = [];
@@ -179,10 +176,7 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
     const parsed = JSON.parse(content) as CursorHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
-      (hooks[eventName] ?? []).some(
-        (entry) =>
-          entry.command?.includes("agent-note hook") || entry.command?.includes("agentnote hook"),
-      );
+      (hooks[eventName] ?? []).some((entry) => entry.command?.includes("agent-note hook"));
 
     const capabilities: string[] = [];
     if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
@@ -215,9 +209,7 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some(
-          (h) => h.command?.includes("agent-note hook") || h.command?.includes("agentnote hook"),
-        ),
+        (group.hooks ?? []).some((h) => h.command?.includes("agent-note hook")),
       );
 
     const capabilities: string[] = [];

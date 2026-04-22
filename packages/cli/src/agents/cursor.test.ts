@@ -43,7 +43,7 @@ describe("cursor adapter", () => {
     assert.match(content, /agent-note hook --agent cursor/);
   });
 
-  it("replaces legacy agentnote hooks without removing unrelated hooks", async () => {
+  it("replaces existing agent-note hooks without removing unrelated hooks", async () => {
     const hooksPath = join(repoRoot, ".cursor", "hooks.json");
     mkdirSync(join(repoRoot, ".cursor"), { recursive: true });
     writeFileSync(
@@ -52,7 +52,7 @@ describe("cursor adapter", () => {
         {
           version: 1,
           hooks: {
-            beforeSubmitPrompt: [{ command: "npx --yes agentnote hook" }, { command: "echo ok" }],
+            beforeSubmitPrompt: [{ command: "npx --yes agent-note hook" }, { command: "echo ok" }],
           },
         },
         null,

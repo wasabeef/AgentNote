@@ -334,8 +334,7 @@ function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {
       .map(([event, entries]) => [
         event,
         entries.filter(
-          (entry) =>
-            !entry.command.includes("agent-note hook") && !entry.command.includes("agentnote hook"),
+          (entry) => !entry.command.includes("agent-note hook"),
         ),
       ])
       .filter(([, entries]) => entries.length > 0),
@@ -402,8 +401,7 @@ export const cursor: AgentAdapter = {
 
     try {
       const content = await readFile(hooksPath, "utf-8");
-      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
-      return content.includes(HOOK_COMMAND) || content.includes("agentnote hook --agent cursor");
+      return content.includes(HOOK_COMMAND);
     } catch {
       return false;
     }

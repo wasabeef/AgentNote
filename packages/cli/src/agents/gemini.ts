@@ -202,8 +202,7 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
     .map((group) => ({
       ...group,
       hooks: group.hooks.filter(
-        (hook) =>
-          !hook.command.includes("agent-note hook") && !hook.command.includes("agentnote hook"),
+        (hook) => !hook.command.includes("agent-note hook"),
       ),
     }))
     .filter((group) => group.hooks.length > 0);
@@ -245,8 +244,7 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
         continue;
       }
 
-      if (!entry.isFile() || !(entry.name.endsWith(".json") || entry.name.endsWith(".jsonl")))
-        continue;
+      if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
       scanned += 1;
 
       if (readTranscriptSessionId(candidate) === sessionId) {
@@ -281,7 +279,7 @@ export const gemini: AgentAdapter = {
 
     const hooks = (settings.hooks ?? {}) as Record<string, GeminiHookGroup[]>;
 
-    // Strip existing agentnote hooks to ensure idempotency.
+    // Strip existing agent-note hooks to ensure idempotency.
     for (const [event, groups] of Object.entries(hooks)) {
       hooks[event] = stripAgentnoteGroups(groups);
       if (hooks[event].length === 0) delete hooks[event];
@@ -320,8 +318,7 @@ export const gemini: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
-      return content.includes(HOOK_COMMAND) || content.includes("agentnote hook --agent gemini");
+      return content.includes(HOOK_COMMAND);
     } catch {
       return false;
     }
