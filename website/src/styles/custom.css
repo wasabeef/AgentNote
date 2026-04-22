@@ -302,39 +302,49 @@ nav.sidebar .top-level > li > a {
   transform: rotate(90deg);
 }
 
-.agent-capability-card__head {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 0.8rem;
-  min-height: 1.7rem;
-}
-
-.agent-capability-card__icon {
-  display: block;
-  width: 1.7rem;
-  height: 1.7rem;
-  flex: 0 0 auto;
-  align-self: center;
-  border-radius: 0.45rem;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.agent-capability-card__title {
-  display: block;
-  font-size: 1.14rem;
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--sl-color-white);
-  letter-spacing: -0.01em;
-  transform: translateY(-2px);
-}
-
-.agent-capability-card p {
-  margin: 0;
+.agent-capability-card {
+  position: relative;
+  flex: 1;
+  min-height: 13.25rem;
+  padding-right: 1rem;
+  padding-bottom: 0.75rem;
+  overflow: hidden;
   color: var(--sl-color-gray-2);
   font-size: 1.01rem;
   line-height: 1.72;
+}
+
+.agent-capability-card__title {
+  margin-bottom: 0.85rem;
+  font-size: 1.14rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--sl-color-white);
+  letter-spacing: -0.01em;
+  position: relative;
+  z-index: 1;
+}
+
+.card:has(.agent-capability-card) {
+  height: 100%;
+}
+
+.card:has(.agent-capability-card) .body {
+  display: flex;
+  flex: 1;
+}
+
+.agent-capability-card__logo {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.45rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  opacity: 0.22;
+  filter: saturate(0.95);
+  z-index: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .agent-attribution-card {

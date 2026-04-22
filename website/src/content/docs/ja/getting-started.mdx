@@ -126,32 +126,32 @@ linked:  3/20 recent commits
 
 <CardGrid>
   <Card>
-    <div class="agent-capability-card__head">
-      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/claude.png" alt="Claude Code icon" />
+    <div class="agent-capability-card">
       <div class="agent-capability-card__title">Claude Code</div>
+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は hook から復元され、attribution は既定で line-level です。
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
     </div>
-    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は hook から復元され、attribution は既定で line-level です。
   </Card>
   <Card>
-    <div class="agent-capability-card__head">
-      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/codex.png" alt="Codex CLI icon" />
+    <div class="agent-capability-card">
       <div class="agent-capability-card__title">Codex CLI</div>
+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
     </div>
-    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
   </Card>
   <Card>
-    <div class="agent-capability-card__head">
-      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/cursor.png" alt="Cursor Preview icon" />
+    <div class="agent-capability-card">
       <div class="agent-capability-card__title">Cursor Preview</div>
+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
-    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
   </Card>
   <Card>
-    <div class="agent-capability-card__head">
-      <img class="agent-capability-card__icon" src="/AgentNote/model-icons/gemini.png" alt="Gemini CLI Preview icon" />
+    <div class="agent-capability-card">
       <div class="agent-capability-card__title">Gemini CLI Preview</div>
+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
+      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>
-    生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
   </Card>
 </CardGrid>
 
