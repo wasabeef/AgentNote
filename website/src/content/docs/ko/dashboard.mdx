@@ -62,7 +62,7 @@ The generated Dashboard workflow restores data from `gh-pages`, refreshes it fro
 
 ## 첫 deploy
 
-새 repo 도 첫 production deploy 전까지 Dashboard data 를 쌓을 수 있지만, public Pages URL 은 첫 `default branch` deploy 이후에 생깁니다.
+새 repo 도 첫 public publish 전까지 Dashboard data 를 쌓을 수 있고, shared Pages URL 은 첫 Dashboard workflow 가 성공하면 바로 생깁니다.
 
 ## 동작 방식
 
@@ -70,4 +70,4 @@ The generated Dashboard workflow restores data from `gh-pages`, refreshes it fro
 - The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` publishes the open state, and `default branch` pushes replace it with the merged state.

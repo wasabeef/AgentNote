@@ -58,7 +58,7 @@ git push
 
 ## 最初の deploy
 
-brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL ができるのは最初の `default branch` deploy 後です。
+brand-new repo でも最初の public publish 前から Dashboard data 自体は蓄積できます。共有 Pages URL は、最初に Dashboard workflow が成功した時点で作られます。
 
 ## 仕組み
 
@@ -66,4 +66,4 @@ brand-new repo でも最初の production deploy 前から Dashboard data 自体
 - 生成された Dashboard workflow が `gh-pages/dashboard/notes/*.json` を共有用の保存先として更新します
 - GitHub Pages が `/dashboard/` で build 済み Dashboard を配信します
 
-repo 自体には sample Dashboard JSON をコミットしません。fresh な Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で open な履歴を更新し、`default branch` で merged 状態を公開します。
+repo 自体には sample Dashboard JSON をコミットしません。fresh な Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で open 状態を公開し、`default branch` への push で merged 状態に置き換えます。

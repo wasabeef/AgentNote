@@ -94,7 +94,7 @@ For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` a
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
 - on `push` to `main`, rebuild the dashboard (and optionally the docs site), persist merged note state, and deploy the public site
 
-A brand-new repo can therefore accumulate dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment.
+A brand-new repo can therefore accumulate dashboard note data before the first public publish, and the shared Pages URL can appear as soon as the first successful Dashboard workflow run completes.
 
 ### Root action.yml trick
 

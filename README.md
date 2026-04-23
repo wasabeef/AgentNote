@@ -234,7 +234,7 @@ npx agent-note init --agent claude --dashboard
 
 The generated Dashboard workflow restores and persists `gh-pages/dashboard/notes/*.json`, then publishes the shared `/dashboard/` view.
 
-This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `default branch` deployment.
+This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the first public publish. Pull requests update the shared Dashboard with open history, and `default branch` pushes replace it with the merged state.
 
 <details>
 <summary>Full example with outputs</summary>

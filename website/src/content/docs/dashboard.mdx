@@ -58,7 +58,7 @@ For example:
 
 ## First Deploy
 
-A brand-new repo can accumulate Dashboard note data before the first production deploy, but the public Pages URL only appears after the first `default branch` deployment.
+A brand-new repo can accumulate Dashboard note data before the first public publish, and the shared Pages URL can appear as soon as the first successful Dashboard workflow run completes.
 
 ## How It Works
 
@@ -66,4 +66,4 @@ A brand-new repo can accumulate Dashboard note data before the first production 
 - The generated Dashboard workflow writes shared note snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. Pull requests refresh open history, and `default branch` publishes the merged state.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. Pull requests publish the open state, and `default branch` pushes replace it with the merged state.

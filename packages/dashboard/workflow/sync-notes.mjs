@@ -173,7 +173,7 @@ if (eventName === "pull_request") {
   setFlags({
     build: "true",
     persist: isForkPullRequest ? "false" : "true",
-    deploy: "false",
+    deploy: isForkPullRequest ? "false" : "true",
   });
   removeNotesForPr(prNumber);
 

@@ -70,4 +70,4 @@ Incluso en un repo nuevo, el Dashboard puede acumular datos antes del primer dep
 - The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` publishes the open state, and `default branch` pushes replace it with the merged state.
