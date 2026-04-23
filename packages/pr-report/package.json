@@ -1,0 +1,27 @@
+{
+  "name": "agent-note-pr-report",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PR report rendering and GitHub Action for agent-note",
+  "main": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./github": "./src/github.ts",
+    "./report": "./src/report.ts"
+  },
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist && rm -f dist/package.json",
+    "test": "find src -name '*.test.ts' | xargs node --import tsx/esm --test"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.0",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "@vercel/ncc": "^0.38.0",
+    "tsx": "^4.19.0",
+    "typescript": "^6.0.2"
+  }
+}

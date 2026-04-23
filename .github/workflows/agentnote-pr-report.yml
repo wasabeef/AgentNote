@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci && npm -w packages/cli run build && npm -w packages/action run build
+      - run: npm ci && npm -w packages/pr-report run build
       - uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

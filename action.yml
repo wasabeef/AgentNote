@@ -28,4 +28,4 @@ outputs:
     description: "Rendered markdown report"
 runs:
   using: "node24"
-  main: "packages/action/dist/index.js"
+  main: "packages/pr-report/dist/index.js"

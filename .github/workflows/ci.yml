@@ -39,8 +39,8 @@ jobs:
       - name: Smoke test
         run: node packages/cli/dist/cli.js version
 
-  action:
-    name: Action
+  pr-report:
+    name: PR Report
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,4 +48,40 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: test -f packages/action/dist/index.js
+      - run: npm -w packages/pr-report test
+      - run: npm -w packages/pr-report run build
+      - run: test -f packages/pr-report/dist/index.js
+
+  dashboard:
+    name: Dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm -w packages/dashboard run build
+      - name: Smoke test dashboard workflow build
+        run: |
+          mkdir -p /tmp/agentnote-dashboard-ci-notes
+          printf '{"v":1,"commit":{"sha":"abc","short_sha":"abc"}}\n' > /tmp/agentnote-dashboard-ci-notes/abc.json
+          NOTES_DIR=/tmp/agentnote-dashboard-ci-notes \
+          PAGES_DIR=/tmp/agentnote-dashboard-ci-pages \
+          PUBLIC_REPO=wasabeef/AgentNote \
+          npm run workflow:build-pages --prefix packages/dashboard
+      - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/index.html
+      - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/notes/abc.json
+
+  website:
+    name: Website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build --prefix website

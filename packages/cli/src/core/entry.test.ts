@@ -12,7 +12,7 @@ import {
 
 describe("isGeneratedArtifactPath", () => {
   it("detects common generated directories", () => {
-    assert.equal(isGeneratedArtifactPath("packages/action/dist/index.js"), true);
+    assert.equal(isGeneratedArtifactPath("packages/pr-report/dist/index.js"), true);
     assert.equal(isGeneratedArtifactPath("website/.next/server/app.js"), true);
     assert.equal(isGeneratedArtifactPath("ios/Runner/GeneratedPluginRegistrant.swift"), true);
     assert.equal(isGeneratedArtifactPath("lib/src/model.freezed.dart"), true);
@@ -95,8 +95,8 @@ describe("calcAiRatio", () => {
 
   it("excludes generated artifacts from file-level ratio", () => {
     const files: FileEntry[] = [
-      { path: "packages/action/src/index.ts", by_ai: true },
-      { path: "packages/action/dist/index.js", by_ai: false },
+      { path: "packages/pr-report/src/index.ts", by_ai: true },
+      { path: "packages/pr-report/dist/index.js", by_ai: false },
     ];
     assert.equal(calcAiRatio(files), 100);
   });
