@@ -237,7 +237,9 @@ export function renderMarkdown(report: PrReport): string {
 
   lines.push("");
   if (report.dashboard_url) {
-    lines.push(`<div align="right">[Open Dashboard ↗](${report.dashboard_url})</div>`);
+    lines.push(
+      `<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`,
+    );
     lines.push("");
   }
 

@@ -169,7 +169,7 @@ This posts an AI session report to the PR description:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right">[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)</div>
+<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>
 ```
 
 ## How It Works

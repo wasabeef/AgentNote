@@ -31744,7 +31744,8 @@ function shouldRetryNotesFetch(report) {
 function inferDashboardUrl(repoUrl) {
     if (!repoUrl)
         return null;
-    const match = repoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+    const normalized = repoUrl.replace(/\.git$/, "");
+    const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
     if (!match)
         return null;
     const [, owner, repo] = match;
@@ -32271,7 +32272,7 @@ function renderMarkdown(report) {
     }
     lines.push("");
     if (report.dashboard_url) {
-        lines.push(`<div align="right">[Open Dashboard ↗](${report.dashboard_url})</div>`);
+        lines.push(`<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`);
         lines.push("");
     }
     const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);

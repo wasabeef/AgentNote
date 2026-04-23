@@ -133,7 +133,7 @@ describe("agentnote pr", () => {
 
       assert.ok(
         output.includes(
-          '<div align="right">[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)</div>',
+          '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>',
         ),
       );
     } finally {
