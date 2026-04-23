@@ -107,17 +107,17 @@ jobs:
           PUBLIC_REPO: \${{ github.repository }}
         run: npm --prefix .agentnote-dashboard-source run dashboard:build-pages
 
-      - name: Persist Dashboard notes to gh-pages
-        if: steps.notes.outputs.should_persist == 'true'
-        env:
-          NOTES_DIR: .agentnote-dashboard-notes
-        run: npm --prefix .agentnote-dashboard-source run dashboard:persist-notes
-
       - name: Upload Pages artifact
         if: steps.notes.outputs.should_deploy == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: .pages
+
+      - name: Persist Dashboard notes to gh-pages
+        if: steps.notes.outputs.should_persist == 'true'
+        env:
+          NOTES_DIR: .agentnote-dashboard-notes
+        run: npm --prefix .agentnote-dashboard-source run dashboard:persist-notes
 
   deploy:
     if: needs.build.outputs.should_deploy == 'true'

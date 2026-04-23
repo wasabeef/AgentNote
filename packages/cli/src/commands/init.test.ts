@@ -301,6 +301,11 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should call the shared Dashboard entrypoint",
     );
     assert.ok(
+      dashboardWorkflow.indexOf("Upload Pages artifact") <
+        dashboardWorkflow.indexOf("Persist Dashboard notes to gh-pages"),
+      "dashboard workflow should upload the Pages artifact before switching to gh-pages",
+    );
+    assert.ok(
       dashboardWorkflow.includes(`DEFAULT_BRANCH: \${{ github.event.repository.default_branch }}`),
       "dashboard workflow should infer the repository default branch",
     );
