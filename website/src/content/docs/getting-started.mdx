@@ -76,7 +76,8 @@ import { Steps, Aside, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/
 Every developer should run `init` after cloning to install local git hooks:
 
 ```bash
-git clone <repo> && cd <repo>
+git clone <repository-url>
+cd <repository-dir>
 npx agent-note init --agent claude
 ```
 
@@ -137,7 +138,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` shows the enabled adapter, `capture:` shows what the active hooks collect, `git:` confirms the repo-local git hooks, and `commit:` tells you whether plain `git commit` is the primary path.
+`agent:` shows the enabled adapter, `capture:` shows what the active hooks collect, `git:` confirms the repository-local git hooks, and `commit:` tells you whether plain `git commit` is the primary path.
 
 ## Init Flags
 

@@ -94,7 +94,7 @@ For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` a
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
 - on `push` to `main`, rebuild the dashboard (and optionally the docs site), persist merged note state, and deploy the public site
 
-A brand-new repo can therefore accumulate dashboard note data before the first public publish, and the shared Pages URL can appear as soon as the first successful Dashboard workflow run completes.
+A brand-new Repository can therefore accumulate Dashboard note data before the Dashboard is published for the first time. If Pull Request Deploys are allowed, the shared Pages URL can appear after the first successful `pull_request` run. Otherwise it appears after the first successful deploy from `default branch`.
 
 ### Root action.yml trick
 
@@ -133,7 +133,7 @@ Stop        Prompt    (Edit/Write)        │                       │
 session       .jsonl     .jsonl
 ```
 
-AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repo-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repository-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
 ### Storage: two layers
 
@@ -364,14 +364,14 @@ agent-note record <session-id> record git note for HEAD (internal, used by post-
 
 `agent-note init` does four things by default:
 
-1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repo-local files to share with the team.
+1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repository-local files to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
-3. **GitHub Actions workflow** — creates `.github/workflows/agentnote-pr-report.yml` for PR reports. With `--dashboard`, it also creates `.github/workflows/agentnote-dashboard.yml`. Commit these files.
+3. **GitHub Actions workflow** — creates `.github/workflows/agentnote-pr-report.yml` for PR Reports. With `--dashboard`, it also creates `.github/workflows/agentnote-dashboard.yml`. Commit these files.
 4. **Auto-fetch config** — adds `refs/notes/agentnote` to `remote.origin.fetch` so `git pull` fetches notes automatically.
 
 Flags: `--agent <name...>`, `--dashboard`, `--no-hooks`, `--no-git-hooks`, `--no-action`, `--no-notes`, `--hooks`, `--action`.
 
-### PR report
+### PR Report
 
 `agent-note pr` produces markdown or structured JSON reports.
 
@@ -431,7 +431,7 @@ JSON output structure:
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+- run: echo "Total AI Ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 ### Action inputs
@@ -459,7 +459,7 @@ The action:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
 2. Collects PR entries via `packages/pr-report`
-3. Renders structured JSON and markdown via the shared PR report package
+3. Renders structured JSON and markdown via the shared PR Report package
 4. Set GitHub Actions outputs
 5. Post report to PR description (upsert between markers) or as a comment
 
@@ -547,7 +547,7 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 | Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
-| GitHub Action markdown injection | PR report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
+| GitHub Action markdown injection | PR Report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
 | `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agent-note hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agent-note`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
@@ -575,7 +575,7 @@ git config notes.rewrite.amend true
 
 ### Squash merge
 
-GitHub's "Squash and merge" creates a new commit with a new SHA. All notes from the individual PR commits are lost on the merge commit. The PR report is only meaningful **before merge**.
+GitHub's "Squash and merge" creates a new commit with a new SHA. All notes from the individual PR commits are lost on the merge commit. The PR Report is only meaningful **before merge**.
 
 Workaround: the GitHub Action posts the report to the PR description (or comment) before merge, preserving the data in the PR.
 

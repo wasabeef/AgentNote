@@ -240,6 +240,9 @@ export function renderMarkdown(report: PrReport): string {
     lines.push(
       `<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`,
     );
+    lines.push(
+      '<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>',
+    );
     lines.push("");
   }
 

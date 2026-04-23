@@ -28,13 +28,13 @@ Das Dashboard brauchst du nur, wenn du eine gemeinsame Web-Ansicht möchtest.
 
 ## Schnellstart
 
-1. Run Dashboard setup once.
+1. Führe das Dashboard-Setup einmal aus.
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Commit both workflow files.
+2. Committe beide Workflow-Dateien.
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
@@ -42,9 +42,9 @@ git commit -m "chore: enable agent-note dashboard"
 git push
 ```
 
-3. In GitHub Pages, choose **GitHub Actions** as the source.
+3. Wähle in GitHub Pages **GitHub Actions** als Quelle.
 
-The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
+Der generierte Dashboard-Workflow stellt Daten aus `gh-pages` wieder her, aktualisiert sie aus `refs/notes/agentnote` und veröffentlicht die gemeinsame Ansicht unter `/dashboard/`.
 
 ## Öffentliche URL
 
@@ -57,17 +57,17 @@ Zum Beispiel:
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
 <Aside type="tip">
-  Wenn du mit GitHub Pages veröffentlichst, übergibt dein Pages-Workflow die repo-spezifischen Werte für `SITE` und `BASE` zur Build-Zeit. In den meisten Repositories reicht das Beispiel-Workflow ohne weitere Änderungen am Dashboard source.
+  Wenn du mit GitHub Pages veröffentlichst, übergibt dein Pages-Workflow die repository-spezifischen Werte für `SITE` und `BASE` zur Build-Zeit. In den meisten Repositories reicht das Beispiel-Workflow ohne weitere Änderungen am Dashboard source.
 </Aside>
 
 ## Erstes Deploy
 
-Auch ein neues Repository kann schon vor dem ersten Production-Deploy Dashboard-Daten sammeln. Die öffentliche Pages-URL erscheint aber erst nach dem ersten Deploy auf `default branch`.
+Auch ein neues Repository kann schon vor dem ersten Production-Deploy Dashboard-Daten sammeln. Wenn PR-Deploys erlaubt sind, erscheint die öffentliche Pages-URL nach dem ersten erfolgreichen `pull_request`-Run. Andernfalls erscheint sie nach dem ersten erfolgreichen Deploy von `default branch`.
 
 ## Wie es funktioniert
 
-- `refs/notes/agentnote` remains the source of truth
-- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
-- GitHub Pages serves the built Dashboard at `/dashboard/`
+- `refs/notes/agentnote` bleibt die Source of Truth
+- Der generierte Dashboard-Workflow schreibt gemeinsame Snapshots nach `gh-pages/dashboard/notes/*.json`
+- GitHub Pages liefert das gebaute Dashboard unter `/dashboard/` aus
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` publishes the open state, and `default branch` pushes replace it with the merged state.
+Das Repository committet keine Beispiel-JSONs für das Dashboard. Ein neues Dashboard bleibt leer, bis der Workflow note files wiederherstellt oder erzeugt. `pull_request` veröffentlicht den Open-Status, und Pushes auf `default branch` ersetzen ihn durch den Merged-Status.

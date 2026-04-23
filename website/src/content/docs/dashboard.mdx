@@ -13,18 +13,18 @@ import { Aside } from '@astrojs/starlight/components';
 
 The Dashboard gives your team one shared URL for Agent Note history.
 
-- Browse open and merged PR history in one place
-- Inspect commits, prompts, and attribution without opening each PR
+- Browse Open / Merged PR history in one place
+- Inspect Commits, Prompts, and Attribution without opening each PR
 - Share one GitHub Pages URL with your team, usually `/dashboard/`
 
-Use it when the PR report is not enough and you want a team-facing view of recent work.
+Use it when the PR Report is not enough and you want one team-facing view of recent work.
 
 ## Before You Start
 
-You only need the Dashboard if you want a shared web view.
+You only need the Dashboard if you want one shared view for the team.
 
 - If you only want AI session reports inside pull requests, stop at [GitHub Action](./github-action/).
-- If you want a shared Pages view for open and merged history, continue here.
+- If you want a shared Pages view for Open / Merged history, continue here.
 
 ## Quick Setup
 
@@ -56,9 +56,19 @@ For example:
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
+## PR Previews
+
+If your repository's `github-pages` environment allows Pull Request Deploys, the shared Dashboard can show the Open PR state before merge.
+
+- `pull_request` runs publish the current Open state
+- `default branch` pushes replace it with the Merged state
+- if environment protection blocks Pull Request Deploys, the shared Dashboard updates after merge instead
+
+This is controlled by your repository's GitHub Pages environment settings, not by Agent Note itself.
+
 ## First Deploy
 
-A brand-new repo can accumulate Dashboard note data before the first public publish, and the shared Pages URL can appear as soon as the first successful Dashboard workflow run completes.
+A brand-new Repository can accumulate Dashboard note data before the Dashboard is published for the first time. If Pull Request Deploys are allowed, the shared Pages URL can appear after the first successful `pull_request` run. Otherwise it appears after the first successful deploy from `default branch`.
 
 ## How It Works
 
@@ -66,4 +76,4 @@ A brand-new repo can accumulate Dashboard note data before the first public publ
 - The generated Dashboard workflow writes shared note snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. Pull requests publish the open state, and `default branch` pushes replace it with the merged state.
+The Repository does not commit sample JSON for the Dashboard. A new Dashboard stays empty until the workflow restores or generates note files. Pull Request runs publish the Open state, and `default branch` pushes replace it with the Merged state.

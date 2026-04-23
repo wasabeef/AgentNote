@@ -71,7 +71,7 @@ describe("agentnote pr", () => {
     assert.ok(!output.includes("Prompts: 2"));
     assert.ok(output.includes("| Commit | AI Ratio | Prompts | Files |"));
     assert.match(output, /\*\*Total AI Ratio:\*\* [█░]+ \d+%/);
-    assert.match(output, /\| .* \| [█░]+ \d+% \| \d+ \| .* \|/);
+    assert.match(output, /[█░]{5} \d+%/);
     assert.ok(output.includes("feat: add A"));
     assert.ok(output.includes("feat: add B"));
     assert.ok(output.includes("🤖"));
@@ -134,6 +134,11 @@ describe("agentnote pr", () => {
       assert.ok(
         output.includes(
           '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>',
+        ),
+      );
+      assert.ok(
+        output.includes(
+          '<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>',
         ),
       );
     } finally {

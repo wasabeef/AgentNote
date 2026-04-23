@@ -28,13 +28,13 @@ Vous n’avez besoin du Dashboard que si vous voulez une vue web partagée.
 
 ## Mise en place rapide
 
-1. Run Dashboard setup once.
+1. Lancez une fois la configuration du Dashboard.
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Commit both workflow files.
+2. Committez les deux fichiers de workflow.
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
@@ -42,9 +42,9 @@ git commit -m "chore: enable agent-note dashboard"
 git push
 ```
 
-3. In GitHub Pages, choose **GitHub Actions** as the source.
+3. Dans GitHub Pages, choisissez **GitHub Actions** comme source.
 
-The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
+Le workflow Dashboard généré restaure les données depuis `gh-pages`, les met à jour depuis `refs/notes/agentnote` et publie la vue partagée sous `/dashboard/`.
 
 ## URL publique
 
@@ -62,12 +62,12 @@ Par exemple :
 
 ## Premier déploiement
 
-Même un dépôt tout neuf peut accumuler des données de Dashboard avant le premier déploiement de production. L’URL publique Pages n’apparaît toutefois qu’après le premier déploiement sur `default branch`.
+Même un dépôt tout neuf peut accumuler des données de Dashboard avant le premier déploiement de production. Si les déploiements de PR sont autorisés, l’URL publique Pages peut apparaître après le premier run `pull_request` réussi. Sinon, elle apparaît après le premier déploiement réussi depuis `default branch`.
 
 ## Comment ça fonctionne
 
-- `refs/notes/agentnote` remains the source of truth
-- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
-- GitHub Pages serves the built Dashboard at `/dashboard/`
+- `refs/notes/agentnote` reste la Source of Truth
+- Le workflow Dashboard généré écrit les snapshots partagés dans `gh-pages/dashboard/notes/*.json`
+- GitHub Pages sert le Dashboard généré sous `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` publishes the open state, and `default branch` pushes replace it with the merged state.
+Le dépôt ne commit pas d’exemples JSON pour le Dashboard. Un Dashboard neuf reste vide tant que le workflow ne restaure ni ne génère les note files. `pull_request` publie l’état Open, puis les pushes vers `default branch` le remplacent par l’état Merged.

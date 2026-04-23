@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Configuración rápida
 
-Run this once in your repository:
+Ejecuta esto una vez en tu repositorio:
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-That creates the PR report workflow for you:
+Con esto se crea el workflow del informe para PR:
 
 ```yaml
 # .github/workflows/agentnote-pr-report.yml
@@ -40,7 +40,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-That's it. Every PR gets an AI session report.
+Y ya está. Cada PR recibe un informe de sesión de IA.
 
 ## Inputs
 
@@ -56,7 +56,7 @@ npx agent-note init --agent claude --dashboard
 ```
 
 <Aside type="tip">
-  This also adds `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard setup.
+  Esto también añade `.github/workflows/agentnote-dashboard.yml` para configurar el Dashboard compartido.
 </Aside>
 
 ## Outputs

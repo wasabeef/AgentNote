@@ -32273,6 +32273,7 @@ function renderMarkdown(report) {
     lines.push("");
     if (report.dashboard_url) {
         lines.push(`<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`);
+        lines.push('<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>');
         lines.push("");
     }
     const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
