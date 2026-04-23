@@ -112,7 +112,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` shows which agent adapters are enabled. `capture:` summarizes what the active agent hooks collect. `git:` shows whether the managed repo-local git hooks are installed. `commit:` tells you the primary tracking path: normal `git commit` when git hooks are active, or fallback mode when you should prefer `agent-note commit`.
+`agent:` shows which agent adapters are enabled. `capture:` summarizes what the active agent hooks collect. `git:` shows whether the managed repository-local git hooks are installed. `commit:` tells you the primary tracking path: normal `git commit` when git hooks are active, or fallback mode when you should prefer `agent-note commit`.
 
 ## What You Get
 
@@ -151,7 +151,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR reports
+### PR Reports
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -168,6 +168,8 @@ This posts an AI session report to the PR description:
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
+
+<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>
 ```
 
 ## How It Works
@@ -205,7 +207,7 @@ You run `git push`
 | `agent-note deinit` | Remove hooks and config for an agent |
 | `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
 | `agent-note log [n]` | List recent commits with AI ratio |
-| `agent-note pr [base]` | Generate PR report (markdown or JSON) |
+| `agent-note pr [base]` | Generate PR Report (markdown or JSON) |
 | `agent-note session <id>` | Show all commits linked to one session |
 | `agent-note commit [args]` | Fallback wrapper around `git commit` when git hooks are unavailable |
 | `agent-note status` | Show tracking state |
@@ -232,7 +234,7 @@ npx agent-note init --agent claude --dashboard
 
 The generated Dashboard workflow restores and persists `gh-pages/dashboard/notes/*.json`, then publishes the shared `/dashboard/` view.
 
-This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `default branch` deployment.
+This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the Dashboard is published for the first time. Pull Request runs update the shared Dashboard with the Open state, and `default branch` pushes replace it with the Merged state.
 
 <details>
 <summary>Full example with outputs</summary>
@@ -244,7 +246,7 @@ This keeps generated JSON off the `default branch` while still letting Dashboard
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+- run: echo "Total AI Ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 </details>

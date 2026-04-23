@@ -1,34 +1,16 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "child_process";
-import { existsSync } from "fs";
-import { readFile } from "fs/promises";
-import { resolve } from "path";
 import {
-	buildPrReportCommand,
 	COMMENT_MARKER,
+	hasDeploymentBranchProtection,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
-} from "./helpers.js";
+} from "./github.js";
+import { collectReport, renderMarkdown } from "./report.js";
 
-type PrOutputMode = "description" | "comment" | "none";
-
-/**
- * Resolve the agentnote CLI command.
- * Prefers the local monorepo build (no version skew), falls back to npx.
- */
-function resolveCliCommand(): string {
-	try {
-		const localCli = resolve("packages/cli/dist/cli.js");
-		if (existsSync(localCli)) {
-			return `node ${localCli}`;
-		}
-	} catch {
-		// ignore
-	}
-	return "npx --yes agent-note";
-}
+type PrOutputMode = ReturnType<typeof resolvePrOutputMode>;
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,10 +24,6 @@ function fetchAgentnoteNotes(): void {
 	} catch {
 		core.info("No agent-note notes found on remote.");
 	}
-}
-
-function isEnabled(value: string): boolean {
-	return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
 }
 
 async function postPrReport(
@@ -113,39 +91,61 @@ async function postPrReport(
 	core.info("Agent Note report posted as PR comment.");
 }
 
+async function inferDashboardPreviewHelpUrl(
+	token: string,
+	dashboardUrl: string | null,
+): Promise<string | null> {
+	if (!dashboardUrl) return null;
+	if (github.context.eventName !== "pull_request") return null;
+	if (!token) return null;
+
+	try {
+		const octokit = github.getOctokit(token);
+		const { owner, repo } = github.context.repo;
+		const { data } = await octokit.request(
+			"GET /repos/{owner}/{repo}/environments/{environment_name}",
+			{
+				owner,
+				repo,
+				environment_name: "github-pages",
+			},
+		);
+		const policy = (data as { deployment_branch_policy?: {
+			protected_branches?: boolean;
+			custom_branch_policies?: boolean;
+		} | null }).deployment_branch_policy;
+		if (hasDeploymentBranchProtection(policy)) {
+			return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+		}
+	} catch {
+		// Best-effort only. If the environment is unavailable or unreadable,
+		// keep the report output minimal and skip the extra notice.
+	}
+
+	return null;
+}
+
 async function run(): Promise<void> {
 	try {
 		const base =
 			core.getInput("base") ||
 			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
 		const headSha = github.context.payload.pull_request?.head?.sha;
-		const cliCmd = resolveCliCommand();
-
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
+		const token = process.env.GITHUB_TOKEN || "";
 
-		let json = "";
-		let report: Record<string, unknown> | null = null;
+		let report: Awaited<ReturnType<typeof collectReport>> = null;
 		const maxAttempts = 3;
 
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			fetchAgentnoteNotes();
 
-			try {
-				json = execSync(buildPrReportCommand(cliCmd, base, headSha, { json: true }), {
-					encoding: "utf-8",
-					stdio: ["pipe", "pipe", "pipe"],
-				}).trim();
-			} catch {
+			report = await collectReport(base, headSha);
+			if (!report) {
 				core.info("No agent-note data found for this PR.");
 				return;
 			}
 
-			if (!json || json === "{}") {
-				core.info("No agent-note data found for this PR.");
-				return;
-			}
-
-			report = JSON.parse(json) as Record<string, unknown>;
 			if (!shouldRetryNotesFetch(report) || attempt === maxAttempts) {
 				break;
 			}
@@ -161,6 +161,13 @@ async function run(): Promise<void> {
 			return;
 		}
 
+		report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(
+			token,
+			report.dashboard_url,
+		);
+
+		const json = JSON.stringify(report, null, 2);
+
 		core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
 		core.setOutput("overall_method", String(report.overall_method ?? "file"));
 		core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
@@ -168,23 +175,7 @@ async function run(): Promise<void> {
 		core.setOutput("total_prompts", String(report.total_prompts ?? 0));
 		core.setOutput("json", json);
 
-		let markdown = "";
-		try {
-			markdown = execSync(buildPrReportCommand(cliCmd, base, headSha), {
-				encoding: "utf-8",
-				stdio: ["pipe", "pipe", "pipe"],
-			}).trim();
-		} catch {
-			markdown = "";
-		}
-		// Keep PR descriptions text-only for now.
-		// The action runs against consumer repositories, so there is no stable
-		// public image URL we can rely on for model icons until those assets are
-		// published from a public host.
-		const reportModel =
-			typeof report.model === "string" ? report.model.trim() : "";
-		void reportModel;
-
+		const markdown = renderMarkdown(report);
 		core.setOutput("markdown", markdown);
 
 		await postPrReport(prOutputMode, markdown);

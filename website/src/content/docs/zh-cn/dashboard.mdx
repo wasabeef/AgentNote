@@ -17,7 +17,7 @@ Dashboard 会给团队一个共享 URL，用来查看 Agent Note 的历史记录
 - 不用逐个打开 PR，也能查看 commit、prompt 和 attribution
 - 一个共享的 GitHub Pages URL，通常位于 `/dashboard/`
 
-当 PR report 已经不够用，而团队需要一个统一的查看页面时，就适合使用 Dashboard。
+当 PR 报告已经不够用，而团队需要一个统一的查看页面时，就适合使用 Dashboard。
 
 ## 开始前
 
@@ -28,13 +28,13 @@ Dashboard 会给团队一个共享 URL，用来查看 Agent Note 的历史记录
 
 ## 快速设置
 
-1. Run Dashboard setup once.
+1. 先执行一次 Dashboard setup。
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Commit both workflow files.
+2. 提交这两个 workflow 文件。
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
@@ -42,9 +42,9 @@ git commit -m "chore: enable agent-note dashboard"
 git push
 ```
 
-3. In GitHub Pages, choose **GitHub Actions** as the source.
+3. 在 GitHub Pages 中，把 source 设为 **GitHub Actions**。
 
-The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
+生成的 Dashboard workflow 会从 `gh-pages` 恢复数据，再从 `refs/notes/agentnote` 刷新，并把共享视图发布到 `/dashboard/`。
 
 ## 公共 URL
 
@@ -57,17 +57,17 @@ The generated Dashboard workflow restores data from `gh-pages`, refreshes it fro
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
 <Aside type="tip">
-  如果你通过 GitHub Pages 发布，Pages workflow 会在 build 时传入仓库专用的 `SITE` 和 `BASE`。对大多数仓库来说，直接使用示例 workflow 就足够，不需要额外修改 `packages/dashboard`。
+  如果你通过 GitHub Pages 发布，Pages workflow 会在 build 时传入仓库专用的 `SITE` 和 `BASE`。对大多数仓库来说，直接使用示例 workflow 就足够，不需要额外修改 Dashboard source。
 </Aside>
 
 ## 首次部署
 
-即使是全新的仓库，也可以在第一次 production deploy 之前先积累 Dashboard 数据。公开的 Pages URL 则要等第一次部署到 `default branch` 之后才会出现。
+即使是全新的仓库，也可以在 Dashboard 第一次发布之前先积累 Dashboard 数据。如果允许 Pull Request Deploy，公开的 Pages URL 可以在第一次成功的 `pull_request` run 之后出现。否则，它会在 `default branch` 的第一次成功 deploy 之后出现。
 
 ## 工作方式
 
-- `refs/notes/agentnote` remains the source of truth
-- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
-- GitHub Pages serves the built Dashboard at `/dashboard/`
+- `refs/notes/agentnote` 仍然是 Source of Truth
+- 生成的 Dashboard workflow 会把共享快照写入 `gh-pages/dashboard/notes/*.json`
+- GitHub Pages 会在 `/dashboard/` 提供构建后的 Dashboard
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.
+仓库本身不会提交示例 Dashboard JSON。新的 Dashboard 会一直保持为空，直到 workflow 恢复或生成 note file。`pull_request` 会发布 Open 状态，推送到 `default branch` 后则会替换为 Merged 状态。

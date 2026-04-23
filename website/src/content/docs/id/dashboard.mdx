@@ -17,7 +17,7 @@ Dashboard memberi tim Anda satu URL bersama untuk melihat riwayat Agent Note.
 - Commit, prompt, dan attribution tanpa membuka setiap PR satu per satu
 - Satu URL GitHub Pages bersama, biasanya di bawah `/dashboard/`
 
-Gunakan ini ketika PR report saja belum cukup dan tim membutuhkan tampilan bersama.
+Gunakan ini ketika laporan PR saja belum cukup dan tim membutuhkan tampilan bersama.
 
 ## Sebelum mulai
 
@@ -28,13 +28,13 @@ Anda hanya perlu Dashboard jika memang ingin tampilan web bersama.
 
 ## Quick setup
 
-1. Run Dashboard setup once.
+1. Jalankan setup Dashboard sekali.
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Commit both workflow files.
+2. Commit kedua file workflow.
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
@@ -42,9 +42,9 @@ git commit -m "chore: enable agent-note dashboard"
 git push
 ```
 
-3. In GitHub Pages, choose **GitHub Actions** as the source.
+3. Di GitHub Pages, pilih **GitHub Actions** sebagai source.
 
-The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
+Workflow Dashboard yang dihasilkan memulihkan data dari `gh-pages`, memperbaruinya dari `refs/notes/agentnote`, lalu memublikasikan tampilan bersama di `/dashboard/`.
 
 ## URL publik
 
@@ -57,17 +57,17 @@ Contoh:
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
 <Aside type="tip">
-  Jika Anda memublikasikan dengan GitHub Pages, workflow Pages akan mengirim nilai `SITE` dan `BASE` yang spesifik untuk repo saat build. Pada kebanyakan repo, workflow contoh bisa dipakai tanpa mengubah `packages/dashboard`.
+  Jika Anda memublikasikan dengan GitHub Pages, workflow Pages akan mengirim nilai `SITE` dan `BASE` yang spesifik untuk repositori saat build. Pada kebanyakan repositori, workflow contoh bisa dipakai tanpa mengubah Dashboard source.
 </Aside>
 
 ## Deploy pertama
 
-Bahkan repo baru bisa mulai mengumpulkan data Dashboard sebelum deploy produksi pertama. URL publik Pages baru muncul setelah deploy pertama ke `default branch`.
+Bahkan repositori baru bisa mulai mengumpulkan data Dashboard sebelum deploy produksi pertama. Jika Pull Request Deploy diizinkan, URL publik Pages bisa muncul setelah run `pull_request` pertama yang sukses. Jika tidak, URL itu muncul setelah deploy pertama yang sukses dari `default branch`.
 
 ## Cara kerjanya
 
-- `refs/notes/agentnote` remains the source of truth
-- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
-- GitHub Pages serves the built Dashboard at `/dashboard/`
+- `refs/notes/agentnote` tetap menjadi Source of Truth
+- Workflow Dashboard yang dihasilkan menulis snapshot bersama ke `gh-pages/dashboard/notes/*.json`
+- GitHub Pages menyajikan Dashboard yang sudah dibangun di `/dashboard/`
 
-The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.
+Repositori tidak meng-commit contoh JSON Dashboard. Dashboard baru tetap kosong sampai workflow memulihkan atau membuat note file. `pull_request` memublikasikan status Open, lalu push ke `default branch` menggantinya dengan status Merged.

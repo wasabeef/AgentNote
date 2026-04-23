@@ -16,7 +16,7 @@ The repository is a monorepo with three packages plus the docs site:
 
 ```
 wasabeef/AgentNote/
-├── action.yml                      # root pointer → packages/action (for uses: wasabeef/AgentNote@v0)
+├── action.yml                      # root pointer → packages/pr-report (for uses: wasabeef/AgentNote@v0)
 │
 ├── packages/
 │   ├── cli/                        # agent-note — npm package
@@ -53,7 +53,7 @@ wasabeef/AgentNote/
 │       │   └── index.ts            # calls CLI, sets outputs, posts to PR description/comment
 │       ├── dist/
 │       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
-│       └── package.json            # name: agent-note-action (private, not published)
+│       └── package.json            # name: agent-note-pr-report (private, not published)
 │   │
 │   └── dashboard/                  # optional static dashboard package
 │       ├── src/pages/index.astro   # dashboard shell + build-time note index
@@ -94,7 +94,7 @@ For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` a
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
 - on `push` to `main`, rebuild the dashboard (and optionally the docs site), persist merged note state, and deploy the public site
 
-A brand-new repo can therefore accumulate dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment.
+A brand-new Repository can therefore accumulate Dashboard note data before the Dashboard is published for the first time. If Pull Request Deploys are allowed, the shared Pages URL can appear after the first successful `pull_request` run. Otherwise it appears after the first successful deploy from `default branch`.
 
 ### Root action.yml trick
 
@@ -106,10 +106,10 @@ name: "Agent Note PR Report"
 description: "AI session tracking report for pull requests"
 runs:
   using: "node24"
-  main: "packages/action/dist/index.js"
+  main: "packages/pr-report/dist/index.js"
 ```
 
-This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/action/`.
+This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/pr-report/`.
 
 ## Architecture
 
@@ -133,7 +133,7 @@ Stop        Prompt    (Edit/Write)        │                       │
 session       .jsonl     .jsonl
 ```
 
-AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repo-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
+AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repository-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
 ### Storage: two layers
 
@@ -364,14 +364,14 @@ agent-note record <session-id> record git note for HEAD (internal, used by post-
 
 `agent-note init` does four things by default:
 
-1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repo-local files to share with the team.
+1. **Agent config** — writes data collection hooks to the active agent config (`.claude/settings.json`, `.codex/config.toml` + `.codex/hooks.json`, `.cursor/hooks.json`, or `.gemini/settings.json`). Commit the generated repository-local files to share with the team.
 2. **Git hooks** — installs `prepare-commit-msg`, `post-commit`, and `pre-push` hooks (respects `core.hooksPath`). Local to `.git/` — must be installed per clone.
-3. **GitHub Actions workflow** — creates `.github/workflows/agentnote.yml` for PR reports. Commit this file.
+3. **GitHub Actions workflow** — creates `.github/workflows/agentnote-pr-report.yml` for PR Reports. With `--dashboard`, it also creates `.github/workflows/agentnote-dashboard.yml`. Commit these files.
 4. **Auto-fetch config** — adds `refs/notes/agentnote` to `remote.origin.fetch` so `git pull` fetches notes automatically.
 
-Flags: `--no-hooks`, `--no-git-hooks`, `--no-action`, `--no-notes`, `--hooks`, `--action`.
+Flags: `--agent <name...>`, `--dashboard`, `--no-hooks`, `--no-git-hooks`, `--no-action`, `--no-notes`, `--hooks`, `--action`.
 
-### PR report
+### PR Report
 
 `agent-note pr` produces markdown or structured JSON reports.
 
@@ -387,8 +387,8 @@ Output: table format with summary header, per-commit rows, and collapsible promp
 ```
 ## 🧑💬🤖 Agent Note
 
-**AI ratio: 73%** ████████
-`45/75 lines` · `4/5 commits` · `8 prompts` · `claude-sonnet-4-20250514`
+**Total AI Ratio:** ████████ 73%
+**Model:** `claude-sonnet-4-20250514`
 ```
 
 Commit hashes are linked to the GitHub commit page. Prompts/responses are in a collapsible `<details>` section.
@@ -431,7 +431,7 @@ JSON output structure:
     base: main
 
 # Use structured outputs
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+- run: echo "Total AI Ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 ### Action inputs
@@ -440,7 +440,6 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `output` | `description` | Report destination: `description` or `comment` |
-| `comment` | `"true"` | Legacy: set to `"false"` to disable posting |
 
 ### Action outputs
 
@@ -459,8 +458,8 @@ JSON output structure:
 The action:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
-2. `agent-note pr --json` → parse outputs
-3. `agent-note pr` → markdown
+2. Collects PR entries via `packages/pr-report`
+3. Renders structured JSON and markdown via the shared PR Report package
 4. Set GitHub Actions outputs
 5. Post report to PR description (upsert between markers) or as a comment
 
@@ -498,12 +497,13 @@ Important:
 ```bash
 # 1. Enable agent-note (one person, once)
 npx agent-note init
-git add .claude/settings.json .github/workflows/agentnote.yml
+git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
 git commit -m "chore: enable agent-note"
 git push
 
 # Codex repositories commit `.codex/config.toml` + `.codex/hooks.json` instead.
 # Cursor repositories commit `.cursor/hooks.json` instead.
+# With `--dashboard`, also commit `.github/workflows/agentnote-dashboard.yml`.
 # Plain `git commit` works when the generated git hooks are installed.
 # `agent-note commit -m "..."` remains a useful fallback wrapper.
 
@@ -547,7 +547,7 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 | Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
-| GitHub Action markdown injection | PR report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
+| GitHub Action markdown injection | PR Report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
 | `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agent-note hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agent-note`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
@@ -575,7 +575,7 @@ git config notes.rewrite.amend true
 
 ### Squash merge
 
-GitHub's "Squash and merge" creates a new commit with a new SHA. All notes from the individual PR commits are lost on the merge commit. The PR report is only meaningful **before merge**.
+GitHub's "Squash and merge" creates a new commit with a new SHA. All notes from the individual PR commits are lost on the merge commit. The PR Report is only meaningful **before merge**.
 
 Workaround: the GitHub Action posts the report to the PR description (or comment) before merge, preserving the data in the PR.
 
@@ -678,13 +678,13 @@ interface AgentAdapter {
   name: string;
   settingsRelPath: string;
 
-  /** Add agent-note hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
+  /** Add agent-note hooks. Idempotent — safe to call multiple times. */
   installHooks(repoRoot: string): Promise<void>;
 
-  /** Remove agent-note hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
+  /** Remove agent-note hooks. Idempotent — no-op if not installed. */
   removeHooks(repoRoot: string): Promise<void>;
 
-  /** Check if current-format hooks are installed. Returns false for legacy-only installs. */
+  /** Check if hooks are installed for this adapter. */
   isEnabled(repoRoot: string): Promise<boolean>;
 
   /** Parse raw hook input into a normalized event. Returns null for unrecognized events. */
@@ -703,7 +703,7 @@ interface AgentAdapter {
 1. Create `packages/cli/src/agents/<agent-name>.ts` implementing `AgentAdapter`
 2. Register it in `agents/index.ts`
 3. `agent-note init --agent <name>` calls `adapter.installHooks()`
-4. `agent-note hook` is dispatched by `--agent <name>`; bare `agent-note hook` is retained only for legacy Claude compatibility and now fails fast for Codex payloads
+4. `agent-note hook` is always dispatched by `--agent <name>`
 5. All core logic and the GitHub Action work unchanged
 
 ## entire.io comparison

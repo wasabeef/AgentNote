@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Quick Setup
 
-Run this once in your repository:
+리포지토리에서 아래 명령을 한 번 실행합니다:
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-That creates the PR report workflow for you:
+이렇게 하면 PR 리포트 workflow 가 생성됩니다:
 
 ```yaml
 # .github/workflows/agentnote-pr-report.yml
@@ -40,7 +40,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-That's it. Every PR gets an AI session report.
+이제 모든 PR 에 AI 세션 리포트가 추가됩니다.
 
 ## Inputs
 
@@ -56,7 +56,7 @@ npx agent-note init --agent claude --dashboard
 ```
 
 <Aside type="tip">
-  This also adds `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard setup.
+  이렇게 하면 공유 Dashboard 설정용 `.github/workflows/agentnote-dashboard.yml` 도 함께 추가됩니다.
 </Aside>
 
 ## Outputs
@@ -85,4 +85,4 @@ PR 리포트에는 다음이 들어갑니다.
 
 ## 다음 단계
 
-open / merged PR 기록을 Pages 에서 함께 보고 싶다면 <a href="./dashboard/">Dashboard</a> 로 이어서 보세요.
+Open / Merged PR 기록을 Pages 에서 함께 보고 싶다면 <a href="./dashboard/">Dashboard</a> 로 이어서 보세요.

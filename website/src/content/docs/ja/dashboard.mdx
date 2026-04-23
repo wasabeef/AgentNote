@@ -13,18 +13,18 @@ import { Aside } from '@astrojs/starlight/components';
 
 Dashboard は、Agent Note の履歴をチームで共有するための 1 つの URL です。
 
-- open / merged 両方の PR 履歴を 1 か所で見られる
-- commit、prompt、attribution をまとめてたどれる
+- Open / Merged 両方の PR 履歴を 1 か所で見られる
+- Commit、Prompt、Attribution をまとめてたどれる
 - GitHub Pages の `/dashboard/` 配下に 1 つの共有 URL として公開できる
 
 PR Description だけでは足りず、チーム向けの一覧画面がほしいときに使います。
 
 ## 先に決めること
 
-Dashboard は web の共有画面が必要なときだけ使います。
+Dashboard はチームで共有する画面が必要なときだけ使います。
 
 - PR の中に AI レポートが出れば十分なら、[GitHub Action](./github-action/) だけで OK です。
-- open / merged 履歴をまとめて見たいなら、このページの設定を足します。
+- Open / Merged 履歴をまとめて見たいなら、このページの設定を足します。
 
 ## クイックセットアップ
 
@@ -56,9 +56,19 @@ git push
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
+## PR Preview
+
+リポジトリの `github-pages` environment で Pull Request Deploy を許可していれば、merge 前でも共有 Dashboard に Open 状態の PR を表示できます。
+
+- `pull_request` の run で現在の Open 状態を公開
+- `default branch` への push で Merged 状態に置き換え
+- environment protection で Pull Request Deploy が止まる場合は、merge 後に共有 Dashboard が更新されます
+
+ここは Agent Note 自体ではなく、リポジトリ側の GitHub Pages environment 設定に依存します。
+
 ## 最初の deploy
 
-brand-new repo でも最初の production deploy 前から Dashboard data 自体は蓄積できますが、public な Pages URL ができるのは最初の `default branch` deploy 後です。
+新しいリポジトリでも、Dashboard が最初に公開される前から Dashboard data 自体は蓄積できます。Pull Request Deploy が許可されていれば、最初の `pull_request` run が成功した時点で共有 Pages URL が作られます。許可されていない場合は、`default branch` からの最初の deploy 成功後に作られます。
 
 ## 仕組み
 
@@ -66,4 +76,4 @@ brand-new repo でも最初の production deploy 前から Dashboard data 自体
 - 生成された Dashboard workflow が `gh-pages/dashboard/notes/*.json` を共有用の保存先として更新します
 - GitHub Pages が `/dashboard/` で build 済み Dashboard を配信します
 
-repo 自体には sample Dashboard JSON をコミットしません。fresh な Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で open な履歴を更新し、`default branch` で merged 状態を公開します。
+リポジトリ自体には Dashboard 用の sample JSON をコミットしません。新しい Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で Open 状態を公開し、`default branch` への push で Merged 状態に置き換えます。

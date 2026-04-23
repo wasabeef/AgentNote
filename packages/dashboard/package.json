@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "workflow:restore-notes": "node workflow/restore-notes.mjs",
+    "workflow:sync-notes": "node workflow/sync-notes.mjs",
+    "workflow:build-pages": "node workflow/build-pages.mjs",
+    "workflow:persist-notes": "node workflow/persist-notes.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.3",

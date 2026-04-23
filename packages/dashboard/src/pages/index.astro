@@ -1,4 +1,5 @@
 ---
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -45,6 +46,13 @@ const repoUrl = configuredRepoUrl || (configuredRepo ? `https://github.com/${con
 // the compiled module location during build, which can make source-relative
 // traversal miss public/notes even when the files are present.
 const notesDir = resolve(process.cwd(), "public/notes");
+const commitMetadataCache = new Map<string, {
+  sha: string;
+  short_sha: string;
+  message: string;
+  date: string;
+  author: string;
+} | null>();
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -52,6 +60,38 @@ function stringValue(value: unknown): string {
 
 function numberValue(value: unknown): number {
   return typeof value === "number" ? value : 0;
+}
+
+function readCommitMetadata(sha: string) {
+  if (!sha) return null;
+  if (commitMetadataCache.has(sha)) {
+    return commitMetadataCache.get(sha) ?? null;
+  }
+
+  try {
+    const raw = execFileSync(
+      "git",
+      ["show", "-s", "--format=%H%x00%h%x00%s%x00%aI%x00%an", sha],
+      {
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+        env: process.env,
+      },
+    ).trim();
+    const [fullSha = "", shortSha = "", message = "", date = "", author = ""] = raw.split("\u0000");
+    const metadata = {
+      sha: fullSha || sha,
+      short_sha: shortSha || sha.slice(0, 7),
+      message,
+      date,
+      author,
+    };
+    commitMetadataCache.set(sha, metadata);
+    return metadata;
+  } catch {
+    commitMetadataCache.set(sha, null);
+    return null;
+  }
 }
 
 function buildDashboardIndex(): DashboardIndexData {
@@ -79,14 +119,19 @@ function buildDashboardIndex(): DashboardIndexData {
       const attribution = (note.attribution ?? {}) as Record<string, unknown>;
       const lines = (attribution.lines ?? {}) as Record<string, unknown>;
       const interactions = Array.isArray(note.interactions) ? note.interactions : [];
-      const shortSha = stringValue(commit.short_sha) || file.replace(/\.json$/, "");
+      const commitSha = stringValue(commit.sha);
+      const fallbackRef =
+        commitSha || stringValue(commit.short_sha) || file.replace(/\.json$/, "");
+      const fallback = readCommitMetadata(fallbackRef);
+      const shortSha =
+        stringValue(commit.short_sha) || fallback?.short_sha || file.replace(/\.json$/, "");
 
       return {
-        sha: stringValue(commit.sha) || shortSha,
+        sha: commitSha || fallback?.sha || shortSha,
         short_sha: shortSha,
-        message: stringValue(commit.message) || shortSha,
-        date: stringValue(commit.date),
-        author: stringValue(commit.author),
+        message: stringValue(commit.message) || fallback?.message || shortSha,
+        date: stringValue(commit.date) || fallback?.date || "",
+        author: stringValue(commit.author) || fallback?.author || "",
         agent: stringValue(note.agent) || null,
         model: stringValue(note.model) || null,
         session_id: stringValue(note.session_id) || null,
@@ -1811,6 +1856,14 @@ const dashboardIndex = buildDashboardIndex();
         const res = await fetch(noteUrl);
         if (!res.ok) throw new Error("Failed to load note: " + summary.short_sha);
         const note = await res.json();
+        note.commit = {
+          ...(note.commit || {}),
+          sha: note.commit?.sha || summary.sha,
+          short_sha: note.commit?.short_sha || summary.short_sha,
+          message: note.commit?.message || summary.message,
+          date: note.commit?.date || summary.date,
+          author: note.commit?.author || summary.author,
+        };
         state.noteCache.set(summary.short_sha, note);
         if (!summary.session_id && note.session_id) summary.session_id = note.session_id;
         return note;

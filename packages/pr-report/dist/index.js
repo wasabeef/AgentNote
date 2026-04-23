@@ -1,10 +1,9 @@
-/******/ (() => { // webpackBootstrap
-/******/ 	var __webpack_modules__ = ({
+import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
+/******/ var __webpack_modules__ = ({
 
 /***/ 2470:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -107,7 +106,6 @@ function escapeProperty(s) {
 /***/ 7184:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -458,7 +456,6 @@ exports.platform = __importStar(__nccwpck_require__(7396));
 /***/ 9933:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 // For internal use, subject to change.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -527,7 +524,6 @@ exports.prepareKeyValueMessage = prepareKeyValueMessage;
 /***/ 5950:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -611,7 +607,6 @@ exports.OidcClient = OidcClient;
 /***/ 5828:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -680,7 +675,6 @@ exports.toPlatformPath = toPlatformPath;
 /***/ 7396:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -781,7 +775,6 @@ exports.getDetails = getDetails;
 /***/ 2491:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1071,7 +1064,6 @@ exports.summary = _summary;
 /***/ 274:
 /***/ ((__unused_webpack_module, exports) => {
 
-"use strict";
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -1118,7 +1110,6 @@ exports.toCommandProperties = toCommandProperties;
 /***/ 9192:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1228,7 +1219,6 @@ exports.getExecOutput = getExecOutput;
 /***/ 8317:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1853,7 +1843,6 @@ class ExecState extends events.EventEmitter {
 /***/ 4108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Context = void 0;
@@ -1916,7 +1905,6 @@ exports.Context = Context;
 /***/ 5683:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1964,7 +1952,6 @@ exports.getOctokit = getOctokit;
 /***/ 4168:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -2041,7 +2028,6 @@ exports.getApiBaseUrl = getApiBaseUrl;
 /***/ 9010:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -2107,7 +2093,6 @@ exports.getOctokitOptions = getOctokitOptions;
 /***/ 4220:
 /***/ (function(__unused_webpack_module, exports) {
 
-"use strict";
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -2195,7 +2180,6 @@ exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHand
 /***/ 9920:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -2854,7 +2838,6 @@ const lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCa
 /***/ 8688:
 /***/ ((__unused_webpack_module, exports) => {
 
-"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkBypass = exports.getProxyUrl = void 0;
@@ -2956,7 +2939,6 @@ class DecodedURL extends URL {
 /***/ 6499:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3146,7 +3128,6 @@ exports.getCmdPath = getCmdPath;
 /***/ 4502:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3452,7 +3433,6 @@ function copyFile(srcFile, destFile, force) {
 /***/ 3452:
 /***/ ((module) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -3537,7 +3517,6 @@ var createTokenAuth = function createTokenAuth2(token) {
 /***/ 7205:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -3713,7 +3692,6 @@ var Octokit = class {
 /***/ 3792:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -4097,7 +4075,6 @@ var endpoint = withDefaults(null, DEFAULTS);
 /***/ 1147:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -4254,7 +4231,6 @@ function withCustomRequest(customRequest) {
 /***/ 3214:
 /***/ ((module) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -4655,7 +4631,6 @@ paginateRest.VERSION = VERSION;
 /***/ 6659:
 /***/ ((module) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -6825,7 +6800,6 @@ legacyRestEndpointMethods.VERSION = VERSION;
 /***/ 8392:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -6923,7 +6897,6 @@ var RequestError = class extends Error {
 /***/ 3059:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -7334,7 +7307,6 @@ function removeHook(state, name, method) {
 /***/ 5802:
 /***/ ((__unused_webpack_module, exports) => {
 
-"use strict";
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -7419,7 +7391,6 @@ module.exports = __nccwpck_require__(5862);
 /***/ 5862:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 var net = __nccwpck_require__(9278);
@@ -7691,7 +7662,6 @@ exports.debug = debug; // for test
 /***/ 1684:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const Client = __nccwpck_require__(5513)
@@ -7866,7 +7836,6 @@ module.exports.mockErrors = mockErrors
 /***/ 2121:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { InvalidArgumentError } = __nccwpck_require__(3959)
@@ -8083,7 +8052,6 @@ module.exports = {
 /***/ 3192:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { AsyncResource } = __nccwpck_require__(290)
@@ -8195,7 +8163,6 @@ module.exports = connect
 /***/ 2466:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -8452,7 +8419,6 @@ module.exports = pipeline
 /***/ 887:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const Readable = __nccwpck_require__(8947)
@@ -8640,7 +8606,6 @@ module.exports.RequestHandler = RequestHandler
 /***/ 4388:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { finished, PassThrough } = __nccwpck_require__(2203)
@@ -8868,7 +8833,6 @@ module.exports = stream
 /***/ 6342:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { InvalidArgumentError, RequestAbortedError, SocketError } = __nccwpck_require__(3959)
@@ -8981,7 +8945,6 @@ module.exports = upgrade
 /***/ 2531:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 module.exports.request = __nccwpck_require__(887)
@@ -8996,7 +8959,6 @@ module.exports.connect = __nccwpck_require__(3192)
 /***/ 8947:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 // Ported from https://github.com/nodejs/undici/pull/907
 
 
@@ -9379,7 +9341,6 @@ module.exports = { getResolveErrorBodyCallback }
 /***/ 5377:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -9577,7 +9538,6 @@ module.exports = BalancedPool
 /***/ 611:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { kConstruct } = __nccwpck_require__(8652)
@@ -10423,7 +10383,6 @@ module.exports = {
 /***/ 6446:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { kConstruct } = __nccwpck_require__(8652)
@@ -10575,7 +10534,6 @@ module.exports = {
 /***/ 8652:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 module.exports = {
@@ -10588,7 +10546,6 @@ module.exports = {
 /***/ 1173:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const assert = __nccwpck_require__(2613)
@@ -10645,7 +10602,6 @@ module.exports = {
 /***/ 5513:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 // @ts-check
 
 
@@ -12936,7 +12892,6 @@ module.exports = Client
 /***/ 22:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 /* istanbul ignore file: only for Node 12 */
@@ -12992,7 +12947,6 @@ module.exports = function () {
 /***/ 6985:
 /***/ ((module) => {
 
-"use strict";
 
 
 // https://wicg.github.io/cookie-store/#cookie-maximum-attribute-value-size
@@ -13012,7 +12966,6 @@ module.exports = {
 /***/ 4276:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { parseSetCookie } = __nccwpck_require__(6695)
@@ -13203,7 +13156,6 @@ module.exports = {
 /***/ 6695:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(6985)
@@ -13528,7 +13480,6 @@ module.exports = {
 /***/ 3126:
 /***/ ((module) => {
 
-"use strict";
 
 
 /**
@@ -13810,7 +13761,6 @@ module.exports = {
 /***/ 1332:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const net = __nccwpck_require__(9278)
@@ -14007,7 +13957,6 @@ module.exports = buildConnector
 /***/ 2371:
 /***/ ((module) => {
 
-"use strict";
 
 
 /** @type {Record<string, string | undefined>} */
@@ -14133,7 +14082,6 @@ module.exports = {
 /***/ 3959:
 /***/ ((module) => {
 
-"use strict";
 
 
 class UndiciError extends Error {
@@ -14371,7 +14319,6 @@ module.exports = {
 /***/ 9691:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -14948,7 +14895,6 @@ module.exports = {
 /***/ 9500:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const assert = __nccwpck_require__(2613)
@@ -15478,7 +15424,6 @@ module.exports = {
 /***/ 2421:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const Dispatcher = __nccwpck_require__(303)
@@ -15678,7 +15623,6 @@ module.exports = DispatcherBase
 /***/ 303:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const EventEmitter = __nccwpck_require__(4434)
@@ -15705,7 +15649,6 @@ module.exports = Dispatcher
 /***/ 7791:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const Busboy = __nccwpck_require__(5249)
@@ -16326,7 +16269,6 @@ module.exports = {
 /***/ 1234:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { MessageChannel, receiveMessageOnPort } = __nccwpck_require__(8167)
@@ -17119,7 +17061,6 @@ module.exports = {
 /***/ 7005:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { Blob, File: NativeFile } = __nccwpck_require__(181)
@@ -17471,7 +17412,6 @@ module.exports = { File, FileLike, isFileLike }
 /***/ 7453:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { isBlobLike, toUSVString, makeIterator } = __nccwpck_require__(2847)
@@ -17744,7 +17684,6 @@ module.exports = { FormData }
 /***/ 2896:
 /***/ ((module) => {
 
-"use strict";
 
 
 // In case of breaking changes, increase the version
@@ -17792,7 +17731,6 @@ module.exports = {
 /***/ 2801:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 // https://github.com/Ethan-Arrowood/undici-fetch
 
 
@@ -18393,7 +18331,6 @@ module.exports = {
 /***/ 1503:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 // https://github.com/Ethan-Arrowood/undici-fetch
 
 
@@ -20549,7 +20486,6 @@ module.exports = {
 /***/ 2630:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 /* globals AbortController */
 
 
@@ -21503,7 +21439,6 @@ module.exports = { Request, makeRequest }
 /***/ 9928:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { Headers, HeadersList, fill } = __nccwpck_require__(2801)
@@ -22082,7 +22017,6 @@ module.exports = {
 /***/ 3730:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = {
@@ -22100,7 +22034,6 @@ module.exports = {
 /***/ 2847:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(1234)
@@ -23252,7 +23185,6 @@ module.exports = {
 /***/ 4354:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { types } = __nccwpck_require__(9023)
@@ -23906,7 +23838,6 @@ module.exports = {
 /***/ 8064:
 /***/ ((module) => {
 
-"use strict";
 
 
 /**
@@ -24204,7 +24135,6 @@ module.exports = {
 /***/ 52:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -24556,7 +24486,6 @@ module.exports = {
 /***/ 2804:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { webidl } = __nccwpck_require__(4354)
@@ -24642,7 +24571,6 @@ module.exports = {
 /***/ 2736:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = {
@@ -24660,7 +24588,6 @@ module.exports = {
 /***/ 4273:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -25060,7 +24987,6 @@ module.exports = {
 /***/ 1481:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 // We include a version number for the Dispatcher API. In case of breaking changes,
@@ -25100,7 +25026,6 @@ module.exports = {
 /***/ 1468:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = class DecoratorHandler {
@@ -25143,7 +25068,6 @@ module.exports = class DecoratorHandler {
 /***/ 8591:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const util = __nccwpck_require__(9500)
@@ -25715,7 +25639,6 @@ module.exports = RetryHandler
 /***/ 9299:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const RedirectHandler = __nccwpck_require__(8591)
@@ -25744,7 +25667,6 @@ module.exports = createRedirectInterceptor
 /***/ 748:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
@@ -26045,7 +25967,6 @@ module.exports = 'AGFzbQEAAAABMAhgAX8Bf2ADf39/AX9gBH9/f38Bf2AAAGADf39/AGABfwBgAn
 /***/ 4608:
 /***/ ((__unused_webpack_module, exports) => {
 
-"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.enumToMap = void 0;
@@ -26067,7 +25988,6 @@ exports.enumToMap = enumToMap;
 /***/ 7017:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { kClients } = __nccwpck_require__(8031)
@@ -26246,7 +26166,6 @@ module.exports = MockAgent
 /***/ 2361:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { promisify } = __nccwpck_require__(9023)
@@ -26313,7 +26232,6 @@ module.exports = MockClient
 /***/ 2673:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { UndiciError } = __nccwpck_require__(3959)
@@ -26338,7 +26256,6 @@ module.exports = {
 /***/ 5843:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { getResponseData, buildKey, addMockDispatch } = __nccwpck_require__(3193)
@@ -26552,7 +26469,6 @@ module.exports.MockScope = MockScope
 /***/ 6480:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { promisify } = __nccwpck_require__(9023)
@@ -26619,7 +26535,6 @@ module.exports = MockPool
 /***/ 2305:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = {
@@ -26650,7 +26565,6 @@ module.exports = {
 /***/ 3193:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { MockNotMatchedError } = __nccwpck_require__(2673)
@@ -27009,7 +26923,6 @@ module.exports = {
 /***/ 5738:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { Transform } = __nccwpck_require__(2203)
@@ -27057,7 +26970,6 @@ module.exports = class PendingInterceptorsFormatter {
 /***/ 5773:
 /***/ ((module) => {
 
-"use strict";
 
 
 const singulars = {
@@ -27094,7 +27006,6 @@ module.exports = class Pluralizer {
 /***/ 8721:
 /***/ ((module) => {
 
-"use strict";
 /* eslint-disable */
 
 
@@ -27219,7 +27130,6 @@ module.exports = class FixedQueue {
 /***/ 8804:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const DispatcherBase = __nccwpck_require__(2421)
@@ -27462,7 +27372,6 @@ module.exports = PoolStats
 /***/ 4288:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const {
@@ -27578,7 +27487,6 @@ module.exports = Pool
 /***/ 9276:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { kProxy, kClose, kDestroy, kInterceptors } = __nccwpck_require__(8031)
@@ -27775,7 +27683,6 @@ module.exports = ProxyAgent
 /***/ 2576:
 /***/ ((module) => {
 
-"use strict";
 
 
 let fastNow = Date.now()
@@ -27880,7 +27787,6 @@ module.exports = {
 /***/ 6114:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const diagnosticsChannel = __nccwpck_require__(1637)
@@ -28179,7 +28085,6 @@ module.exports = {
 /***/ 77:
 /***/ ((module) => {
 
-"use strict";
 
 
 // This is a Globally Unique Identifier unique used
@@ -28238,7 +28143,6 @@ module.exports = {
 /***/ 7115:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { webidl } = __nccwpck_require__(4354)
@@ -28549,7 +28453,6 @@ module.exports = {
 /***/ 2697:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { maxUnsigned16Bit } = __nccwpck_require__(77)
@@ -28630,7 +28533,6 @@ module.exports = {
 /***/ 3607:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { Writable } = __nccwpck_require__(2203)
@@ -28982,7 +28884,6 @@ module.exports = {
 /***/ 7945:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = {
@@ -29002,7 +28903,6 @@ module.exports = {
 /***/ 5506:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nccwpck_require__(7945)
@@ -29210,7 +29110,6 @@ module.exports = {
 /***/ 551:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const { webidl } = __nccwpck_require__(4354)
@@ -29859,7 +29758,6 @@ module.exports = {
 /***/ 9367:
 /***/ ((__unused_webpack_module, exports) => {
 
-"use strict";
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -29922,525 +29820,226 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1979:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DESCRIPTION_END = exports.DESCRIPTION_BEGIN = exports.COMMENT_MARKER = void 0;
-exports.resolvePrOutputMode = resolvePrOutputMode;
-exports.upsertDescription = upsertDescription;
-exports.shouldRetryNotesFetch = shouldRetryNotesFetch;
-exports.buildPrReportCommand = buildPrReportCommand;
-exports.COMMENT_MARKER = "<!-- agentnote-pr-report -->";
-exports.DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
-exports.DESCRIPTION_END = "<!-- agentnote-end -->";
-/**
- * Resolve PR output mode from the action input.
- */
-function resolvePrOutputMode(prOutputInput) {
-    if (prOutputInput === "description" ||
-        prOutputInput === "comment" ||
-        prOutputInput === "none") {
-        return prOutputInput;
-    }
-    return "description";
-}
-/**
- * Upsert the agentnote markdown section into a PR description body.
- * Replaces the existing section (begin/end markers) if present, appends if not.
- */
-function upsertDescription(existingBody, markdown) {
-    const section = `${exports.DESCRIPTION_BEGIN}\n${markdown}\n${exports.DESCRIPTION_END}`;
-    if (existingBody.includes(exports.DESCRIPTION_BEGIN)) {
-        const before = existingBody.slice(0, existingBody.indexOf(exports.DESCRIPTION_BEGIN));
-        const after = existingBody.includes(exports.DESCRIPTION_END)
-            ? existingBody.slice(existingBody.indexOf(exports.DESCRIPTION_END) + exports.DESCRIPTION_END.length)
-            : "";
-        return `${before.trimEnd()}\n\n${section}${after}`;
-    }
-    return `${existingBody.trimEnd()}\n\n${section}`;
-}
-/**
- * Retry notes fetch only when the PR clearly has commits but none of them
- * resolved to Agent Note data yet. This is the common signature of a notes
- * push race right after branch publication.
- */
-function shouldRetryNotesFetch(report) {
-    return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
-}
-/**
- * Build the CLI command used to collect a PR report.
- * When GitHub provides the real PR head SHA, prefer it over the synthetic
- * merge commit checked out by pull_request workflows.
- */
-function buildPrReportCommand(cliCmd, base, headSha, options) {
-    const headArg = headSha ? ` --head "${headSha}"` : "";
-    const jsonArg = options?.json ? " --json" : "";
-    return `${cliCmd} pr "${base}"${headArg}${jsonArg}`;
-}
-
-
-/***/ }),
-
-/***/ 3018:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(7184));
-const github = __importStar(__nccwpck_require__(5683));
-const child_process_1 = __nccwpck_require__(5317);
-const fs_1 = __nccwpck_require__(9896);
-const path_1 = __nccwpck_require__(6928);
-const helpers_js_1 = __nccwpck_require__(1979);
-/**
- * Resolve the agentnote CLI command.
- * Prefers the local monorepo build (no version skew), falls back to npx.
- */
-function resolveCliCommand() {
-    try {
-        const localCli = (0, path_1.resolve)("packages/cli/dist/cli.js");
-        if ((0, fs_1.existsSync)(localCli)) {
-            return `node ${localCli}`;
-        }
-    }
-    catch {
-        // ignore
-    }
-    return "npx --yes agent-note";
-}
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-function fetchAgentnoteNotes() {
-    try {
-        (0, child_process_1.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", {
-            stdio: "pipe",
-        });
-    }
-    catch {
-        core.info("No agent-note notes found on remote.");
-    }
-}
-function isEnabled(value) {
-    return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
-}
-async function postPrReport(outputMode, markdown) {
-    if (outputMode === "none")
-        return;
-    if (!markdown || !github.context.payload.pull_request)
-        return;
-    const token = process.env.GITHUB_TOKEN || "";
-    if (!token) {
-        core.warning("No GitHub token available. Skipping PR report.");
-        return;
-    }
-    const octokit = github.getOctokit(token);
-    const { owner, repo } = github.context.repo;
-    const issueNumber = github.context.payload.pull_request.number;
-    if (outputMode === "description") {
-        const { data: pr } = await octokit.rest.pulls.get({
-            owner,
-            repo,
-            pull_number: issueNumber,
-        });
-        const existingBody = pr.body ?? "";
-        const newBody = (0, helpers_js_1.upsertDescription)(existingBody, markdown);
-        await octokit.rest.pulls.update({
-            owner,
-            repo,
-            pull_number: issueNumber,
-            body: newBody,
-        });
-        core.info("Agent Note report added to PR description.");
-        return;
-    }
-    const body = `${helpers_js_1.COMMENT_MARKER}\n${markdown}`;
-    const { data: comments } = await octokit.rest.issues.listComments({
-        owner,
-        repo,
-        issue_number: issueNumber,
-    });
-    const existing = comments.find((comment) => comment.body?.includes(helpers_js_1.COMMENT_MARKER));
-    if (existing) {
-        await octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: existing.id,
-            body,
-        });
-    }
-    else {
-        await octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: issueNumber,
-            body,
-        });
-    }
-    core.info("Agent Note report posted as PR comment.");
-}
-async function run() {
-    try {
-        const base = core.getInput("base") ||
-            `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
-        const headSha = github.context.payload.pull_request?.head?.sha;
-        const cliCmd = resolveCliCommand();
-        const prOutputMode = (0, helpers_js_1.resolvePrOutputMode)(core.getInput("pr_output"));
-        let json = "";
-        let report = null;
-        const maxAttempts = 3;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            fetchAgentnoteNotes();
-            try {
-                json = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha, { json: true }), {
-                    encoding: "utf-8",
-                    stdio: ["pipe", "pipe", "pipe"],
-                }).trim();
-            }
-            catch {
-                core.info("No agent-note data found for this PR.");
-                return;
-            }
-            if (!json || json === "{}") {
-                core.info("No agent-note data found for this PR.");
-                return;
-            }
-            report = JSON.parse(json);
-            if (!(0, helpers_js_1.shouldRetryNotesFetch)(report) || attempt === maxAttempts) {
-                break;
-            }
-            core.info(`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
-            await sleep(attempt * 1000);
-        }
-        if (!report) {
-            core.info("No agent-note data found for this PR.");
-            return;
-        }
-        core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
-        core.setOutput("overall_method", String(report.overall_method ?? "file"));
-        core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
-        core.setOutput("total_commits", String(report.total_commits ?? 0));
-        core.setOutput("total_prompts", String(report.total_prompts ?? 0));
-        core.setOutput("json", json);
-        let markdown = "";
-        try {
-            markdown = (0, child_process_1.execSync)((0, helpers_js_1.buildPrReportCommand)(cliCmd, base, headSha), {
-                encoding: "utf-8",
-                stdio: ["pipe", "pipe", "pipe"],
-            }).trim();
-        }
-        catch {
-            markdown = "";
-        }
-        // Keep PR descriptions text-only for now.
-        // The action runs against consumer repositories, so there is no stable
-        // public image URL we can rely on for model icons until those assets are
-        // published from a public host.
-        const reportModel = typeof report.model === "string" ? report.model.trim() : "";
-        void reportModel;
-        core.setOutput("markdown", markdown);
-        await postPrReport(prOutputMode, markdown);
-    }
-    catch (error) {
-        if (error instanceof Error) {
-            core.setFailed(error.message);
-        }
-    }
-}
-run();
-
-
-/***/ }),
-
 /***/ 2613:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("assert");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("assert");
 
 /***/ }),
 
 /***/ 290:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("async_hooks");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("async_hooks");
 
 /***/ }),
 
 /***/ 181:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("buffer");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("buffer");
 
 /***/ }),
 
 /***/ 5317:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("child_process");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("child_process");
 
 /***/ }),
 
 /***/ 4236:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("console");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("console");
 
 /***/ }),
 
 /***/ 6982:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("crypto");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("crypto");
 
 /***/ }),
 
 /***/ 1637:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("diagnostics_channel");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("diagnostics_channel");
 
 /***/ }),
 
 /***/ 4434:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("events");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("events");
 
 /***/ }),
 
 /***/ 9896:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("fs");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("fs");
 
 /***/ }),
 
 /***/ 8611:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("http");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("http");
 
 /***/ }),
 
 /***/ 5675:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("http2");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("http2");
 
 /***/ }),
 
 /***/ 5692:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("https");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("https");
 
 /***/ }),
 
 /***/ 9278:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("net");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("net");
 
 /***/ }),
 
 /***/ 7598:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("node:crypto");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:crypto");
 
 /***/ }),
 
 /***/ 8474:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("node:events");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:events");
 
 /***/ }),
 
 /***/ 7075:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("node:stream");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream");
 
 /***/ }),
 
 /***/ 7975:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("node:util");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:util");
 
 /***/ }),
 
 /***/ 857:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("os");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("os");
 
 /***/ }),
 
 /***/ 6928:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("path");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
 
 /***/ }),
 
 /***/ 2987:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("perf_hooks");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("perf_hooks");
 
 /***/ }),
 
 /***/ 3480:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("querystring");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("querystring");
 
 /***/ }),
 
 /***/ 2203:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("stream");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream");
 
 /***/ }),
 
 /***/ 3774:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("stream/web");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream/web");
 
 /***/ }),
 
 /***/ 5574:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("string_decoder");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("string_decoder");
 
 /***/ }),
 
 /***/ 3557:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("timers");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("timers");
 
 /***/ }),
 
 /***/ 4756:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("tls");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("tls");
 
 /***/ }),
 
 /***/ 7016:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("url");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("url");
 
 /***/ }),
 
 /***/ 9023:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("util");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 
 /***/ }),
 
 /***/ 8253:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("util/types");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util/types");
 
 /***/ }),
 
 /***/ 8167:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("worker_threads");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("worker_threads");
 
 /***/ }),
 
 /***/ 3106:
 /***/ ((module) => {
 
-"use strict";
-module.exports = require("zlib");
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("zlib");
 
 /***/ }),
 
 /***/ 8946:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const WritableStream = (__nccwpck_require__(7075).Writable)
@@ -30661,7 +30260,6 @@ module.exports = Dicer
 /***/ 7003:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const EventEmitter = (__nccwpck_require__(8474).EventEmitter)
@@ -30769,7 +30367,6 @@ module.exports = HeaderParser
 /***/ 7952:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const inherits = (__nccwpck_require__(7975).inherits)
@@ -30790,7 +30387,6 @@ module.exports = PartStream
 /***/ 6484:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 /**
@@ -31026,7 +30622,6 @@ module.exports = SBMH
 /***/ 5249:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const WritableStream = (__nccwpck_require__(7075).Writable)
@@ -31119,7 +30714,6 @@ module.exports.Dicer = Dicer
 /***/ 5764:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 // TODO:
@@ -31433,7 +31027,6 @@ module.exports = Multipart
 /***/ 1411:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 
 
 const Decoder = __nccwpck_require__(4364)
@@ -31631,7 +31224,6 @@ module.exports = UrlEncoded
 /***/ 4364:
 /***/ ((module) => {
 
-"use strict";
 
 
 const RE_PLUS = /\+/g
@@ -31693,7 +31285,6 @@ module.exports = Decoder
 /***/ 5080:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = function basename (path) {
@@ -31715,7 +31306,6 @@ module.exports = function basename (path) {
 /***/ 6607:
 /***/ (function(module) {
 
-"use strict";
 
 
 // Node has always utf-8
@@ -31837,7 +31427,6 @@ module.exports = decodeText
 /***/ 5245:
 /***/ ((module) => {
 
-"use strict";
 
 
 module.exports = function getLimit (limits, name, defaultLimit) {
@@ -31861,7 +31450,6 @@ module.exports = function getLimit (limits, name, defaultLimit) {
 /***/ 717:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-"use strict";
 /* eslint-disable object-property-newline */
 
 
@@ -32062,50 +31650,848 @@ module.exports = parseParams
 
 /***/ })
 
-/******/ 	});
+/******/ });
 /************************************************************************/
-/******/ 	// The module cache
-/******/ 	var __webpack_module_cache__ = {};
-/******/ 	
-/******/ 	// The require function
-/******/ 	function __nccwpck_require__(moduleId) {
-/******/ 		// Check if module is in cache
-/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
-/******/ 		if (cachedModule !== undefined) {
-/******/ 			return cachedModule.exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = __webpack_module_cache__[moduleId] = {
-/******/ 			// no module.id needed
-/******/ 			// no module.loaded needed
-/******/ 			exports: {}
-/******/ 		};
-/******/ 	
-/******/ 		// Execute the module function
-/******/ 		var threw = true;
-/******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
-/******/ 			threw = false;
-/******/ 		} finally {
-/******/ 			if(threw) delete __webpack_module_cache__[moduleId];
-/******/ 		}
-/******/ 	
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
+/******/ // The module cache
+/******/ var __webpack_module_cache__ = {};
+/******/ 
+/******/ // The require function
+/******/ function __nccwpck_require__(moduleId) {
+/******/ 	// Check if module is in cache
+/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 	if (cachedModule !== undefined) {
+/******/ 		return cachedModule.exports;
 /******/ 	}
-/******/ 	
+/******/ 	// Create a new module (and put it into the cache)
+/******/ 	var module = __webpack_module_cache__[moduleId] = {
+/******/ 		// no module.id needed
+/******/ 		// no module.loaded needed
+/******/ 		exports: {}
+/******/ 	};
+/******/ 
+/******/ 	// Execute the module function
+/******/ 	var threw = true;
+/******/ 	try {
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
+/******/ 		threw = false;
+/******/ 	} finally {
+/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 	}
+/******/ 
+/******/ 	// Return the exports of the module
+/******/ 	return module.exports;
+/******/ }
+/******/ 
 /************************************************************************/
-/******/ 	/* webpack/runtime/compat */
-/******/ 	
-/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
-/******/ 	
+/******/ /* webpack/runtime/compat */
+/******/ 
+/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(3018);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
-/******/ })()
-;
+var __webpack_exports__ = {};
+
+// EXTERNAL MODULE: ../../node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(7184);
+// EXTERNAL MODULE: ../../node_modules/@actions/github/lib/github.js
+var github = __nccwpck_require__(5683);
+// EXTERNAL MODULE: external "child_process"
+var external_child_process_ = __nccwpck_require__(5317);
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
+// EXTERNAL MODULE: external "node:util"
+var external_node_util_ = __nccwpck_require__(7975);
+;// CONCATENATED MODULE: ./src/github.ts
+
+
+const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
+const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
+const DESCRIPTION_END = "<!-- agentnote-end -->";
+const execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
+/**
+ * Resolve PR output mode from the action input.
+ */
+function resolvePrOutputMode(prOutputInput) {
+    if (prOutputInput === "description" ||
+        prOutputInput === "comment" ||
+        prOutputInput === "none") {
+        return prOutputInput;
+    }
+    return "description";
+}
+/**
+ * Upsert the agentnote markdown section into a PR description body.
+ * Replaces the existing section (begin/end markers) if present, appends if not.
+ */
+function upsertDescription(existingBody, markdown) {
+    const section = `${DESCRIPTION_BEGIN}\n${markdown}\n${DESCRIPTION_END}`;
+    if (existingBody.includes(DESCRIPTION_BEGIN)) {
+        const before = existingBody.slice(0, existingBody.indexOf(DESCRIPTION_BEGIN));
+        const after = existingBody.includes(DESCRIPTION_END)
+            ? existingBody.slice(existingBody.indexOf(DESCRIPTION_END) + DESCRIPTION_END.length)
+            : "";
+        return `${before.trimEnd()}\n\n${section}${after}`;
+    }
+    return `${existingBody.trimEnd()}\n\n${section}`;
+}
+/**
+ * Retry notes fetch only when the PR clearly has commits but none of them
+ * resolved to Agent Note data yet. This is the common signature of a notes
+ * push race right after branch publication.
+ */
+function shouldRetryNotesFetch(report) {
+    return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
+}
+function inferDashboardUrl(repoUrl) {
+    if (!repoUrl)
+        return null;
+    const normalized = repoUrl.replace(/\.git$/, "");
+    const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+    if (!match)
+        return null;
+    const [, owner, repo] = match;
+    const pagesRoot = `https://${owner}.github.io`;
+    if (repo === `${owner}.github.io`) {
+        return `${pagesRoot}/dashboard/`;
+    }
+    return `${pagesRoot}/${repo}/dashboard/`;
+}
+function hasDeploymentBranchProtection(policy) {
+    return Boolean(policy &&
+        (policy.protected_branches === true ||
+            policy.custom_branch_policies === true));
+}
+async function updatePrDescription(prNumber, markdown) {
+    const currentBody = await readPrBody(prNumber);
+    const newBody = upsertDescription(currentBody, markdown);
+    await execFileAsync("gh", ["pr", "edit", prNumber, "--body", newBody], {
+        encoding: "utf-8",
+    });
+}
+async function postPrComment(prNumber, content) {
+    const body = `${COMMENT_MARKER}\n${content}`;
+    try {
+        const { stdout } = await execFileAsync("gh", [
+            "pr",
+            "view",
+            prNumber,
+            "--json",
+            "comments",
+            "--jq",
+            `.comments[] | select(.body | contains("${COMMENT_MARKER}")) | .id`,
+        ], { encoding: "utf-8" });
+        const commentId = stdout.trim().split("\n")[0];
+        if (commentId) {
+            await execFileAsync("gh", [
+                "api",
+                "-X",
+                "PATCH",
+                `/repos/{owner}/{repo}/issues/comments/${commentId}`,
+                "-f",
+                `body=${body}`,
+            ], { encoding: "utf-8" });
+            return;
+        }
+    }
+    catch {
+        // fall through to create
+    }
+    await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], {
+        encoding: "utf-8",
+    });
+}
+function wrapWithMarkers(content) {
+    return `${DESCRIPTION_BEGIN}\n${content}\n${DESCRIPTION_END}`;
+}
+async function readPrBody(prNumber) {
+    const { stdout } = await execFileAsync("gh", ["pr", "view", prNumber, "--json", "body"], { encoding: "utf-8" });
+    return JSON.parse(stdout).body ?? "";
+}
+
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+;// CONCATENATED MODULE: ../cli/src/core/constants.ts
+// ─── Trailer ───
+const TRAILER_KEY = "Agentnote-Session";
+const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+// ─── Git notes ───
+const constants_NOTES_REF = "agentnote";
+const NOTES_REF_FULL = (/* unused pure expression or super */ null && (`refs/notes/${constants_NOTES_REF}`));
+const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}:${NOTES_REF_FULL}`));
+// ─── Directory names ───
+const AGENTNOTE_DIR = "agentnote";
+const SESSIONS_DIR = "sessions";
+// ─── Session file names ───
+const PROMPTS_FILE = "prompts.jsonl";
+const CHANGES_FILE = "changes.jsonl";
+const EVENTS_FILE = "events.jsonl";
+const TRANSCRIPT_PATH_FILE = "transcript_path";
+const TURN_FILE = "turn";
+/**
+ * Current user prompt identity (UUID v4, one line). Overwritten at each
+ * UserPromptSubmit. Authoritative primary key for pairing prompts with the
+ * file edits and transcript interactions they produced.
+ */
+const PROMPT_ID_FILE = "prompt_id";
+const SESSION_FILE = "session";
+const SESSION_AGENT_FILE = "agent";
+const PENDING_COMMIT_FILE = "pending_commit.json";
+// ─── Display limits ───
+const MAX_COMMITS = 500;
+const BAR_WIDTH_COMPACT = 5;
+const BAR_WIDTH_FULL = 20;
+const TRUNCATE_PROMPT = 120;
+const TRUNCATE_PROMPT_PR = 500;
+const TRUNCATE_RESPONSE_SHOW = 200;
+const TRUNCATE_RESPONSE_PR = 500;
+const TRUNCATE_RESPONSE_CHAT = 800;
+// ─── Archive ───
+/** Base36 rotation ID pattern: [0-9a-z]{6,} (future-safe for post-2059 length growth). */
+const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
+// ─── Session infrastructure ───
+const HEARTBEAT_FILE = "heartbeat";
+const PRE_BLOBS_FILE = "pre_blobs.jsonl";
+/** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
+const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+// ─── Git ───
+/** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
+const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
+// ─── Schema ───
+const constants_SCHEMA_VERSION = 1;
+// ─── Debug ───
+const DEBUG = !!process.env.AGENTNOTE_DEBUG;
+
+;// CONCATENATED MODULE: ../cli/src/core/entry.ts
+
+// Best-effort generated-artifact heuristics grouped by ecosystem so each rule
+// stays explainable when we broaden support across languages and frameworks.
+const GENERATED_DIR_SEGMENTS = new Set([
+    // Web / JS / TS build outputs
+    ".next",
+    ".nuxt",
+    "coverage",
+    "dist",
+    "out",
+    // Monorepo / remote-cache build outputs
+    ".turbo",
+    ".yarn",
+    "bazel-bin",
+    "bazel-out",
+    "bazel-testlogs",
+    // Mobile / Flutter build caches
+    ".dart_tool",
+    "DerivedData",
+    // Multi-language generic build directories (Android, Kotlin, Rust, Go, Dart)
+    "build",
+    "gen",
+    "generated",
+    "target",
+]);
+const GENERATED_FILE_NAMES = new Set([
+    // Flutter tool-managed dependency snapshot
+    ".flutter-plugins-dependencies",
+    // Flutter desktop / mobile plugin registrants
+    "generated_plugin_registrant.dart",
+    "GeneratedPluginRegistrant.java",
+    "GeneratedPluginRegistrant.swift",
+    "GeneratedPluginRegistrant.m",
+    "GeneratedPluginRegistrant.h",
+]);
+const GENERATED_FILE_SUFFIXES = [
+    // Web / TS / GraphQL / OpenAPI codegen
+    ".gen.ts",
+    ".gen.tsx",
+    ".generated.js",
+    ".generated.jsx",
+    ".generated.ts",
+    ".generated.tsx",
+    // Dart / Flutter codegen
+    ".chopper.dart",
+    ".config.dart",
+    ".freezed.dart",
+    ".g.dart",
+    ".gr.dart",
+    ".mocks.dart",
+    ".pb.dart",
+    ".pbjson.dart",
+    ".pbenum.dart",
+    ".pbserver.dart",
+    // Go codegen
+    ".pb.go",
+    ".pb.gw.go",
+    ".twirp.go",
+    ".gen.go",
+    ".generated.go",
+    "_gen.go",
+    "_generated.go",
+    "_string.go",
+    // Rust codegen
+    ".generated.rs",
+    ".pb.rs",
+    "_generated.rs",
+    // Kotlin / Swift codegen
+    ".g.kt",
+    ".gen.kt",
+    ".generated.kt",
+    ".g.swift",
+    ".generated.swift",
+    // Web sourcemaps
+    ".map",
+];
+const GENERATED_CONTENT_PATTERNS = (/* unused pure expression or super */ null && ([
+    // Cross-language generator banners used by protoc, sqlc, stringer, bindgen, etc.
+    /\bcode generated\b[\s\S]{0,160}\bdo not edit\b/i,
+    /\bautomatically generated by\b/i,
+    /\bthis file was generated by\b/i,
+    // Annotation-style banners commonly used in Java / Kotlin / JS ecosystems.
+    /\B@generated\b/i,
+    // Named generators across Web, mobile, backend, and protobuf toolchains.
+    /\bgenerated by (?:swiftgen|sourcery|protoc|buf|sqlc|openapi(?:-generator)?|openapitools|wire|freezed|build_runner|mockgen|rust-bindgen|apollo|drift|flutterfire|ksp)\b/i,
+]));
+function isGeneratedArtifactPath(path) {
+    const normalized = path.replaceAll("\\", "/");
+    const segments = normalized.split("/").filter(Boolean);
+    if (segments.some((segment) => GENERATED_DIR_SEGMENTS.has(segment))) {
+        return true;
+    }
+    const basename = segments.at(-1) ?? normalized;
+    if (GENERATED_FILE_NAMES.has(basename))
+        return true;
+    return GENERATED_FILE_SUFFIXES.some((suffix) => basename.endsWith(suffix));
+}
+function hasGeneratedArtifactMarkers(content) {
+    const header = content.slice(0, 2048).toLowerCase();
+    return GENERATED_CONTENT_PATTERNS.some((pattern) => pattern.test(header));
+}
+function filterAiRatioEligibleFiles(files) {
+    return files.filter((file) => !file.generated && !isGeneratedArtifactPath(file.path));
+}
+function countAiRatioEligibleFiles(files) {
+    const eligible = filterAiRatioEligibleFiles(files);
+    return {
+        total: eligible.length,
+        ai: eligible.filter((file) => file.by_ai).length,
+    };
+}
+// ─── Functions ───
+/**
+ * Calculate AI ratio.
+ * When line counts are available, uses line-level ratio (added lines only).
+ * Falls back to file-count ratio when blob data is unavailable.
+ */
+function calcAiRatio(files, lineCounts) {
+    if (lineCounts && lineCounts.totalAddedLines > 0) {
+        return Math.round((lineCounts.aiAddedLines / lineCounts.totalAddedLines) * 100);
+    }
+    const eligible = countAiRatioEligibleFiles(files);
+    if (eligible.total === 0)
+        return 0;
+    return Math.round((eligible.ai / eligible.total) * 100);
+}
+/** Determine attribution method from available data. */
+function resolveMethod(lineCounts) {
+    if (!lineCounts)
+        return "file";
+    if (lineCounts.totalAddedLines === 0)
+        return "none";
+    return "line";
+}
+/** Build an agentnote entry from collected data. */
+function buildEntry(opts) {
+    const generatedFiles = new Set(opts.generatedFiles ?? []);
+    const files = opts.commitFiles.map((path) => ({
+        path,
+        by_ai: opts.aiFiles.includes(path),
+        ...(generatedFiles.has(path) ? { generated: true } : {}),
+    }));
+    const method = resolveMethod(opts.lineCounts);
+    const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);
+    const attribution = { ai_ratio: aiRatio, method };
+    if (opts.lineCounts) {
+        attribution.lines = {
+            ai_added: opts.lineCounts.aiAddedLines,
+            total_added: opts.lineCounts.totalAddedLines,
+            deleted: opts.lineCounts.deletedLines,
+        };
+    }
+    const interactions = opts.interactions.map((i, idx) => {
+        const base = { prompt: i.prompt, response: i.response };
+        if (i.files_touched && i.files_touched.length > 0) {
+            base.files_touched = i.files_touched;
+        }
+        // Attach tools from interactionTools map (preserving null), or inherit from interaction.
+        if (opts.interactionTools?.has(idx)) {
+            base.tools = opts.interactionTools.get(idx) ?? null;
+        }
+        else if (i.tools !== undefined) {
+            base.tools = i.tools;
+        }
+        return base;
+    });
+    return {
+        v: SCHEMA_VERSION,
+        agent: opts.agent ?? null,
+        session_id: opts.sessionId,
+        timestamp: new Date().toISOString(),
+        model: opts.model ?? null,
+        interactions,
+        files,
+        attribution,
+    };
+}
+
+;// CONCATENATED MODULE: ../cli/src/git.ts
+
+
+const git_execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
+/** Run a git command and return its stdout. */
+async function git(args, options) {
+    const { stdout } = await git_execFileAsync("git", args, {
+        cwd: options?.cwd,
+        encoding: "utf-8",
+    });
+    return stdout.trim();
+}
+/** Run a git command and return its exit code instead of throwing. */
+async function git_gitSafe(args, options) {
+    try {
+        const stdout = await git(args, options);
+        return { stdout, exitCode: 0 };
+    }
+    catch (err) {
+        const e = err;
+        return {
+            stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+            exitCode: typeof e.code === "number" ? e.code : 1,
+        };
+    }
+}
+/** Get the repository root path. */
+async function repoRoot() {
+    return git(["rev-parse", "--show-toplevel"]);
+}
+
+;// CONCATENATED MODULE: ../cli/src/core/storage.ts
+
+
+/** Write a agentnote entry as a git note on a commit. */
+async function writeNote(commitSha, data) {
+    const body = JSON.stringify(data, null, 2);
+    await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+}
+/** Read a agentnote entry from a git note. Returns null if no note exists. */
+async function readNote(commitSha) {
+    const { stdout, exitCode } = await git_gitSafe(["notes", `--ref=${constants_NOTES_REF}`, "show", commitSha]);
+    if (exitCode !== 0 || !stdout.trim())
+        return null;
+    try {
+        return JSON.parse(stdout);
+    }
+    catch {
+        return null;
+    }
+}
+
+;// CONCATENATED MODULE: ../cli/src/commands/normalize.ts
+function isStructuredEntry(raw) {
+    if (!raw || typeof raw !== "object")
+        return false;
+    const entry = raw;
+    return Array.isArray(entry.interactions) && Array.isArray(entry.files) && !!entry.attribution;
+}
+/**
+ * Normalize a raw git note into the current structured AgentnoteEntry schema.
+ * Older flat note formats are no longer supported.
+ */
+function normalizeEntry(raw) {
+    if (!isStructuredEntry(raw)) {
+        throw new Error("unsupported agent-note entry format");
+    }
+    return raw;
+}
+
+;// CONCATENATED MODULE: ./src/report.ts
+
+
+
+
+
+
+
+
+async function collectReport(base, headRef = "HEAD") {
+    const head = await git(["rev-parse", "--short", headRef]);
+    const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
+    if (!raw.trim())
+        return null;
+    const commits = [];
+    for (const line of raw.trim().split("\n")) {
+        const [sha, short, ...msgParts] = line.split("\t");
+        const message = msgParts.join("\t");
+        const note = await readNote(sha);
+        if (!note) {
+            commits.push({
+                sha,
+                short,
+                message,
+                session_id: null,
+                model: null,
+                ai_ratio: null,
+                attribution_method: null,
+                prompts_count: 0,
+                files_total: 0,
+                files_ai: 0,
+                files: [],
+                interactions: [],
+                attribution: null,
+            });
+            continue;
+        }
+        const entry = normalizeEntry(note);
+        const eligibleCounts = countAiRatioEligibleFiles(entry.files);
+        commits.push({
+            sha,
+            short,
+            message,
+            session_id: entry.session_id ?? null,
+            model: entry.model ?? null,
+            ai_ratio: entry.attribution.ai_ratio,
+            attribution_method: entry.attribution.method,
+            prompts_count: entry.interactions.length,
+            files_total: eligibleCounts.total,
+            files_ai: eligibleCounts.ai,
+            files: entry.files,
+            interactions: entry.interactions,
+            attribution: entry.attribution,
+        });
+    }
+    const tracked = commits.filter((commit) => commit.session_id !== null);
+    const totalFiles = tracked.reduce((sum, commit) => sum + commit.files_total, 0);
+    const totalFilesAi = tracked.reduce((sum, commit) => sum + commit.files_ai, 0);
+    const lineEligible = tracked.filter((commit) => commit.attribution?.method === "line" &&
+        commit.attribution.lines &&
+        commit.attribution.lines.total_added > 0);
+    const fileOnly = tracked.filter((commit) => commit.attribution?.method === "file");
+    const excluded = tracked.filter((commit) => commit.attribution?.method === "none");
+    const eligible = [...lineEligible, ...fileOnly];
+    let overallMethod;
+    if (tracked.length > 0 && excluded.length === tracked.length) {
+        overallMethod = "none";
+    }
+    else if (eligible.length === 0) {
+        overallMethod = "none";
+    }
+    else if (fileOnly.length === 0 && lineEligible.length > 0) {
+        overallMethod = "line";
+    }
+    else if (lineEligible.length === 0) {
+        overallMethod = "file";
+    }
+    else {
+        overallMethod = "mixed";
+    }
+    let overallAiRatio;
+    if (overallMethod === "line") {
+        const aiAdded = lineEligible.reduce((sum, commit) => sum + (commit.attribution?.lines?.ai_added ?? 0), 0);
+        const totalAdded = lineEligible.reduce((sum, commit) => sum + (commit.attribution?.lines?.total_added ?? 0), 0);
+        overallAiRatio = totalAdded > 0 ? Math.round((aiAdded / totalAdded) * 100) : 0;
+    }
+    else if (overallMethod === "file") {
+        const eligibleFiles = eligible.reduce((sum, commit) => sum + commit.files_total, 0);
+        const eligibleFilesAi = eligible.reduce((sum, commit) => sum + commit.files_ai, 0);
+        overallAiRatio =
+            eligibleFiles > 0 ? Math.round((eligibleFilesAi / eligibleFiles) * 100) : 0;
+    }
+    else if (overallMethod === "mixed") {
+        const weightedSum = eligible.reduce((sum, commit) => sum + (commit.ai_ratio ?? 0) * commit.files_total, 0);
+        const weightTotal = eligible.reduce((sum, commit) => sum + commit.files_total, 0);
+        overallAiRatio = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
+    }
+    else {
+        overallAiRatio = 0;
+    }
+    let repoUrl = null;
+    try {
+        const remoteUrl = await git(["remote", "get-url", "origin"]);
+        repoUrl = remoteUrl
+            .replace(/\.git$/, "")
+            .replace(/^git@github\.com:/, "https://github.com/")
+            .replace(/^ssh:\/\/git@github\.com\//, "https://github.com/");
+    }
+    catch {
+        repoUrl = null;
+    }
+    const repoRoot = await git(["rev-parse", "--show-toplevel"]);
+    const hasDashboardWorkflow = (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"));
+    const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
+    return {
+        base,
+        head,
+        repo_url: repoUrl,
+        dashboard_url: dashboardUrl,
+        total_commits: commits.length,
+        tracked_commits: tracked.length,
+        total_prompts: tracked.reduce((sum, commit) => sum + commit.prompts_count, 0),
+        total_files: totalFiles,
+        total_files_ai: totalFilesAi,
+        overall_ai_ratio: overallAiRatio,
+        overall_method: overallMethod,
+        model: tracked.find((commit) => commit.model)?.model ?? null,
+        commits,
+    };
+}
+function renderProgressBar(ratio, width = 8) {
+    const filled = Math.round((ratio / 100) * width);
+    return "█".repeat(filled) + "░".repeat(width - filled);
+}
+function renderRatioWithBar(ratio, width) {
+    return `${renderProgressBar(ratio, width)} ${ratio}%`;
+}
+function renderHeader(report) {
+    const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
+    const lines = [line1];
+    if (report.model) {
+        lines.push(`**Model:** \`${report.model}\``);
+    }
+    return lines;
+}
+function renderMarkdown(report) {
+    const lines = [];
+    lines.push("## 🧑💬🤖 Agent Note");
+    lines.push("");
+    lines.push(...renderHeader(report));
+    lines.push("");
+    lines.push("| Commit | AI Ratio | Prompts | Files |");
+    lines.push("|---|---|---|---|");
+    for (const commit of report.commits) {
+        const link = commitLink(commit, report.repo_url);
+        const commitCell = escapeTableCell(`${link} ${commit.message}`);
+        if (commit.ai_ratio === null) {
+            lines.push(`| ${commitCell} | — | — | — |`);
+            continue;
+        }
+        const fileList = escapeTableCell(commit.files.map((file) => `${basename(file.path)} ${file.by_ai ? "🤖" : "👤"}`).join(", "));
+        const aiRatioCell = renderRatioWithBar(commit.ai_ratio, 5);
+        lines.push(`| ${commitCell} | ${aiRatioCell} | ${commit.prompts_count} | ${fileList} |`);
+    }
+    lines.push("");
+    if (report.dashboard_url) {
+        lines.push(`<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`);
+        if (report.dashboard_preview_help_url) {
+            lines.push(`<div align="right"><sub><a href="${report.dashboard_preview_help_url}">About PR previews</a></sub></div>`);
+        }
+        lines.push("");
+    }
+    const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
+    if (withPrompts.length > 0) {
+        lines.push("<details>");
+        lines.push(`<summary>💬 Prompts & Responses (${report.total_prompts} total)</summary>`);
+        lines.push("");
+        for (const commit of withPrompts) {
+            lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
+            lines.push("");
+            for (const { prompt, response } of commit.interactions) {
+                const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
+                lines.push(`> **🧑 Prompt:** ${cleaned.split("\n").join("\n> ")}`);
+                if (response) {
+                    const truncated = response.length > TRUNCATE_RESPONSE_PR
+                        ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+                        : response;
+                    lines.push(">");
+                    lines.push(`> **🤖 Response:** ${truncated.split("\n").join("\n> ")}`);
+                }
+                lines.push("");
+            }
+        }
+        lines.push("</details>");
+    }
+    return lines.join("\n");
+}
+async function detectBaseBranch() {
+    for (const name of ["main", "master", "develop"]) {
+        const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
+        if (exitCode === 0)
+            return `origin/${name}`;
+    }
+    return null;
+}
+function commitLink(commit, repoUrl) {
+    if (repoUrl) {
+        return `[\`${commit.short}\`](${repoUrl}/commit/${commit.sha})`;
+    }
+    return `\`${commit.short}\``;
+}
+function escapeTableCell(value) {
+    return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+function cleanPrompt(prompt, maxLen) {
+    const trimmed = prompt.trim();
+    if (trimmed.length === 0)
+        return "";
+    const lines = trimmed.split("\n");
+    const firstLine = lines[0] ?? "";
+    let body = trimmed;
+    if (firstLine.startsWith("## ") || firstLine.startsWith("# ")) {
+        const userStart = lines.findIndex((line, index) => index > 0 && !line.startsWith("#") && !line.startsWith("```") && line.trim().length > 10);
+        if (userStart !== -1) {
+            body = lines.slice(userStart).join("\n").trim();
+        }
+        else {
+            body = firstLine.replace(/^#+\s*/, "");
+        }
+    }
+    if (body.length <= maxLen)
+        return body;
+    return `${body.slice(0, maxLen)}…`;
+}
+function basename(path) {
+    return path.split("/").pop() ?? path;
+}
+
+;// CONCATENATED MODULE: ./src/index.ts
+
+
+
+
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function fetchAgentnoteNotes() {
+    try {
+        (0,external_child_process_.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", {
+            stdio: "pipe",
+        });
+    }
+    catch {
+        core.info("No agent-note notes found on remote.");
+    }
+}
+async function postPrReport(outputMode, markdown) {
+    if (outputMode === "none")
+        return;
+    if (!markdown || !github.context.payload.pull_request)
+        return;
+    const token = process.env.GITHUB_TOKEN || "";
+    if (!token) {
+        core.warning("No GitHub token available. Skipping PR report.");
+        return;
+    }
+    const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
+    const issueNumber = github.context.payload.pull_request.number;
+    if (outputMode === "description") {
+        const { data: pr } = await octokit.rest.pulls.get({
+            owner,
+            repo,
+            pull_number: issueNumber,
+        });
+        const existingBody = pr.body ?? "";
+        const newBody = upsertDescription(existingBody, markdown);
+        await octokit.rest.pulls.update({
+            owner,
+            repo,
+            pull_number: issueNumber,
+            body: newBody,
+        });
+        core.info("Agent Note report added to PR description.");
+        return;
+    }
+    const body = `${COMMENT_MARKER}\n${markdown}`;
+    const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+    const existing = comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+    if (existing) {
+        await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existing.id,
+            body,
+        });
+    }
+    else {
+        await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body,
+        });
+    }
+    core.info("Agent Note report posted as PR comment.");
+}
+async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
+    if (!dashboardUrl)
+        return null;
+    if (github.context.eventName !== "pull_request")
+        return null;
+    if (!token)
+        return null;
+    try {
+        const octokit = github.getOctokit(token);
+        const { owner, repo } = github.context.repo;
+        const { data } = await octokit.request("GET /repos/{owner}/{repo}/environments/{environment_name}", {
+            owner,
+            repo,
+            environment_name: "github-pages",
+        });
+        const policy = data.deployment_branch_policy;
+        if (hasDeploymentBranchProtection(policy)) {
+            return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+        }
+    }
+    catch {
+        // Best-effort only. If the environment is unavailable or unreadable,
+        // keep the report output minimal and skip the extra notice.
+    }
+    return null;
+}
+async function run() {
+    try {
+        const base = core.getInput("base") ||
+            `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
+        const headSha = github.context.payload.pull_request?.head?.sha;
+        const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
+        const token = process.env.GITHUB_TOKEN || "";
+        let report = null;
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            fetchAgentnoteNotes();
+            report = await collectReport(base, headSha);
+            if (!report) {
+                core.info("No agent-note data found for this PR.");
+                return;
+            }
+            if (!shouldRetryNotesFetch(report) || attempt === maxAttempts) {
+                break;
+            }
+            core.info(`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
+            await sleep(attempt * 1000);
+        }
+        if (!report) {
+            core.info("No agent-note data found for this PR.");
+            return;
+        }
+        report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);
+        const json = JSON.stringify(report, null, 2);
+        core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
+        core.setOutput("overall_method", String(report.overall_method ?? "file"));
+        core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
+        core.setOutput("total_commits", String(report.total_commits ?? 0));
+        core.setOutput("total_prompts", String(report.total_prompts ?? 0));
+        core.setOutput("json", json);
+        const markdown = renderMarkdown(report);
+        core.setOutput("markdown", markdown);
+        await postPrReport(prOutputMode, markdown);
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error.message);
+        }
+    }
+}
+run();
+

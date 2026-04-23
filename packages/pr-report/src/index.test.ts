@@ -1,14 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-	buildPrReportCommand,
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
+	inferDashboardUrl,
+	hasDeploymentBranchProtection,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
-} from "./helpers.js";
+} from "./github.js";
 
 describe("resolvePrOutputMode", () => {
 	it('returns "none" when pr_output is "none"', () => {
@@ -106,36 +107,66 @@ describe("shouldRetryNotesFetch", () => {
 	});
 });
 
-describe("buildPrReportCommand", () => {
-	it("uses the explicit PR head sha when available", () => {
+describe("inferDashboardUrl", () => {
+	it("infers the standard project Pages dashboard URL", () => {
 		assert.equal(
-			buildPrReportCommand(
-				"node packages/cli/dist/cli.js",
-				"origin/main",
-				"abc1234",
-				{ json: true },
-			),
-			'node packages/cli/dist/cli.js pr "origin/main" --head "abc1234" --json',
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
 		);
 	});
 
-	it("uses the explicit PR head sha for markdown output too", () => {
+	it("strips a trailing .git suffix from GitHub remotes", () => {
 		assert.equal(
-			buildPrReportCommand(
-				"node packages/cli/dist/cli.js",
-				"origin/main",
-				"abc1234",
-			),
-			'node packages/cli/dist/cli.js pr "origin/main" --head "abc1234"',
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote.git"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
 		);
 	});
 
-	it("falls back to HEAD when no head sha is provided", () => {
+	it("infers the user Pages dashboard URL for owner.github.io repos", () => {
 		assert.equal(
-			buildPrReportCommand("node packages/cli/dist/cli.js", "origin/main", undefined, {
-				json: true,
+			inferDashboardUrl("https://github.com/wasabeef/wasabeef.github.io"),
+			"https://wasabeef.github.io/dashboard/",
+		);
+	});
+
+	it("returns null for non-GitHub remotes", () => {
+		assert.equal(inferDashboardUrl("https://gitlab.com/example/project"), null);
+	});
+});
+
+describe("hasDeploymentBranchProtection", () => {
+	it("returns true when protected branches are enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: true,
+				custom_branch_policies: false,
 			}),
-			'node packages/cli/dist/cli.js pr "origin/main" --json',
+			true,
 		);
+	});
+
+	it("returns true when custom branch policies are enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: false,
+				custom_branch_policies: true,
+			}),
+			true,
+		);
+	});
+
+	it("returns false when no branch policy is enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: false,
+				custom_branch_policies: false,
+			}),
+			false,
+		);
+	});
+
+	it("returns false for nullish policy", () => {
+		assert.equal(hasDeploymentBranchProtection(null), false);
+		assert.equal(hasDeploymentBranchProtection(undefined), false);
 	});
 });

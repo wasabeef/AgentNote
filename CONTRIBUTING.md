@@ -134,7 +134,7 @@ packages/
     ├── dist/index.js              # ncc-bundled (committed)
     └── package.json
 
-action.yml                         # Root pointer → packages/action/dist/index.js
+action.yml                         # Root pointer → packages/pr-report/dist/index.js
 ```
 
 ### Key Design Decisions

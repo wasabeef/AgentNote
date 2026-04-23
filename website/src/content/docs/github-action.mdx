@@ -1,6 +1,6 @@
 ---
 title: GitHub Action
-description: Automatically post AI session reports on pull requests.
+description: Automatically post AI session reports on Pull Requests.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -13,7 +13,7 @@ Run this once in your repository:
 npx agent-note init --agent claude
 ```
 
-That creates the PR report workflow for you:
+That creates the PR Report workflow for you:
 
 ```yaml
 # .github/workflows/agentnote-pr-report.yml
@@ -47,7 +47,7 @@ That's it. Every PR gets an AI session report.
 | Input | Default | Description |
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
-| `pr_output` | `description` | PR report destination: `description`, `comment`, or `none` |
+| `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
 
 ### Post as comment instead of description
 
@@ -89,12 +89,12 @@ npx agent-note init --agent claude --dashboard
   with:
     base: main
 
-- run: echo "AI ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
+- run: echo "Total AI Ratio: ${{ steps.agent-note.outputs.overall_ai_ratio }}%"
 ```
 
 ## Report Format
 
-The PR report includes:
+The PR Report includes:
 
 - **Header** — `Total AI Ratio` with a progress bar, plus a separate plain-text `Model` line
 - **Table** — per-commit AI ratio, prompt count, and files with attribution

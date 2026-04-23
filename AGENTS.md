@@ -10,8 +10,8 @@ Agent Note (`agent-note`) is a monorepo CLI + GitHub Action that links AI coding
 
 ```
 packages/cli/     # agent-note — npm package (CLI)
-packages/action/  # GitHub Action (Marketplace)
-action.yml        # root pointer to packages/action/dist/index.js
+packages/pr-report/  # PR report library + GitHub Action (Marketplace)
+action.yml           # root pointer to packages/pr-report/dist/index.js
 website/          # Documentation site (Astro Starlight, 12 locales)
 ```
 
@@ -144,4 +144,3 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
 - **Git notes for persistent storage.** Entry data goes to `refs/notes/agentnote`, not to files.
 - **Biome for lint + format.** Run `npm run lint` (biome check) and `npm run typecheck` (tsc) separately. Both must pass in CI.
-
