@@ -4146,9 +4146,11 @@ function renderMarkdown(report) {
     lines.push(
       `<div align="right"><a href="${report.dashboard_url}">Open Dashboard \u2197</a></div>`
     );
-    lines.push(
-      '<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>'
-    );
+    if (report.dashboard_preview_help_url) {
+      lines.push(
+        `<div align="right"><sub><a href="${report.dashboard_preview_help_url}">About PR previews</a></sub></div>`
+      );
+    }
     lines.push("");
   }
   const withPrompts = report.commits.filter((commit2) => commit2.interactions.length > 0);

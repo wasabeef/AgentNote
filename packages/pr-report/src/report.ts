@@ -34,6 +34,7 @@ export interface PrReport {
   head: string;
   repo_url: string | null;
   dashboard_url: string | null;
+  dashboard_preview_help_url?: string | null;
   total_commits: number;
   tracked_commits: number;
   total_prompts: number;
@@ -240,9 +241,11 @@ export function renderMarkdown(report: PrReport): string {
     lines.push(
       `<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`,
     );
-    lines.push(
-      '<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>',
-    );
+    if (report.dashboard_preview_help_url) {
+      lines.push(
+        `<div align="right"><sub><a href="${report.dashboard_preview_help_url}">About PR previews</a></sub></div>`,
+      );
+    }
     lines.push("");
   }
 

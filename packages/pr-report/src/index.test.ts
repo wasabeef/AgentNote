@@ -5,6 +5,7 @@ import {
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
 	inferDashboardUrl,
+	hasDeploymentBranchProtection,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
@@ -130,5 +131,42 @@ describe("inferDashboardUrl", () => {
 
 	it("returns null for non-GitHub remotes", () => {
 		assert.equal(inferDashboardUrl("https://gitlab.com/example/project"), null);
+	});
+});
+
+describe("hasDeploymentBranchProtection", () => {
+	it("returns true when protected branches are enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: true,
+				custom_branch_policies: false,
+			}),
+			true,
+		);
+	});
+
+	it("returns true when custom branch policies are enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: false,
+				custom_branch_policies: true,
+			}),
+			true,
+		);
+	});
+
+	it("returns false when no branch policy is enabled", () => {
+		assert.equal(
+			hasDeploymentBranchProtection({
+				protected_branches: false,
+				custom_branch_policies: false,
+			}),
+			false,
+		);
+	});
+
+	it("returns false for nullish policy", () => {
+		assert.equal(hasDeploymentBranchProtection(null), false);
+		assert.equal(hasDeploymentBranchProtection(undefined), false);
 	});
 });

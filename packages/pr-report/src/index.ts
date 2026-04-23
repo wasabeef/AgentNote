@@ -3,6 +3,7 @@ import * as github from "@actions/github";
 import { execSync } from "child_process";
 import {
 	COMMENT_MARKER,
+	hasDeploymentBranchProtection,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
@@ -90,6 +91,40 @@ async function postPrReport(
 	core.info("Agent Note report posted as PR comment.");
 }
 
+async function inferDashboardPreviewHelpUrl(
+	token: string,
+	dashboardUrl: string | null,
+): Promise<string | null> {
+	if (!dashboardUrl) return null;
+	if (github.context.eventName !== "pull_request") return null;
+	if (!token) return null;
+
+	try {
+		const octokit = github.getOctokit(token);
+		const { owner, repo } = github.context.repo;
+		const { data } = await octokit.request(
+			"GET /repos/{owner}/{repo}/environments/{environment_name}",
+			{
+				owner,
+				repo,
+				environment_name: "github-pages",
+			},
+		);
+		const policy = (data as { deployment_branch_policy?: {
+			protected_branches?: boolean;
+			custom_branch_policies?: boolean;
+		} | null }).deployment_branch_policy;
+		if (hasDeploymentBranchProtection(policy)) {
+			return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+		}
+	} catch {
+		// Best-effort only. If the environment is unavailable or unreadable,
+		// keep the report output minimal and skip the extra notice.
+	}
+
+	return null;
+}
+
 async function run(): Promise<void> {
 	try {
 		const base =
@@ -97,6 +132,7 @@ async function run(): Promise<void> {
 			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
 		const headSha = github.context.payload.pull_request?.head?.sha;
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
+		const token = process.env.GITHUB_TOKEN || "";
 
 		let report: Awaited<ReturnType<typeof collectReport>> = null;
 		const maxAttempts = 3;
@@ -124,6 +160,11 @@ async function run(): Promise<void> {
 			core.info("No agent-note data found for this PR.");
 			return;
 		}
+
+		report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(
+			token,
+			report.dashboard_url,
+		);
 
 		const json = JSON.stringify(report, null, 2);
 

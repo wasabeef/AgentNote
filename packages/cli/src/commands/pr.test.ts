@@ -136,11 +136,7 @@ describe("agentnote pr", () => {
           '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>',
         ),
       );
-      assert.ok(
-        output.includes(
-          '<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>',
-        ),
-      );
+      assert.ok(!output.includes("About PR previews"));
     } finally {
       rmSync(dashboardDir, { recursive: true, force: true });
     }

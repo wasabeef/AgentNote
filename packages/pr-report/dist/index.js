@@ -31755,6 +31755,11 @@ function inferDashboardUrl(repoUrl) {
     }
     return `${pagesRoot}/${repo}/dashboard/`;
 }
+function hasDeploymentBranchProtection(policy) {
+    return Boolean(policy &&
+        (policy.protected_branches === true ||
+            policy.custom_branch_policies === true));
+}
 async function updatePrDescription(prNumber, markdown) {
     const currentBody = await readPrBody(prNumber);
     const newBody = upsertDescription(currentBody, markdown);
@@ -32273,7 +32278,9 @@ function renderMarkdown(report) {
     lines.push("");
     if (report.dashboard_url) {
         lines.push(`<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`);
-        lines.push('<div align="right"><sub><a href="https://wasabeef.github.io/AgentNote/dashboard/#pr-previews">About PR previews</a></sub></div>');
+        if (report.dashboard_preview_help_url) {
+            lines.push(`<div align="right"><sub><a href="${report.dashboard_preview_help_url}">About PR previews</a></sub></div>`);
+        }
         lines.push("");
     }
     const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
@@ -32416,12 +32423,39 @@ async function postPrReport(outputMode, markdown) {
     }
     core.info("Agent Note report posted as PR comment.");
 }
+async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
+    if (!dashboardUrl)
+        return null;
+    if (github.context.eventName !== "pull_request")
+        return null;
+    if (!token)
+        return null;
+    try {
+        const octokit = github.getOctokit(token);
+        const { owner, repo } = github.context.repo;
+        const { data } = await octokit.request("GET /repos/{owner}/{repo}/environments/{environment_name}", {
+            owner,
+            repo,
+            environment_name: "github-pages",
+        });
+        const policy = data.deployment_branch_policy;
+        if (hasDeploymentBranchProtection(policy)) {
+            return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+        }
+    }
+    catch {
+        // Best-effort only. If the environment is unavailable or unreadable,
+        // keep the report output minimal and skip the extra notice.
+    }
+    return null;
+}
 async function run() {
     try {
         const base = core.getInput("base") ||
             `origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
         const headSha = github.context.payload.pull_request?.head?.sha;
         const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
+        const token = process.env.GITHUB_TOKEN || "";
         let report = null;
         const maxAttempts = 3;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -32441,6 +32475,7 @@ async function run() {
             core.info("No agent-note data found for this PR.");
             return;
         }
+        report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);
         const json = JSON.stringify(report, null, 2);
         core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
         core.setOutput("overall_method", String(report.overall_method ?? "file"));

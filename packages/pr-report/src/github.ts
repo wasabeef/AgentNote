@@ -76,6 +76,22 @@ export function inferDashboardUrl(repoUrl: string | null): string | null {
 	return `${pagesRoot}/${repo}/dashboard/`;
 }
 
+export function hasDeploymentBranchProtection(
+	policy:
+		| {
+				protected_branches?: boolean;
+				custom_branch_policies?: boolean;
+		  }
+		| null
+		| undefined,
+): boolean {
+	return Boolean(
+		policy &&
+			(policy.protected_branches === true ||
+				policy.custom_branch_policies === true),
+	);
+}
+
 export async function updatePrDescription(
 	prNumber: string,
 	markdown: string,
