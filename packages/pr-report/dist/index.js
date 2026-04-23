@@ -32248,9 +32248,6 @@ function renderHeader(report) {
     if (report.model) {
         lines.push(`**Model:** \`${report.model}\``);
     }
-    if (report.dashboard_url) {
-        lines.push(`[Open Dashboard ↗](${report.dashboard_url})`);
-    }
     return lines;
 }
 function renderMarkdown(report) {
@@ -32273,6 +32270,10 @@ function renderMarkdown(report) {
         lines.push(`| ${commitCell} | ${aiRatioCell} | ${commit.prompts_count} | ${fileList} |`);
     }
     lines.push("");
+    if (report.dashboard_url) {
+        lines.push(`<div align="right">[Open Dashboard ↗](${report.dashboard_url})</div>`);
+        lines.push("");
+    }
     const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
     if (withPrompts.length > 0) {
         lines.push("<details>");
