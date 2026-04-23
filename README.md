@@ -164,6 +164,7 @@ This posts an AI session report to the PR description:
 
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
+[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)
 
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|

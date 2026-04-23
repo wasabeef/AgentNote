@@ -61,6 +61,20 @@ export function shouldRetryNotesFetch(report: {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
+export function inferDashboardUrl(repoUrl: string | null): string | null {
+	if (!repoUrl) return null;
+
+	const match = repoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+	if (!match) return null;
+
+	const [, owner, repo] = match;
+	const pagesRoot = `https://${owner}.github.io`;
+	if (repo === `${owner}.github.io`) {
+		return `${pagesRoot}/dashboard/`;
+	}
+	return `${pagesRoot}/${repo}/dashboard/`;
+}
+
 export async function updatePrDescription(
 	prNumber: string,
 	markdown: string,

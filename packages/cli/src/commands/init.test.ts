@@ -295,7 +295,9 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should fetch the shared Dashboard source",
     );
     assert.ok(
-      dashboardWorkflow.includes("npm --prefix .agentnote-dashboard-source run dashboard:build-pages"),
+      dashboardWorkflow.includes(
+        "npm --prefix .agentnote-dashboard-source run dashboard:build-pages",
+      ),
       "dashboard workflow should call the shared Dashboard entrypoint",
     );
     assert.ok(

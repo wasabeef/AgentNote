@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../../cli/src/core/constants.js";
 import type { Attribution } from "../../cli/src/core/entry.js";
 import { countAiRatioEligibleFiles } from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
+import { inferDashboardUrl } from "./github.js";
 
 export interface Interaction {
   prompt: string;
@@ -30,6 +33,7 @@ export interface PrReport {
   base: string;
   head: string;
   repo_url: string | null;
+  dashboard_url: string | null;
   total_commits: number;
   tracked_commits: number;
   total_prompts: number;
@@ -161,10 +165,17 @@ export async function collectReport(
     repoUrl = null;
   }
 
+  const repoRoot = await git(["rev-parse", "--show-toplevel"]);
+  const hasDashboardWorkflow = existsSync(
+    join(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"),
+  );
+  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
+
   return {
     base,
     head,
     repo_url: repoUrl,
+    dashboard_url: dashboardUrl,
     total_commits: commits.length,
     tracked_commits: tracked.length,
     total_prompts: tracked.reduce((sum, commit) => sum + commit.prompts_count, 0),
@@ -188,8 +199,14 @@ export function renderRatioWithBar(ratio: number, width: number): string {
 
 export function renderHeader(report: PrReport): string[] {
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
-  if (!report.model) return [line1];
-  return [line1, `**Model:** \`${report.model}\``];
+  const lines = [line1];
+  if (report.model) {
+    lines.push(`**Model:** \`${report.model}\``);
+  }
+  if (report.dashboard_url) {
+    lines.push(`[Open Dashboard ↗](${report.dashboard_url})`);
+  }
+  return lines;
 }
 
 export function renderMarkdown(report: PrReport): string {

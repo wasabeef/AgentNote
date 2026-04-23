@@ -77,6 +77,66 @@ describe("agentnote pr", () => {
     assert.ok(output.includes("🤖"));
   });
 
+  it("adds an Open Dashboard link when the dashboard workflow exists", () => {
+    const dashboardDir = mkdtempSync(join(tmpdir(), "agentnote-pr-dashboard-"));
+    try {
+      execSync("git init", { cwd: dashboardDir });
+      execSync("git config user.email test@test.com", { cwd: dashboardDir });
+      execSync("git config user.name Test", { cwd: dashboardDir });
+      execSync("git remote add origin https://github.com/wasabeef/AgentNote.git", {
+        cwd: dashboardDir,
+      });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dashboardDir });
+      mkdirSync(join(dashboardDir, ".github", "workflows"), { recursive: true });
+      writeFileSync(
+        join(dashboardDir, ".github", "workflows", "agentnote-dashboard.yml"),
+        "name: Agent Note Dashboard\n",
+      );
+
+      writeFileSync(join(dashboardDir, "feature.ts"), "export const feature = true;");
+      execSync("git add feature.ts .github/workflows/agentnote-dashboard.yml", {
+        cwd: dashboardDir,
+      });
+      execSync('git commit -m "feat: dashboard-aware report"', { cwd: dashboardDir });
+
+      const sha = execSync("git rev-parse HEAD", {
+        cwd: dashboardDir,
+        encoding: "utf-8",
+      }).trim();
+      const note = {
+        v: 1,
+        session_id: "a1b2c3d4-aaaa-bbbb-cccc-000000000088",
+        timestamp: "2026-04-23T00:00:00Z",
+        model: "gpt-5.4",
+        interactions: [
+          {
+            prompt: "wire the dashboard link into the report",
+            response: "I'll surface the shared Dashboard URL in the header.",
+          },
+        ],
+        files: [{ path: "feature.ts", by_ai: true }],
+        attribution: {
+          ai_ratio: 100,
+          method: "file",
+        },
+      };
+      execSync(`git notes --ref=agentnote add -f -m '${JSON.stringify(note)}' ${sha}`, {
+        cwd: dashboardDir,
+      });
+
+      const output = execSync(`node ${cliPath} pr HEAD~1`, {
+        cwd: dashboardDir,
+        encoding: "utf-8",
+      });
+
+      assert.ok(
+        output.includes("[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)"),
+      );
+    } finally {
+      rmSync(dashboardDir, { recursive: true, force: true });
+    }
+  });
+
   it("escapes pipes in commit messages and file names for markdown tables", () => {
     const pipeDir = mkdtempSync(join(tmpdir(), "agentnote-pr-pipe-"));
     try {

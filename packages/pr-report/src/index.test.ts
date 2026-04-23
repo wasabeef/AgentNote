@@ -4,6 +4,7 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
+	inferDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
@@ -102,5 +103,25 @@ describe("shouldRetryNotesFetch", () => {
 			shouldRetryNotesFetch({ total_commits: 0, tracked_commits: 0 }),
 			false,
 		);
+	});
+});
+
+describe("inferDashboardUrl", () => {
+	it("infers the standard project Pages dashboard URL", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
+		);
+	});
+
+	it("infers the user Pages dashboard URL for owner.github.io repos", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/wasabeef.github.io"),
+			"https://wasabeef.github.io/dashboard/",
+		);
+	});
+
+	it("returns null for non-GitHub remotes", () => {
+		assert.equal(inferDashboardUrl("https://gitlab.com/example/project"), null);
 	});
 });

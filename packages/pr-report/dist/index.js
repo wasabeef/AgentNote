@@ -31741,6 +31741,19 @@ function upsertDescription(existingBody, markdown) {
 function shouldRetryNotesFetch(report) {
     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
+function inferDashboardUrl(repoUrl) {
+    if (!repoUrl)
+        return null;
+    const match = repoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+    if (!match)
+        return null;
+    const [, owner, repo] = match;
+    const pagesRoot = `https://${owner}.github.io`;
+    if (repo === `${owner}.github.io`) {
+        return `${pagesRoot}/dashboard/`;
+    }
+    return `${pagesRoot}/${repo}/dashboard/`;
+}
 async function updatePrDescription(prNumber, markdown) {
     const currentBody = await readPrBody(prNumber);
     const newBody = upsertDescription(currentBody, markdown);
@@ -31788,6 +31801,10 @@ async function readPrBody(prNumber) {
     return JSON.parse(stdout).body ?? "";
 }
 
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: ../cli/src/core/constants.ts
 // ─── Trailer ───
 const TRAILER_KEY = "Agentnote-Session";
@@ -32094,6 +32111,9 @@ function normalizeEntry(raw) {
 
 
 
+
+
+
 async function collectReport(base, headRef = "HEAD") {
     const head = await git(["rev-parse", "--short", headRef]);
     const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
@@ -32196,10 +32216,14 @@ async function collectReport(base, headRef = "HEAD") {
     catch {
         repoUrl = null;
     }
+    const repoRoot = await git(["rev-parse", "--show-toplevel"]);
+    const hasDashboardWorkflow = (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"));
+    const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
     return {
         base,
         head,
         repo_url: repoUrl,
+        dashboard_url: dashboardUrl,
         total_commits: commits.length,
         tracked_commits: tracked.length,
         total_prompts: tracked.reduce((sum, commit) => sum + commit.prompts_count, 0),
@@ -32220,9 +32244,14 @@ function renderRatioWithBar(ratio, width) {
 }
 function renderHeader(report) {
     const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
-    if (!report.model)
-        return [line1];
-    return [line1, `**Model:** \`${report.model}\``];
+    const lines = [line1];
+    if (report.model) {
+        lines.push(`**Model:** \`${report.model}\``);
+    }
+    if (report.dashboard_url) {
+        lines.push(`[Open Dashboard ↗](${report.dashboard_url})`);
+    }
+    return lines;
 }
 function renderMarkdown(report) {
     const lines = [];
@@ -32417,12 +32446,6 @@ async function run() {
         core.setOutput("total_prompts", String(report.total_prompts ?? 0));
         core.setOutput("json", json);
         const markdown = renderMarkdown(report);
-        // Keep PR descriptions text-only for now.
-        // The action runs against consumer repositories, so there is no stable
-        // public image URL we can rely on for model icons until those assets are
-        // published from a public host.
-        const reportModel = typeof report.model === "string" ? report.model.trim() : "";
-        void reportModel;
         core.setOutput("markdown", markdown);
         await postPrReport(prOutputMode, markdown);
     }

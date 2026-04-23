@@ -135,14 +135,6 @@ async function run(): Promise<void> {
 		core.setOutput("json", json);
 
 		const markdown = renderMarkdown(report);
-		// Keep PR descriptions text-only for now.
-		// The action runs against consumer repositories, so there is no stable
-		// public image URL we can rely on for model icons until those assets are
-		// published from a public host.
-		const reportModel =
-			typeof report.model === "string" ? report.model.trim() : "";
-		void reportModel;
-
 		core.setOutput("markdown", markdown);
 
 		await postPrReport(prOutputMode, markdown);
