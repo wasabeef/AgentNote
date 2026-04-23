@@ -51,6 +51,25 @@ describe("agentnote deinit", () => {
     assert.ok(threw, "should exit with error");
   });
 
+  it("rejects repeated --agent flags", () => {
+    let threw = false;
+    try {
+      execSync(`node ${cliPath} deinit --agent claude --agent cursor`, {
+        cwd: testDir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    } catch (err: unknown) {
+      threw = true;
+      const e = err as { stderr: string };
+      assert.ok(
+        e.stderr.includes("repeat --agent is not supported"),
+        "should reject repeated --agent flags",
+      );
+    }
+    assert.ok(threw, "should exit with error");
+  });
+
   it("removes agent hooks, git hooks, workflow, and notes config after init", () => {
     // First, init
     execSync(`node ${cliPath} init --agent claude`, { cwd: testDir });
@@ -58,7 +77,7 @@ describe("agentnote deinit", () => {
     const settingsPath = join(testDir, ".claude", "settings.json");
     assert.ok(existsSync(settingsPath), "settings.json should exist after init");
 
-    const workflowPath = join(testDir, ".github", "workflows", "agentnote.yml");
+    const workflowPath = join(testDir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist after init");
 
     // Verify notes config is set
@@ -81,7 +100,7 @@ describe("agentnote deinit", () => {
     assert.equal(
       Object.keys(settings.hooks ?? {}).length,
       0,
-      "agentnote hooks should be removed from settings.json",
+      "agent-note hooks should be removed from settings.json",
     );
 
     // Git hooks removed
@@ -121,7 +140,7 @@ describe("agentnote deinit", () => {
     const originalHookContent = "#!/bin/sh\necho original-hook\n";
     writeFileSync(join(hookDir, "post-commit"), originalHookContent, { mode: 0o755 });
 
-    // init should chain: backup original and install agentnote hook
+    // init should chain: backup original and install agent-note hook
     execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
 
     const backupPath = join(hookDir, "post-commit.agentnote-backup");
@@ -167,7 +186,7 @@ describe("agentnote deinit", () => {
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
     execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
-    const workflowPath = join(dir, ".github", "workflows", "agentnote.yml");
+    const workflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist after init");
 
     execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
@@ -236,8 +255,34 @@ describe("agentnote deinit", () => {
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     assert.ok(settings.hooks?.SessionStart, "SessionStart hook should be reinstalled");
 
-    const workflowPath = join(dir, ".github", "workflows", "agentnote.yml");
+    const workflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should be recreated after re-init");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("removes both new workflow files when initialized with --dashboard", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-dashboard-workflows-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --dashboard`, { cwd: dir });
+
+    const prWorkflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
+    const dashboardWorkflowPath = join(dir, ".github", "workflows", "agentnote-dashboard.yml");
+    assert.ok(existsSync(prWorkflowPath), "PR workflow should exist after init");
+    assert.ok(existsSync(dashboardWorkflowPath), "dashboard workflow should exist after init");
+
+    execSync(`node ${cliPath} deinit --agent claude --remove-workflow`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(!existsSync(prWorkflowPath), "PR workflow should be removed");
+    assert.ok(!existsSync(dashboardWorkflowPath), "dashboard workflow should be removed");
 
     rmSync(dir, { recursive: true, force: true });
   });

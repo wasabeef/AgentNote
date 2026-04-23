@@ -28,19 +28,23 @@ Anda hanya perlu Dashboard jika memang ingin tampilan web bersama.
 
 ## Quick setup
 
-Pertama, biarkan Action menulis file Dashboard untuk setiap PR:
+1. Run Dashboard setup once.
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-Ini akan membuat atau memperbarui `packages/dashboard/public/notes/*.json` untuk PR saat ini. Setelah itu workflow Pages Anda menangani restore, persist, dan publish file tersebut.
+2. Commit both workflow files.
+
+```bash
+git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
+git commit -m "chore: enable agent-note dashboard"
+git push
+```
+
+3. In GitHub Pages, choose **GitHub Actions** as the source.
+
+The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
 
 ## URL publik
 
@@ -58,12 +62,12 @@ Contoh:
 
 ## Deploy pertama
 
-Bahkan repo baru bisa mulai mengumpulkan data Dashboard sebelum deploy produksi pertama. URL publik Pages baru muncul setelah deploy pertama ke `main`.
+Bahkan repo baru bisa mulai mengumpulkan data Dashboard sebelum deploy produksi pertama. URL publik Pages baru muncul setelah deploy pertama ke `default branch`.
 
 ## Cara kerjanya
 
-- `packages/dashboard/` adalah aplikasi Astro untuk tampilan Dashboard
-- `packages/dashboard/public/notes/*.json` adalah bundle yang dibaca saat build
-- `gh-pages/dashboard/notes/*.json` adalah penyimpanan permanen untuk riwayat bersama
+- `refs/notes/agentnote` remains the source of truth
+- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
+- GitHub Pages serves the built Dashboard at `/dashboard/`
 
-Repo ini tidak menyertakan JSON contoh untuk Dashboard. Dashboard baru akan tetap kosong sampai workflow Anda me-restore atau menghasilkan note files. Banyak tim memperbarui PR notes di `pull_request`, lalu memublikasikan status merged dari `main`.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.

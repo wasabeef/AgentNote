@@ -16,9 +16,10 @@ const HELP = `
 agent-note v${VERSION} — remember why your code changed
 
 usage:
-  agent-note init --agent <name>    set up hooks, workflow, and notes auto-fetch (agents: claude, codex, cursor, gemini)
-                                    [--no-hooks] [--no-action] [--no-notes] [--no-git-hooks] [--hooks] [--action]
-  agent-note deinit --agent <name>  remove hooks and config [--remove-workflow] [--keep-notes]
+  agent-note init --agent <name...> set up hooks, workflows, and notes auto-fetch (agents: claude, codex, cursor, gemini)
+                                    [--dashboard] [--no-hooks] [--no-action] [--no-notes] [--no-git-hooks] [--hooks] [--action]
+  agent-note deinit --agent <name...>
+                                    remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment]

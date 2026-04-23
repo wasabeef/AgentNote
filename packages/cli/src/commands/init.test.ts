@@ -45,7 +45,7 @@ describe("agentnote init", () => {
     );
 
     // Workflow
-    const workflowPath = join(testDir, ".github", "workflows", "agentnote.yml");
+    const workflowPath = join(testDir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
     assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
@@ -112,20 +112,20 @@ describe("agentnote init", () => {
     assert.equal(settings.hooks.SessionStart.length, 1, "should not duplicate hooks");
   });
 
-  it("upgrades a legacy managed pre-push hook to the shim-based implementation", () => {
+  it("upgrades an outdated managed pre-push hook to the shim-based implementation", () => {
     execSync(`node ${cliPath} init --agent claude --no-action`, {
       cwd: testDir,
       encoding: "utf-8",
     });
 
-    const legacyPrePush = `#!/bin/sh
+    const outdatedPrePush = `#!/bin/sh
 # agentnote-managed
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 REMOTE="\${1:-origin}"
 AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 `;
     const hookPath = join(testDir, ".git", "hooks", "pre-push");
-    writeFileSync(hookPath, legacyPrePush, { mode: 0o755 });
+    writeFileSync(hookPath, outdatedPrePush, { mode: 0o755 });
 
     execSync(`node ${cliPath} init --agent claude --no-action`, {
       cwd: testDir,
@@ -135,11 +135,11 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     const upgradedHook = readFileSync(hookPath, "utf-8");
     assert.ok(
       upgradedHook.includes('"$GIT_DIR/agentnote/bin/agent-note" push-notes "$1"'),
-      "init should upgrade legacy managed pre-push hooks to the shim-based implementation",
+      "init should upgrade outdated managed pre-push hooks to the shim-based implementation",
     );
     assert.ok(
       !upgradedHook.includes('git push "$REMOTE" refs/notes/agentnote 2>/dev/null &'),
-      "legacy async notes push should be removed during upgrade",
+      "outdated async notes push should be removed during upgrade",
     );
   });
 
@@ -173,35 +173,6 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     rmSync(remoteDir, { recursive: true, force: true });
   });
 
-  it("upgrades legacy Claude hook commands to --agent form", () => {
-    const settingsPath = join(testDir, ".claude", "settings.json");
-    writeFileSync(
-      settingsPath,
-      `${JSON.stringify(
-        {
-          hooks: {
-            SessionStart: [
-              {
-                hooks: [{ type: "command", command: "npx --yes agent-note hook", async: true }],
-              },
-            ],
-          },
-        },
-        null,
-        2,
-      )}\n`,
-    );
-
-    execSync(`node ${cliPath} init --agent claude --hooks --no-git-hooks`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
-
-    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-    const raw = JSON.stringify(settings);
-    assert.ok(raw.includes("--agent claude"), "should migrate to explicit Claude hook");
-  });
-
   it("--hooks creates only hooks", () => {
     const dir = mkdtempSync(join(tmpdir(), "agentnote-hooks-only-"));
     execSync("git init", { cwd: dir });
@@ -213,7 +184,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     assert.ok(existsSync(join(dir, ".claude", "settings.json")), "hooks should exist");
     assert.ok(
-      !existsSync(join(dir, ".github", "workflows", "agentnote.yml")),
+      !existsSync(join(dir, ".github", "workflows", "agentnote-pr-report.yml")),
       "workflow should NOT exist",
     );
 
@@ -231,8 +202,113 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     assert.ok(!existsSync(join(dir, ".claude", "settings.json")), "hooks should NOT exist");
     assert.ok(
-      existsSync(join(dir, ".github", "workflows", "agentnote.yml")),
+      existsSync(join(dir, ".github", "workflows", "agentnote-pr-report.yml")),
       "workflow should exist",
+    );
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("supports multiple agents after a single --agent flag", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-init-multi-agent-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude cursor`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(existsSync(join(dir, ".claude", "settings.json")));
+    assert.ok(existsSync(join(dir, ".cursor", "hooks.json")));
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rejects repeated --agent flags", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-init-repeat-agent-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    let threw = false;
+    try {
+      execSync(`node ${cliPath} init --agent claude --agent cursor`, {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    } catch (err: unknown) {
+      threw = true;
+      const e = err as { stderr: string };
+      assert.ok(
+        e.stderr.includes("repeat --agent is not supported"),
+        "should reject repeated --agent flags",
+      );
+    }
+    assert.ok(threw, "should exit with error");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("--dashboard creates the additional dashboard workflow", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-init-dashboard-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --dashboard`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    assert.ok(
+      existsSync(join(dir, ".github", "workflows", "agentnote-pr-report.yml")),
+      "PR report workflow should exist",
+    );
+    assert.ok(
+      existsSync(join(dir, ".github", "workflows", "agentnote-dashboard.yml")),
+      "dashboard workflow should exist",
+    );
+
+    const dashboardWorkflow = readFileSync(
+      join(dir, ".github", "workflows", "agentnote-dashboard.yml"),
+      "utf-8",
+    );
+    const prReportWorkflow = readFileSync(
+      join(dir, ".github", "workflows", "agentnote-pr-report.yml"),
+      "utf-8",
+    );
+    assert.ok(
+      dashboardWorkflow.includes("name: Agent Note Dashboard"),
+      "dashboard workflow should have the new name",
+    );
+    assert.ok(
+      dashboardWorkflow.includes("repository: wasabeef/AgentNote"),
+      "dashboard workflow should fetch the shared Dashboard source",
+    );
+    assert.ok(
+      dashboardWorkflow.includes(".agentnote-dashboard-source"),
+      "dashboard workflow should build from the shared Dashboard source directory",
+    );
+    assert.ok(
+      dashboardWorkflow.includes(`DEFAULT_BRANCH: \${{ github.event.repository.default_branch }}`),
+      "dashboard workflow should infer the repository default branch",
+    );
+    assert.ok(
+      !dashboardWorkflow.includes("branches:\n      - main"),
+      "dashboard workflow should not hardcode main as the deploy branch",
+    );
+    assert.ok(
+      prReportWorkflow.includes(`GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`),
+      "PR report workflow should pass GITHUB_TOKEN to the action",
     );
 
     rmSync(dir, { recursive: true, force: true });

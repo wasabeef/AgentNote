@@ -48,13 +48,20 @@ Each developer should run this once locally after cloning.
 You can enable more than one agent in the same repository:
 
 ```bash
-npx agent-note init --agent claude --agent cursor
+npx agent-note init --agent claude cursor
+```
+
+If you also want the shared Dashboard on GitHub Pages:
+
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
 2. Commit the generated files and push.
 
 ```bash
-git add .claude/settings.json .github/workflows/agentnote.yml
+git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+# with --dashboard, also add .github/workflows/agentnote-dashboard.yml
 git commit -m "chore: enable agent-note"
 git push
 ```
@@ -213,28 +220,19 @@ Examples in this section assume `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` is s
 
 ### Dashboard data
 
-The optional Dashboard package lives in `packages/dashboard/`. If you want a static Dashboard on GitHub Pages:
+If you want the shared Dashboard on GitHub Pages:
 
-1. Enable Dashboard bundle output in the action.
-2. Configure your Pages workflow to restore and persist `gh-pages/dashboard/notes/*.json`.
+1. Run `agent-note init --agent <name...> --dashboard`.
+2. Commit `.github/workflows/agentnote-pr-report.yml` and `.github/workflows/agentnote-dashboard.yml`.
+3. Enable GitHub Pages and choose `GitHub Actions` as the source.
 
-The action writes `notes/*.json` into the Dashboard package automatically.
-
-`packages/dashboard` keeps its local default at `/`. Set `SITE`, `BASE`, `PUBLIC_REPO`, and optionally `PUBLIC_REPO_URL` in your Pages workflow so the deployed Dashboard points at the right URL and GitHub repository.
-
-```yaml
-- uses: wasabeef/AgentNote@v0
-  with:
-    dashboard: true
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-Agent Note does not commit sample Dashboard data to the repository. A new Dashboard starts out empty. For a live GitHub Pages Dashboard, use a workflow that:
+The generated Dashboard workflow restores and persists `gh-pages/dashboard/notes/*.json`, then publishes the shared `/dashboard/` view.
 
-- restores `gh-pages/dashboard/notes/*.json` into `packages/dashboard/public/notes/`
-- on `pull_request` (`opened`, `reopened`, `synchronize`), rewrites the current PR's note set and persists it back to `gh-pages`
-- on `push` to `main`, rebuilds the site, persists merged note state, and deploys the public Pages artifact
-
-This keeps generated JSON off `main` while still letting Dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `main` deployment.
+This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the first production deploy. The public Pages URL appears after the first `default branch` deployment.
 
 <details>
 <summary>Full example with outputs</summary>

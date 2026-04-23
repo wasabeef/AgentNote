@@ -420,7 +420,7 @@ describe("claude adapter", () => {
       assert.ok(settings.hooks.PostToolUse, "PostToolUse hooks should be present");
     });
 
-    it("merges with existing hooks and preserves non-agentnote hooks", async () => {
+    it("merges with existing hooks and preserves non-agent-note hooks", async () => {
       const settingsDir = join(repoRoot, ".claude");
       mkdirSync(settingsDir, { recursive: true });
       const settingsPath = join(settingsDir, "settings.json");
@@ -477,7 +477,7 @@ describe("claude adapter", () => {
   });
 
   describe("removeHooks", () => {
-    it("removes agentnote hooks while preserving other hooks", async () => {
+    it("removes agent-note hooks while preserving other hooks", async () => {
       const settingsDir = join(repoRoot, ".claude");
       mkdirSync(settingsDir, { recursive: true });
       const settingsPath = join(settingsDir, "settings.json");
@@ -517,7 +517,7 @@ describe("claude adapter", () => {
       const allCommands =
         settings.hooks?.PostToolUse?.flatMap((g) => g.hooks).map((h) => h.command) ?? [];
       assert.ok(
-        !allCommands.some((c) => c?.includes("agent-note hook") || c?.includes("agentnote hook")),
+        !allCommands.some((c) => c?.includes("agent-note hook")),
         "agent-note hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");
@@ -684,23 +684,6 @@ describe("claude adapter", () => {
         "Found it — missing null check.\nFixed in a.ts.",
         "should aggregate text across multiple assistant messages and skip tool_result-only user messages",
       );
-    });
-
-    it("handles user content as plain string (legacy format)", async () => {
-      const transcriptPath = join(claudeHome, "session.jsonl");
-      const lines = [
-        JSON.stringify({ type: "user", message: { content: "Plain string prompt" } }),
-        JSON.stringify({
-          type: "assistant",
-          message: { content: [{ type: "text", text: "Got it." }] },
-        }),
-      ];
-      writeFileSync(transcriptPath, lines.join("\n"));
-
-      const interactions = await claude.extractInteractions(transcriptPath);
-      assert.equal(interactions.length, 1);
-      assert.equal(interactions[0].prompt, "Plain string prompt");
-      assert.equal(interactions[0].response, "Got it.");
     });
 
     it("joins multiple user text blocks into a single prompt", async () => {

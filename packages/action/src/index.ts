@@ -2,20 +2,17 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "child_process";
 import { existsSync } from "fs";
-import { mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
-import { join, resolve } from "path";
+import { readFile } from "fs/promises";
+import { resolve } from "path";
 import {
 	buildPrReportCommand,
 	COMMENT_MARKER,
-	inferDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
-	withDashboardLink,
 } from "./helpers.js";
 
 type PrOutputMode = "description" | "comment" | "none";
-const DEFAULT_DASHBOARD_DIR = "packages/dashboard/public";
 
 /**
  * Resolve the agentnote CLI command.
@@ -49,116 +46,6 @@ function fetchAgentnoteNotes(): void {
 
 function isEnabled(value: string): boolean {
 	return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
-}
-
-function readGitNote(commitSha: string): Record<string, unknown> | null {
-	try {
-		const raw = execSync(`git notes --ref=agentnote show "${commitSha}"`, {
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
-		}).trim();
-		if (!raw) return null;
-		return JSON.parse(raw) as Record<string, unknown>;
-	} catch {
-		return null;
-	}
-}
-
-function withDashboardMetadata(
-	note: Record<string, unknown>,
-	commitSha: string,
-	pullRequest: { number: number; title: string },
-): Record<string, unknown> {
-	const commit = (note.commit ?? {}) as Record<string, unknown>;
-	const shortSha =
-		typeof commit.short_sha === "string" && commit.short_sha
-			? commit.short_sha
-			: commitSha.slice(0, 7);
-
-	return {
-		...note,
-		commit: {
-			...commit,
-			sha: typeof commit.sha === "string" && commit.sha ? commit.sha : commitSha,
-			short_sha: shortSha,
-		},
-		pull_request: {
-			number: pullRequest.number,
-			title: pullRequest.title,
-		},
-	};
-}
-
-async function removeDashboardNotesForPr(
-	notesDir: string,
-	prNumber: number,
-): Promise<void> {
-	if (!existsSync(notesDir)) return;
-
-	for (const name of await readdir(notesDir)) {
-		if (!name.endsWith(".json")) continue;
-		const path = join(notesDir, name);
-
-		try {
-			const note = JSON.parse(
-				await readFile(path, "utf-8"),
-			) as Record<string, unknown>;
-			const pullRequest = (note.pull_request ?? {}) as Record<string, unknown>;
-			if (pullRequest.number === prNumber) {
-				await rm(path, { force: true });
-			}
-		} catch {
-			// Ignore malformed dashboard files and leave them untouched.
-		}
-	}
-}
-
-async function writeDashboardBundle(
-	report: Record<string, unknown>,
-): Promise<{ dir: string; commits: number }> {
-	const pullRequest = github.context.payload.pull_request;
-	if (!pullRequest) {
-		core.info("No pull request context available. Skipping dashboard bundle.");
-		return { dir: resolve(DEFAULT_DASHBOARD_DIR), commits: 0 };
-	}
-
-	const dashboardDir = resolve(DEFAULT_DASHBOARD_DIR);
-	const notesDir = join(dashboardDir, "notes");
-	await mkdir(notesDir, { recursive: true });
-	await removeDashboardNotesForPr(notesDir, pullRequest.number);
-
-	let writtenCommits = 0;
-	const commits = Array.isArray(report.commits)
-		? (report.commits as Array<Record<string, unknown>>)
-		: [];
-
-	for (const commit of commits) {
-		const sha = typeof commit.sha === "string" ? commit.sha : "";
-		if (!sha) continue;
-
-		const note = readGitNote(sha);
-		if (!note) continue;
-
-		const dashboardNote = withDashboardMetadata(note, sha, {
-			number: pullRequest.number,
-			title: pullRequest.title,
-		});
-		const commitInfo = (dashboardNote.commit ?? {}) as Record<string, unknown>;
-		const shortSha =
-			typeof commitInfo.short_sha === "string" && commitInfo.short_sha
-				? commitInfo.short_sha
-				: sha.slice(0, 7);
-		await writeFile(
-			join(notesDir, `${shortSha}.json`),
-			`${JSON.stringify(dashboardNote, null, 2)}\n`,
-		);
-		writtenCommits += 1;
-	}
-
-	core.info(
-		`Agent Note dashboard notes updated at ${notesDir} (${writtenCommits} commits).`,
-	);
-	return { dir: dashboardDir, commits: writtenCommits };
 }
 
 async function postPrReport(
@@ -235,7 +122,6 @@ async function run(): Promise<void> {
 		const cliCmd = resolveCliCommand();
 
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
-		const dashboardEnabled = isEnabled(core.getInput("dashboard"));
 
 		let json = "";
 		let report: Record<string, unknown> | null = null;
@@ -299,27 +185,7 @@ async function run(): Promise<void> {
 			typeof report.model === "string" ? report.model.trim() : "";
 		void reportModel;
 
-		let dashboardCommits = 0;
-		let dashboardDir = "";
-		let dashboardUrl = "";
-		if (dashboardEnabled) {
-			const result = await writeDashboardBundle(report);
-			dashboardCommits = result.commits;
-			dashboardDir = result.dir;
-			if (dashboardCommits > 0) {
-				dashboardUrl = inferDashboardUrl(
-					github.context.repo.owner && github.context.repo.repo
-						? `${github.context.repo.owner}/${github.context.repo.repo}`
-						: "",
-				);
-			}
-		}
-		if (dashboardUrl) {
-			markdown = withDashboardLink(markdown, dashboardUrl);
-		}
 		core.setOutput("markdown", markdown);
-		core.setOutput("dashboard_commits", String(dashboardCommits));
-		core.setOutput("dashboard_url", dashboardUrl);
 
 		await postPrReport(prOutputMode, markdown);
 	} catch (error) {

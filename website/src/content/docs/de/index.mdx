@@ -59,12 +59,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Für Codex CLI: `npx agent-note init --agent codex`
    - Für Cursor: `npx agent-note init --agent cursor`
    - Für Gemini CLI: `npx agent-note init --agent gemini`
-   - Mehrere Agenten gleichzeitig: `npx agent-note init --agent claude --agent cursor`
+   - Mehrere Agenten gleichzeitig: `npx agent-note init --agent claude cursor`
 
 2. Committe die generierten Dateien
 
    ```bash
-   git add .claude/settings.json .github/workflows/agentnote.yml
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
    git commit -m "chore: enable agent-note"
    git push
    ```

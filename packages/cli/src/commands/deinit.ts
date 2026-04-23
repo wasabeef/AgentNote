@@ -5,7 +5,12 @@ import { getAgent, hasAgent, listAgents } from "../agents/index.js";
 import { AGENTNOTE_HOOK_MARKER, NOTES_FETCH_REFSPEC } from "../core/constants.js";
 import { gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
-import { resolveHookDir } from "./init.js";
+import {
+  DASHBOARD_WORKFLOW_FILENAME,
+  PR_REPORT_WORKFLOW_FILENAME,
+  parseAgentArgs,
+  resolveHookDir,
+} from "./init.js";
 
 /**
  * Check if any agent (other than those being removed) still has hooks enabled.
@@ -46,12 +51,12 @@ async function removeGitHook(hookDir: string, name: string): Promise<boolean> {
 }
 
 export async function deinit(args: string[]): Promise<void> {
-  const agents: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--agent" && args[i + 1]) {
-      agents.push(args[i + 1]);
-      i++;
-    }
+  let agents: string[] = [];
+  try {
+    agents = parseAgentArgs(args);
+  } catch (error) {
+    console.error(`error: ${(error as Error).message}`);
+    process.exit(1);
   }
 
   const removeWorkflow = args.includes("--remove-workflow");
@@ -96,18 +101,11 @@ export async function deinit(args: string[]): Promise<void> {
       }
     }
 
-    // Local CLI shim — remove both the current name and the legacy `agentnote`
-    // shim left over from pre-rebrand installations.
+    // Local CLI shim
     const binDir = join(await agentnoteDir(), "bin");
-    let shimRemoved = false;
-    for (const name of ["agent-note", "agentnote"]) {
-      const shimPath = join(binDir, name);
-      if (existsSync(shimPath)) {
-        await unlink(shimPath);
-        shimRemoved = true;
-      }
-    }
-    if (shimRemoved) {
+    const shimPath = join(binDir, "agent-note");
+    if (existsSync(shimPath)) {
+      await unlink(shimPath);
       results.push("  ✓ removed local CLI shim");
     }
 
@@ -115,10 +113,15 @@ export async function deinit(args: string[]): Promise<void> {
     // init skips creation if the file already exists. Removing a pre-existing
     // user-owned workflow would be destructive.
     if (removeWorkflow) {
-      const workflowPath = join(repoRoot, ".github", "workflows", "agentnote.yml");
-      if (existsSync(workflowPath)) {
+      const workflowPaths = [
+        join(repoRoot, ".github", "workflows", PR_REPORT_WORKFLOW_FILENAME),
+        join(repoRoot, ".github", "workflows", DASHBOARD_WORKFLOW_FILENAME),
+      ];
+
+      for (const workflowPath of workflowPaths) {
+        if (!existsSync(workflowPath)) continue;
         await unlink(workflowPath);
-        results.push("  ✓ removed .github/workflows/agentnote.yml");
+        results.push(`  ✓ removed ${workflowPath.replace(`${repoRoot}/`, "")}`);
       }
     }
 

@@ -28,19 +28,23 @@ Vous n’avez besoin du Dashboard que si vous voulez une vue web partagée.
 
 ## Mise en place rapide
 
-Commencez par laisser l’Action écrire les fichiers du Dashboard pour chaque PR :
+1. Run Dashboard setup once.
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-Cela crée ou met à jour `packages/dashboard/public/notes/*.json` pour la PR en cours. Ensuite, votre workflow Pages restaure, enregistre et publie ces fichiers.
+2. Commit both workflow files.
+
+```bash
+git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
+git commit -m "chore: enable agent-note dashboard"
+git push
+```
+
+3. In GitHub Pages, choose **GitHub Actions** as the source.
+
+The generated Dashboard workflow restores data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view.
 
 ## URL publique
 
@@ -58,12 +62,12 @@ Par exemple :
 
 ## Premier déploiement
 
-Même un dépôt tout neuf peut accumuler des données de Dashboard avant le premier déploiement de production. L’URL publique Pages n’apparaît toutefois qu’après le premier déploiement sur `main`.
+Même un dépôt tout neuf peut accumuler des données de Dashboard avant le premier déploiement de production. L’URL publique Pages n’apparaît toutefois qu’après le premier déploiement sur `default branch`.
 
 ## Comment ça fonctionne
 
-- `packages/dashboard/` est l’application Astro qui affiche le Dashboard
-- `packages/dashboard/public/notes/*.json` est le bundle lu au moment du build
-- `gh-pages/dashboard/notes/*.json` est le stockage durable de l’historique partagé
+- `refs/notes/agentnote` remains the source of truth
+- The generated Dashboard workflow writes shared snapshots to `gh-pages/dashboard/notes/*.json`
+- GitHub Pages serves the built Dashboard at `/dashboard/`
 
-Le dépôt ne contient pas de JSON d’exemple pour le Dashboard. Un Dashboard neuf reste vide jusqu’à ce que votre workflow restaure ou génère les fichiers de notes. Dans beaucoup d’équipes, les notes de PR sont mises à jour sur `pull_request`, puis l’état mergé est publié depuis `main`.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. `pull_request` refreshes open history, and `default branch` publishes the merged state.

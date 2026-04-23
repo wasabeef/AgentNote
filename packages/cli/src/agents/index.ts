@@ -11,12 +11,8 @@ const AGENTS = new Map<string, AgentAdapter>([
   [gemini.name, gemini],
 ]);
 
-/** Aliases for backward compatibility (e.g. "claude-code" → claude). */
-const ALIASES = new Map<string, string>([["claude-code", claude.name]]);
-
 export function getAgent(name: string): AgentAdapter {
-  const canonical = ALIASES.get(name) ?? name;
-  const agent = AGENTS.get(canonical);
+  const agent = AGENTS.get(name);
   if (!agent) {
     throw new Error(`unknown agent: ${name}`);
   }
@@ -24,8 +20,7 @@ export function getAgent(name: string): AgentAdapter {
 }
 
 export function hasAgent(name: string): boolean {
-  const canonical = ALIASES.get(name) ?? name;
-  return AGENTS.has(canonical);
+  return AGENTS.has(name);
 }
 
 export function listAgents(): string[] {

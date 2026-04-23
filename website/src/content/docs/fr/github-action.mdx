@@ -7,13 +7,20 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Mise en place rapide
 
-Utilisez simplement le workflow créé par `agent-note init` :
+Run this once in your repository:
+
+```bash
+npx agent-note init --agent claude
+```
+
+That creates the PR report workflow for you:
 
 ```yaml
-name: Agent Note
+# .github/workflows/agentnote-pr-report.yml
+name: Agent Note PR Report
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 permissions:
   contents: read
   pull-requests: write
@@ -21,13 +28,19 @@ jobs:
   report:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
       - uses: wasabeef/AgentNote@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-C’est suffisant. Chaque PR reçoit automatiquement un rapport de session IA.
+That's it. Every PR gets an AI session report.
 
 ## Inputs
 
@@ -35,22 +48,15 @@ C’est suffisant. Chaque PR reçoit automatiquement un rapport de session IA.
 |---|---|---|
 | `base` | Branche de base de la PR | Branche utilisée pour la comparaison |
 | `pr_output` | `description` | Destination du rapport de PR : `description`, `comment` ou `none` |
-| `dashboard` | `false` | Écrit aussi les fichiers du Dashboard pour la PR en cours |
 
-### Utiliser la PR description et le Dashboard en même temps
+## Dashboard
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
 <Aside type="tip">
-  Activez `dashboard: true` uniquement si vous voulez aussi le Dashboard partagé. La page <a href="./dashboard/">Dashboard</a> explique comment s’articulent bundle, synchronisation Pages et déploiement.
+  This also adds `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard setup.
 </Aside>
 
 ## Outputs
@@ -64,7 +70,6 @@ C’est suffisant. Chaque PR reçoit automatiquement un rapport de session IA.
 | `total_prompts` | number | Nombre total de prompts sur tous les commits |
 | `json` | string | Rapport structuré complet |
 | `markdown` | string | Rapport Markdown rendu |
-| `dashboard_commits` | number | Nombre de tracked commits écrits dans le bundle du Dashboard |
 
 ## Ce que contient le rapport
 

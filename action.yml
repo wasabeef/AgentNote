@@ -1,5 +1,5 @@
 name: "Agent Note"
-description: "AI agent session reports for pull requests and Dashboard bundles"
+description: "AI agent session reports for pull requests"
 author: "wasabeef"
 
 inputs:
@@ -11,11 +11,6 @@ inputs:
     description: "PR report destination: description, comment, or none (default: description)"
     required: false
     default: ""
-  dashboard:
-    description: "Write/update Dashboard snapshot files for the current PR"
-    required: false
-    default: "false"
-
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
@@ -31,11 +26,6 @@ outputs:
     description: "Full structured report as JSON"
   markdown:
     description: "Rendered markdown report"
-  dashboard_commits:
-    description: "Number of tracked commits written into the Dashboard snapshot"
-  dashboard_url:
-    description: "Public Dashboard URL inferred from the repository's standard GitHub Pages path"
-
 runs:
   using: "node24"
   main: "packages/action/dist/index.js"

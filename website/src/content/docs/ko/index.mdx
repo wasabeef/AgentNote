@@ -59,12 +59,12 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
    - Codex CLI 의 경우: `npx agent-note init --agent codex`
    - Cursor 의 경우: `npx agent-note init --agent cursor`
    - Gemini CLI의 경우: `npx agent-note init --agent gemini`
-   - 여러 에이전트 동시에: `npx agent-note init --agent claude --agent cursor`
+   - 여러 에이전트 동시에: `npx agent-note init --agent claude cursor`
 
 2. 생성된 파일을 커밋
 
    ```bash
-   git add .claude/settings.json .github/workflows/agentnote.yml
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
    git commit -m "chore: enable agent-note"
    git push
    ```

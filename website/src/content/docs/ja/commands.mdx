@@ -23,13 +23,14 @@ npx agent-note init --agent claude
 
 | フラグ | 説明 |
 |---|---|
+| `--agent <name...>` | **必須。** 1 つ以上のエージェントアダプターを指定: `claude`、`codex`、`cursor`、`gemini` |
+| `--dashboard` | 共有 Dashboard 用の `.github/workflows/agentnote-dashboard.yml` も作成 |
 | `--no-hooks` | エージェントフックの設定をスキップ |
 | `--no-git-hooks` | git フックのインストールをスキップ |
 | `--no-action` | ワークフローの作成をスキップ |
 | `--no-notes` | 自動 fetch 設定をスキップ |
 | `--hooks` | エージェントフックのみインストール |
 | `--action` | ワークフローのみ作成 |
-| `--agent <name>` | **必須。** エージェントアダプターを指定: `claude`、`codex`、`cursor`、`gemini`。複数エージェントの場合は繰り返し指定 |
 
 ## agent-note show
 
@@ -119,8 +120,8 @@ npx agent-note deinit --agent claude
 
 | フラグ | 説明 |
 |---|---|
-| `--agent <name>` | **必須。** 除去するエージェント: `claude`、`codex`、`cursor`、`gemini`。複数指定可 |
-| `--remove-workflow` | `.github/workflows/agentnote.yml` も削除（デフォルトでは温存） |
+| `--agent <name...>` | **必須。** 1 つ以上のエージェントを除去: `claude`、`codex`、`cursor`、`gemini` |
+| `--remove-workflow` | `.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` も削除 |
 | `--keep-notes` | notes の自動 fetch 設定を維持 |
 
 <Aside>

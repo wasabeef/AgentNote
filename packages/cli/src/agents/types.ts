@@ -57,13 +57,13 @@ export interface AgentAdapter {
   /** All repo-relative files this adapter manages. */
   managedPaths(repoRoot: string): Promise<string[]>;
 
-  /** Add agentnote hooks. Idempotent — safe to call multiple times. Replaces legacy formats. */
+  /** Add agent-note hooks. Idempotent — safe to call multiple times. */
   installHooks(repoRoot: string): Promise<void>;
 
-  /** Remove agentnote hooks. Idempotent — no-op if not installed. Removes both current and legacy formats. */
+  /** Remove agent-note hooks. Idempotent — no-op if not installed. */
   removeHooks(repoRoot: string): Promise<void>;
 
-  /** Check if current-format hooks are installed. Returns false for legacy-only installs. */
+  /** Check if hooks are installed. */
   isEnabled(repoRoot: string): Promise<boolean>;
 
   /** Parse raw hook input into a normalized event. Returns null for unrecognized events. */

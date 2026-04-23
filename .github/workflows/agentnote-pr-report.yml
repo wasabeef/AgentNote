@@ -1,7 +1,7 @@
-name: Agent Note
+name: Agent Note PR Report
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 concurrency:
   group: agentnote-${{ github.event.pull_request.number }}
   cancel-in-progress: true

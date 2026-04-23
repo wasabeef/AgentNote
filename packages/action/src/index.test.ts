@@ -5,11 +5,9 @@ import {
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
-	inferDashboardUrl,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
-	withDashboardLink,
 } from "./helpers.js";
 
 describe("resolvePrOutputMode", () => {
@@ -138,44 +136,6 @@ describe("buildPrReportCommand", () => {
 				json: true,
 			}),
 			'node packages/cli/dist/cli.js pr "origin/main" --json',
-		);
-	});
-});
-
-describe("inferDashboardUrl", () => {
-	it("infers the standard project-site dashboard url", () => {
-		assert.equal(
-			inferDashboardUrl("wasabeef/AgentNote"),
-			"https://wasabeef.github.io/AgentNote/dashboard/",
-		);
-	});
-
-	it("infers the user-site dashboard url without repeating the repo segment", () => {
-		assert.equal(
-			inferDashboardUrl("wasabeef/wasabeef.github.io"),
-			"https://wasabeef.github.io/dashboard/",
-		);
-	});
-
-	it("returns an empty string for an invalid repository string", () => {
-		assert.equal(inferDashboardUrl(""), "");
-	});
-});
-
-describe("withDashboardLink", () => {
-	it("inserts the dashboard link below the report heading", () => {
-		const markdown = ["## 🧑💬🤖 Agent Note", "", "**Total AI Ratio:** 100% ████████"].join(
-			"\n",
-		);
-		const result = withDashboardLink(
-			markdown,
-			"https://wasabeef.github.io/AgentNote/dashboard/",
-		);
-
-		assert.ok(
-			result.includes(
-				"## 🧑💬🤖 Agent Note\n\n🔎 [Open dashboard](https://wasabeef.github.io/AgentNote/dashboard/)\n\n**Total AI Ratio:** 100% ████████",
-			),
 		);
 	});
 });

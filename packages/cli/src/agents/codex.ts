@@ -230,11 +230,7 @@ function stripAgentnoteHooks(config: CodexHooksFile): CodexHooksFile {
         const filteredGroups = groups
           .map((group) => ({
             ...group,
-            hooks: group.hooks.filter(
-              (hook) =>
-                !hook.command.includes("agent-note hook") &&
-                !hook.command.includes("agentnote hook"),
-            ),
+            hooks: group.hooks.filter((hook) => !hook.command.includes("agent-note hook")),
           }))
           .filter((group) => group.hooks.length > 0);
         return [event, filteredGroups];
@@ -385,10 +381,7 @@ export const codex: AgentAdapter = {
         configContent.includes("features.codex_hooks = true") ||
         (configContent.includes("[features]") &&
           configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null);
-      // Also recognise legacy `agentnote hook` commands from pre-rebrand installs.
-      const hasHook =
-        hooksContent.includes(HOOK_COMMAND) ||
-        hooksContent.includes("agentnote hook --agent codex");
+      const hasHook = hooksContent.includes(HOOK_COMMAND);
       return configOk && hasHook;
     } catch {
       return false;

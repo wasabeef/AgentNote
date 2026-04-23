@@ -108,11 +108,7 @@ export const claude: AgentAdapter = {
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
         const text = JSON.stringify(entry);
-        return (
-          !text.includes("agent-note hook") &&
-          !text.includes("agentnote hook") &&
-          !text.includes("cli.js hook")
-        );
+        return !text.includes("agent-note hook") && !text.includes("cli.js hook");
       });
       if (hooks[event].length === 0) delete hooks[event];
     }
@@ -135,11 +131,7 @@ export const claude: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return (
-            !text.includes("agent-note hook") &&
-            !text.includes("agentnote hook") &&
-            !text.includes("cli.js hook")
-          );
+          return !text.includes("agent-note hook") && !text.includes("cli.js hook");
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -155,14 +147,7 @@ export const claude: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, "utf-8");
-      return (
-        content.includes(CLAUDE_HOOK_COMMAND) ||
-        // Legacy package name (agentnote) — pre-rebrand installations.
-        content.includes("agentnote hook --agent claude") ||
-        content.includes("agentnote hook --agent claude-code") ||
-        content.includes("cli.js hook --agent claude-code") ||
-        content.includes("cli.js hook --agent claude")
-      );
+      return content.includes(CLAUDE_HOOK_COMMAND);
     } catch {
       return false;
     }
@@ -296,10 +281,9 @@ export const claude: AgentAdapter = {
       };
 
       const extractUserText = (content: unknown): string | null => {
-        // Claude transcripts store user text either as a string or as content blocks.
+        // Claude transcripts store user text as content blocks.
         // Join all text blocks when multiple are present (user messages can contain
         // several text chunks, e.g. pasted content + question).
-        if (typeof content === "string") return content.trim() || null;
         if (!Array.isArray(content)) return null;
         const texts: string[] = [];
         for (const block of content) {

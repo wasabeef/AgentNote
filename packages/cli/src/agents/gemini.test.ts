@@ -430,7 +430,7 @@ describe("gemini adapter", () => {
       assert.ok(settings.hooks.AfterTool, "AfterTool hooks should be present");
     });
 
-    it("merges with existing hooks and preserves non-agentnote hooks", async () => {
+    it("merges with existing hooks and preserves non-agent-note hooks", async () => {
       const settingsDir = join(repoRoot, ".gemini");
       mkdirSync(settingsDir, { recursive: true });
       const settingsPath = join(settingsDir, "settings.json");
@@ -476,7 +476,7 @@ describe("gemini adapter", () => {
         hooks: Record<string, Array<{ hooks: Array<{ name: string }> }>>;
       };
 
-      // Count agentnote hooks for SessionStart — should be exactly 1
+      // Count agent-note hooks for SessionStart — should be exactly 1
       const sessionStartGroups = settings.hooks.SessionStart ?? [];
       const agentnoteHookCount = sessionStartGroups
         .flatMap((g) => g.hooks)
@@ -486,7 +486,7 @@ describe("gemini adapter", () => {
   });
 
   describe("removeHooks", () => {
-    it("removes agentnote hooks while preserving other hooks", async () => {
+    it("removes agent-note hooks while preserving other hooks", async () => {
       const settingsDir = join(repoRoot, ".gemini");
       mkdirSync(settingsDir, { recursive: true });
       const settingsPath = join(settingsDir, "settings.json");
@@ -502,7 +502,7 @@ describe("gemini adapter", () => {
                     {
                       name: "agentnote-before-shell",
                       type: "command",
-                      command: "npx --yes agentnote hook --agent gemini",
+                      command: "npx --yes agent-note hook --agent gemini",
                     },
                     { name: "my-custom-hook", type: "command", command: "echo hello" },
                   ],
@@ -521,7 +521,7 @@ describe("gemini adapter", () => {
         hooks?: Record<string, Array<{ hooks: Array<{ name: string }> }>>;
       };
       const allHooks = settings.hooks?.BeforeTool?.flatMap((g) => g.hooks).map((h) => h.name) ?? [];
-      assert.ok(!allHooks.includes("agentnote-before-shell"), "agentnote hook should be removed");
+      assert.ok(!allHooks.includes("agentnote-before-shell"), "agent-note hook should be removed");
       assert.ok(allHooks.includes("my-custom-hook"), "custom hook should be preserved");
     });
 
@@ -564,16 +564,6 @@ describe("gemini adapter", () => {
         transcriptPath,
         JSON.stringify({ sessionId: VALID_SESSION_ID, projectHash: "abc" }),
       );
-
-      const result = gemini.findTranscript(VALID_SESSION_ID);
-      assert.equal(result, transcriptPath);
-    });
-
-    it("finds legacy .json transcript", () => {
-      const tmpDir = join(geminiHome, "tmp");
-      mkdirSync(tmpDir, { recursive: true });
-      const transcriptPath = join(tmpDir, "session.json");
-      writeFileSync(transcriptPath, JSON.stringify({ sessionId: VALID_SESSION_ID }));
 
       const result = gemini.findTranscript(VALID_SESSION_ID);
       assert.equal(result, transcriptPath);

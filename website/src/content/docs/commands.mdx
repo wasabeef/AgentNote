@@ -23,13 +23,14 @@ npx agent-note init --agent claude
 
 | Flag | Description |
 |---|---|
+| `--agent <name...>` | **Required.** Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
+| `--dashboard` | Also create `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard |
 | `--no-hooks` | Skip agent hook configuration |
 | `--no-git-hooks` | Skip git hook installation |
 | `--no-action` | Skip workflow creation |
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | **Required.** Choose the agent adapter: `claude`, `codex`, `cursor`, or `gemini`. Repeat for multiple agents |
 
 ## agent-note show
 
@@ -146,8 +147,8 @@ npx agent-note deinit --agent claude
 
 | Flag | Description |
 |---|---|
-| `--agent <name>` | **Required.** Agent to remove: `claude`, `codex`, `cursor`, or `gemini`. Repeat for multiple agents |
-| `--remove-workflow` | Also delete `.github/workflows/agentnote.yml` (preserved by default) |
+| `--agent <name...>` | **Required.** Remove one or more agents: `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | Also delete `.github/workflows/agentnote-pr-report.yml` and `.github/workflows/agentnote-dashboard.yml` |
 | `--keep-notes` | Keep the notes auto-fetch configuration |
 
 <Aside>

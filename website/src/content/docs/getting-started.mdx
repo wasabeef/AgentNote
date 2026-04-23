@@ -35,26 +35,36 @@ import { Steps, Aside, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/
    Multiple agents at once:
 
    ```bash
-   npx agent-note init --agent claude --agent cursor
+   npx agent-note init --agent claude cursor
    ```
 
    Agent Note sets up:
    - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI)
    - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
-   - GitHub Action workflow (`.github/workflows/agentnote.yml`)
+   - GitHub Action workflow (`.github/workflows/agentnote-pr-report.yml`)
    - Auto-fetch for git notes on pull
+
+   If you also want the shared Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+   That also adds `.github/workflows/agentnote-dashboard.yml`.
 
 2. **Commit** the generated files
 
    ```bash
-   git add .claude/settings.json .github/workflows/agentnote.yml
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   # with --dashboard, also add .github/workflows/agentnote-dashboard.yml
    git commit -m "chore: enable agent-note"
    git push
    ```
 
-   Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote.yml`.
-   Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote.yml`.
-   Gemini CLI repositories commit `.gemini/settings.json` and `.github/workflows/agentnote.yml`.
+   Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote-pr-report.yml`.
+   Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote-pr-report.yml`.
+   Gemini CLI repositories commit `.gemini/settings.json` and `.github/workflows/agentnote-pr-report.yml`.
+   With `--dashboard`, also commit `.github/workflows/agentnote-dashboard.yml`.
 
 3. **You're ready.** Start coding with your agent.
    Normal `git commit` works when the generated git hooks are installed.
@@ -133,13 +143,14 @@ linked:  3/20 recent commits
 
 | Flag | Description |
 |---|---|
+| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
+| `--dashboard` | Also create `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard |
 | `--no-hooks` | Skip agent hook configuration |
 | `--no-git-hooks` | Skip git hook installation |
 | `--no-action` | Skip workflow creation |
 | `--no-notes` | Skip auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
-| `--agent <name>` | Choose the agent adapter, for example `claude`, `codex`, `cursor`, or `gemini` |
 
 ## What Each Agent Supports
 
@@ -180,4 +191,4 @@ linked:  3/20 recent commits
 npx agent-note deinit --agent claude
 ```
 
-This removes agent hooks and git hooks. Add `--remove-workflow` to also delete the GitHub Action workflow.
+This removes agent hooks and git hooks. Add `--remove-workflow` to also delete `agentnote-pr-report.yml` and `agentnote-dashboard.yml`.

@@ -28,19 +28,23 @@ You only need the Dashboard if you want a shared web view.
 
 ## Quick Setup
 
-First, let the action write Dashboard bundle files for each PR:
+1. Run Dashboard setup once:
 
-```yaml
-- uses: wasabeef/AgentNote@v0
-  id: agent-note
-  with:
-    pr_output: description
-    dashboard: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```bash
+npx agent-note init --agent claude --dashboard
 ```
 
-This creates or updates `packages/dashboard/public/notes/*.json` for the current PR. Your Pages workflow can then restore, persist, and publish those files.
+2. Commit both workflow files:
+
+```bash
+git add .github/workflows/agentnote-pr-report.yml .github/workflows/agentnote-dashboard.yml
+git commit -m "chore: enable agent-note dashboard"
+git push
+```
+
+3. In GitHub, enable Pages for the repository and choose **GitHub Actions** as the source.
+
+The generated Dashboard workflow restores note data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view for you.
 
 ## Public URL
 
@@ -52,18 +56,14 @@ For example:
 
 - `https://wasabeef.github.io/AgentNote/dashboard/`
 
-<Aside type="tip">
-  If you publish with GitHub Pages, your Pages workflow should inject repo-specific `SITE` and `BASE` values at build time. Most users can copy the example workflow and leave `packages/dashboard` itself untouched.
-</Aside>
-
 ## First Deploy
 
-A brand-new repo can accumulate Dashboard note data before the first production deploy, but the public Pages URL only appears after the first `main` deployment.
+A brand-new repo can accumulate Dashboard note data before the first production deploy, but the public Pages URL only appears after the first `default branch` deployment.
 
 ## How It Works
 
-- `packages/dashboard/` is the interactive Astro app
-- `packages/dashboard/public/notes/*.json` is the working bundle used at build time
-- `gh-pages/dashboard/notes/*.json` is the durable store for shared history
+- `refs/notes/agentnote` remains the source of truth
+- The generated Dashboard workflow writes shared note snapshots to `gh-pages/dashboard/notes/*.json`
+- GitHub Pages serves the built Dashboard at `/dashboard/`
 
-The repository does not ship sample Dashboard JSON. A fresh Dashboard stays empty until your workflow restores or generates note files. Most teams refresh PR notes on `pull_request` and publish the merged state on `main`.
+The repository does not commit sample Dashboard JSON. A fresh Dashboard stays empty until the workflow restores or generates note files. Pull requests refresh open history, and `default branch` publishes the merged state.
