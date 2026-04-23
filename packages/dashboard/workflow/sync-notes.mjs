@@ -45,21 +45,68 @@ function readGitNote(sha) {
   return JSON.parse(raw);
 }
 
+function readCommitMetadata(sha) {
+  if (!sha) return null;
+
+  try {
+    const raw = run("git", [
+      "show",
+      "-s",
+      "--format=%H%x00%h%x00%s%x00%aI%x00%an",
+      sha,
+    ]);
+    const [fullSha = "", shortSha = "", message = "", date = "", author = ""] = raw.split("\u0000");
+    return {
+      sha: fullSha || sha,
+      short_sha: shortSha || sha.slice(0, 7),
+      message,
+      date,
+      author,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildDashboardCommit(sha, commit) {
+  const fallback = readCommitMetadata(typeof commit?.sha === "string" ? commit.sha : sha);
+  const resolvedSha =
+    typeof commit?.sha === "string" && commit.sha
+      ? commit.sha
+      : (fallback?.sha ?? sha);
+  const shortSha =
+    typeof commit?.short_sha === "string" && commit.short_sha
+      ? commit.short_sha
+      : (fallback?.short_sha ?? resolvedSha.slice(0, 7));
+
+  return {
+    ...commit,
+    sha: resolvedSha,
+    short_sha: shortSha,
+    message:
+      typeof commit?.message === "string" && commit.message
+        ? commit.message
+        : (fallback?.message ?? shortSha),
+    date:
+      typeof commit?.date === "string" && commit.date
+        ? commit.date
+        : (fallback?.date ?? ""),
+    author:
+      typeof commit?.author === "string" && commit.author
+        ? commit.author
+        : (fallback?.author ?? ""),
+  };
+}
+
 function writeDashboardNote(sha, pullRequest) {
   const note = readGitNote(sha);
   if (!note) return false;
 
   const commit = note.commit && typeof note.commit === "object" ? note.commit : {};
-  const shortSha =
-    typeof commit.short_sha === "string" && commit.short_sha
-      ? commit.short_sha
-      : sha.slice(0, 7);
+  const dashboardCommit = buildDashboardCommit(sha, commit);
+  const shortSha = dashboardCommit.short_sha;
 
-  note.commit = {
-    ...commit,
-    sha: typeof commit.sha === "string" && commit.sha ? commit.sha : sha,
-    short_sha: shortSha,
-  };
+  note.commit = dashboardCommit;
 
   if (pullRequest) {
     note.pull_request = pullRequest;
@@ -82,6 +129,29 @@ function readDashboardNote(path) {
     return JSON.parse(readFileSync(path, "utf-8"));
   } catch {
     return null;
+  }
+}
+
+function backfillDashboardNotes() {
+  for (const path of listNoteFiles()) {
+    const note = readDashboardNote(path);
+    if (!note || typeof note !== "object") continue;
+
+    const commit = note.commit && typeof note.commit === "object" ? note.commit : null;
+    const sha = typeof commit?.sha === "string" ? commit.sha : "";
+    if (!sha) continue;
+
+    const nextCommit = buildDashboardCommit(sha, commit);
+    const changed =
+      nextCommit.sha !== commit.sha ||
+      nextCommit.short_sha !== commit.short_sha ||
+      nextCommit.message !== commit.message ||
+      nextCommit.date !== commit.date ||
+      nextCommit.author !== commit.author;
+    if (!changed) continue;
+
+    note.commit = nextCommit;
+    writeFileSync(path, `${JSON.stringify(note, null, 2)}\n`);
   }
 }
 
@@ -157,6 +227,8 @@ function setFlags({ build, persist, deploy }) {
   setOutput("should_persist", persist);
   setOutput("should_deploy", deploy);
 }
+
+backfillDashboardNotes();
 
 if (eventName === "pull_request") {
   if (!Number.isInteger(prNumber) || !prTitle) {
