@@ -301,6 +301,14 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should call the shared Dashboard entrypoint",
     );
     assert.ok(
+      dashboardWorkflow.includes(`PAGES_DIR: \${{ github.workspace }}/.pages`),
+      "dashboard workflow should pass an absolute Pages artifact path",
+    );
+    assert.ok(
+      dashboardWorkflow.includes(`NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes`),
+      "dashboard workflow should pass an absolute notes directory path",
+    );
+    assert.ok(
       dashboardWorkflow.indexOf("Upload Pages artifact") <
         dashboardWorkflow.indexOf("Persist Dashboard notes to gh-pages"),
       "dashboard workflow should upload the Pages artifact before switching to gh-pages",

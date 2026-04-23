@@ -3034,7 +3034,7 @@ jobs:
       - name: Update Dashboard notes from git notes
         id: notes
         env:
-          NOTES_DIR: .agentnote-dashboard-notes
+          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
           EVENT_NAME: \${{ github.event_name }}
           GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: \${{ github.repository }}
@@ -3050,8 +3050,8 @@ jobs:
       - name: Build Dashboard
         if: steps.notes.outputs.should_build == 'true'
         env:
-          NOTES_DIR: .agentnote-dashboard-notes
-          PAGES_DIR: .pages
+          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
+          PAGES_DIR: \${{ github.workspace }}/.pages
           PUBLIC_REPO: \${{ github.repository }}
         run: npm --prefix .agentnote-dashboard-source run dashboard:build-pages
 
@@ -3064,7 +3064,7 @@ jobs:
       - name: Persist Dashboard notes to gh-pages
         if: steps.notes.outputs.should_persist == 'true'
         env:
-          NOTES_DIR: .agentnote-dashboard-notes
+          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
         run: npm --prefix .agentnote-dashboard-source run dashboard:persist-notes
 
   deploy:
