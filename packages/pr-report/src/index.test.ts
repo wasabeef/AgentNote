@@ -114,6 +114,13 @@ describe("inferDashboardUrl", () => {
 		);
 	});
 
+	it("strips a trailing .git suffix from GitHub remotes", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote.git"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
+		);
+	});
+
 	it("infers the user Pages dashboard URL for owner.github.io repos", () => {
 		assert.equal(
 			inferDashboardUrl("https://github.com/wasabeef/wasabeef.github.io"),

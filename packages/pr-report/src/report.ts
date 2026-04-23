@@ -203,9 +203,6 @@ export function renderHeader(report: PrReport): string[] {
   if (report.model) {
     lines.push(`**Model:** \`${report.model}\``);
   }
-  if (report.dashboard_url) {
-    lines.push(`[Open Dashboard ↗](${report.dashboard_url})`);
-  }
   return lines;
 }
 
@@ -239,6 +236,10 @@ export function renderMarkdown(report: PrReport): string {
   }
 
   lines.push("");
+  if (report.dashboard_url) {
+    lines.push(`<div align="right">[Open Dashboard ↗](${report.dashboard_url})</div>`);
+    lines.push("");
+  }
 
   const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
   if (withPrompts.length > 0) {

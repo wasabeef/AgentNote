@@ -64,7 +64,8 @@ export function shouldRetryNotesFetch(report: {
 export function inferDashboardUrl(repoUrl: string | null): string | null {
 	if (!repoUrl) return null;
 
-	const match = repoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+	const normalized = repoUrl.replace(/\.git$/, "");
+	const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
 	if (!match) return null;
 
 	const [, owner, repo] = match;

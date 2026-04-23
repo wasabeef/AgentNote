@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -120,9 +120,11 @@ describe("agentnote pr", () => {
           method: "file",
         },
       };
-      execSync(`git notes --ref=agentnote add -f -m '${JSON.stringify(note)}' ${sha}`, {
-        cwd: dashboardDir,
-      });
+      execFileSync(
+        "git",
+        ["notes", "--ref=agentnote", "add", "-f", "-m", JSON.stringify(note), sha],
+        { cwd: dashboardDir },
+      );
 
       const output = execSync(`node ${cliPath} pr HEAD~1`, {
         cwd: dashboardDir,
@@ -130,7 +132,9 @@ describe("agentnote pr", () => {
       });
 
       assert.ok(
-        output.includes("[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)"),
+        output.includes(
+          '<div align="right">[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)</div>',
+        ),
       );
     } finally {
       rmSync(dashboardDir, { recursive: true, force: true });

@@ -164,11 +164,12 @@ This posts an AI session report to the PR description:
 
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
-[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)
 
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
+
+<div align="right">[Open Dashboard ↗](https://wasabeef.github.io/AgentNote/dashboard/)</div>
 ```
 
 ## How It Works
