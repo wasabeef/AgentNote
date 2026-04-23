@@ -146,6 +146,6 @@
   "pull_request": {
     "number": 28,
     "title": "refactor(cli): simplify dashboard setup",
-    "state": "open"
+    "state": "merged"
   }
 }
