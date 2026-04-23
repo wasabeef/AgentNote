@@ -81,7 +81,7 @@ jobs:
           path: .agentnote-dashboard-source
 
       - name: Restore Dashboard notes from gh-pages
-        run: npm run workflow:restore-notes --prefix .agentnote-dashboard-source/packages/dashboard
+        run: npm --prefix .agentnote-dashboard-source run dashboard:restore-notes
 
       - name: Update Dashboard notes from git notes
         id: notes
@@ -97,7 +97,7 @@ jobs:
           PR_NUMBER: \${{ github.event.pull_request.number }}
           PR_TITLE: \${{ github.event.pull_request.title }}
           PR_HEAD_REPO: \${{ github.event.pull_request.head.repo.full_name }}
-        run: npm run workflow:sync-notes --prefix .agentnote-dashboard-source/packages/dashboard
+        run: npm --prefix .agentnote-dashboard-source run dashboard:sync-notes
 
       - name: Build Dashboard
         if: steps.notes.outputs.should_build == 'true'
@@ -105,13 +105,13 @@ jobs:
           NOTES_DIR: .agentnote-dashboard-notes
           PAGES_DIR: .pages
           PUBLIC_REPO: \${{ github.repository }}
-        run: npm run workflow:build-pages --prefix .agentnote-dashboard-source/packages/dashboard
+        run: npm --prefix .agentnote-dashboard-source run dashboard:build-pages
 
       - name: Persist Dashboard notes to gh-pages
         if: steps.notes.outputs.should_persist == 'true'
         env:
           NOTES_DIR: .agentnote-dashboard-notes
-        run: npm run workflow:persist-notes --prefix .agentnote-dashboard-source/packages/dashboard
+        run: npm --prefix .agentnote-dashboard-source run dashboard:persist-notes
 
       - name: Upload Pages artifact
         if: steps.notes.outputs.should_deploy == 'true'

@@ -61,8 +61,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm -w packages/dashboard run build
+      - run: npm ci --prefix packages/dashboard
+      - run: npm run dashboard:build
       - name: Smoke test dashboard workflow build
         run: |
           mkdir -p /tmp/agentnote-dashboard-ci-notes
@@ -70,7 +70,7 @@ jobs:
           NOTES_DIR=/tmp/agentnote-dashboard-ci-notes \
           PAGES_DIR=/tmp/agentnote-dashboard-ci-pages \
           PUBLIC_REPO=wasabeef/AgentNote \
-          npm run workflow:build-pages --prefix packages/dashboard
+          npm run dashboard:build-pages
       - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/index.html
       - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/notes/abc.json
 
@@ -83,5 +83,5 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --prefix website
       - run: npm run build --prefix website
