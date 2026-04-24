@@ -14,6 +14,8 @@ const prHeadRepo = process.env.PR_HEAD_REPO || "";
 const refName = process.env.REF_NAME || "";
 const githubOutput = process.env.GITHUB_OUTPUT || "";
 const zeroSha = /^0+$/;
+const MAX_DIFF_LINES_PER_FILE = 1000;
+const MAX_DIFF_TOTAL_LINES = 3000;
 
 mkdirSync(notesDir, { recursive: true });
 
@@ -98,6 +100,78 @@ function buildDashboardCommit(sha, commit) {
   };
 }
 
+function createDiffFile(path) {
+  return {
+    path: path || "(unknown)",
+    lines: [],
+    truncated: false,
+  };
+}
+
+function normalizeDiffPath(rawPath) {
+  if (!rawPath || rawPath === "/dev/null") return "";
+  return rawPath.replace(/^[ab]\//, "");
+}
+
+function parseDiffFiles(rawDiff) {
+  const files = [];
+  let current = null;
+  let totalLines = 0;
+
+  for (const line of rawDiff.split("\n")) {
+    if (line.startsWith("diff --git ")) {
+      const match = line.match(/^diff --git a\/(.+?) b\/(.+)$/);
+      current = createDiffFile(match ? match[2] : "");
+      files.push(current);
+      continue;
+    }
+
+    if (!current) continue;
+    if (line.startsWith("GIT binary patch") || line.startsWith("Binary files ")) {
+      current.truncated = true;
+      current.lines = [];
+      continue;
+    }
+
+    if (line.startsWith("+++ ")) {
+      const path = normalizeDiffPath(line.slice(4).trim());
+      if (path) current.path = path;
+    }
+
+    if (current.lines.length >= MAX_DIFF_LINES_PER_FILE || totalLines >= MAX_DIFF_TOTAL_LINES) {
+      current.truncated = true;
+      continue;
+    }
+    current.lines.push(line);
+    totalLines += 1;
+  }
+
+  return files.filter((file) => file.lines.length > 0);
+}
+
+function readCommitDiff(sha) {
+  if (!sha) return null;
+  try {
+    const rawDiff = run("git", [
+      "show",
+      "--format=",
+      "--patch",
+      "--no-color",
+      "--no-ext-diff",
+      "--find-renames",
+      sha,
+    ]);
+    const files = parseDiffFiles(rawDiff);
+    return files.length > 0 ? { files } : null;
+  } catch {
+    return null;
+  }
+}
+
+function needsDiff(note) {
+  return !Array.isArray(note?.diff?.files) || note.diff.files.length === 0;
+}
+
 function writeDashboardNote(sha, pullRequest) {
   const note = readGitNote(sha);
   if (!note) return false;
@@ -107,6 +181,10 @@ function writeDashboardNote(sha, pullRequest) {
   const shortSha = dashboardCommit.short_sha;
 
   note.commit = dashboardCommit;
+  if (needsDiff(note)) {
+    const diff = readCommitDiff(dashboardCommit.sha);
+    if (diff) note.diff = diff;
+  }
 
   if (pullRequest) {
     note.pull_request = pullRequest;
@@ -142,15 +220,18 @@ function backfillDashboardNotes() {
     if (!sha) continue;
 
     const nextCommit = buildDashboardCommit(sha, commit);
+    const nextDiff = needsDiff(note) ? readCommitDiff(nextCommit.sha) : null;
     const changed =
       nextCommit.sha !== commit.sha ||
       nextCommit.short_sha !== commit.short_sha ||
       nextCommit.message !== commit.message ||
       nextCommit.date !== commit.date ||
-      nextCommit.author !== commit.author;
+      nextCommit.author !== commit.author ||
+      nextDiff !== null;
     if (!changed) continue;
 
     note.commit = nextCommit;
+    if (nextDiff) note.diff = nextDiff;
     writeFileSync(path, `${JSON.stringify(note, null, 2)}\n`);
   }
 }
