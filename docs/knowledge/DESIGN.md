@@ -240,11 +240,14 @@ A commit note records a list of `interactions` (prompt + response + `files_touch
 **Step 2 — expand to a causal prompt window.**
 
 - Keep each primary turn itself.
-- Walk backward from that turn until the previous edit turn (or `maxConsumedTurn`) and keep only the **prompt-only** turns in that slice.
+- Walk backward from that turn until the previous edit turn (or `maxConsumedTurn`) and collect the contiguous **prompt-only** slice in that episode.
+- Keep the last prompt-only turn in that slice as the **trigger** turn.
+- Optionally rescue at most one earlier prompt-only turn in the same slice as an **anchor** when it carries enough planning / clarification detail to explain the final edit.
 - Do **not** pull in non-primary edit turns, even if they touched the same file earlier in the session.
+- Do **not** keep the whole prompt-only chain if the trigger is just a short go-ahead and the older turns are broad stale discussion.
 - Do **not** pull in trailing prompt-only turns after the final edit turn in the window.
 
-This keeps nearby planning / clarification context such as “adjust the env defaults before the final README edit”, but drops older overwritten edit bursts, stale same-file work, and post-edit chatter that no longer explain the final diff.
+This keeps nearby planning / clarification context such as “adjust the env defaults before the final README edit” while avoiding two common failure modes: notes that collapse to a bare “yes, do that” trigger, and notes that drag in much older same-session design discussion. Older overwritten edit bursts, stale same-file work, and post-edit chatter are still dropped.
 
 **Split-commit semantics are preserved.**
 

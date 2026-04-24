@@ -118,7 +118,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 목록은 session 전체가 아니라 final diff 로 이어진 대화에서 가져옵니다. file-level 모드에서는 마지막 edit 경로와, 그 경로를 설명하는 가까운 문맥만 남깁니다.
+  prompt 목록은 session 전체가 아니라 final diff 로 이어진 대화에서 가져옵니다. file-level 모드에서는 가장 가까운 trigger prompt 를 남기고, 변경을 설명하는 데 정말 필요할 때만 가까운 planning 또는 clarification prompt 하나를 더 남깁니다.
 </Aside>
 
 <Aside>

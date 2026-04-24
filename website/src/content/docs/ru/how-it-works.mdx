@@ -118,7 +118,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  Списки prompt берутся из разговора, который привёл к final diff, а не из всей истории сессии. В режиме file-level Agent Note оставляет только путь последнего edit и близкий контекст, который его объясняет.
+  Списки prompt берутся из разговора, который привёл к final diff, а не из всей истории сессии. В режиме file-level Agent Note оставляет ближайший trigger prompt и, только если это действительно помогает объяснить изменение, ещё один близкий prompt с планированием или уточнением.
 </Aside>
 
 <Aside>
