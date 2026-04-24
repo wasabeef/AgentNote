@@ -2059,7 +2059,12 @@ async function recordCommitEntry(opts) {
     const touched = i.files_touched ?? [];
     return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
   });
-  if (hasTurnData && prompts.length === 0 && aiFiles.length === 0 && !transcriptEditsCommit && transcriptEditsOthers) {
+  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(promptEntries, allSessionEditTurns, maxConsumedTurn) : [];
+  const canUsePromptOnlyFallback = promptOnlyFallbackEntries.length >= 2 && promptOnlyFallbackEntries.some((entry2) => {
+    const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
+    return !!id && interactionsById.has(id);
+  });
+  if (hasTurnData && prompts.length === 0 && aiFiles.length === 0 && !transcriptEditsCommit && transcriptEditsOthers && !canUsePromptOnlyFallback) {
     interactions = [];
   } else if (relevantPromptEntries.length > 0) {
     interactions = relevantPromptEntries.map((entry2) => {
@@ -2088,6 +2093,16 @@ async function recordCommitEntry(opts) {
         transcriptMatched
       );
     }
+  } else if (canUsePromptOnlyFallback) {
+    relevantPromptEntries = promptOnlyFallbackEntries;
+    prompts = promptOnlyFallbackEntries.map((entry2) => entry2.prompt ?? "");
+    interactions = promptOnlyFallbackEntries.map((entry2) => {
+      const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
+      const matched = id ? interactionsById.get(id) : void 0;
+      if (matched) return toRecordedInteraction(matched, commitFileSet);
+      return { prompt: entry2.prompt ?? "", response: null };
+    });
+    consumedPromptEntries = promptOnlyFallbackEntries;
   } else if (transcriptPath && allInteractions.length > 0) {
     const transcriptMatched = allInteractions.filter(
       (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
@@ -2367,6 +2382,30 @@ function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxCo
       if (editTurns.has(turn)) break;
       selectedTurns.add(turn);
     }
+  }
+  return promptEntries.filter((entry) => {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    return turn > 0 && selectedTurns.has(turn);
+  });
+}
+function selectPromptOnlyFallbackEntries(promptEntries, editTurns, maxConsumedTurn) {
+  const latestPromptTurn = promptEntries.reduce((latest, entry) => {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    return turn > latest ? turn : latest;
+  }, 0);
+  if (latestPromptTurn <= maxConsumedTurn) return [];
+  const selectedTurns = /* @__PURE__ */ new Set([latestPromptTurn]);
+  const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  let lowerBoundary = maxConsumedTurn;
+  for (let index = orderedEditTurns.length - 1; index >= 0; index--) {
+    const editTurn = orderedEditTurns[index];
+    if (editTurn >= latestPromptTurn) continue;
+    lowerBoundary = Math.max(editTurn, maxConsumedTurn);
+    break;
+  }
+  for (let turn = latestPromptTurn - 1; turn > lowerBoundary; turn--) {
+    if (editTurns.has(turn)) break;
+    selectedTurns.add(turn);
   }
   return promptEntries.filter((entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
