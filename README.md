@@ -81,7 +81,7 @@ With the generated git hooks installed, Agent Note records commits automatically
 - The files touched by the agent
 - An AI ratio for the commit
 
-Prompt lists are chosen from the causal conversation around the final diff, not from the entire session window. When Agent Note falls back to file-level attribution, it anchors the note to the latest touch turn for each committed file, keeps the nearest trigger prompt, and may keep one nearby planning or clarification prompt when it meaningfully explains the final edit. Older same-file history and trailing follow-up chatter are still dropped. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
+Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 

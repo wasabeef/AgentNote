@@ -118,7 +118,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 목록은 session 전체가 아니라 final diff 로 이어진 대화에서 가져옵니다. file-level 모드에서는 가장 가까운 trigger prompt 를 남기고, 변경을 설명하는 데 정말 필요할 때만 가까운 planning 또는 clarification prompt 하나를 더 남깁니다.
+  prompt 목록은 session 전체가 아니라 commit 과 다음 commit 사이의 대화 window 에서 가져옵니다. Agent Note 는 현재 commit 을 설명하는 planning, clarification, review prompt 를 남기고, 인용된 과거 prompt 기록이나 이 commit 에 남지 않은 edit turn 은 잘라냅니다.
 </Aside>
 
 <Aside>

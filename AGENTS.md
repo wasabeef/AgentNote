@@ -108,7 +108,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 
 ### Causal turn ID
 
-Each `UserPromptSubmit` increments a turn counter. File changes inherit the current turn number. At commit time, `recordCommitEntry()` groups files by turn and attaches them as `files_touched` per interaction. This avoids timestamp-based attribution which is unreliable under async hooks.
+Each `UserPromptSubmit` increments a turn counter. File changes inherit the current turn number. At commit time, `recordCommitEntry()` groups files by turn and attaches them as `files_touched` per interaction. Prompt lists are selected from the commit-to-commit window: turns after the previous recorded commit through the current commit's surviving edit turns, with structurally stale leading quoted history and overwritten edit turns trimmed. This avoids timestamp-based attribution which is unreliable under async hooks.
 
 ### init vs hook
 

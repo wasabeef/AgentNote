@@ -230,24 +230,23 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 A commit note records a list of `interactions` (prompt + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
-**Current: causal window.** Agent Note keeps the prompt list centered on the turns that actually survive into the final commit, then expands just enough to preserve the prompt-only context that leads into those edits.
+**Current: commit-to-commit window.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
 
 **Step 1 — derive primary turns.**
 
 - **Session-driven agents** (`Claude`, `Gemini`, partial `Cursor`): use line-level attribution when blob data is available. Turns that still own added lines in the final diff become the primary turns. If line-level attribution is unavailable, fall back to the **latest touch turn for each committed file**, not every historical same-file turn in the session.
 - **Transcript-driven agents** (`Codex`): use transcript `files_touched` + `line_stats`. Agent Note searches backward for the smallest suffix of transcript edits whose cumulative line counts match the committed diff. Those turns become the primary turns. If an exact suffix cannot be proven, fall back to transcript turns that touched the commit's files.
 
-**Step 2 — expand to a causal prompt window.**
+**Step 2 — trim the commit prompt window.**
 
-- Keep each primary turn itself.
-- Walk backward from that turn until the previous edit turn (or `maxConsumedTurn`) and collect the contiguous **prompt-only** slice in that episode.
-- Keep the last prompt-only turn in that slice as the **trigger** turn.
-- Optionally rescue at most one earlier prompt-only turn in the same slice as an **anchor** when it carries enough planning / clarification detail to explain the final edit.
-- Do **not** pull in non-primary edit turns, even if they touched the same file earlier in the session.
-- Do **not** keep the whole prompt-only chain if the trigger is just a short go-ahead and the older turns are broad stale discussion.
-- Do **not** pull in trailing prompt-only turns after the final edit turn in the window.
+- Build the base window from turns `> maxConsumedTurn` through the latest primary turn for this commit.
+- Keep nearby prompt-only planning, clarification, review, and follow-up turns inside that window.
+- Drop edit turns that are not primary for this commit, even if they touched the same file earlier in the session.
+- Trim leading quoted prompt-history blocks, one-character continuation prompts, and overwritten edit bursts before the current work begins.
+- Use structural signals only: path / file references, Unicode token overlap with the commit subject and paths, list-like prompt shape, quote markers, and edit-turn ownership. Do not use language-specific keyword lists.
+- For transcript-driven agents such as Codex, apply the same window rule after transcript `files_touched` / `line_stats` identify the primary turns.
 
-This keeps nearby planning / clarification context such as “adjust the env defaults before the final README edit” while avoiding two common failure modes: notes that collapse to a bare “yes, do that” trigger, and notes that drag in much older same-session design discussion. Older overwritten edit bursts, stale same-file work, and post-edit chatter are still dropped.
+This keeps a readable commit narrative such as “remember the package redesign?” → “start the branch” → “do not keep backward compatibility” → “run the final review checklist”, while avoiding two failure modes: notes that collapse to a single short turn, and notes that drag in stale quoted PR summaries or overwritten edit bursts.
 
 **Split-commit semantics are preserved.**
 
@@ -255,7 +254,7 @@ This keeps nearby planning / clarification context such as “adjust the env def
 - `maxConsumedTurn` trims spent context from later commits in the same session.
 - A turn that is primary for the current commit is still allowed through even if an earlier split commit already consumed the same turn.
 
-**Trade-off:** the causal window is intentionally narrower than the old full-session window, but it can still include prompt-only turns near the active edit block. This is deliberate: the goal is "causal conversation", not "edit-only prompts".
+**Trade-off:** the commit window is intentionally broader than edit-only attribution, but much narrower than the full session. This is deliberate: the goal is "the conversation between commits", not "only the prompt that touched the final line".
 
 ### Line-level AI attribution
 
