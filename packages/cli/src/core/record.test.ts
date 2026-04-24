@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
@@ -870,6 +870,95 @@ describe("recordCommitEntry", () => {
         null,
         "human-only commit must not inherit transcript interactions for other files",
       );
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("mid-session Codex commit keeps a prompt-only note when transcript attribution misses commit files", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "missing-files.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:30:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:30:00Z"}}`,
+          '{"timestamp":"2026-04-15T09:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit first.ts"}]}}',
+          '{"timestamp":"2026-04-15T09:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing first"}]}}',
+          '{"timestamp":"2026-04-15T09:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: first.ts\\\\n+export const first = 1;\\\\n*** End Patch\\"}"}}',
+          '{"timestamp":"2026-04-15T09:30:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"plan dashboard workflow cleanup"}]}}',
+          '{"timestamp":"2026-04-15T09:30:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I\\u0027ll move the shared entrypoints and clean up the workflow next."}]}}',
+          '{"timestamp":"2026-04-15T09:30:06Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"yes, proceed with the cleanup"}]}}',
+          '{"timestamp":"2026-04-15T09:30:07Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Proceeding with the workflow cleanup."}]}}',
+          '{"timestamp":"2026-04-15T09:30:08Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c2","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: unrelated.ts\\\\n+export const unrelated = true;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"edit first.ts","prompt_id":"id-first","turn":1,"timestamp":"2026-04-15T09:30:01Z"}\n' +
+          '{"event":"prompt","prompt":"plan dashboard workflow cleanup","prompt_id":"id-plan","turn":2,"timestamp":"2026-04-15T09:30:04Z"}\n' +
+          '{"event":"prompt","prompt":"yes, proceed with the cleanup","prompt_id":"id-go","turn":3,"timestamp":"2026-04-15T09:30:06Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+      writeFileSync(join(repoDir, "first.ts"), "export const first = 1;\n");
+      execSync("git add first.ts", { cwd: repoDir });
+      execSync('git commit -m "feat: first codex commit"', { cwd: repoDir });
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const workflowPath = join(repoDir, ".github/workflows/test.yml");
+      mkdirSync(dirname(workflowPath), { recursive: true });
+      writeFileSync(
+        workflowPath,
+        "name: Test\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n",
+      );
+      writeFileSync(join(repoDir, "docs.md"), "# dashboard cleanup\n");
+      execSync("git add .github/workflows/test.yml docs.md", { cwd: repoDir });
+      execSync('git commit -m "fix: workflow cleanup"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null, "mid-session false negative should still leave a prompt-only note");
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+        files_touched?: string[];
+      }>;
+      assert.deepEqual(
+        interactions.map((interaction) => interaction.prompt),
+        ["plan dashboard workflow cleanup", "yes, proceed with the cleanup"],
+      );
+      assert.equal(
+        interactions[0].response,
+        "I'll move the shared entrypoints and clean up the workflow next.",
+      );
+      assert.equal(interactions[1].response, "Proceeding with the workflow cleanup.");
+      assert.equal(interactions[0].files_touched, undefined);
+      assert.equal(interactions[1].files_touched, undefined);
+      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
