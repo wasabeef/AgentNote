@@ -706,6 +706,7 @@ function selectPromptWindowEntries(
   if (orderedPrimaryTurns.length === 0) return [];
 
   const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  const promptByTurn = buildPromptByTurn(promptEntries);
   const selectedTurns = new Set<number>();
 
   for (const primaryTurn of orderedPrimaryTurns) {
@@ -719,8 +720,13 @@ function selectPromptWindowEntries(
       break;
     }
 
+    const promptOnlyChain: number[] = [];
     for (let turn = primaryTurn - 1; turn > lowerBoundary; turn--) {
       if (editTurns.has(turn)) break;
+      promptOnlyChain.push(turn);
+    }
+
+    for (const turn of selectEpisodeContextTurns(promptOnlyChain.reverse(), promptByTurn)) {
       selectedTurns.add(turn);
     }
   }
@@ -744,6 +750,7 @@ function selectPromptOnlyFallbackEntries(
 
   const selectedTurns = new Set<number>([latestPromptTurn]);
   const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  const promptByTurn = buildPromptByTurn(promptEntries);
 
   let lowerBoundary = maxConsumedTurn;
   for (let index = orderedEditTurns.length - 1; index >= 0; index--) {
@@ -753,8 +760,13 @@ function selectPromptOnlyFallbackEntries(
     break;
   }
 
+  const promptOnlyChain: number[] = [];
   for (let turn = latestPromptTurn - 1; turn > lowerBoundary; turn--) {
     if (editTurns.has(turn)) break;
+    promptOnlyChain.push(turn);
+  }
+
+  for (const turn of selectEpisodeContextTurns(promptOnlyChain.reverse(), promptByTurn)) {
     selectedTurns.add(turn);
   }
 
@@ -762,6 +774,76 @@ function selectPromptOnlyFallbackEntries(
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
     return turn > 0 && selectedTurns.has(turn);
   });
+}
+
+const EPISODE_ANCHOR_LOOKBACK = 3;
+const EPISODE_ANCHOR_SCORE_THRESHOLD = 40;
+const EPISODE_LOW_INFO_THRESHOLD = 20;
+const EPISODE_ANCHOR_DELTA = 14;
+
+function buildPromptByTurn(promptEntries: Record<string, unknown>[]): Map<number, string> {
+  const prompts = new Map<number, string>();
+  for (const entry of promptEntries) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
+    if (turn > 0 && prompt) prompts.set(turn, prompt);
+  }
+  return prompts;
+}
+
+function scorePromptAnchor(prompt: string): number {
+  const text = prompt.trim();
+  if (!text) return 0;
+
+  let score = Math.min(Math.floor(text.length / 4), 24);
+  const newlines = (text.match(/\n/g) ?? []).length;
+  score += Math.min(newlines * 10, 30);
+  if (/`[^`]+`/.test(text)) score += 18;
+  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text)) score += 16;
+  if (/--[a-z0-9-]+/i.test(text)) score += 14;
+  if (/^\s*(?:[-*]|\d+\.)\s/m.test(text)) score += 20;
+
+  return score;
+}
+
+function selectEpisodeContextTurns(
+  chainTurns: number[],
+  promptByTurn: Map<number, string>,
+): Set<number> {
+  const selected = new Set<number>();
+  if (chainTurns.length === 0) return selected;
+
+  const triggerTurn = chainTurns[chainTurns.length - 1];
+  selected.add(triggerTurn);
+
+  const triggerScore = scorePromptAnchor(promptByTurn.get(triggerTurn) ?? "");
+  let rescuedAnchor = false;
+  let scanned = 0;
+
+  for (
+    let index = chainTurns.length - 2;
+    index >= 0 && scanned < EPISODE_ANCHOR_LOOKBACK;
+    index--
+  ) {
+    scanned += 1;
+    const candidateTurn = chainTurns[index];
+    const candidateScore = scorePromptAnchor(promptByTurn.get(candidateTurn) ?? "");
+    if (
+      candidateScore >= EPISODE_ANCHOR_SCORE_THRESHOLD ||
+      (triggerScore <= EPISODE_LOW_INFO_THRESHOLD &&
+        candidateScore >= triggerScore + EPISODE_ANCHOR_DELTA)
+    ) {
+      selected.add(candidateTurn);
+      rescuedAnchor = true;
+      break;
+    }
+  }
+
+  if (!rescuedAnchor && chainTurns.length <= 2 && triggerScore <= EPISODE_LOW_INFO_THRESHOLD) {
+    for (const turn of chainTurns) selected.add(turn);
+  }
+
+  return selected;
 }
 
 async function selectTranscriptPrimaryTurns(

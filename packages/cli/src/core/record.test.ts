@@ -597,6 +597,43 @@ describe("recordCommitEntry", () => {
     assert.deepEqual(prompts, ["touch a.ts", "bridge the follow-up change", "touch b.ts"]);
   });
 
+  it("file-level fallback keeps only the nearest informative anchor before a short trigger", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"long earlier discussion about generated files and dashboard deploy details that is no longer the best explanation","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"Missing commit notes should keep a prompt-only note when Codex misses commit files\\n- keep the human-only skip\\n- rescue only the current implementation thread","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"yes, implement that","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"apply the record fallback in record.ts","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"record.ts","turn":4}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    writeFileSync(join(repoDir, "record.ts"), "export const record = true;\n");
+    execSync("git add record.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: narrow prompt episode anchor"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [
+      "Missing commit notes should keep a prompt-only note when Codex misses commit files\n- keep the human-only skip\n- rescue only the current implementation thread",
+      "yes, implement that",
+      "apply the record fallback in record.ts",
+    ]);
+  });
+
   it("excludes generated artifacts from line-level AI ratio", async () => {
     const sourceBlob = hashBlob(repoDir, "export const status = 'done';\n");
 
@@ -959,6 +996,89 @@ describe("recordCommitEntry", () => {
       assert.equal(interactions[0].files_touched, undefined);
       assert.equal(interactions[1].files_touched, undefined);
       assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("mid-session Codex prompt-only fallback keeps the nearest informative anchor only", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "prompt-only-anchor.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:30:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:30:00Z"}}`,
+          '{"timestamp":"2026-04-15T09:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit first.ts"}]}}',
+          '{"timestamp":"2026-04-15T09:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing first"}]}}',
+          '{"timestamp":"2026-04-15T09:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: first.ts\\\\n+export const first = 1;\\\\n*** End Patch\\"}"}}',
+          '{"timestamp":"2026-04-15T09:30:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor"}]}}',
+          '{"timestamp":"2026-04-15T09:30:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"older context"}]}}',
+          '{"timestamp":"2026-04-15T09:30:06Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- only rescue the current implementation episode"}]}}',
+          '{"timestamp":"2026-04-15T09:30:07Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I\\u0027ll keep the fallback narrow to the current Codex episode."}]}}',
+          '{"timestamp":"2026-04-15T09:30:08Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"yes, implement that"}]}}',
+          '{"timestamp":"2026-04-15T09:30:09Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Implementing the narrow fallback now."}]}}',
+          '{"timestamp":"2026-04-15T09:30:10Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c2","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: unrelated.ts\\\\n+export const unrelated = true;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"edit first.ts","prompt_id":"id-first","turn":1,"timestamp":"2026-04-15T09:30:01Z"}\n' +
+          '{"event":"prompt","prompt":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor","prompt_id":"id-old","turn":2,"timestamp":"2026-04-15T09:30:04Z"}\n' +
+          '{"event":"prompt","prompt":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- only rescue the current implementation episode","prompt_id":"id-plan","turn":3,"timestamp":"2026-04-15T09:30:06Z"}\n' +
+          '{"event":"prompt","prompt":"yes, implement that","prompt_id":"id-go","turn":4,"timestamp":"2026-04-15T09:30:08Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+      writeFileSync(join(repoDir, "first.ts"), "export const first = 1;\n");
+      execSync("git add first.ts", { cwd: repoDir });
+      execSync('git commit -m "feat: first codex commit"', { cwd: repoDir });
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const workflowPath = join(repoDir, ".github/workflows/test.yml");
+      mkdirSync(dirname(workflowPath), { recursive: true });
+      writeFileSync(
+        workflowPath,
+        "name: Test\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n",
+      );
+      writeFileSync(join(repoDir, "docs.md"), "# dashboard cleanup\n");
+      execSync("git add .github/workflows/test.yml docs.md", { cwd: repoDir });
+      execSync('git commit -m "fix: workflow cleanup"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string }>;
+      assert.deepEqual(
+        interactions.map((interaction) => interaction.prompt),
+        [
+          "keep a prompt-only note for Codex when transcript attribution misses commit files\n- keep human-only commits skipped\n- only rescue the current implementation episode",
+          "yes, implement that",
+        ],
+      );
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
