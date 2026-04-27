@@ -62,8 +62,9 @@ try {
     copyDirectoryContents(snapshotDir, dashboardNotesDir);
   }
 
+  git(["add", "dashboard/notes"], { cwd: worktreeDir });
   try {
-    git(["diff", "--quiet", "--", "dashboard/notes"], { cwd: worktreeDir });
+    git(["diff", "--cached", "--quiet", "--", "dashboard/notes"], { cwd: worktreeDir });
   } catch {
     hasChanges = true;
   }
@@ -73,7 +74,6 @@ try {
     git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], {
       cwd: worktreeDir,
     });
-    git(["add", "dashboard/notes"], { cwd: worktreeDir });
     git(["commit", "-m", "chore: update Dashboard notes"], { cwd: worktreeDir });
     git(["push", "origin", "gh-pages"], { cwd: worktreeDir, stdio: "inherit" });
   } else {
