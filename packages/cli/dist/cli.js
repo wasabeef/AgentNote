@@ -1948,6 +1948,11 @@ async function recordCommitEntry(opts) {
   } catch {
   }
   const commitFileSet = new Set(commitFiles);
+  let commitSubject = "";
+  try {
+    commitSubject = await git(["show", "-s", "--format=%s", "HEAD"]);
+  } catch {
+  }
   const allChangeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
   const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
   const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
@@ -1971,8 +1976,9 @@ async function recordCommitEntry(opts) {
     (e) => !consumedPairs.has(consumedKey(e))
   );
   const maxConsumedTurn = await readMaxConsumedTurn(sessionDir);
+  const currentTurn = await readCurrentTurn(sessionDir);
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
-  const allSessionEditTurns = collectSessionEditTurns(allChangeEntries, allPreBlobEntries);
+  const unconsumedEditTurns = collectSessionEditTurns(changeEntries, preBlobEntriesForTurnFix);
   const commitFileTurns = collectCommitFileTurns(
     changeEntries,
     preBlobEntriesForTurnFix,
@@ -1981,6 +1987,7 @@ async function recordCommitEntry(opts) {
   let aiFiles;
   let prompts;
   let relevantPromptEntries;
+  let promptWindowConsumedEntries = [];
   const relevantTurns = new Set(commitFileTurns.keys());
   let primaryTurns = /* @__PURE__ */ new Set();
   if (hasTurnData) {
@@ -2017,22 +2024,21 @@ async function recordCommitEntry(opts) {
   if (hasTurnData) {
     const fileFallbackTurns = selectFileFallbackPrimaryTurns(commitFileTurns);
     primaryTurns = lineAttribution.contributingTurns.size > 0 ? lineAttribution.contributingTurns : fileFallbackTurns.size > 0 ? fileFallbackTurns : new Set(relevantTurns);
-    relevantPromptEntries = selectPromptWindowEntries(
+    const promptWindow = selectPromptWindowEntries(
       promptEntries,
       primaryTurns,
-      allSessionEditTurns,
-      maxConsumedTurn
+      unconsumedEditTurns,
+      maxConsumedTurn,
+      commitFiles,
+      commitSubject
     );
+    relevantPromptEntries = promptWindow.selected;
+    promptWindowConsumedEntries = promptWindow.consumed;
     prompts = relevantPromptEntries.map((e) => e.prompt);
   }
   const transcriptPath = opts.transcriptPath ?? await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(opts.sessionId);
   let crossTurnCommit = false;
   if (hasTurnData && relevantTurns.size > 0) {
-    const turnFilePath = join6(sessionDir, TURN_FILE);
-    let currentTurn = 0;
-    if (existsSync7(turnFilePath)) {
-      currentTurn = Number.parseInt((await readFile7(turnFilePath, "utf-8")).trim(), 10) || 0;
-    }
     const minRelevantTurn = Math.min(...relevantTurns);
     crossTurnCommit = minRelevantTurn < currentTurn;
   }
@@ -2059,8 +2065,8 @@ async function recordCommitEntry(opts) {
     const touched = i.files_touched ?? [];
     return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
   });
-  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(promptEntries, allSessionEditTurns, maxConsumedTurn) : [];
-  const canUsePromptOnlyFallback = promptOnlyFallbackEntries.length >= 2 && promptOnlyFallbackEntries.some((entry2) => {
+  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject) : { selected: [], consumed: [] };
+  const canUsePromptOnlyFallback = promptOnlyFallbackEntries.selected.length >= 2 && promptOnlyFallbackEntries.selected.some((entry2) => {
     const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
     return !!id && interactionsById.has(id);
   });
@@ -2073,7 +2079,7 @@ async function recordCommitEntry(opts) {
       if (matched) return toRecordedInteraction(matched, commitFileSet);
       return { prompt: entry2.prompt ?? "", response: null };
     });
-    consumedPromptEntries = relevantPromptEntries;
+    consumedPromptEntries = promptWindowConsumedEntries.length > 0 ? promptWindowConsumedEntries : relevantPromptEntries;
     const transcriptMatched = relevantPromptEntries.map((entry2) => {
       const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
       return id ? interactionsById.get(id) : void 0;
@@ -2094,41 +2100,44 @@ async function recordCommitEntry(opts) {
       );
     }
   } else if (canUsePromptOnlyFallback) {
-    relevantPromptEntries = promptOnlyFallbackEntries;
-    prompts = promptOnlyFallbackEntries.map((entry2) => entry2.prompt ?? "");
-    interactions = promptOnlyFallbackEntries.map((entry2) => {
+    relevantPromptEntries = promptOnlyFallbackEntries.selected;
+    prompts = promptOnlyFallbackEntries.selected.map((entry2) => entry2.prompt ?? "");
+    interactions = promptOnlyFallbackEntries.selected.map((entry2) => {
       const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
       const matched = id ? interactionsById.get(id) : void 0;
       if (matched) return toRecordedInteraction(matched, commitFileSet);
       return { prompt: entry2.prompt ?? "", response: null };
     });
-    consumedPromptEntries = promptOnlyFallbackEntries;
+    consumedPromptEntries = promptOnlyFallbackEntries.consumed;
   } else if (transcriptPath && allInteractions.length > 0) {
     const transcriptMatched = allInteractions.filter(
       (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
     );
-    const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
     const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
       transcriptMatched,
       promptEntries,
       attributionCommitFileSet
     );
-    const windowEntries = selectPromptWindowEntries(
+    const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
+    const promptWindow = selectPromptWindowEntries(
       promptEntries,
       transcriptPrimaryTurns,
       transcriptEditTurns,
-      maxConsumedTurn
+      maxConsumedTurn,
+      commitFiles,
+      commitSubject
     );
-    relevantPromptEntries = windowEntries;
-    prompts = windowEntries.map((entry2) => entry2.prompt ?? "");
-    if (windowEntries.length > 0) {
-      interactions = windowEntries.map((entry2) => {
+    relevantPromptEntries = promptWindow.selected;
+    promptWindowConsumedEntries = promptWindow.consumed;
+    prompts = relevantPromptEntries.map((entry2) => entry2.prompt ?? "");
+    if (relevantPromptEntries.length > 0) {
+      interactions = relevantPromptEntries.map((entry2) => {
         const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
         const matched = id ? interactionsById.get(id) : void 0;
         if (matched) return toRecordedInteraction(matched, commitFileSet);
         return { prompt: entry2.prompt ?? "", response: null };
       });
-      consumedPromptEntries = windowEntries;
+      consumedPromptEntries = promptWindowConsumedEntries.length > 0 ? promptWindowConsumedEntries : relevantPromptEntries;
     } else if (transcriptMatched.length > 0) {
       interactions = transcriptMatched.map((i) => toRecordedInteraction(i, commitFileSet));
     } else if (!crossTurnCommit) {
@@ -2315,30 +2324,6 @@ function attachFilesTouched(changeEntries, promptEntries, interactions, commitFi
     }
   }
 }
-function collectSessionEditTurns(changeEntries, preBlobEntries) {
-  const turns = /* @__PURE__ */ new Set();
-  for (const entry of [...changeEntries, ...preBlobEntries]) {
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    const file = entry.file;
-    if (turn > 0 && file) turns.add(turn);
-  }
-  return turns;
-}
-function collectTranscriptEditTurns(interactions, promptEntries) {
-  const promptTurnById = /* @__PURE__ */ new Map();
-  for (const entry of promptEntries) {
-    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
-  }
-  const turns = /* @__PURE__ */ new Set();
-  for (const interaction of interactions) {
-    if (!interaction.prompt_id || (interaction.files_touched?.length ?? 0) === 0) continue;
-    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
-    if (turn > 0) turns.add(turn);
-  }
-  return turns;
-}
 function collectCommitFileTurns(changeEntries, preBlobEntries, commitFileSet) {
   const turns = /* @__PURE__ */ new Map();
   const addEntry = (entry) => {
@@ -2363,54 +2348,194 @@ function selectFileFallbackPrimaryTurns(commitFileTurns) {
   }
   return new Set(latestTurnByFile.values());
 }
-function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn) {
-  if (primaryTurns.size === 0) return [];
-  const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
-  if (orderedPrimaryTurns.length === 0) return [];
-  const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
-  const selectedTurns = /* @__PURE__ */ new Set();
-  for (const primaryTurn of orderedPrimaryTurns) {
-    selectedTurns.add(primaryTurn);
-    let lowerBoundary = maxConsumedTurn;
-    for (let index = orderedEditTurns.length - 1; index >= 0; index--) {
-      const editTurn = orderedEditTurns[index];
-      if (editTurn >= primaryTurn) continue;
-      lowerBoundary = Math.max(editTurn, maxConsumedTurn);
-      break;
-    }
-    for (let turn = primaryTurn - 1; turn > lowerBoundary; turn--) {
-      if (editTurns.has(turn)) break;
-      selectedTurns.add(turn);
-    }
-  }
-  return promptEntries.filter((entry) => {
+function collectSessionEditTurns(changeEntries, preBlobEntries) {
+  const turns = /* @__PURE__ */ new Set();
+  for (const entry of [...changeEntries, ...preBlobEntries]) {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    return turn > 0 && selectedTurns.has(turn);
-  });
+    const file = entry.file;
+    if (turn > 0 && file) turns.add(turn);
+  }
+  return turns;
 }
-function selectPromptOnlyFallbackEntries(promptEntries, editTurns, maxConsumedTurn) {
+function collectTranscriptEditTurns(interactions, promptEntries) {
+  const promptTurnById = /* @__PURE__ */ new Map();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
+  }
+  const turns = /* @__PURE__ */ new Set();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id || (interaction.files_touched?.length ?? 0) === 0) continue;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (turn > 0) turns.add(turn);
+  }
+  return turns;
+}
+function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, commitFiles, commitSubject) {
+  if (primaryTurns.size === 0) return emptyPromptWindowSelection();
+  const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  if (orderedPrimaryTurns.length === 0) return emptyPromptWindowSelection();
+  return selectCommitPromptWindow(
+    promptEntries,
+    maxConsumedTurn,
+    orderedPrimaryTurns[orderedPrimaryTurns.length - 1] ?? 0,
+    primaryTurns,
+    editTurns,
+    commitFiles,
+    commitSubject
+  );
+}
+function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject) {
   const latestPromptTurn = promptEntries.reduce((latest, entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
     return turn > latest ? turn : latest;
   }, 0);
-  if (latestPromptTurn <= maxConsumedTurn) return [];
-  const selectedTurns = /* @__PURE__ */ new Set([latestPromptTurn]);
-  const orderedEditTurns = [...editTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
-  let lowerBoundary = maxConsumedTurn;
-  for (let index = orderedEditTurns.length - 1; index >= 0; index--) {
-    const editTurn = orderedEditTurns[index];
-    if (editTurn >= latestPromptTurn) continue;
-    lowerBoundary = Math.max(editTurn, maxConsumedTurn);
-    break;
-  }
-  for (let turn = latestPromptTurn - 1; turn > lowerBoundary; turn--) {
-    if (editTurns.has(turn)) break;
-    selectedTurns.add(turn);
-  }
-  return promptEntries.filter((entry) => {
+  if (latestPromptTurn <= maxConsumedTurn) return emptyPromptWindowSelection();
+  return selectCommitPromptWindow(
+    promptEntries,
+    maxConsumedTurn,
+    latestPromptTurn,
+    /* @__PURE__ */ new Set(),
+    /* @__PURE__ */ new Set(),
+    commitFiles,
+    commitSubject
+  );
+}
+function emptyPromptWindowSelection() {
+  return { selected: [], consumed: [] };
+}
+function selectCommitPromptWindow(promptEntries, lowerTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject) {
+  if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
+  const rows = promptEntries.filter((entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    return turn > 0 && selectedTurns.has(turn);
-  });
+    return turn > lowerTurn && turn <= upperTurn || primaryTurns.has(turn);
+  }).sort((left, right) => {
+    const leftTurn = typeof left.turn === "number" ? left.turn : 0;
+    const rightTurn = typeof right.turn === "number" ? right.turn : 0;
+    return leftTurn - rightTurn;
+  }).map(
+    (entry) => buildPromptWindowRow(entry, primaryTurns, editTurns, commitFiles, commitSubject)
+  );
+  if (rows.length === 0) return emptyPromptWindowSelection();
+  let hardStartIndex = 0;
+  while (hardStartIndex < rows.length - 1 && isHardTrimPromptRow(rows[hardStartIndex])) {
+    hardStartIndex += 1;
+  }
+  const hardTrimmedRows = rows.slice(0, hardStartIndex);
+  const hasQuotedOrTinyHardTrim = hardTrimmedRows.some(
+    (row) => row.isQuotedHistory || row.isTinyPrompt
+  );
+  const firstAnchorIndex = rows.findIndex(
+    (row, index) => index >= hardStartIndex && isPromptWindowAnchor(row)
+  );
+  let startIndex = firstAnchorIndex >= 0 ? firstAnchorIndex : hardStartIndex;
+  const softLeadingRows = firstAnchorIndex >= 0 ? rows.slice(hardStartIndex, firstAnchorIndex) : [];
+  const preserveShortLeadingContext = firstAnchorIndex >= 0 && !hasQuotedOrTinyHardTrim && firstAnchorIndex - hardStartIndex <= 2 && softLeadingRows.every(isLowShapePromptRow);
+  if (preserveShortLeadingContext) {
+    startIndex = hardStartIndex;
+  }
+  const consumed = rows.map((row) => row.entry);
+  const selectedRows = rows.slice(startIndex).filter((row) => !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn);
+  const selected = selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES ? trimLongPromptWindow(selectedRows).map((row) => row.entry) : selectedRows.map((row) => row.entry);
+  return { selected, consumed };
+}
+function buildPromptWindowRow(entry, primaryTurns, editTurns, commitFiles, commitSubject) {
+  const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
+  const turn = typeof entry.turn === "number" ? entry.turn : 0;
+  const isQuotedHistory = isQuotedPromptHistory(prompt);
+  const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
+  const isPrimaryTurn = primaryTurns.has(turn);
+  return {
+    entry,
+    fileRefScore: scorePromptFileRefs(prompt, commitFiles),
+    shapeScore: scoreTextShape(prompt),
+    textScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
+    isQuotedHistory,
+    isTinyPrompt: !isPrimaryTurn && isStructurallyTinyPrompt(prompt),
+    isPrimaryTurn,
+    isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn
+  };
+}
+function isPromptWindowAnchor(row) {
+  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
+  return row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+function isHardTrimPromptRow(row) {
+  return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn;
+}
+function isLowShapePromptRow(row) {
+  return row.textScore < 2 && row.fileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE && row.shapeScore < 20;
+}
+function trimLongPromptWindow(rows) {
+  const first = rows[0];
+  const tail = rows.slice(-(PROMPT_WINDOW_MAX_ENTRIES - 1));
+  const selected = /* @__PURE__ */ new Map();
+  if (first) selected.set(promptRowTurn(first), first);
+  for (const row of tail) selected.set(promptRowTurn(row), row);
+  return [...selected.values()].sort((left, right) => promptRowTurn(left) - promptRowTurn(right));
+}
+function promptRowTurn(row) {
+  return typeof row.entry.turn === "number" ? row.entry.turn : 0;
+}
+function isStructurallyTinyPrompt(prompt) {
+  return prompt.trim().length <= 1;
+}
+function isQuotedPromptHistory(prompt) {
+  if (/🧑\s*Prompt/.test(prompt) && /🤖\s*Response/.test(prompt)) return true;
+  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > 300)
+    return true;
+  const indentedQuoteLines = prompt.match(/^\s{2,}\S/gm)?.length ?? 0;
+  return prompt.length > 500 && indentedQuoteLines >= 8;
+}
+function scoreTextShape(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  let score = Math.min(Math.floor(trimmed.length / 4), 24);
+  const newlines = (trimmed.match(/\n/g) ?? []).length;
+  score += Math.min(newlines * 10, 30);
+  if (/`[^`]+`/.test(trimmed)) score += 18;
+  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) score += 16;
+  if (/--[a-z0-9-]+/i.test(trimmed)) score += 14;
+  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += 20;
+  return score;
+}
+function scorePromptTextOverlap(prompt, commitFiles, commitSubject) {
+  const promptTokens = tokenizePromptSelectionText(prompt);
+  const commitTokens = tokenizePromptSelectionText(`${commitSubject}
+${commitFiles.join("\n")}`);
+  let score = 0;
+  for (const token of promptTokens) {
+    if (commitTokens.has(token)) score += token.includes("/") || token.includes(".") ? 4 : 1;
+  }
+  return score;
+}
+function scorePromptFileRefs(prompt, commitFiles) {
+  const lowerPrompt = prompt.toLowerCase();
+  let score = 0;
+  for (const file of commitFiles) {
+    const lowerFile = file.toLowerCase();
+    if (lowerPrompt.includes(lowerFile)) score += 80;
+    const segments = file.split(/[/.]/).filter((segment) => segment.length >= 4);
+    for (const segment of segments) {
+      if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
+    }
+    const basename2 = file.split("/").pop();
+    if (basename2 && lowerPrompt.includes(basename2.toLowerCase())) score += 20;
+  }
+  return score;
+}
+function tokenizePromptSelectionText(text) {
+  const tokens = /* @__PURE__ */ new Set();
+  const normalized = text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^\p{L}\p{N}_\-./]+/gu, " ").toLowerCase();
+  for (const raw of normalized.split(/\s+/)) {
+    if (!raw || raw.length < 2) continue;
+    tokens.add(raw);
+    for (const part of raw.split(/[./_-]/)) {
+      if (part.length >= 3) tokens.add(part);
+    }
+  }
+  return tokens;
 }
 async function selectTranscriptPrimaryTurns(transcriptMatched, promptEntries, commitFileSet) {
   const promptTurnById = /* @__PURE__ */ new Map();
@@ -2741,6 +2866,11 @@ async function readMaxConsumedTurn(sessionDir) {
   }
   return max;
 }
+async function readCurrentTurn(sessionDir) {
+  const file = join6(sessionDir, TURN_FILE);
+  if (!existsSync7(file)) return 0;
+  return Number.parseInt((await readFile7(file, "utf-8")).trim(), 10) || 0;
+}
 async function readConsumedPairs(sessionDir) {
   const file = join6(sessionDir, COMMITTED_PAIRS_FILE);
   if (!existsSync7(file)) return /* @__PURE__ */ new Set();
@@ -2865,6 +2995,7 @@ async function ensureEmptyBlobInStore() {
     }
   }
 }
+var PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
 var init_record = __esm({
   "src/core/record.ts"() {
     "use strict";
@@ -2876,6 +3007,10 @@ var init_record = __esm({
     init_jsonl();
     init_session();
     init_storage();
+    PROMPT_WINDOW_MAX_ENTRIES = 24;
+    PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
+    PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
+    PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
   }
 });
 
@@ -3582,7 +3717,7 @@ async function readStdin() {
   }
   return Buffer.concat(chunks).toString("utf-8");
 }
-async function readCurrentTurn(sessionDir) {
+async function readCurrentTurn2(sessionDir) {
   const turnPath = join12(sessionDir, TURN_FILE);
   if (!existsSync12(turnPath)) return 0;
   const raw = (await readFile11(turnPath, "utf-8")).trim();
@@ -3661,7 +3796,7 @@ async function hook(args2 = []) {
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
-      const turn = await readCurrentTurn(sessionDir);
+      const turn = await readCurrentTurn2(sessionDir);
       await appendJsonl(join12(sessionDir, EVENTS_FILE), {
         event: "stop",
         session_id: event.sessionId,
@@ -3696,7 +3831,7 @@ async function hook(args2 = []) {
       const rotateId = Date.now().toString(36);
       await rotateLogs(sessionDir, rotateId, [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE]);
       const turnPath = join12(sessionDir, TURN_FILE);
-      let turn = await readCurrentTurn(sessionDir);
+      let turn = await readCurrentTurn2(sessionDir);
       turn += 1;
       await writeFile8(turnPath, String(turn));
       const promptId = randomUUID();
@@ -3723,7 +3858,7 @@ async function hook(args2 = []) {
       break;
     }
     case "response": {
-      const turn = await readCurrentTurn(sessionDir);
+      const turn = await readCurrentTurn2(sessionDir);
       await appendJsonl(join12(sessionDir, EVENTS_FILE), {
         event: "response",
         session_id: event.sessionId,
@@ -3736,7 +3871,7 @@ async function hook(args2 = []) {
     case "pre_edit": {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
-      const turn = await readCurrentTurn(sessionDir);
+      const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
       const preBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       await appendJsonl(join12(sessionDir, PRE_BLOBS_FILE), {
@@ -3757,7 +3892,7 @@ async function hook(args2 = []) {
     case "file_change": {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
-      const turn = await readCurrentTurn(sessionDir);
+      const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
       const postBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       const changeId = adapter.name === "cursor" ? `${event.timestamp}:${event.tool ?? "file_change"}:${filePath}:${postBlob}` : null;

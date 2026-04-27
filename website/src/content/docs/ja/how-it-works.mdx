@@ -108,7 +108,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 一覧はセッション全体ではなく、最終 diff につながった会話から選ばれます。file-level の場合も、最後の edit と、それを説明する近い文脈だけを残します。
+  Prompt 一覧はセッション全体ではなく、commit から次の commit までの会話 window から選ばれます。現在の commit に必要な planning、clarification、review の prompt は残しつつ、引用された過去の prompt 履歴や、この commit に残らなかった edit turn は削ります。
 </Aside>
 
 <Aside>

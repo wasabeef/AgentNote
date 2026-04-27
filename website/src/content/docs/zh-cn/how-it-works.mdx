@@ -118,7 +118,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 列表来自真正导向最终 diff 的那段对话，而不是整个 session backlog。在 file-level 模式下，Agent Note 只保留最后一条 edit 路径，以及解释它的近邻上下文。
+  prompt 列表来自 commit 到下一个 commit 之间的对话 window，而不是整个 session backlog。Agent Note 会保留能解释当前 commit 的 planning、clarification 和 review prompt，同时裁掉被引用的旧 prompt 历史，以及没有保留到这个 commit 中的 edit turn。
 </Aside>
 
 <Aside>

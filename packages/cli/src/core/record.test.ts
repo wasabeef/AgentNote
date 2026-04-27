@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
+  COMMITTED_PAIRS_FILE,
   EMPTY_BLOB,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
@@ -597,6 +598,150 @@ describe("recordCommitEntry", () => {
     assert.deepEqual(prompts, ["touch a.ts", "bridge the follow-up change", "touch b.ts"]);
   });
 
+  it("file-level fallback keeps context before a short primary prompt without keyword filtering", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"long earlier discussion about generated files and dashboard deploy details that is no longer the best explanation","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"Missing commit notes should keep a prompt-only note when Codex misses commit files\\n- keep the human-only skip\\n- rescue only the current implementation thread","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"yes, implement that","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"apply the record fallback in record.ts","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"record.ts","turn":4}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    writeFileSync(join(repoDir, "record.ts"), "export const record = true;\n");
+    execSync("git add record.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: keep prompt window context"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [
+      "Missing commit notes should keep a prompt-only note when Codex misses commit files\n- keep the human-only skip\n- rescue only the current implementation thread",
+      "yes, implement that",
+      "apply the record fallback in record.ts",
+    ]);
+  });
+
+  it("prompt window keeps commit-to-commit context and trims stale leading chatter", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":355,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"review the previous PR one last time","turn":356,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"was that branch pushed?","turn":357,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"the merge is done, switch back to main","turn":358,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"do you remember the packages redesign discussion?","turn":359,"timestamp":"2026-04-13T10:00:03Z"}\n' +
+        '{"event":"prompt","prompt":"cut a branch and start the work","turn":360,"timestamp":"2026-04-13T10:00:04Z"}\n' +
+        '{"event":"prompt","prompt":"do not keep backward compatibility; remove obsolete paths","turn":361,"timestamp":"2026-04-13T10:00:05Z"}\n' +
+        '{"event":"prompt","prompt":"c","turn":362,"timestamp":"2026-04-13T10:00:06Z"}\n' +
+        '{"event":"prompt","prompt":"after implementation, check:\\n- no missing implementation\\n- CLI agents still work\\n- docs, README, CLAUDE.md, AGENTS.md, and website locales are updated","turn":363,"timestamp":"2026-04-13T10:00:07Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"packages/pr-report/src/index.ts","turn":363}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "363\n");
+
+    mkdirSync(join(repoDir, "packages", "pr-report", "src"), { recursive: true });
+    writeFileSync(join(repoDir, "packages", "pr-report", "src", "index.ts"), "export {};\n");
+    execSync("git add packages/pr-report/src/index.ts", { cwd: repoDir });
+    execSync('git commit -m "refactor(repo): split pr report and dashboard logic"', {
+      cwd: repoDir,
+    });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [
+      "do you remember the packages redesign discussion?",
+      "cut a branch and start the work",
+      "do not keep backward compatibility; remove obsolete paths",
+      "after implementation, check:\n- no missing implementation\n- CLI agents still work\n- docs, README, CLAUDE.md, AGENTS.md, and website locales are updated",
+    ]);
+  });
+
+  it("prompt window drops quoted prompt-history meta before the current work", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":365,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"In the current PR, the first prompt was\\n\\n🧑 Prompt: old package split prompt\\n\\n🤖 Response: old implementation response\\n  with lots of quoted lines\\n  and prior context\\n\\nWhy was the previous prompt not selected?","turn":366,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"For now, review the PR scope later","turn":368,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"@.github/workflows/agentnote-dashboard.yml\\n\\nWhy is this much larger than the PR Report workflow?","turn":369,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"@.github/workflows/agentnote-dashboard.yml#L37\\n\\nIs this line still needed?","turn":370,"timestamp":"2026-04-13T10:00:03Z"}\n' +
+        '{"event":"prompt","prompt":"Can the dashboard be generated in this PR?","turn":371,"timestamp":"2026-04-13T10:00:04Z"}\n' +
+        '{"event":"prompt","prompt":"fix it","turn":372,"timestamp":"2026-04-13T10:00:05Z"}\n' +
+        '{"event":"prompt","prompt":"Consider both this repository and the common setup users will have.","turn":373,"timestamp":"2026-04-13T10:00:06Z"}\n' +
+        '{"event":"prompt","prompt":"@.github/workflows/agentnote-dashboard.yml#L51\\n\\nAre these prefixes specific to this repository?","turn":374,"timestamp":"2026-04-13T10:00:07Z"}\n' +
+        '{"event":"prompt","prompt":"Is packages/dashboard itself repository-specific?","turn":375,"timestamp":"2026-04-13T10:00:08Z"}\n' +
+        '{"event":"prompt","prompt":"improve it","turn":376,"timestamp":"2026-04-13T10:00:09Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":".github/workflows/agentnote-dashboard.yml","turn":376}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "376\n");
+
+    mkdirSync(join(repoDir, ".github", "workflows"), { recursive: true });
+    writeFileSync(
+      join(repoDir, ".github", "workflows", "agentnote-dashboard.yml"),
+      "name: Dashboard\n",
+    );
+    execSync("git add .github/workflows/agentnote-dashboard.yml", { cwd: repoDir });
+    execSync('git commit -m "fix(workflow): hide dashboard package paths"', {
+      cwd: repoDir,
+    });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [
+      "@.github/workflows/agentnote-dashboard.yml\n\nWhy is this much larger than the PR Report workflow?",
+      "@.github/workflows/agentnote-dashboard.yml#L37\n\nIs this line still needed?",
+      "Can the dashboard be generated in this PR?",
+      "fix it",
+      "Consider both this repository and the common setup users will have.",
+      "@.github/workflows/agentnote-dashboard.yml#L51\n\nAre these prefixes specific to this repository?",
+      "Is packages/dashboard itself repository-specific?",
+      "improve it",
+    ]);
+  });
+
   it("excludes generated artifacts from line-level AI ratio", async () => {
     const sourceBlob = hashBlob(repoDir, "export const status = 'done';\n");
 
@@ -959,6 +1104,89 @@ describe("recordCommitEntry", () => {
       assert.equal(interactions[0].files_touched, undefined);
       assert.equal(interactions[1].files_touched, undefined);
       assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("mid-session Codex prompt-only fallback trims stale discussion before the commit window anchor", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "prompt-only-anchor.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:30:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:30:00Z"}}`,
+          '{"timestamp":"2026-04-15T09:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit first.ts"}]}}',
+          '{"timestamp":"2026-04-15T09:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"editing first"}]}}',
+          '{"timestamp":"2026-04-15T09:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: first.ts\\\\n+export const first = 1;\\\\n*** End Patch\\"}"}}',
+          '{"timestamp":"2026-04-15T09:30:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor"}]}}',
+          '{"timestamp":"2026-04-15T09:30:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"older context"}]}}',
+          '{"timestamp":"2026-04-15T09:30:06Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window"}]}}',
+          '{"timestamp":"2026-04-15T09:30:07Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I\\u0027ll keep the fallback scoped to the current commit window."}]}}',
+          '{"timestamp":"2026-04-15T09:30:08Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"yes, implement that"}]}}',
+          '{"timestamp":"2026-04-15T09:30:09Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Implementing the narrow fallback now."}]}}',
+          '{"timestamp":"2026-04-15T09:30:10Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c2","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: unrelated.ts\\\\n+export const unrelated = true;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"edit first.ts","prompt_id":"id-first","turn":1,"timestamp":"2026-04-15T09:30:01Z"}\n' +
+          '{"event":"prompt","prompt":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor","prompt_id":"id-old","turn":2,"timestamp":"2026-04-15T09:30:04Z"}\n' +
+          '{"event":"prompt","prompt":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window","prompt_id":"id-plan","turn":3,"timestamp":"2026-04-15T09:30:06Z"}\n' +
+          '{"event":"prompt","prompt":"yes, implement that","prompt_id":"id-go","turn":4,"timestamp":"2026-04-15T09:30:08Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+      writeFileSync(join(repoDir, "first.ts"), "export const first = 1;\n");
+      execSync("git add first.ts", { cwd: repoDir });
+      execSync('git commit -m "feat: first codex commit"', { cwd: repoDir });
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const workflowPath = join(repoDir, ".github/workflows/test.yml");
+      mkdirSync(dirname(workflowPath), { recursive: true });
+      writeFileSync(
+        workflowPath,
+        "name: Test\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n",
+      );
+      writeFileSync(join(repoDir, "docs.md"), "# dashboard cleanup\n");
+      execSync("git add .github/workflows/test.yml docs.md", { cwd: repoDir });
+      execSync('git commit -m "fix: workflow cleanup"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string }>;
+      assert.deepEqual(
+        interactions.map((interaction) => interaction.prompt),
+        [
+          "keep a prompt-only note for Codex when transcript attribution misses commit files\n- keep human-only commits skipped\n- keep only the current commit window",
+          "yes, implement that",
+        ],
+      );
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
