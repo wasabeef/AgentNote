@@ -44,7 +44,7 @@ git push
 
 3. Wähle in GitHub Pages **GitHub Actions** als Quelle.
 
-Der generierte Dashboard-Workflow stellt Daten aus `gh-pages` wieder her, aktualisiert sie aus `refs/notes/agentnote` und veröffentlicht die gemeinsame Ansicht unter `/dashboard/`.
+Der generierte Dashboard-Workflow verwendet `wasabeef/AgentNote@v0` mit `dashboard: true`, um Wiederherstellung, Sync, Build, Artefakt-Upload und Notes-Persistenz auszuführen, und veröffentlicht danach die gemeinsame Ansicht unter `/dashboard/`.
 
 ## Öffentliche URL
 
@@ -67,7 +67,7 @@ Auch ein neues Repository kann schon vor dem ersten Production-Deploy Dashboard-
 ## Wie es funktioniert
 
 - `refs/notes/agentnote` bleibt die Source of Truth
-- Der generierte Dashboard-Workflow schreibt gemeinsame Snapshots nach `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v0` im Dashboard-Modus schreibt Notes-Snapshots nach `gh-pages/dashboard/notes/*.json`
 - GitHub Pages liefert das gebaute Dashboard unter `/dashboard/` aus
 
 Das Repository committet keine Beispiel-JSONs für das Dashboard. Ein neues Dashboard bleibt leer, bis der Workflow note files wiederherstellt oder erzeugt. `pull_request` veröffentlicht den Open-Status, und Pushes auf `default branch` ersetzen ihn durch den Merged-Status.

@@ -16,7 +16,7 @@ The repository is a monorepo with three packages plus the docs site:
 
 ```
 wasabeef/AgentNote/
-├── action.yml                      # root pointer → packages/pr-report (for uses: wasabeef/AgentNote@v0)
+├── action.yml                      # public Action dispatcher for PR Report and Dashboard
 │
 ├── packages/
 │   ├── cli/                        # agent-note — npm package
@@ -47,15 +47,15 @@ wasabeef/AgentNote/
 │   │   ├── package.json            # name: agent-note
 │   │   └── tsconfig.json
 │   │
-│   └── action/                     # GitHub Action (Marketplace)
-│       ├── action.yml              # action definition (inputs/outputs)
-│       ├── src/
-│       │   └── index.ts            # calls CLI, sets outputs, posts to PR description/comment
-│       ├── dist/
-│       │   └── index.js            # ncc-bundled (committed, no node_modules needed)
-│       └── package.json            # name: agent-note-pr-report (private, not published)
-│   │
+│   ├── pr-report/                  # PR Report library used by the root Action
+│   │   ├── src/
+│   │   │   └── index.ts            # collects notes, sets outputs, posts to PR description/comment
+│   │   ├── dist/
+│   │   │   └── index.js            # ncc-bundled (committed, no node_modules needed)
+│   │   └── package.json            # name: agent-note-pr-report (private, not published)
+│
 │   └── dashboard/                  # optional static dashboard package
+│       ├── workflow/               # Dashboard restore/sync/build/persist scripts
 │       ├── src/pages/index.astro   # dashboard shell + build-time note index
 │       ├── public/notes/           # synced dashboard note JSON during build/deploy
 │       └── package.json
@@ -88,28 +88,29 @@ The action calls `agent-note pr --json` — it's tightly coupled to the CLI's ou
 
 The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
 
-For the live site, the Pages workflow treats `gh-pages/dashboard/notes/*.json` as the durable store:
+For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
-- on `push` to `main`, rebuild the dashboard (and optionally the docs site), persist merged note state, and deploy the public site
+- on `push` to the default branch, rebuild the dashboard, persist merged note state, and deploy the public site
 
 A brand-new Repository can therefore accumulate Dashboard note data before the Dashboard is published for the first time. If Pull Request Deploys are allowed, the shared Pages URL can appear after the first successful `pull_request` run. Otherwise it appears after the first successful deploy from `default branch`.
 
-### Root action.yml trick
+### Root action.yml dispatcher
 
-GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is a 3-line pointer to the real implementation:
+GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is the public facade:
 
 ```yaml
-# action.yml (root)
-name: "Agent Note PR Report"
-description: "AI session tracking report for pull requests"
-runs:
-  using: "node24"
-  main: "packages/pr-report/dist/index.js"
+# PR Report mode
+- uses: wasabeef/AgentNote@v0
+
+# Dashboard mode
+- uses: wasabeef/AgentNote@v0
+  with:
+    dashboard: true
 ```
 
-This gives users `uses: wasabeef/AgentNote@v0` while code lives in `packages/pr-report/`.
+The implementation stays split by responsibility: `packages/pr-report` owns PR body/comment rendering, while `packages/dashboard` owns the static UI and Pages data bundle workflow.
 
 ## Architecture
 
@@ -441,7 +442,8 @@ JSON output structure:
 | Input | Default | Description |
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
-| `output` | `description` | Report destination: `description` or `comment` |
+| `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
+| `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report mode |
 
 ### Action outputs
 
@@ -454,10 +456,13 @@ JSON output structure:
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
 | `markdown` | string | Rendered markdown report |
+| `should_deploy` | boolean string | Dashboard mode output used by the deploy job |
 
 ### Action internals
 
-The action:
+The root Action is a composite dispatcher.
+
+In PR Report mode (`dashboard` omitted or `false`), it:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
 2. Collects PR entries via `packages/pr-report`
@@ -466,6 +471,8 @@ The action:
 5. Post report to PR description (upsert between markers) or as a comment
 
 Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a single `dist/index.js` that is committed to the repo. No `npm install` needed at runtime.
+
+In Dashboard mode (`dashboard: true`), it checks out the caller repository, restores existing Dashboard notes from `gh-pages`, syncs current git notes into the Dashboard note bundle, uploads the Pages artifact when deploy is allowed, and persists the updated notes back to `gh-pages`.
 
 ## Distribution
 

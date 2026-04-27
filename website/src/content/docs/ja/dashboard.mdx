@@ -44,7 +44,7 @@ git push
 
 3. GitHub の Pages 設定で、公開元に **GitHub Actions** を選びます。
 
-生成された Dashboard workflow が `gh-pages` から note data を復元し、`refs/notes/agentnote` から更新して、共有用の `/dashboard/` を公開します。
+生成された Dashboard workflow は、`wasabeef/AgentNote@v0` に `dashboard: true` を渡して、復元・同期・build・artifact upload・note 保存を実行し、共有用の `/dashboard/` を公開します。
 
 ## 公開 URL
 
@@ -73,7 +73,7 @@ git push
 ## 仕組み
 
 - `refs/notes/agentnote` が source of truth のまま残ります
-- 生成された Dashboard workflow が `gh-pages/dashboard/notes/*.json` を共有用の保存先として更新します
+- Dashboard mode の `wasabeef/AgentNote@v0` が `gh-pages/dashboard/notes/*.json` を共有用の保存先として更新します
 - GitHub Pages が `/dashboard/` で build 済み Dashboard を配信します
 
 リポジトリ自体には Dashboard 用の sample JSON をコミットしません。新しい Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で Open 状態を公開し、`default branch` への push で Merged 状態に置き換えます。

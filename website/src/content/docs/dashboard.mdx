@@ -44,7 +44,7 @@ git push
 
 3. In GitHub, enable Pages for the repository and choose **GitHub Actions** as the source.
 
-The generated Dashboard workflow restores note data from `gh-pages`, refreshes it from `refs/notes/agentnote`, and publishes the shared `/dashboard/` view for you.
+The generated Dashboard workflow uses `wasabeef/AgentNote@v0` with `dashboard: true` to restore, sync, build, upload the artifact, and persist notes, then publishes the shared `/dashboard/` view for you.
 
 ## Public URL
 
@@ -73,7 +73,7 @@ A brand-new Repository can accumulate Dashboard note data before the Dashboard i
 ## How It Works
 
 - `refs/notes/agentnote` remains the source of truth
-- The generated Dashboard workflow writes shared note snapshots to `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v0` in Dashboard mode writes note snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
 The Repository does not commit sample JSON for the Dashboard. A new Dashboard stays empty until the workflow restores or generates note files. Pull Request runs publish the Open state, and `default branch` pushes replace it with the Merged state.

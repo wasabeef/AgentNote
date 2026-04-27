@@ -1,31 +1,131 @@
 name: "Agent Note"
-description: "AI agent session reports for pull requests"
+description: "AI agent session reports and dashboard publishing"
 author: "wasabeef"
 
 inputs:
+  dashboard:
+    description: "Build and publish Dashboard data instead of updating the PR Report"
+    required: false
+    default: "false"
   base:
     description: "Base branch to compare against (default: PR base)"
     required: false
     default: ""
   pr_output:
-    description: "PR report destination: description, comment, or none (default: description)"
+    description: "PR Report destination: description, comment, or none (default: description)"
     required: false
     default: ""
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
+    value: ${{ steps.pr_report.outputs.overall_ai_ratio }}
   overall_method:
     description: "Attribution method: line, file, mixed, or none"
+    value: ${{ steps.pr_report.outputs.overall_method }}
   tracked_commits:
     description: "Number of commits with agent-note data"
+    value: ${{ steps.pr_report.outputs.tracked_commits }}
   total_commits:
     description: "Total commits in PR"
+    value: ${{ steps.pr_report.outputs.total_commits }}
   total_prompts:
     description: "Total prompts across all commits"
+    value: ${{ steps.pr_report.outputs.total_prompts }}
   json:
     description: "Full structured report as JSON"
+    value: ${{ steps.pr_report.outputs.json }}
   markdown:
     description: "Rendered markdown report"
+    value: ${{ steps.pr_report.outputs.markdown }}
+  should_deploy:
+    description: "Whether the Dashboard workflow should run actions/deploy-pages"
+    value: ${{ steps.dashboard_notes.outputs.should_deploy }}
 runs:
-  using: "node24"
-  main: "packages/pr-report/dist/index.js"
+  using: "composite"
+  steps:
+    - name: Set up Node.js for PR Report
+      if: inputs.dashboard != 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: Run PR Report
+      if: inputs.dashboard != 'true'
+      id: pr_report
+      shell: bash
+      env:
+        AGENT_NOTE_ACTION_PATH: ${{ github.action_path }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_PR_OUTPUT: ${{ inputs.pr_output }}
+      run: node "$AGENT_NOTE_ACTION_PATH/packages/pr-report/dist/index.js"
+
+    - name: Check out repository
+      if: inputs.dashboard == 'true'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node.js for Dashboard
+      if: inputs.dashboard == 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    - name: Resolve Dashboard paths
+      if: inputs.dashboard == 'true'
+      id: dashboard_paths
+      shell: bash
+      run: |
+        echo "notes_dir=${GITHUB_WORKSPACE}/.agentnote-dashboard-notes" >> "$GITHUB_OUTPUT"
+        echo "pages_dir=${GITHUB_WORKSPACE}/.agentnote-pages" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Dashboard notes from gh-pages
+      if: inputs.dashboard == 'true'
+      shell: bash
+      env:
+        DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+        NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
+      run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:restore-notes
+
+    - name: Update Dashboard notes from git notes
+      if: inputs.dashboard == 'true'
+      id: dashboard_notes
+      shell: bash
+      env:
+        DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+        NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
+        EVENT_NAME: ${{ github.event_name }}
+        GH_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        BEFORE_SHA: ${{ github.event.before }}
+        HEAD_SHA: ${{ github.sha }}
+        REF_NAME: ${{ github.ref_name }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:sync-notes
+
+    - name: Build Dashboard
+      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_build == 'true'
+      shell: bash
+      env:
+        DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+        NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
+        PAGES_DIR: ${{ steps.dashboard_paths.outputs.pages_dir }}
+        PUBLIC_REPO: ${{ github.repository }}
+      run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:build-pages
+
+    - name: Upload Pages artifact
+      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_deploy == 'true'
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: ${{ steps.dashboard_paths.outputs.pages_dir }}
+
+    - name: Persist Dashboard notes to gh-pages
+      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_persist == 'true'
+      shell: bash
+      env:
+        DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+        NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
+      run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:persist-notes

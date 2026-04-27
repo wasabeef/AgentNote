@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ Selesai. Setiap PR akan mendapatkan laporan sesi AI.
 |---|---|---|
 | `base` | Branch dasar PR | Branch pembanding |
 | `pr_output` | `description` | Tujuan laporan PR: `description`, `comment`, atau `none` |
+| `dashboard` | `false` | Menjalankan mode Dashboard, bukan mode PR Report. Biasanya dibuat oleh `agent-note init --dashboard` |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | Jumlah total prompt di semua commit |
 | `json` | string | Laporan terstruktur lengkap |
 | `markdown` | string | Laporan Markdown yang sudah dirender |
+| `should_deploy` | boolean string | Output mode Dashboard untuk menentukan job deploy |
 
 ## Isi laporan
 

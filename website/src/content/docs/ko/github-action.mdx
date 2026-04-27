@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | 비교 기준 branch |
 | `pr_output` | `description` | PR 리포트의 출력 위치: `description`, `comment`, `none` |
+| `dashboard` | `false` | PR Report mode 대신 Dashboard mode 를 실행합니다. 보통 `agent-note init --dashboard` 가 생성합니다 |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | 모든 commit 의 전체 prompt 수 |
 | `json` | string | 전체 구조화 리포트 |
 | `markdown` | string | 렌더링된 Markdown 리포트 |
+| `should_deploy` | boolean string | Dashboard mode 에서 deploy job 실행 여부를 판단하는 출력 |
 
 ## 리포트 구성
 

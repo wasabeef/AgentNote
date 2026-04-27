@@ -44,7 +44,7 @@ git push
 
 3. GitHub Pages 에서 source 로 **GitHub Actions** 를 선택합니다.
 
-생성된 Dashboard workflow 는 `gh-pages` 에서 데이터를 복원하고, `refs/notes/agentnote` 에서 갱신한 뒤, 공유용 `/dashboard/` 화면을 공개합니다.
+생성된 Dashboard workflow 는 `wasabeef/AgentNote@v0` 에 `dashboard: true` 를 전달해 restore, sync, build, artifact upload, note 저장을 실행하고, 공유용 `/dashboard/` 화면을 공개합니다.
 
 ## 공개 URL
 
@@ -67,7 +67,7 @@ git push
 ## 동작 방식
 
 - `refs/notes/agentnote` 는 계속 Source of Truth 로 남습니다
-- 생성된 Dashboard workflow 가 공유용 snapshot 을 `gh-pages/dashboard/notes/*.json` 에 씁니다
+- Dashboard mode 의 `wasabeef/AgentNote@v0` 가 note snapshot 을 `gh-pages/dashboard/notes/*.json` 에 씁니다
 - GitHub Pages 가 build 된 Dashboard 를 `/dashboard/` 에서 제공합니다
 
 리포지토리 자체에는 Dashboard 용 sample JSON 을 commit 하지 않습니다. 새 Dashboard 는 workflow 가 note file 을 복원하거나 생성할 때까지 비어 있습니다. `pull_request` 는 Open 상태를 공개하고, `default branch` 로의 push 는 이를 Merged 상태로 바꿉니다.

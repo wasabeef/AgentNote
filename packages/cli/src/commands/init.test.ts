@@ -291,31 +291,38 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should have the new name",
     );
     assert.ok(
-      dashboardWorkflow.includes("repository: wasabeef/AgentNote"),
-      "dashboard workflow should fetch the shared Dashboard source",
+      dashboardWorkflow.includes("uses: wasabeef/AgentNote@v0"),
+      "dashboard workflow should use the public Agent Note action",
+    );
+    assert.ok(
+      dashboardWorkflow.includes("dashboard: true"),
+      "dashboard workflow should enable the Dashboard mode on the public action",
     );
     assert.ok(
       dashboardWorkflow.includes(
-        "npm --prefix .agentnote-dashboard-source run dashboard:build-pages",
+        ["should_deploy:", "$" + "{{ steps.dashboard.outputs.should_deploy }}"].join(" "),
       ),
-      "dashboard workflow should call the shared Dashboard entrypoint",
+      "dashboard workflow should expose the shared action deploy decision",
     );
     assert.ok(
-      dashboardWorkflow.includes(`PAGES_DIR: \${{ github.workspace }}/.pages`),
-      "dashboard workflow should pass an absolute Pages artifact path",
+      dashboardWorkflow.includes("uses: actions/deploy-pages@v4"),
+      "dashboard workflow should keep the GitHub Pages deployment job",
     );
     assert.ok(
-      dashboardWorkflow.includes(`NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes`),
-      "dashboard workflow should pass an absolute notes directory path",
+      !dashboardWorkflow.includes(".agentnote-dashboard-source"),
+      "dashboard workflow should not expose the Dashboard source checkout path",
     );
     assert.ok(
-      dashboardWorkflow.indexOf("Upload Pages artifact") <
-        dashboardWorkflow.indexOf("Persist Dashboard notes to gh-pages"),
-      "dashboard workflow should upload the Pages artifact before switching to gh-pages",
+      !dashboardWorkflow.includes("NOTES_DIR:"),
+      "dashboard workflow should keep note storage paths inside the shared action",
     );
     assert.ok(
-      dashboardWorkflow.includes(`DEFAULT_BRANCH: \${{ github.event.repository.default_branch }}`),
-      "dashboard workflow should infer the repository default branch",
+      !dashboardWorkflow.includes("PAGES_DIR:"),
+      "dashboard workflow should keep Pages artifact paths inside the shared action",
+    );
+    assert.ok(
+      !dashboardWorkflow.includes("packages/dashboard@v0"),
+      "dashboard workflow should not expose the internal Dashboard package path",
     );
     assert.ok(
       !dashboardWorkflow.includes("branches:\n      - main"),

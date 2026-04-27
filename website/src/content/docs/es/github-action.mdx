@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ Y ya está. Cada PR recibe un informe de sesión de IA.
 |---|---|---|
 | `base` | Rama base del PR | Rama contra la que se compara |
 | `pr_output` | `description` | Destino del informe del PR: `description`, `comment` o `none` |
+| `dashboard` | `false` | Ejecuta el modo Dashboard en lugar del modo PR Report. Normalmente lo genera `agent-note init --dashboard` |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | Número total de prompts en todos los commits |
 | `json` | string | Reporte estructurado completo |
 | `markdown` | string | Reporte renderizado en Markdown |
+| `should_deploy` | boolean string | Output del modo Dashboard usado para decidir el job de deploy |
 
 ## Qué incluye el reporte
 
