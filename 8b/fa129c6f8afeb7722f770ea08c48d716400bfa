@@ -1,0 +1,30 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-04-27T04:21:44.390Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "原因調査だけして TODO.md に書いておいてください",
+      "response": "原因調査だけに絞ります。まず `8bc068f` の note がなぜ古い prompt を拾ったのか、record / prompt selection 周りの実装と session log の状態を確認して、修正案ではなく TODO として残します。\n原因調査だけに絞って進めます。まず実装側の prompt 選択ロジックと既存 `docs/TODO.md` の整理方針を確認して、修正方針ではなく「なぜ起きたか」と「後で直すなら何を見るか」まで TODO に残します。\n実装を見る限り、PR body の Markdown 側ではなく `recordCommitEntry()` が git note に保存する `interactions` の選び方が焦点です。特に `maxConsumedTurn` と transcript-driven / file-level fallback の境界が、長い Codex session をまたいだときに弱そうなので、そこをもう少し掘ります。\n確認できました。`committed_pairs.jsonl` の `maxConsumedTurn` は同一 session 内の「すでに note に使った turn」を境界にする設計ですが、今回の note では古い同一ファイル turn が実際に残っていて、`persist-notes.mjs` の修正 commit に過去の package split prompt が選ばれています。もう少し実データ側の session log も覗いて、TODO に書く精度を上げます。\n原因はかなり絞れました。`maxConsumedTurn` は効いていますが、`primaryTurns` が lower bound をバイパスできるため、長い Codex session で同じファイルを過去に触っていると stale turn が復活します。これを `docs/TODO.md` に未解決調査として追記します。\n[docs/TODO.md](/Users/a12622/git/context-history/docs/TODO.md:3) に原因調査を追記しました。\n\n要点は、PR body 生成ではなく git note 本体の `interactions` 選択で起きていて、長い Codex session 内の古い同一ファイル edit が `primaryTurns` として `lowerTurn` をバイパスし、`8bc068f` に過去の package split prompt が混ざった可能性が高い、という整理です。\n\n調査のみなのでテストは回していません。コミットもしていません。",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
