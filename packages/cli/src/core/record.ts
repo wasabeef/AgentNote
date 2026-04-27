@@ -23,6 +23,17 @@ import { appendJsonl, readJsonlEntries } from "./jsonl.js";
 import { readSessionAgent, readSessionTranscriptPath } from "./session.js";
 import { readNote, writeNote } from "./storage.js";
 
+type ConsumedPromptState = {
+  legacyPromptIds: Set<string>;
+  promptFilePairs: Set<string>;
+};
+
+type ConsumedTranscriptPromptFile = {
+  turn: number;
+  promptId: string;
+  file: string;
+};
+
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
   agentnoteDirPath: string;
@@ -91,6 +102,7 @@ export async function recordCommitEntry(opts: {
   const preBlobEntriesForTurnFix = allPreBlobEntries.filter(
     (e) => !consumedPairs.has(consumedKey(e)),
   );
+  const consumedPromptState = await readConsumedPromptState(sessionDir);
 
   // Highest turn already attributed to a previous commit in this session.
   // Prompts from turns <= this are considered "spent" — their own commits
@@ -198,6 +210,7 @@ export async function recordCommitEntry(opts: {
   // to recordConsumedPairs so maxConsumedTurn advances even when no
   // file_change/pre_blob entries exist (e.g. Codex transcript-driven path).
   let consumedPromptEntries: Record<string, unknown>[] = [];
+  let consumedTranscriptPromptFiles: ConsumedTranscriptPromptFile[] = [];
 
   // Extract transcript interactions up front. Cross-turn commits tolerate
   // transcript failures (pre-PR #16 behavior); same-turn commits re-throw so
@@ -248,7 +261,13 @@ export async function recordCommitEntry(opts: {
     maxConsumedTurn > 0 &&
     !transcriptEditsCommit &&
     transcriptEditsOthers
-      ? selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject)
+      ? selectPromptOnlyFallbackEntries(
+          promptEntries,
+          maxConsumedTurn,
+          commitFiles,
+          commitSubject,
+          currentTurn,
+        )
       : { selected: [], consumed: [] };
   const canUsePromptOnlyFallback =
     promptOnlyFallbackEntries.selected.length >= 2 &&
@@ -274,7 +293,7 @@ export async function recordCommitEntry(opts: {
     interactions = relevantPromptEntries.map((entry) => {
       const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
       const matched = id ? interactionsById.get(id) : undefined;
-      if (matched) return toRecordedInteraction(matched, commitFileSet);
+      if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
       return { prompt: (entry.prompt as string) ?? "", response: null };
     });
     consumedPromptEntries =
@@ -294,13 +313,14 @@ export async function recordCommitEntry(opts: {
       aiFiles = [
         ...new Set(
           transcriptMatched.flatMap((i) =>
-            (i.files_touched ?? []).filter((f) => commitFileSet.has(f)),
+            filterInteractionCommitFiles(i, commitFileSet, consumedPromptState),
           ),
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         attributionCommitFileSet,
         transcriptMatched,
+        consumedPromptState,
       );
     }
   } else if (canUsePromptOnlyFallback) {
@@ -309,7 +329,7 @@ export async function recordCommitEntry(opts: {
     interactions = promptOnlyFallbackEntries.selected.map((entry) => {
       const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
       const matched = id ? interactionsById.get(id) : undefined;
-      if (matched) return toRecordedInteraction(matched, commitFileSet);
+      if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
       return { prompt: (entry.prompt as string) ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
@@ -319,20 +339,47 @@ export async function recordCommitEntry(opts: {
     const transcriptMatched = allInteractions.filter((i) =>
       (i.files_touched ?? []).some((f) => commitFileSet.has(f)),
     );
-    const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
+    const selectableTranscriptMatched = filterSelectableTranscriptInteractions(
       transcriptMatched,
+      promptEntries,
+      attributionCommitFileSet,
+      consumedPromptState,
+      currentTurn,
+    );
+    const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
+      selectableTranscriptMatched,
       promptEntries,
       attributionCommitFileSet,
     );
     const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
-    const promptWindow = selectPromptWindowEntries(
-      promptEntries,
-      transcriptPrimaryTurns,
-      transcriptEditTurns,
-      maxConsumedTurn,
-      commitFiles,
-      commitSubject,
-    );
+    let promptWindow = emptyPromptWindowSelection();
+    let useSelectableTranscriptAttribution = false;
+    if (transcriptPrimaryTurns.size > 0) {
+      promptWindow = selectPromptWindowEntries(
+        promptEntries,
+        transcriptPrimaryTurns,
+        transcriptEditTurns,
+        maxConsumedTurn,
+        commitFiles,
+        commitSubject,
+      );
+    } else if (
+      hasUnlinkedCurrentTranscriptEdit(
+        allInteractions,
+        selectableTranscriptMatched,
+        promptEntries,
+        maxConsumedTurn,
+        currentTurn,
+      )
+    ) {
+      promptWindow = selectPromptOnlyFallbackEntries(
+        promptEntries,
+        maxConsumedTurn,
+        commitFiles,
+        commitSubject,
+        currentTurn,
+      );
+    }
     relevantPromptEntries = promptWindow.selected;
     promptWindowConsumedEntries = promptWindow.consumed;
     prompts = relevantPromptEntries.map((entry) => (entry.prompt as string) ?? "");
@@ -341,34 +388,50 @@ export async function recordCommitEntry(opts: {
       interactions = relevantPromptEntries.map((entry) => {
         const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
         const matched = id ? interactionsById.get(id) : undefined;
-        if (matched) return toRecordedInteraction(matched, commitFileSet);
+        if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
         return { prompt: (entry.prompt as string) ?? "", response: null };
       });
       consumedPromptEntries =
         promptWindowConsumedEntries.length > 0
           ? promptWindowConsumedEntries
           : relevantPromptEntries;
-    } else if (transcriptMatched.length > 0) {
+      useSelectableTranscriptAttribution = true;
+    } else if (
+      selectableTranscriptMatched.length > 0 &&
+      (promptEntries.length === 0 || transcriptPrimaryTurns.size > 0)
+    ) {
       // No session prompts at all — emit just the edit-linked transcript
-      // interactions (e.g. commit with no surviving prompts.jsonl entry).
-      interactions = transcriptMatched.map((i) => toRecordedInteraction(i, commitFileSet));
-    } else if (!crossTurnCommit) {
+      // interactions (e.g. commit with no surviving prompts.jsonl entry). If
+      // session prompts exist but none were selected, do not revive old
+      // prompt_id-less transcript edits as a last-ditch fallback.
+      interactions = selectableTranscriptMatched.map((i) =>
+        toRecordedInteraction(i, commitFileSet, consumedPromptState),
+      );
+      useSelectableTranscriptAttribution = true;
+    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
       interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
     } else {
       interactions = [];
     }
 
-    if (transcriptMatched.length > 0) {
+    if (useSelectableTranscriptAttribution && selectableTranscriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
-          transcriptMatched.flatMap((i) =>
-            (i.files_touched ?? []).filter((f) => commitFileSet.has(f)),
+          selectableTranscriptMatched.flatMap((i) =>
+            filterInteractionCommitFiles(i, commitFileSet, consumedPromptState),
           ),
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         attributionCommitFileSet,
-        transcriptMatched,
+        selectableTranscriptMatched,
+        consumedPromptState,
+      );
+      consumedTranscriptPromptFiles = collectConsumedTranscriptPromptFiles(
+        selectableTranscriptMatched,
+        promptEntries,
+        commitFileSet,
+        consumedPromptState,
       );
     }
   } else {
@@ -426,6 +489,7 @@ export async function recordCommitEntry(opts: {
     preBlobEntriesForTurnFix,
     commitFileSet,
     consumedPromptEntries,
+    consumedTranscriptPromptFiles,
   );
 
   // Do NOT delete rotated archives here. They are kept available for subsequent
@@ -493,13 +557,18 @@ function correlatePromptIds(
 function toRecordedInteraction(
   interaction: TranscriptInteraction,
   commitFileSet: Set<string>,
+  consumedPromptState?: ConsumedPromptState,
 ): Interaction {
   const recorded: Interaction = {
     prompt: interaction.prompt,
     response: interaction.response,
   };
 
-  const filesTouched = interaction.files_touched?.filter((file) => commitFileSet.has(file));
+  const filesTouched = filterInteractionCommitFiles(
+    interaction,
+    commitFileSet,
+    consumedPromptState,
+  );
   if (filesTouched && filesTouched.length > 0) {
     recorded.files_touched = [...new Set(filesTouched)];
   }
@@ -509,6 +578,19 @@ function toRecordedInteraction(
   }
 
   return recorded;
+}
+
+function filterInteractionCommitFiles(
+  interaction: TranscriptInteraction,
+  commitFileSet: Set<string>,
+  consumedPromptState?: ConsumedPromptState,
+): string[] {
+  const files = (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file));
+  if (!consumedPromptState || !interaction.prompt_id) return files;
+  const promptId = interaction.prompt_id;
+  return files.filter(
+    (file) => !consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file)),
+  );
 }
 
 function selectTranscriptFallbackInteractions(
@@ -547,12 +629,16 @@ async function fillInteractionResponsesFromEvents(
 async function resolveTranscriptLineCounts(
   commitFileSet: Set<string>,
   interactions: TranscriptInteraction[],
+  consumedPromptState?: ConsumedPromptState,
 ): Promise<LineCounts | undefined> {
   const transcriptStats = new Map<string, { added: number; deleted: number }>();
 
   for (const interaction of interactions) {
+    const eligibleFiles = new Set(
+      filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState),
+    );
     for (const [file, stats] of Object.entries(interaction.line_stats ?? {})) {
-      if (!commitFileSet.has(file)) continue;
+      if (!eligibleFiles.has(file)) continue;
       const previous = transcriptStats.get(file) ?? { added: 0, deleted: 0 };
       transcriptStats.set(file, {
         added: previous.added + stats.added,
@@ -692,12 +778,7 @@ function collectTranscriptEditTurns(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],
 ): Set<number> {
-  const promptTurnById = new Map<string, number>();
-  for (const entry of promptEntries) {
-    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
-  }
+  const promptTurnById = buildPromptTurnById(promptEntries);
 
   const turns = new Set<number>();
   for (const interaction of interactions) {
@@ -706,6 +787,120 @@ function collectTranscriptEditTurns(
     if (turn > 0) turns.add(turn);
   }
   return turns;
+}
+
+function buildPromptTurnById(promptEntries: Record<string, unknown>[]): Map<string, number> {
+  const promptTurnById = new Map<string, number>();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
+  }
+  return promptTurnById;
+}
+
+function promptFilePairKey(promptId: string, file: string): string {
+  return `${promptId}\0${file}`;
+}
+
+function filterSelectableTranscriptInteractions(
+  interactions: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+  currentTurn: number,
+): TranscriptInteraction[] {
+  const promptTurnById = buildPromptTurnById(promptEntries);
+  return interactions.filter((interaction) => {
+    if (!transcriptTouchesCommitFile(interaction, commitFileSet)) return false;
+    if (!interaction.prompt_id) return true;
+
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (currentTurn > 0 && turn > currentTurn) return false;
+    return !isTranscriptPromptConsumedForCommit(interaction, commitFileSet, consumedPromptState);
+  });
+}
+
+function transcriptTouchesCommitFile(
+  interaction: TranscriptInteraction,
+  commitFileSet: Set<string>,
+): boolean {
+  return (interaction.files_touched ?? []).some((file) => commitFileSet.has(file));
+}
+
+function isTranscriptPromptConsumedForCommit(
+  interaction: TranscriptInteraction,
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+): boolean {
+  const promptId = interaction.prompt_id;
+  if (!promptId) return false;
+  if (consumedPromptState.legacyPromptIds.has(promptId)) return true;
+
+  const files = (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file));
+  return (
+    files.length > 0 &&
+    files.every((file) =>
+      consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file)),
+    )
+  );
+}
+
+function hasUnlinkedCurrentTranscriptEdit(
+  allInteractions: TranscriptInteraction[],
+  interactions: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+  maxConsumedTurn: number,
+  currentTurn: number,
+): boolean {
+  const unlinkedMatches = new Set(interactions.filter((interaction) => !interaction.prompt_id));
+  if (unlinkedMatches.size === 0) return false;
+
+  const currentPromptIds = new Set<string>();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > maxConsumedTurn && (currentTurn <= 0 || turn <= currentTurn)) {
+      currentPromptIds.add(promptId);
+    }
+  }
+  if (currentPromptIds.size === 0) return false;
+
+  let sawCurrentPrompt = false;
+  for (const interaction of allInteractions) {
+    if (interaction.prompt_id && currentPromptIds.has(interaction.prompt_id)) {
+      sawCurrentPrompt = true;
+    }
+    if (sawCurrentPrompt && unlinkedMatches.has(interaction)) return true;
+  }
+  return false;
+}
+
+function collectConsumedTranscriptPromptFiles(
+  interactions: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+  commitFileSet: Set<string>,
+  consumedPromptState?: ConsumedPromptState,
+): ConsumedTranscriptPromptFile[] {
+  const promptTurnById = buildPromptTurnById(promptEntries);
+  const consumed: ConsumedTranscriptPromptFile[] = [];
+  const seen = new Set<string>();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id) continue;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (turn <= 0) continue;
+    for (const file of filterInteractionCommitFiles(
+      interaction,
+      commitFileSet,
+      consumedPromptState,
+    )) {
+      const key = promptFilePairKey(interaction.prompt_id, file);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      consumed.push({ turn, promptId: interaction.prompt_id, file });
+    }
+  }
+  return consumed;
 }
 
 function selectPromptWindowEntries(
@@ -737,9 +932,12 @@ function selectPromptOnlyFallbackEntries(
   maxConsumedTurn: number,
   commitFiles: string[],
   commitSubject: string,
+  currentTurn = Number.POSITIVE_INFINITY,
 ): PromptWindowSelection {
+  const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
   const latestPromptTurn = promptEntries.reduce((latest, entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (turn > upperTurn) return latest;
     return turn > latest ? turn : latest;
   }, 0);
   if (latestPromptTurn <= maxConsumedTurn) return emptyPromptWindowSelection();
@@ -977,12 +1175,7 @@ async function selectTranscriptPrimaryTurns(
   promptEntries: Record<string, unknown>[],
   commitFileSet: Set<string>,
 ): Promise<Set<number>> {
-  const promptTurnById = new Map<string, number>();
-  for (const entry of promptEntries) {
-    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
-  }
+  const promptTurnById = buildPromptTurnById(promptEntries);
 
   const matchedTurns = new Set<number>();
   for (const interaction of transcriptMatched) {
@@ -1476,6 +1669,36 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   return set;
 }
 
+async function readConsumedPromptState(sessionDir: string): Promise<ConsumedPromptState> {
+  const file = join(sessionDir, COMMITTED_PAIRS_FILE);
+  const state: ConsumedPromptState = {
+    legacyPromptIds: new Set(),
+    promptFilePairs: new Set(),
+  };
+  if (!existsSync(file)) return state;
+
+  const entries = await readJsonlEntries(file);
+  for (const entry of entries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    if (!promptId) continue;
+
+    const filePath = typeof entry.file === "string" ? entry.file : undefined;
+    if (filePath) {
+      state.promptFilePairs.add(promptFilePairKey(promptId, filePath));
+      continue;
+    }
+
+    // New prompt-window markers only advance maxConsumedTurn. Older entries did
+    // not have a scope marker, so treat them as fully consumed to prevent stale
+    // prompt revival after upgrading Agent Note mid-session.
+    if (entry.prompt_scope !== "window") {
+      state.legacyPromptIds.add(promptId);
+    }
+  }
+
+  return state;
+}
+
 /** Build the consumed-pair key for a change/pre-blob entry. */
 function consumedKey(entry: Record<string, unknown>): string {
   if (typeof entry.change_id === "string" && entry.change_id) {
@@ -1492,6 +1715,7 @@ async function recordConsumedPairs(
   preBlobEntries: Record<string, unknown>[],
   commitFileSet: Set<string>,
   consumedPromptEntries: Record<string, unknown>[] = [],
+  consumedTranscriptPromptFiles: ConsumedTranscriptPromptFile[] = [],
 ): Promise<void> {
   const seen = new Set<string>();
   const pairsFile = join(sessionDir, COMMITTED_PAIRS_FILE);
@@ -1512,6 +1736,20 @@ async function recordConsumedPairs(
       tool_use_id: entry.tool_use_id ?? null,
     });
   }
+  const promptFileSeen = new Set<string>();
+  for (const entry of consumedTranscriptPromptFiles) {
+    if (!entry.promptId || !entry.file || !commitFileSet.has(entry.file)) continue;
+    const key = promptFilePairKey(entry.promptId, entry.file);
+    if (promptFileSeen.has(key) || seen.has(key)) continue;
+    promptFileSeen.add(key);
+    await appendJsonl(pairsFile, {
+      turn: entry.turn,
+      prompt_id: entry.promptId,
+      file: entry.file,
+      change_id: null,
+      tool_use_id: null,
+    });
+  }
   // Record prompt-only consumed turns so transcript-driven agents (Codex)
   // advance maxConsumedTurn even with no file_change/pre_blob entries.
   // Without this, each Codex commit can keep dragging earlier prompt-only
@@ -1528,6 +1766,7 @@ async function recordConsumedPairs(
       turn,
       prompt_id: promptId,
       file: null,
+      prompt_scope: "window",
       change_id: null,
       tool_use_id: null,
     });
