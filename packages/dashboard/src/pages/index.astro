@@ -2374,7 +2374,7 @@ const dashboardIndex = buildDashboardIndex();
           const fileEl = h("div", { className: "diff-file" }, [
             header,
             body,
-            file.truncated && h("div", { className: "diff-truncated" }, "(diff truncated at 400 lines)"),
+            file.truncated && h("div", { className: "diff-truncated" }, "(diff truncated)"),
           ].filter(Boolean));
           wrap.appendChild(fileEl);
         }
