@@ -1,5 +1,22 @@
 # TODO
 
+## 未解決の調査
+
+### PR #32 prompt selection regression
+
+- 対象 PR: `#32`
+- 対象 commit: `f8d7cae feat(action): route dashboard through root action`, `8bc068f fix(dashboard): persist notes without switching workspace`
+- 症状は 2 種類あります。`f8d7cae` は root Action dispatcher の本題 prompt も拾えていますが、以前の docs / prompt selection / PR preview 周りの会話が多く混ざっています。`8bc068f` はさらに悪く、本来は CI failure と `persist-notes` の workspace 切り替え修正の文脈が出るべきところ、過去の package split 作業の prompt が保存されています。
+- PR body の rendering 問題ではありません。`git notes --ref=agentnote show <sha>` で確認すると、誤った `interactions` は note 本体に保存されています。
+- 両 commit は同じ Codex `session_id` (`019da962-23cc-7aa0-bbe3-a10f60fddada`) を共有していました。この session は `2026-04-20` から `2026-04-27` まで続いており、複数 PR / branch の prompt と transcript が同じ session log に蓄積されています。
+- `committed_pairs.jsonl` の `maxConsumedTurn` 自体は進んでいましたが、`selectCommitPromptWindow()` は `primaryTurns` を `lowerTurn` より優先して通します。これは split commit のための仕様ですが、今回のように過去の同一ファイル edit が `primaryTurns` になると、消費済みより古い turn でも prompt window に再流入します。
+- `8bc068f` では `packages/dashboard/workflow/persist-notes.mjs` を過去の package split 作業でも触っていました。その古い transcript interaction が commit file と一致し、turn `361` / `362` が primary turn として復活した可能性が高いです。一方、実際に `8bc068f` の修正につながった直近 prompt は turn `531` 付近でしたが、note には採用されませんでした。
+- `f8d7cae` のノイズは、長い Codex session で branch / PR をまたいだ未消費 prompt-only context が commit-to-commit window に残ったことが主因です。`PROMPT_WINDOW_MAX_ENTRIES` により 24 件には抑えられていますが、window の開始位置が作業単位としては広すぎました。
+- 影響範囲は core の prompt selection です。再現しやすいのは Codex ですが、`selectCommitPromptWindow()` は共通処理なので、長寿命 session と同一ファイル再編集が重なる agent では同種の誤帰属が起こり得ます。
+- 改善候補は、`primaryTurns` が `lowerTurn` を無条件にバイパスする仕様を見直すことです。split commit は守りつつ、消費済み turn を復活させる場合は「現在 commit の transcript suffix / diff count / session-local commit marker と一致する」など追加条件を置く必要があります。
+- もう一つの改善候補は、branch ancestry や git note だけに頼らず、session-local に「最後に note を書いた commit / turn / transcript index」を marker として保存することです。これにより、branch 切り替えや PR をまたぐ長い Codex session でも、現在作業の lower bound をより正確に決められます。
+- regression case には、`PR #32` の `f8d7cae` と `8bc068f` を追加します。期待値は、`f8d7cae` が root Action dispatcher の設計相談から始まり、`8bc068f` が CI failure / `persist-notes` workspace fix の prompt を含み、過去の package split prompt を含まないことです。
+
 ## 解決済みの調査
 
 ### Prompt selection
