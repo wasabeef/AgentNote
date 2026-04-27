@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ jobs:
 |---|---|---|
 | `base` | Базовая ветка PR | Ветка для сравнения |
 | `pr_output` | `description` | Куда выводить отчёт PR: `description`, `comment` или `none` |
+| `dashboard` | `false` | Запускает режим Dashboard вместо режима PR Report. Обычно генерируется через `agent-note init --dashboard` |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | Общее число prompts во всех коммитах |
 | `json` | string | Полный структурированный отчёт |
 | `markdown` | string | Готовый Markdown-отчёт |
+| `should_deploy` | boolean string | Output режима Dashboard для решения о запуске deploy job |
 
 ## Что входит в отчёт
 

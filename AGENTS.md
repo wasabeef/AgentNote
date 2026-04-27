@@ -10,8 +10,9 @@ Agent Note (`agent-note`) is a monorepo CLI + GitHub Action that links AI coding
 
 ```
 packages/cli/     # agent-note — npm package (CLI)
-packages/pr-report/  # PR report library + GitHub Action (Marketplace)
-action.yml           # root pointer to packages/pr-report/dist/index.js
+packages/pr-report/  # PR Report library used by the GitHub Action
+packages/dashboard/  # Dashboard static app + workflow scripts
+action.yml           # public Action entrypoint for PR Report and Dashboard
 website/          # Documentation site (Astro Starlight, 12 locales)
 ```
 

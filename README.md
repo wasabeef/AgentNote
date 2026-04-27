@@ -232,7 +232,7 @@ If you want the shared Dashboard on GitHub Pages:
 npx agent-note init --agent claude --dashboard
 ```
 
-The generated Dashboard workflow restores and persists `gh-pages/dashboard/notes/*.json`, then publishes the shared `/dashboard/` view.
+The generated Dashboard workflow uses `wasabeef/AgentNote@v0` with `dashboard: true` to restore, sync, build, upload the artifact, and persist notes, then publishes the shared `/dashboard/` view.
 
 This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the Dashboard is published for the first time. Pull Request runs update the shared Dashboard with the Open state, and `default branch` pushes replace it with the Merged state.
 

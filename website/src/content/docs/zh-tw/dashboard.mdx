@@ -44,7 +44,7 @@ git push
 
 3. 在 GitHub Pages 中，把 source 設為 **GitHub Actions**。
 
-生成的 Dashboard workflow 會從 `gh-pages` 還原資料，再從 `refs/notes/agentnote` 重新整理，並把共享視圖發布到 `/dashboard/`。
+生成的 Dashboard workflow 會用 `wasabeef/AgentNote@v0` 並傳入 `dashboard: true`，執行還原、同步、build、artifact 上傳與 note 持久化，然後把共享視圖發布到 `/dashboard/`。
 
 ## 公開 URL
 
@@ -67,7 +67,7 @@ git push
 ## 運作方式
 
 - `refs/notes/agentnote` 仍然是 Source of Truth
-- 生成的 Dashboard workflow 會把共享快照寫入 `gh-pages/dashboard/notes/*.json`
+- Dashboard mode 的 `wasabeef/AgentNote@v0` 會把 note 快照寫入 `gh-pages/dashboard/notes/*.json`
 - GitHub Pages 會在 `/dashboard/` 提供建置完成的 Dashboard
 
 倉庫本身不會提交範例 Dashboard JSON。新的 Dashboard 會一直保持為空，直到 workflow 還原或產生 note file。`pull_request` 會發佈 Open 狀態，而推送到 `default branch` 後則會替換成 Merged 狀態。

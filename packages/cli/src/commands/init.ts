@@ -32,10 +32,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
@@ -65,59 +61,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: \${{ steps.notes.outputs.should_deploy }}
+      should_deploy: \${{ steps.dashboard.outputs.should_deploy }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Build Dashboard bundle
+        id: dashboard
+        uses: wasabeef/AgentNote@v0
         with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-      - name: Check out Dashboard source
-        uses: actions/checkout@v6
-        with:
-          repository: wasabeef/AgentNote
-          ref: v0
-          path: .agentnote-dashboard-source
-
-      - name: Restore Dashboard notes from gh-pages
-        run: npm --prefix .agentnote-dashboard-source run dashboard:restore-notes
-
-      - name: Update Dashboard notes from git notes
-        id: notes
-        env:
-          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
-          EVENT_NAME: \${{ github.event_name }}
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: \${{ github.repository }}
-          DEFAULT_BRANCH: \${{ github.event.repository.default_branch }}
-          BEFORE_SHA: \${{ github.event.before }}
-          HEAD_SHA: \${{ github.sha }}
-          REF_NAME: \${{ github.ref_name }}
-          PR_NUMBER: \${{ github.event.pull_request.number }}
-          PR_TITLE: \${{ github.event.pull_request.title }}
-          PR_HEAD_REPO: \${{ github.event.pull_request.head.repo.full_name }}
-        run: npm --prefix .agentnote-dashboard-source run dashboard:sync-notes
-
-      - name: Build Dashboard
-        if: steps.notes.outputs.should_build == 'true'
-        env:
-          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
-          PAGES_DIR: \${{ github.workspace }}/.pages
-          PUBLIC_REPO: \${{ github.repository }}
-        run: npm --prefix .agentnote-dashboard-source run dashboard:build-pages
-
-      - name: Upload Pages artifact
-        if: steps.notes.outputs.should_deploy == 'true'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: .pages
-
-      - name: Persist Dashboard notes to gh-pages
-        if: steps.notes.outputs.should_persist == 'true'
-        env:
-          NOTES_DIR: \${{ github.workspace }}/.agentnote-dashboard-notes
-        run: npm --prefix .agentnote-dashboard-source run dashboard:persist-notes
+          dashboard: true
 
   deploy:
     if: needs.build.outputs.should_deploy == 'true'

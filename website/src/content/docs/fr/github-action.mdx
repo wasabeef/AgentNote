@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ C’est tout. Chaque PR reçoit un rapport de session IA.
 |---|---|---|
 | `base` | Branche de base de la PR | Branche utilisée pour la comparaison |
 | `pr_output` | `description` | Destination du rapport de PR : `description`, `comment` ou `none` |
+| `dashboard` | `false` | Exécute le mode Dashboard au lieu du mode PR Report. Généralement généré par `agent-note init --dashboard` |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | Nombre total de prompts sur tous les commits |
 | `json` | string | Rapport structuré complet |
 | `markdown` | string | Rapport Markdown rendu |
+| `should_deploy` | boolean string | Output du mode Dashboard utilisé par le job de déploiement |
 
 ## Ce que contient le rapport
 

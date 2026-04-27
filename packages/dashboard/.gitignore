@@ -1,3 +1,5 @@
 dist/
 .astro/
+.agentnote-dashboard-notes/
+.pages/
 node_modules/

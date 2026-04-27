@@ -44,7 +44,7 @@ git push
 
 3. Di GitHub Pages, pilih **GitHub Actions** sebagai source.
 
-Workflow Dashboard yang dihasilkan memulihkan data dari `gh-pages`, memperbaruinya dari `refs/notes/agentnote`, lalu memublikasikan tampilan bersama di `/dashboard/`.
+Workflow Dashboard yang dihasilkan memakai `wasabeef/AgentNote@v0` dengan `dashboard: true` untuk restore, sync, build, upload artifact, dan persistensi note, lalu memublikasikan tampilan bersama di `/dashboard/`.
 
 ## URL publik
 
@@ -67,7 +67,7 @@ Bahkan repositori baru bisa mulai mengumpulkan data Dashboard sebelum deploy pro
 ## Cara kerjanya
 
 - `refs/notes/agentnote` tetap menjadi Source of Truth
-- Workflow Dashboard yang dihasilkan menulis snapshot bersama ke `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v0` dalam mode Dashboard menulis snapshot note ke `gh-pages/dashboard/notes/*.json`
 - GitHub Pages menyajikan Dashboard yang sudah dibangun di `/dashboard/`
 
 Repositori tidak meng-commit contoh JSON Dashboard. Dashboard baru tetap kosong sampai workflow memulihkan atau membuat note file. `pull_request` memublikasikan status Open, lalu push ke `default branch` menggantinya dengan status Merged.

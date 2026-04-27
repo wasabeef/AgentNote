@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ jobs:
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
 | `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
+| `dashboard` | `false` | PR Report mode の代わりに Dashboard mode を実行します。通常は `agent-note init --dashboard` が生成します |
 
 ## Dashboard も使いたいとき
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | 全プロンプト数 |
 | `json` | string | 構造化レポート全体 |
 | `markdown` | string | レンダリング済みのマークダウンレポート |
+| `should_deploy` | boolean string | Dashboard mode で deploy job の実行判定に使います |
 
 ## レポート形式
 

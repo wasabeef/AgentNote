@@ -31,10 +31,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
       - uses: wasabeef/AgentNote@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +44,7 @@ Damit ist alles bereit. Jede PR erhält einen KI-Sitzungsbericht.
 |---|---|---|
 | `base` | Basis-Branch der PR | Branch, gegen den verglichen wird |
 | `pr_output` | `description` | Ziel des PR-Berichts: `description`, `comment` oder `none` |
+| `dashboard` | `false` | Führt den Dashboard-Modus statt des PR-Report-Modus aus. Normalerweise durch `agent-note init --dashboard` generiert |
 
 ## Dashboard
 
@@ -70,6 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | Gesamtzahl der Prompts über alle Commits |
 | `json` | string | Vollständiger strukturierter Bericht |
 | `markdown` | string | Gerenderter Markdown-Bericht |
+| `should_deploy` | boolean string | Output im Dashboard-Modus für die Deploy-Job-Entscheidung |
 
 ## Bericht
 
