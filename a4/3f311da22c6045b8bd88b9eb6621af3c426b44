@@ -1,0 +1,126 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-04-27T01:25:41.575Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "後でやるリストとして\n\ndocs/TODO.md 作っといて\n\nさっき他の https://github.com/wasabeef/AgentNote/pull/27 でももっと前段のプロンプトほしいって話したと思うけど",
+      "response": "`docs/TODO.md` を追加して、あとで検討したい prompt selection の改善メモを残します。まず既存ファイル有無を確認してから、再現ケースが分かる形で短くまとめます。\n`TODO` メモを追加します。今回は 1 件でも、再現条件と改善の意図が伝わるようにしておきます。\n`docs/TODO.md` を追加しました。\n\n入れた内容は、あとで検討する `prompt selection` 改善メモです。\n\n- 最終 diff を説明するのに有効な「もう 1 つ前の planning / approval prompt」を拾えるようにする\n- stale な same-file history や follow-up chatter は引き続き落とす\n- 最近の PR で出た再現ケースを基準にする\n- `Claude / Codex / Cursor / Gemini` 全部で再確認する\n\n今回は file 追加だけで、まだ commit はしていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "• 前後の commit には note があり、e1e1596 だけ抜けています。なので「notes fetch の問題」ではなく、その\n  commit を作った瞬間だけ record が失敗した 線が濃いです。もう少し絞るために、前後の commit note と\n  record 実装の失敗条件を照らします。\n\nのやつもかいて",
+      "response": "`TODO` に、`e1e1596` のような「trailer はあるのに note だけ欠ける」件も追記します。再現条件と、次に見るべき観点が分かる形で足します。\n追記しました。[docs/TODO.md](/Users/a12622/git/context-history/docs/TODO.md)\n\n追加したのは `Missing commit notes` セクションで、内容はこの観点です。\n\n- `Agentnote-Session` trailer はあるのに git note がないケースの調査\n- `e1e1596` を主な再現ケースとして扱う\n- 前後 commit の成功ケースと `recordCommitEntry()` / `post-commit` の failure / skip 条件を照らす\n- 原因が分かったら regression test を足す\n\nまだ commit はしていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "TODO には対象PRもかいたほうがいい",
+      "response": "`docs/TODO.md` に対象 PR を追記します。あとで掘るときに、どの会話ログと note を見ればいいかすぐ分かる形に整えます。\n追記しました。[docs/TODO.md](/Users/a12622/git/context-history/docs/TODO.md)\n\n- `Prompt selection`\n  - Target PRs: `#27`, `#29`\n- `Missing commit notes`\n  - Target PRs: `#29`\n\nこれで、あとから見返したときに対象の PR と論点がすぐ結びつくようになっています。  \nまだ commit はしていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "マージした。別ブランチを切って\n\nTODO の内容を確認して問題があれば修正してほしい。",
+      "response": "まず `main` を最新化して新しい branch を切り、そのうえで `docs/TODO.md` の内容を読み直して、論点の抜けや優先度の違和感がないかを詰めます。必要なら TODO の粒度も少し整えます。\nTODO の方向は大きくは合っていますが、少し抽象的です。特に `Missing commit notes` は仮説が強めなので、実際の commit 状態を見て「何をまず切り分けるべきか」まで落としてから整えます。\nTODO 自体は悪くないですが、2 点だけ直した方がよさそうです。  \n`Missing commit notes` は「record failure と仮定しすぎ」なので、正当な skip だった可能性も最初に切り分けるようにします。`Prompt selection` も、成功条件を 1 行足しておくと後で迷いにくいです。\n確認して、`docs/TODO.md` は少しだけ直しました。[docs/TODO.md](/Users/a12622/git/context-history/docs/TODO.md)\n\n主な修正は 2 点です。\n\n- `Prompt selection`\n  - 成功条件を追加して、「1 つ前の planning prompt を拾う」だけでなく、`same-session / same-file` の漏れ戻りを再発させないことを明確にしました。\n- `Missing commit notes`\n  - `e1e1596` を見たところ、`Agentnote-Session` trailer は確かにありますが note はありません。\n  - なので TODO は「record failure 前提」に寄りすぎないようにして、まず\n    - 本来 note が書かれるべき commit だったのか\n    - それとも現行ルール上の正当な skip だったのか\n    を切り分ける流れに直しました。\n\nbranch は切ってあります。\n\n- branch: `codex/todo-review`\n\ncommit はまだしていません。  \nMay the Force be with you.",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "では TODO の懸念事項としてを更新しておいてほしい",
+      "response": "`TODO` に今回の `PR #30` で見えた症状を追記します。まず現状の項目を確認して、`Missing commit notes` と `Prompt selection` の境界が分かるように更新します。\n`PR #30` の新しい repro が、`Missing commit notes` ではなく `Prompt selection` 側の課題だと分かるように追記します。`#27 / #29` に加えて `#30` も対象にして、`note は作られるが prompts が広すぎる` 症状を明記します。\n更新しました。[docs/TODO.md](/Users/a12622/git/context-history/docs/TODO.md)\n\n追加した内容:\n- `Prompt selection` の対象 PR に `#30` を追加\n- `PR #30` / `ffaaad1` を、`Missing commit notes` は直ったが prompt list が広すぎる repro として明記\n- 同じ `record.ts` / `record.test.ts` を長く触った session でも、古い設計会話を引きずりすぎないように次の heuristic で潰すべき点を追記\n\nまだ commit はしていません。  \nMay the Force be with you.",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "先程も言いましたが、日本語だけのOSSじゃないのでキーワードフィルターは筋が悪いです",
+      "response": "その指摘は正しいです。いま入れた実装には `c/y/commit` や stopword 的な文字列判定が残っていて、汎用 OSS として筋が悪いので、キーワードベースは撤去して構造ベースに寄せます。\n方向を修正します。キーワードによる除外ではなく、`1 文字だけの極小 prompt`、`過去の Prompt/Response 引用ブロック`、`今回 commit に残らない別 edit turn` という構造 signal だけで trim するように直します。\n調整しました。今度は「少数の直前 context は残す」「別 edit turn は落とす」「Codex transcript の古い edit turn も落とす」の 3 点を同時に確認します。\n低 relevance だから落とす、という挙動が強すぎたので直しました。anchor が見つからない小さな window はそのまま残し、anchor がある場合だけ先頭の hard-trim 対象を削るようにしています。\n`record.test.ts` は 31 件すべて通りました。次に docs / README / AGENTS / CLAUDE / website 各言語を、旧 “nearest trigger + one planning prompt” から “commit-to-commit window + structural trim” の説明へ揃えます。\nキーワードフィルターは完全に筋悪いので、その方向は捨てます。今の実装は「言語の意味」ではなく、commit 境界・turn・file touch・quote 形状・短すぎる非 primary turn みたいな構造だけで判断するように寄せていて、ここから漏れがないかコードと docs をもう一周確認します。\n`rg` で古い説明と keyword 系の残りを確認しました。残っている `keyword` は CSS コメントと「使わない」と明記している設計説明だけなので、実装側が本当に同じ方針になっているか `record.ts` とテストを中心に見ます。\nひとつ改善点が見つかりました。keyword filter ではないものの、text overlap の tokenizer が `A-Za-z` と CJK/Japanese 寄りの文字範囲になっていたので、ここは Unicode の `Letter/Number` ベースに変えて、韓国語・キリル文字・アクセント付き Latin などでも同じ構造判定になるよう直します。\n実装コメントとテスト名にも古い「episode / short trigger」っぽい匂いが少し残っていました。挙動自体は keyword 判定ではないですが、後で読む人が誤解しやすいので、ここも「commit window / structural signal」ベースの表現に揃えます。\n未追跡の `docs/TODO.md` に、今回の Prompt selection 相談の古い TODO が残っています。今回の修正で扱っている内容なので、TODO として残すべきか、解消済みにするべきかを確認してから整理します。\n`docs/TODO.md` は今のままだと「これからやること」に見えてしまいます。今回の branch では Prompt selection を解消方向に動かしているので、未解決 TODO ではなく「解消済みの背景と今後の監視観点」に言い換えて、古い `はい、その構成でお願い` 前提の文脈も keyword 方針に見えない形へ直します。\nここから検証に入ります。まず CLI を build して `dist` を同期し、そのあと typecheck / lint / test / website build まで通して、最後に観点を変えたレビューを 5 回分チェックします。\n`typecheck` は通りました。`lint` はロジックではなく Biome の整形差分だけだったので、formatter に任せてから再実行します。\n対象テストは 31 件すべて通りました。次は full CLI test と website build まで広げて、docs の全 locale 変更も build で確認します。\nfull test で 3 件落ちました。これは重要で、commit から離れた turn で編集して後から commit するケースと、Cursor の split commit ケースで、今回の window の `upperTurn` が primary turn までで止まっていた影響が出ています。ここは「commit-to-commit」方針に合わせて、commit 実行 turn まで window を伸ばしつつ、非 primary edit turn は除外する形に直します。\n修正方針は 2 点です。`maxConsumedTurn` は split commit の重複防止には必要ですが、現在の commit の primary turn まで消してはいけないので primary turn は例外的に通します。さらに cross-turn commit は現在 turn まで window を見て、`y` や `c` のような 1 文字非 primary prompt は構造的に落とす形にします。\n落ちた 3 ケースは targeted で全部復旧しました。原因はやっぱり `maxConsumedTurn` が primary turn まで切っていたことだったので、split commit と cross-turn の既存仕様を壊さない形に戻せています。full 検証をもう一度通します。\n追加で分かりました。`currentTurn` まで広げると、既存の「最終 edit 後の follow-up は載せない」安全策を壊していました。今回必要なのは `currentTurn` まで広げることではなく、`maxConsumedTurn` で primary turn を消さないことです。そこだけ残して、trailing prompt は従来どおり落とします。\nこれで「primary turn は consumed 済みでも現在 commit なら通す」「ただし最終 edit 後の prompt-only chatter は載せない」の両方が成立しました。落ちた 7 本相当の targeted checks は通ったので、もう一度 full を回します。\nfull CLI test は 303/303 通りました。ここから最後のレビュー段階に入って、language-neutrality・Agent 影響・docs 漏れ・生成物同期・不要差分の 5 観点で見直します。\nキーワードフィルター方針は捨てて、実装も docs も language-neutral に寄せました。判定は `turn boundary`、primary edit、path/file 参照、Unicode token overlap、quoted-history 形状、1 文字 non-primary prompt などの構造ベースです。\n\n検証済みです。\n\n- `npm run build`\n- `npm run typecheck`\n- `npm run lint`\n- `npm test` 303/303 pass\n- `website` build pass\n- 5 観点レビュー済み: language-neutrality、Claude/Codex/Cursor/Gemini 影響、split/cross-turn regression、docs 全 locale、不要差分確認\n\n補足として、既存の unrelated 差分に `packages/dashboard/src/pages/index.astro` と未追跡の画像/SVG が残っています。今回の Prompt selection 変更とは別物として触っていません。",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "write_stdin",
+        "apply_patch",
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": "`commit push` として進めます。まず差分を確認して、今回の Prompt selection 変更だけをステージングします。前から残っている dashboard の小差分と SVG 画像系はスコープ外として混ぜないようにします。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "PR 更新しといて",
+      "response": "PR 説明の更新まで含めてやります。まず現在の branch と PR 番号を確認して、コミット対象を Prompt selection 関連に絞ってから push、最後に PR body を更新します。\nPR #31 を確認しました。現在の PR body は古い `episode compression` 表現のままなので、今回の language-neutral / commit-to-commit window の内容に更新します。コミットには Prompt selection 関連の tracked files を入れ、`packages/dashboard` の別差分と SVG は除外します。\n変更は意味単位で 2 commits に分けます。1 つ目は CLI の prompt selection 実装と dist、2 つ目は README / DESIGN / website 各 locale の説明更新です。\n`dist` は ignore されていますが、この repo では CLI bundle を tracked artifact として更新する必要があります。source/test を先に確認してから、`dist` だけ `git add -f` で明示的に含めます。\nCLI 実装の commit が入りました。続けて docs と website の説明更新だけをステージングします。\nコミットは 2 本入りました。未コミットとして残っているのは今回の commit 対象から外した `packages/dashboard` の小差分と未追跡の TODO/SVG だけです。このまま branch を push します。\npush は完了しました。PR body は古い `episode` 表現が残っているので、上部の Summary / Testing を今回の内容に更新します。Agent Note 自動ブロックは workflow 側で再生成される前提なので、手動本文では説明部分だけ新しくします。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "dis 本当にいる？\n\nローカルでしか使わないんじゃない？",
+      "response": "`dist` の要否を実際の package 設定で確認します。ここは「ローカルだけか」「npm package / git hooks / tests で必要か」で答えが変わるので、参照元を見ます。\n現状の設計では `dist` は必要です。`packages/cli/package.json` の `bin` が `./dist/cli.js` を指していて、npm package の `files` も `dist` だけを publish 対象にしています。CI でも `node packages/cli/dist/cli.js version` を直接叩いています。\n\nただし「git に tracked artifact として置く必要があるか」は別問題です。`prepublishOnly` で build するなら、将来的には `dist` を追跡対象から外して CI/publish 前に必ず build する設計にもできます。今回は今の repo ルールに合わせて `dist` を更新しましたが、PR ノイズを減らすなら別途 `dist` 非 tracking 化はありです。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "TODO に書いといて",
+      "response": "`dist` の扱いを今後の検討事項として `docs/TODO.md` に追記します。今すぐ tracking 方針は変えず、「必要だが git に持つべきかは別途整理」という形で残します。\n`docs/TODO.md` に `CLI dist tracking` の検討事項を追記しました。  \n今は `dist` が必要な理由と、将来 tracked artifact から外すなら CI / release / hook shim を合わせて直す必要がある点を書いています。",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "TODO 日本語にして",
+      "response": "`docs/TODO.md` を日本語に揃えます。内容はそのまま、今後読み返したときに文脈が分かる表現に整えます。\n`docs/TODO.md` を日本語に揃えました。技術用語はそのまま残しつつ、調査背景と今後の cleanup 方針が読み返しやすい表現にしています。",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "tools": [
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
