@@ -1028,9 +1028,7 @@ function selectCommitPromptWindow(
   }
 
   const consumed = rows.map((row) => row.entry);
-  const selectedRows = rows
-    .slice(startIndex)
-    .filter((row) => !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn);
+  const selectedRows = rows.slice(startIndex).filter(shouldKeepPromptWindowRow);
   const selected =
     selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES
       ? trimLongPromptWindow(selectedRows).map((row) => row.entry)
@@ -1063,8 +1061,14 @@ function buildPromptWindowRow(
   };
 }
 
+function shouldKeepPromptWindowRow(row: PromptWindowRow): boolean {
+  if (row.isPrimaryTurn) return true;
+  return !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn;
+}
+
 function isPromptWindowAnchor(row: PromptWindowRow): boolean {
-  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
+  if (row.isPrimaryTurn) return true;
+  if (!shouldKeepPromptWindowRow(row)) return false;
   return (
     row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE ||
     row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE ||
@@ -1073,6 +1077,7 @@ function isPromptWindowAnchor(row: PromptWindowRow): boolean {
 }
 
 function isHardTrimPromptRow(row: PromptWindowRow): boolean {
+  if (row.isPrimaryTurn) return false;
   return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn;
 }
 
@@ -1086,9 +1091,16 @@ function isLowShapePromptRow(row: PromptWindowRow): boolean {
 
 function trimLongPromptWindow(rows: PromptWindowRow[]): PromptWindowRow[] {
   const first = rows[0];
-  const tail = rows.slice(-(PROMPT_WINDOW_MAX_ENTRIES - 1));
   const selected = new Map<number, PromptWindowRow>();
   if (first) selected.set(promptRowTurn(first), first);
+  for (const row of rows) {
+    if (row.isPrimaryTurn) selected.set(promptRowTurn(row), row);
+  }
+  const remainingSlots = Math.max(PROMPT_WINDOW_MAX_ENTRIES - selected.size, 0);
+  const tail =
+    remainingSlots > 0
+      ? rows.filter((row) => !selected.has(promptRowTurn(row))).slice(-remainingSlots)
+      : [];
   for (const row of tail) selected.set(promptRowTurn(row), row);
   return [...selected.values()].sort((left, right) => promptRowTurn(left) - promptRowTurn(right));
 }

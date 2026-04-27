@@ -742,6 +742,122 @@ describe("recordCommitEntry", () => {
     ]);
   });
 
+  it("prompt window keeps a quoted-looking primary review prompt", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":547,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+
+    const reviewPrompt = [
+      "Validation result: 15/16 passed, 1 partial.",
+      "",
+      "  R1 transcript primary uses prompt_id:file consumed state.",
+      "  R2 legacy prompt-only entries are treated as fully consumed.",
+      "  R3 prompt-window markers only advance maxConsumedTurn.",
+      "  R4 transcript consumption is stored per file.",
+      "  R5 synthetic edit fallback is post-window only.",
+      "  R6 PR #32 stale revival prevention test exists.",
+      "  R7 split commit prompt reuse test exists.",
+      "  R8 commit-to-commit prompt window exists.",
+      "  R9 language-neutral selection logic uses structural signals.",
+      "  R10 PR #29 package split history is covered.",
+      "",
+      "R14 gap: add direct record-level coverage for Cursor and Gemini. Update packages/cli/src/core/record.test.ts and docs/TODO.md.",
+    ].join("\n");
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      `${JSON.stringify({
+        event: "prompt",
+        prompt: reviewPrompt,
+        turn: 548,
+        timestamp: "2026-04-13T10:00:00Z",
+      })}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `${JSON.stringify({
+        event: "file_change",
+        tool: "Edit",
+        file: "packages/cli/src/core/record.test.ts",
+        turn: 548,
+      })}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "548\n");
+
+    mkdirSync(join(repoDir, "packages", "cli", "src", "core"), { recursive: true });
+    writeFileSync(join(repoDir, "packages", "cli", "src", "core", "record.test.ts"), "test\n");
+    execSync("git add packages/cli/src/core/record.test.ts", { cwd: repoDir });
+    execSync('git commit -m "test: cover prompt selection"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [reviewPrompt]);
+  });
+
+  it("prompt window trimming preserves primary turns outside the tail", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":100,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+
+    const promptLines: string[] = [];
+    for (let turn = 101; turn <= 140; turn += 1) {
+      const prompt =
+        turn === 110
+          ? "primary implementation prompt for target.ts that must survive trimming"
+          : `context prompt ${turn} for target.ts`;
+      promptLines.push(
+        JSON.stringify({
+          event: "prompt",
+          prompt,
+          turn,
+          timestamp: `2026-04-13T10:00:${String(turn - 100).padStart(2, "0")}Z`,
+        }),
+      );
+    }
+
+    writeFileSync(join(sessionDir, PROMPTS_FILE), `${promptLines.join("\n")}\n`);
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"target.ts","turn":110}\n' +
+        '{"event":"file_change","tool":"Edit","file":"tail.ts","turn":140}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "140\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    writeFileSync(join(repoDir, "tail.ts"), "export const tail = true;\n");
+    execSync("git add target.ts tail.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: trim prompt window"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.equal(prompts.length, 24);
+    assert.ok(
+      prompts.includes("primary implementation prompt for target.ts that must survive trimming"),
+    );
+  });
+
   it("excludes generated artifacts from line-level AI ratio", async () => {
     const sourceBlob = hashBlob(repoDir, "export const status = 'done';\n");
 
