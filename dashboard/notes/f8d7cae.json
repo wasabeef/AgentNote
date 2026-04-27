@@ -1902,6 +1902,6 @@
   "pull_request": {
     "number": 32,
     "title": "feat(action): route dashboard through root action",
-    "state": "open"
+    "state": "merged"
   }
 }
