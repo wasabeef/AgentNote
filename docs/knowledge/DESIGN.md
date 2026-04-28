@@ -180,6 +180,7 @@ Note content per commit:
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
+      "context": "The previous response explains why this middleware needs to change.",
       "response": "I'll create the middleware with... ",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -209,6 +210,7 @@ Note content per commit:
   - **`method`**: `"line"` (blob-based 3-diff), `"file"` (binary file-count), or `"none"` (deletion-only, no valid ratio).
   - **`lines`**: Present when blob data available. `ai_added`, `total_added`, `deleted`.
 - **`interactions[].tools`**: File-edit tools used in this interaction. Optional field — omitted when no tool data is available, `null` when adapter doesn't support tool tracking, `string[]` when tools were observed.
+- **`interactions[].context`**: Optional display-only excerpt from the immediately previous response when a short prompt needs nearby rationale. It is never used for attribution, prompt counts, or file ownership.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID
@@ -229,7 +231,7 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 ### Prompt selection for notes
 
-A commit note records a list of `interactions` (prompt + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
+A commit note records a list of `interactions` (prompt + optional display-only context + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
 **Current: commit-to-commit window.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
 
@@ -248,6 +250,17 @@ A commit note records a list of `interactions` (prompt + response + `files_touch
 - For transcript-driven agents such as Codex, apply the same window rule after transcript `files_touched` / `line_stats` identify the primary turns.
 
 This keeps a readable commit narrative such as “remember the package redesign?” → “start the branch” → “do not keep backward compatibility” → “run the final review checklist”, while avoiding two failure modes: notes that collapse to a single short turn, and notes that drag in stale quoted PR summaries or overwritten edit bursts.
+
+**Display-only context.**
+
+If a selected prompt is short and depends on the immediately previous response, but that previous turn is not selected for the current commit, Agent Note may attach `interactions[].context`. This is a conservative display helper, not a second attribution signal.
+
+- The previous response must overlap the current commit through a strong structural anchor: changed file path, changed file basename, or code-like identifier extracted from the final diff.
+- Commit subject words can only break ties. They cannot create context without a file or code-symbol anchor.
+- Current prompts that already contain a strong anchor do not get extra context.
+- If the immediately previous turn is already selected, no context is attached because the same information will appear as a normal prompt / response pair.
+- Context selection uses language-neutral structural signals only. It does not use approval keywords such as "yes", "do it", or equivalents in any language.
+- Context never changes `files_touched`, `ai_ratio`, prompt counts, consumed prompt state, or line-level attribution.
 
 **Split-commit semantics are preserved.**
 
@@ -385,7 +398,7 @@ agent-note pr --output description --update 42  # upsert into PR description
 agent-note pr --output comment --update 42      # post as PR comment
 ```
 
-Output: table format with summary header, per-commit rows, and collapsible prompts/responses section.
+Output: table format with summary header, per-commit rows, and collapsible context / prompt / response section.
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -394,7 +407,7 @@ Output: table format with summary header, per-commit rows, and collapsible promp
 **Model:** `claude-sonnet-4-20250514`
 ```
 
-Commit hashes are linked to the GitHub commit page. Prompts/responses are in a collapsible `<details>` section.
+Commit hashes are linked to the GitHub commit page. Context, prompts, and responses are in a collapsible `<details>` section.
 
 Prompt display: first meaningful line only (120 chars). Skill-generated expansions (`/commit`, `/plan`) are filtered to show the user's original input.
 
@@ -417,7 +430,7 @@ JSON output structure:
       "ai_ratio": 100,
       "attribution": { "ai_ratio": 100, "method": "line", "lines": { "ai_added": 32, "total_added": 32, "deleted": 0 } },
       "files": [{"path": "button.tsx", "by_ai": true}],
-      "interactions": [{"prompt": "...", "response": "...", "tools": ["Write"]}]
+      "interactions": [{"prompt": "...", "context": "...", "response": "...", "tools": ["Write"]}]
     }
   ]
 }
@@ -541,7 +554,7 @@ Notes are automatically pushed to the remote via the `pre-push` git hook install
 
 ### Threat model
 
-Agent Note records prompts and AI responses. This data may contain sensitive information:
+Agent Note records prompts, optional display-only context excerpts, and AI responses. This data may contain sensitive information:
 
 - API keys, tokens, or credentials mentioned in prompts
 - Internal business logic or proprietary algorithms
@@ -552,11 +565,11 @@ Agent Note records prompts and AI responses. This data may contain sensitive inf
 
 | Threat | Mitigation |
 |---|---|
-| Secrets in prompts/responses | **Not automatically redacted.** Users are responsible for not pushing notes to public repos. Future: optional secret detection before note creation. |
+| Secrets in prompts/context/responses | **Not automatically redacted.** Users are responsible for not pushing notes to public repos. Future: optional secret detection before note creation. |
 | Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
-| GitHub Action markdown injection | PR Report embeds raw prompts/responses in markdown. **Sanitization is not yet implemented.** Untrusted prompts could inject markdown/HTML into PR descriptions. |
+| GitHub Action markdown injection | PR Report embeds raw prompts/context/responses in markdown. **Sanitization is not yet implemented.** Untrusted content could inject markdown/HTML into PR descriptions. |
 | `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agent-note hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agent-note`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
