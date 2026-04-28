@@ -19,6 +19,11 @@ import {
 } from "./constants.js";
 import type { Interaction, LineCounts } from "./entry.js";
 import { buildEntry, hasGeneratedArtifactMarkers, isGeneratedArtifactPath } from "./entry.js";
+import {
+  buildCommitContextSignature,
+  type CommitContextSignature,
+  selectInteractionContext,
+} from "./interaction-context.js";
 import { appendJsonl, readJsonlEntries } from "./jsonl.js";
 import { readSessionAgent, readSessionTranscriptPath } from "./session.js";
 import { readNote, writeNote } from "./storage.js";
@@ -67,6 +72,17 @@ export async function recordCommitEntry(opts: {
   } catch {
     // Subject is only a prompt-trimming hint. Recording should still proceed.
   }
+  let commitDiffText = "";
+  try {
+    commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
+  } catch {
+    // Context is display-only. If diff extraction fails, simply skip code-symbol anchors.
+  }
+  const contextSignature = buildCommitContextSignature({
+    changedFiles: commitFiles,
+    diffText: commitDiffText,
+    commitSubject,
+  });
 
   // Read all change and prompt entries: current files + any rotated (archived) files
   // from previous turns that have not yet been attributed to a commit.
@@ -439,6 +455,14 @@ export async function recordCommitEntry(opts: {
   }
 
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
+  await attachInteractionContexts(
+    sessionDir,
+    promptEntries,
+    relevantPromptEntries,
+    interactions,
+    contextSignature,
+    interactionsById,
+  );
 
   // Attach per-turn file attribution when turn data is available.
   if (hasTurnData) {
@@ -623,6 +647,51 @@ async function fillInteractionResponsesFromEvents(
     if (response) {
       interaction.response = response;
     }
+  }
+}
+
+async function attachInteractionContexts(
+  sessionDir: string,
+  allPromptEntries: Record<string, unknown>[],
+  promptEntries: Record<string, unknown>[],
+  interactions: Interaction[],
+  signature: CommitContextSignature,
+  interactionsById: Map<string, TranscriptInteraction>,
+): Promise<void> {
+  if (interactions.length === 0 || promptEntries.length === 0) return;
+
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
+  for (const entry of allPromptEntries) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!turn || responsesByTurn.has(turn)) continue;
+    const id = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const response = id ? interactionsById.get(id)?.response?.trim() : "";
+    if (response) responsesByTurn.set(turn, response);
+  }
+  if (responsesByTurn.size === 0) return;
+
+  const selectedTurns = new Set(
+    promptEntries
+      .map((entry) => (typeof entry.turn === "number" ? entry.turn : 0))
+      .filter((turn) => turn > 0),
+  );
+
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) continue;
+    const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+    if (turn <= 1) continue;
+
+    const context = selectInteractionContext(
+      {
+        prompt: interaction.prompt,
+        previousResponse: responsesByTurn.get(turn - 1) ?? null,
+        previousTurnSelected: selectedTurns.has(turn - 1),
+      },
+      signature,
+    );
+    if (context) interaction.context = context;
   }
 }
 

@@ -57,6 +57,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "JWT 認証ミドルウェアを実装して",
+      "context": "直前の response が、この middleware を変更する理由を説明しています。",
       "response": "ミドルウェアを作成します...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -108,7 +109,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  Prompt 一覧はセッション全体ではなく、commit から次の commit までの会話 window から選ばれます。現在の commit に必要な planning、clarification、review の prompt は残しつつ、引用された過去の prompt 履歴や、この commit に残らなかった edit turn は削ります。
+  Prompt 一覧はセッション全体ではなく、commit から次の commit までの会話 window から選ばれます。現在の commit に必要な planning、clarification、review の prompt は残しつつ、引用された過去の prompt 履歴や、この commit に残らなかった edit turn は削ります。短い prompt が直前の response に依存していて、その直前 turn がすでに前の commit に属している場合は、表示専用の `context` が prompt の前に付くことがあります。これは attribution には影響しません。
 </Aside>
 
 <Aside>

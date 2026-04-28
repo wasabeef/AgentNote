@@ -93,7 +93,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 ### Core modules
 
 - **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Agent-aware via registry. Idempotent (checks existing note). Includes consumed-pairs deduplication to prevent re-attribution across split commits.
-- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, and `interactions[].tools`.
+- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, `interactions[].context`, and `interactions[].tools`.
 - **`core/attribution.ts`**: 3-diff position algorithm for line-level AI attribution. Parses unified diff hunks, computes AI vs human line positions.
 - **`core/session.ts`**: `writeSessionAgent()` / `readSessionAgent()` / `writeSessionTranscriptPath()` / `readSessionTranscriptPath()`. Per-session agent metadata.
 - **`core/constants.ts`**: Shared constants — `TRAILER_KEY`, `SESSION_AGENT_FILE`, `HEARTBEAT_FILE`, `PENDING_COMMIT_FILE`, etc.
@@ -109,7 +109,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 
 ### Causal turn ID
 
-Each `UserPromptSubmit` increments a turn counter. File changes inherit the current turn number. At commit time, `recordCommitEntry()` groups files by turn and attaches them as `files_touched` per interaction. Prompt lists are selected from the commit-to-commit window: turns after the previous recorded commit through the current commit's surviving edit turns, with structurally stale leading quoted history and overwritten edit turns trimmed. This avoids timestamp-based attribution which is unreliable under async hooks.
+Each `UserPromptSubmit` increments a turn counter. File changes inherit the current turn number. At commit time, `recordCommitEntry()` groups files by turn and attaches them as `files_touched` per interaction. Prompt lists are selected from the commit-to-commit window: turns after the previous recorded commit through the current commit's surviving edit turns, with structurally stale leading quoted history and overwritten edit turns trimmed. If a short selected prompt depends on the immediately previous response but that previous turn is already consumed by an older commit, Agent Note may attach display-only `context`; this never changes attribution. This avoids timestamp-based attribution which is unreliable under async hooks.
 
 ### init vs hook
 

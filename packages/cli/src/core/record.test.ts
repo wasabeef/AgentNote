@@ -9,6 +9,7 @@ import {
   CHANGES_FILE,
   COMMITTED_PAIRS_FILE,
   EMPTY_BLOB,
+  EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
   SESSIONS_DIR,
@@ -330,6 +331,177 @@ describe("recordCommitEntry", () => {
     assert.equal(interactions[0].files_touched, undefined);
     assert.equal(interactions[1].files_touched, undefined);
     assert.deepEqual(interactions[2].files_touched, ["impl.ts"]);
+  });
+
+  it("attaches display-only context from the previous response when it anchors to the commit", async () => {
+    const filePath = "packages/cli/src/core/record.ts";
+    mkdirSync(dirname(join(repoDir, filePath)), { recursive: true });
+    writeFileSync(
+      join(repoDir, filePath),
+      "export function isQuotedPromptHistory(value: string): boolean {\n  return value.length > 0;\n}\n",
+    );
+    execSync(`git add ${filePath}`, { cwd: repoDir });
+    execSync('git commit -m "fix(record): preserve primary prompt rows"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"review the prompt selector","prompt_id":"id-context","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"本当にこの修正で改善できるのか","prompt_id":"id-current","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Edit","file":"${filePath}","turn":2,"prompt_id":"id-current"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"response","turn":1,"response":"The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows."}\n' +
+        '{"event":"response","turn":2,"response":"I will keep the primary row and limit quoted-history filtering to surrounding context."}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    assert.equal(result.promptCount, 1);
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      response: string | null;
+      context?: string;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions.length, 1);
+    assert.equal(interactions[0].prompt, "本当にこの修正で改善できるのか");
+    assert.equal(
+      interactions[0].context,
+      "The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows.",
+    );
+    assert.equal(
+      interactions[0].response,
+      "I will keep the primary row and limit quoted-history filtering to surrounding context.",
+    );
+    assert.deepEqual(interactions[0].files_touched, [filePath]);
+  });
+
+  it("does not attach context when the previous response lacks a commit anchor", async () => {
+    writeFileSync(join(repoDir, "target.ts"), "export const targetValue = 1;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: update target value"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"review the idea","prompt_id":"id-context","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"apply the fix","prompt_id":"id-current","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"target.ts","turn":2,"prompt_id":"id-current"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"response","turn":1,"response":"The previous discussion only covered the general design tradeoff."}\n' +
+        '{"event":"response","turn":2,"response":"I will apply the fix now."}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    assert.equal(result.promptCount, 1);
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+    const interactions = note.interactions as Array<{
+      context?: string;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions[0].context, undefined);
+    assert.deepEqual(interactions[0].files_touched, ["target.ts"]);
+  });
+
+  it("attaches display-only context from transcript responses when hook events are absent", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "context-source.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:31:23Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:31:23Z"}}`,
+          '{"timestamp":"2026-04-15T09:31:24Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"review selector behavior"}]}}',
+          '{"timestamp":"2026-04-15T09:31:25Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"The issue is in target.ts and targetValue because the selector needs a structural anchor."}]}}',
+          '{"timestamp":"2026-04-15T09:31:26Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"does this fix it?"}]}}',
+          '{"timestamp":"2026-04-15T09:31:27Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will update the selector now."}]}}',
+          '{"timestamp":"2026-04-15T09:31:28Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: target.ts\\\\n+export const targetValue = 1;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"review selector behavior","prompt_id":"id-context","turn":1,"timestamp":"2026-04-15T09:31:24Z"}\n' +
+          '{"event":"prompt","prompt":"does this fix it?","prompt_id":"id-current","turn":2,"timestamp":"2026-04-15T09:31:26Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "target.ts"), "export const targetValue = 1;\n");
+      execSync("git add target.ts", { cwd: repoDir });
+      execSync('git commit -m "fix: update selector target"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+        context?: string;
+      }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "does this fix it?");
+      assert.equal(
+        interactions[0].context,
+        "The issue is in target.ts and targetValue because the selector needs a structural anchor.",
+      );
+      assert.equal(interactions[0].response, "I will update the selector now.");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
   });
 
   it("excludes older overwritten edit turns from the causal prompt window", async () => {

@@ -78,10 +78,11 @@ With the generated git hooks installed, Agent Note records commits automatically
 ## What Agent Note Saves
 
 - The prompts and responses behind a commit
+- Optional display-only context before a short prompt when the previous response explains it
 - The files touched by the agent
 - An AI ratio for the commit
 
-Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
+Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. If a short prompt depends on the previous response but that previous turn already belongs to an earlier commit, Agent Note may attach a display-only `context` field before the prompt. Context never changes attribution. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
@@ -267,6 +268,7 @@ $ git notes --ref=agentnote show ce941f7
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
+      "context": "The previous response explains why this middleware needs to change.",
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

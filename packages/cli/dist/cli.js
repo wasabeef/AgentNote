@@ -1682,9 +1682,9 @@ function isGeneratedArtifactPath(path) {
   if (segments.some((segment) => GENERATED_DIR_SEGMENTS.has(segment))) {
     return true;
   }
-  const basename2 = segments.at(-1) ?? normalized;
-  if (GENERATED_FILE_NAMES.has(basename2)) return true;
-  return GENERATED_FILE_SUFFIXES.some((suffix) => basename2.endsWith(suffix));
+  const basename3 = segments.at(-1) ?? normalized;
+  if (GENERATED_FILE_NAMES.has(basename3)) return true;
+  return GENERATED_FILE_SUFFIXES.some((suffix) => basename3.endsWith(suffix));
 }
 function hasGeneratedArtifactMarkers(content) {
   const header = content.slice(0, 2048).toLowerCase();
@@ -1732,6 +1732,9 @@ function buildEntry(opts) {
   }
   const interactions = opts.interactions.map((i, idx) => {
     const base = { prompt: i.prompt, response: i.response };
+    if (i.context && i.context.trim().length > 0) {
+      base.context = i.context;
+    }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
     }
@@ -1844,6 +1847,190 @@ var init_entry = __esm({
   }
 });
 
+// src/core/interaction-context.ts
+function buildCommitContextSignature(opts) {
+  return {
+    changedFiles: unique(opts.changedFiles.map((file) => normalizePath(file))),
+    changedFileBasenames: unique(
+      opts.changedFiles.map((file) => basename(normalizePath(file))).filter(Boolean)
+    ),
+    codeIdentifiers: extractCodeIdentifiers(opts.diffText),
+    commitSubjectTokens: tokenizeSubject(opts.commitSubject)
+  };
+}
+function extractCodeIdentifiers(diffText) {
+  const identifiers = /* @__PURE__ */ new Set();
+  for (const pattern of [CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER]) {
+    for (const match of diffText.matchAll(pattern)) {
+      const identifier = match[0];
+      if (isGenericIdentifier(identifier)) continue;
+      identifiers.add(identifier);
+    }
+  }
+  return identifiers;
+}
+function selectInteractionContext(candidate, signature) {
+  if (candidate.previousTurnSelected) return void 0;
+  if (!candidate.previousResponse) return void 0;
+  if (hasStrongAnchor(candidate.prompt, signature)) return void 0;
+  const scored = splitParagraphs(candidate.previousResponse).filter((paragraph) => !isRejectedParagraph(paragraph)).map((paragraph, index) => scoreParagraph(paragraph, index, signature)).filter((score) => hasStrongParagraphAnchor(score)).sort(compareParagraphScores);
+  if (scored.length === 0) return void 0;
+  const maxChars = Math.min(MAX_CONTEXT_CHARS, candidate.previousResponse.length);
+  const selected = scored.slice(0, 2).sort((a, b) => a.index - b.index);
+  const output = [];
+  let length = 0;
+  for (const item of selected) {
+    const nextLength = length + item.paragraph.length + (output.length > 0 ? 2 : 0);
+    if (nextLength > maxChars) continue;
+    output.push(item.paragraph);
+    length = nextLength;
+  }
+  return output.length > 0 ? output.join("\n\n") : void 0;
+}
+function scoreParagraph(paragraph, index, signature) {
+  return {
+    paragraph,
+    index,
+    exactPathHits: countLiteralHits(paragraph, signature.changedFiles),
+    basenameHits: countLiteralHits(paragraph, signature.changedFileBasenames),
+    codeIdentifierHits: countIdentifierHits(paragraph, signature.codeIdentifiers),
+    subjectTokenHits: countSubjectTokenHits(paragraph, signature.commitSubjectTokens)
+  };
+}
+function compareParagraphScores(a, b) {
+  return b.exactPathHits - a.exactPathHits || b.basenameHits - a.basenameHits || b.codeIdentifierHits - a.codeIdentifierHits || b.subjectTokenHits - a.subjectTokenHits || a.index - b.index;
+}
+function hasStrongParagraphAnchor(score) {
+  return score.exactPathHits > 0 || score.basenameHits > 0 || score.codeIdentifierHits > 0;
+}
+function hasStrongAnchor(text, signature) {
+  return countLiteralHits(text, signature.changedFiles) > 0 || countLiteralHits(text, signature.changedFileBasenames) > 0 || countIdentifierHits(text, signature.codeIdentifiers) > 0;
+}
+function splitParagraphs(text) {
+  const paragraphs = [];
+  let current = [];
+  let inFence = false;
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trimEnd();
+    if (line.trim().startsWith("```")) {
+      inFence = !inFence;
+      current.push(line);
+      continue;
+    }
+    if (!inFence && line.trim() === "") {
+      if (current.length > 0) {
+        paragraphs.push(current.join("\n").trim());
+        current = [];
+      }
+      continue;
+    }
+    current.push(line);
+  }
+  if (current.length > 0) paragraphs.push(current.join("\n").trim());
+  return paragraphs.filter((paragraph) => paragraph.length > 0);
+}
+function isRejectedParagraph(paragraph) {
+  return hasBrokenCodeFence(paragraph) || isIntroOnlyParagraph(paragraph) || isOperationalNoise(paragraph) || hasLocalAbsolutePath(paragraph);
+}
+function hasBrokenCodeFence(paragraph) {
+  return (paragraph.match(/```/g) ?? []).length % 2 !== 0;
+}
+function isIntroOnlyParagraph(paragraph) {
+  const trimmed = paragraph.trim();
+  return /^#{1,6}\s+\S/.test(trimmed) || /[:：]\s*$/.test(trimmed);
+}
+function isOperationalNoise(paragraph) {
+  const lower = paragraph.toLowerCase();
+  return lower.includes("working tree") || lower.includes("ready for review") || /\bci\b/.test(lower) && /\b(pass|passed|green|failed|failure)\b/.test(lower) || lower.includes("git diff --check");
+}
+function hasLocalAbsolutePath(paragraph) {
+  return /(?:^|[\s("'`])(?:\/Users\/|\/home\/|[A-Za-z]:\\)/.test(paragraph);
+}
+function countLiteralHits(text, literals) {
+  let count = 0;
+  for (const literal of literals) {
+    if (!literal) continue;
+    if (containsLiteral(text, literal)) count += 1;
+  }
+  return count;
+}
+function containsLiteral(text, literal) {
+  const escaped = escapeRegExp(literal);
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_./-])${escaped}($|[^A-Za-z0-9_/-])`, "i");
+  return pattern.test(text);
+}
+function countIdentifierHits(text, identifiers) {
+  let count = 0;
+  for (const identifier of identifiers) {
+    if (containsIdentifier(text, identifier)) count += 1;
+  }
+  return count;
+}
+function containsIdentifier(text, identifier) {
+  const escaped = escapeRegExp(identifier);
+  return new RegExp(`\\b${escaped}\\b`).test(text);
+}
+function countSubjectTokenHits(text, tokens) {
+  const textTokens = new Set(tokenizeSubject(text));
+  return tokens.filter((token) => textTokens.has(token)).length;
+}
+function tokenizeSubject(text) {
+  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}_-]+/u).map((token) => token.trim()).filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token));
+  return unique(tokens);
+}
+function isGenericIdentifier(identifier) {
+  return GENERIC_TOKENS.has(identifier.toLowerCase());
+}
+function normalizePath(path) {
+  return path.replaceAll("\\", "/");
+}
+function basename(path) {
+  return path.split("/").pop() ?? path;
+}
+function unique(values) {
+  return [...new Set(values.filter((value) => value.length > 0))];
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+var MAX_CONTEXT_CHARS, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER;
+var init_interaction_context = __esm({
+  "src/core/interaction-context.ts"() {
+    "use strict";
+    MAX_CONTEXT_CHARS = 900;
+    GENERIC_TOKENS = /* @__PURE__ */ new Set([
+      "agent",
+      "agentnote",
+      "build",
+      "case",
+      "change",
+      "commit",
+      "context",
+      "diff",
+      "file",
+      "files",
+      "fix",
+      "html",
+      "http",
+      "https",
+      "json",
+      "note",
+      "prompt",
+      "record",
+      "response",
+      "test",
+      "tests",
+      "todo",
+      "turn",
+      "utf8",
+      "yaml"
+    ]);
+    CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
+    SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
+    ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{3,}\b/g;
+  }
+});
+
 // src/core/jsonl.ts
 import { existsSync as existsSync5 } from "node:fs";
 import { appendFile, readFile as readFile5 } from "node:fs/promises";
@@ -1953,6 +2140,16 @@ async function recordCommitEntry(opts) {
     commitSubject = await git(["show", "-s", "--format=%s", "HEAD"]);
   } catch {
   }
+  let commitDiffText = "";
+  try {
+    commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
+  } catch {
+  }
+  const contextSignature = buildCommitContextSignature({
+    changedFiles: commitFiles,
+    diffText: commitDiffText,
+    commitSubject
+  });
   const allChangeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
   const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
   const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
@@ -2207,6 +2404,14 @@ async function recordCommitEntry(opts) {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
   }
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
+  await attachInteractionContexts(
+    sessionDir,
+    promptEntries,
+    relevantPromptEntries,
+    interactions,
+    contextSignature,
+    interactionsById
+  );
   if (hasTurnData) {
     attachFilesTouched(changeEntries, relevantPromptEntries, interactions, commitFileSet);
   }
@@ -2308,6 +2513,37 @@ async function fillInteractionResponsesFromEvents(sessionDir, promptEntries, int
     if (response) {
       interaction.response = response;
     }
+  }
+}
+async function attachInteractionContexts(sessionDir, allPromptEntries, promptEntries, interactions, signature, interactionsById) {
+  if (interactions.length === 0 || promptEntries.length === 0) return;
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
+  for (const entry of allPromptEntries) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!turn || responsesByTurn.has(turn)) continue;
+    const id = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const response = id ? interactionsById.get(id)?.response?.trim() : "";
+    if (response) responsesByTurn.set(turn, response);
+  }
+  if (responsesByTurn.size === 0) return;
+  const selectedTurns = new Set(
+    promptEntries.map((entry) => typeof entry.turn === "number" ? entry.turn : 0).filter((turn) => turn > 0)
+  );
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) continue;
+    const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+    if (turn <= 1) continue;
+    const context = selectInteractionContext(
+      {
+        prompt: interaction.prompt,
+        previousResponse: responsesByTurn.get(turn - 1) ?? null,
+        previousTurnSelected: selectedTurns.has(turn - 1)
+      },
+      signature
+    );
+    if (context) interaction.context = context;
   }
 }
 async function resolveTranscriptLineCounts(commitFileSet, interactions, consumedPromptState) {
@@ -2664,8 +2900,8 @@ function scorePromptFileRefs(prompt, commitFiles) {
     for (const segment of segments) {
       if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
     }
-    const basename2 = file.split("/").pop();
-    if (basename2 && lowerPrompt.includes(basename2.toLowerCase())) score += 20;
+    const basename3 = file.split("/").pop();
+    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += 20;
   }
   return score;
 }
@@ -3180,6 +3416,7 @@ var init_record = __esm({
     init_attribution();
     init_constants();
     init_entry();
+    init_interaction_context();
     init_jsonl();
     init_session();
     init_storage();
@@ -4434,7 +4671,7 @@ function renderMarkdown(report) {
       continue;
     }
     const fileList = escapeTableCell(
-      commit2.files.map((file) => `${basename(file.path)} ${file.by_ai ? "\u{1F916}" : "\u{1F464}"}`).join(", ")
+      commit2.files.map((file) => `${basename2(file.path)} ${file.by_ai ? "\u{1F916}" : "\u{1F464}"}`).join(", ")
     );
     const aiRatioCell = renderRatioWithBar(commit2.ai_ratio, 5);
     lines.push(
@@ -4461,13 +4698,18 @@ function renderMarkdown(report) {
     for (const commit2 of withPrompts) {
       lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
       lines.push("");
-      for (const { prompt, response } of commit2.interactions) {
+      for (const { context, prompt, response } of commit2.interactions) {
+        if (context && context.trim().length > 0) {
+          const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
+          pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanedContext);
+          lines.push(">");
+        }
         const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
-        lines.push(`> **\u{1F9D1} Prompt:** ${cleaned.split("\n").join("\n> ")}`);
+        pushBlockquoteSection(lines, "\u{1F9D1} Prompt", cleaned);
         if (response) {
           const truncated = response.length > TRUNCATE_RESPONSE_PR ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : response;
           lines.push(">");
-          lines.push(`> **\u{1F916} Response:** ${truncated.split("\n").join("\n> ")}`);
+          pushBlockquoteSection(lines, "\u{1F916} Response", truncated);
         }
         lines.push("");
       }
@@ -4511,7 +4753,11 @@ function cleanPrompt(prompt, maxLen) {
   if (body.length <= maxLen) return body;
   return `${body.slice(0, maxLen)}\u2026`;
 }
-function basename(path) {
+function pushBlockquoteSection(lines, label, body) {
+  lines.push(`> **${label}**`);
+  lines.push(`> ${body.split("\n").join("\n> ")}`);
+}
+function basename2(path) {
   return path.split("/").pop() ?? path;
 }
 
