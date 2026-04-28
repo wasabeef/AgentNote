@@ -2858,7 +2858,7 @@
   },
   "pull_request": {
     "number": 33,
-    "title": "fix(record): harden prompt selection consumption",
+    "title": "feat(record): add prompt context display",
     "state": "open"
   }
 }
