@@ -1048,10 +1048,9 @@ describe("recordCommitEntry", () => {
     writeFileSync(join(sessionDir, TURN_FILE), "1\n");
 
     mkdirSync(join(repoDir, "src"), { recursive: true });
-    mkdirSync(join(repoDir, "dist"), { recursive: true });
     writeFileSync(join(repoDir, "src", "service.ts"), "export const status = 'done';\n");
-    writeFileSync(join(repoDir, "dist", "index.js"), "/* compiled */\n");
-    execSync("git add src/service.ts dist/index.js", { cwd: repoDir });
+    writeFileSync(join(repoDir, "src", "client.generated.ts"), "export const generated = true;\n");
+    execSync("git add src/service.ts src/client.generated.ts", { cwd: repoDir });
     execSync('git commit -m "feat: generated line attribution"', { cwd: repoDir });
 
     const commitSha = execSync("git rev-parse HEAD", {
@@ -1074,7 +1073,7 @@ describe("recordCommitEntry", () => {
       "generated files should be ignored even when line-level attribution is available",
     );
     const files = typedNote.files;
-    assert.equal(files.find((file) => file.path === "dist/index.js")?.generated, true);
+    assert.equal(files.find((file) => file.path === "src/client.generated.ts")?.generated, true);
   });
 
   it("marks generated files from committed content without reading the whole blob into attribution", async () => {

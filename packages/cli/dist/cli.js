@@ -1781,8 +1781,6 @@ var init_entry = __esm({
       ".next",
       ".nuxt",
       "coverage",
-      "dist",
-      "out",
       // Monorepo / remote-cache build outputs
       ".turbo",
       ".yarn",
@@ -1791,12 +1789,7 @@ var init_entry = __esm({
       "bazel-testlogs",
       // Mobile / Flutter build caches
       ".dart_tool",
-      "DerivedData",
-      // Multi-language generic build directories (Android, Kotlin, Rust, Go, Dart)
-      "build",
-      "gen",
-      "generated",
-      "target"
+      "DerivedData"
     ]);
     GENERATED_FILE_NAMES = /* @__PURE__ */ new Set([
       // Flutter tool-managed dependency snapshot

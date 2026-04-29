@@ -123,7 +123,7 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast
 </Aside>
 
 <Aside>
-  Artefatos gerados comuns são excluídos do denominador de `AI ratio` em best effort, incluindo outputs de build web, Flutter registrants, Dart codegen, protobufs de Go, bindings de Rust e fontes geradas de Swift / Kotlin.
+  Generated artifacts comuns são excluídos do denominador de `AI ratio` em best effort usando sinais específicos, como caminhos de framework/cache, nomes ou sufixos gerados e headers dos arquivos commitados. Nomes genéricos de diretório como `build/`, `dist/`, `gen/`, `generated/` e `target/` não bastam por si só.
 </Aside>
 
 ## Ciclo de vida da sessão

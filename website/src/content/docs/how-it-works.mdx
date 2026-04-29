@@ -123,7 +123,7 @@ With the generated git hooks installed, most repos can keep using plain `git com
 </Aside>
 
 <Aside>
-  Common generated artifacts are excluded from the AI ratio denominator on a best-effort basis, including Web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings, and Swift / Kotlin generated sources.
+  Common generated artifacts are excluded from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves.
 </Aside>
 
 ## Session Lifecycle

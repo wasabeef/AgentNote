@@ -123,7 +123,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </Aside>
 
 <Aside>
-  Web build output, Flutter registrant, Dart codegen, Go protobuf, Rust bindings, Swift / Kotlin generated source 같은 대표적인 generated artifact 는 best-effort 로 `AI ratio` 분모에서 제외됩니다.
+  대표적인 generated artifact 는 framework/cache path, generated filename/suffix, commit 된 file header 같은 구체적인 signal 로 best-effort 로 `AI ratio` 분모에서 제외됩니다. `build/`, `dist/`, `gen/`, `generated/`, `target/` 같은 범용 directory 이름만으로는 generated 로 보지 않습니다.
 </Aside>
 
 ## 세션 라이프사이클

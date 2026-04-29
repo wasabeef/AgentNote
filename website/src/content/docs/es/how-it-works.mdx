@@ -123,7 +123,7 @@ Con los git hooks generados instalados, en la mayoría de los repos basta con se
 </Aside>
 
 <Aside>
-  Los artefactos generados más comunes se excluyen del denominador de `AI ratio` como best effort, incluidos los builds web, los registrants de Flutter, el codegen de Dart, los protobufs de Go, los bindings de Rust y las fuentes generadas de Swift / Kotlin.
+  Los generated artifacts comunes se excluyen del denominador de `AI ratio` como best effort usando señales específicas, como rutas de framework/cache, nombres o sufijos generados y headers del archivo commiteado. Los nombres genéricos de directorio como `build/`, `dist/`, `gen/`, `generated/` y `target/` no bastan por sí solos.
 </Aside>
 
 ## Ciclo de vida de la sesión
