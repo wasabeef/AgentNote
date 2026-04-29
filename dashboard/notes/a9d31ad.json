@@ -303,6 +303,6 @@
   "pull_request": {
     "number": 33,
     "title": "feat(record): add prompt context display",
-    "state": "open"
+    "state": "merged"
   }
 }
