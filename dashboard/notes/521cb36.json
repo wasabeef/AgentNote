@@ -1140,6 +1140,6 @@
   "pull_request": {
     "number": 37,
     "title": "fix(hooks): harden shell commit detection",
-    "state": "open"
+    "state": "merged"
   }
 }
