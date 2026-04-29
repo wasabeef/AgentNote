@@ -464,6 +464,6 @@
   "pull_request": {
     "number": 34,
     "title": "fix(dashboard): preserve truncated diff entries",
-    "state": "open"
+    "state": "merged"
   }
 }
