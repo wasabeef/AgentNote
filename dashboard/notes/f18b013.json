@@ -721,6 +721,6 @@
   "pull_request": {
     "number": 35,
     "title": "fix(record): bound transcript prompt pairing",
-    "state": "open"
+    "state": "merged"
   }
 }
