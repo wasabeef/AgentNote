@@ -26,6 +26,7 @@ type CodexHooksFile = {
 
 type RolloutLine = {
   type?: string;
+  timestamp?: string;
   payload?: Record<string, unknown>;
 };
 
@@ -487,6 +488,7 @@ export const codex: AgentAdapter = {
         if (!prompt) continue;
         if (current) interactions.push(current);
         current = { prompt, response: null };
+        if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
         continue;
       }
 

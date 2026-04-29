@@ -244,7 +244,8 @@ export async function recordCommitEntry(opts: {
 
   // Tag each transcript interaction with the prompt_id of its corresponding
   // session prompt. Pairing is a pure map lookup below.
-  correlatePromptIds(allInteractions, promptEntries);
+  const transcriptCorrelationStartMs = await readTranscriptCorrelationStartMs(sessionDir);
+  correlatePromptIds(allInteractions, promptEntries, transcriptCorrelationStartMs);
   const interactionsById = new Map<string, TranscriptInteraction>();
   for (const i of allInteractions) {
     if (i.prompt_id) interactionsById.set(i.prompt_id, i);
@@ -534,21 +535,25 @@ export async function recordCommitEntry(opts: {
  * rather than silently shifting pairs by one. Losing the response on every
  * duplicate is safer than silently attaching the wrong one.
  *
- * Known limitation: Claude `--continue` preserves the original session_id
- * but extends the transcript with prior-run turns, while `prompts.jsonl`
- * starts fresh for the resumed run. A repeated prompt text that also
- * appeared in the prior run can have its session_id stamped onto a
- * transcript index that belongs to the prior run, producing response=null
- * (or, worse, a wrong-session response) for the current run's pairing.
- * Fixing this cleanly needs a chronological lower bound (first transcript
- * index to consider) derived from the session_start timestamp; deferred.
+ * When a transcript includes previous runs (for example Claude `--continue`),
+ * `transcriptCorrelationStartMs` limits timestamped transcript candidates to
+ * the current hook session. Fully timestampless transcripts keep the existing
+ * pairing behavior; mixed timestamp data prefers timestamped current-session
+ * candidates for each prompt text and skips ambiguous partial matches.
  *
  * Mutates `interactions` in place.
  */
 function correlatePromptIds(
   interactions: TranscriptInteraction[],
   sessionPromptEntries: Record<string, unknown>[],
+  transcriptCorrelationStartMs: number | null = null,
 ): void {
+  const effectiveCorrelationStartMs = hasTranscriptCandidateAtOrAfter(
+    interactions,
+    transcriptCorrelationStartMs,
+  )
+    ? transcriptCorrelationStartMs
+    : null;
   const sessionTextToIds = new Map<string, string[]>();
   for (const entry of sessionPromptEntries) {
     const text = typeof entry.prompt === "string" ? entry.prompt : undefined;
@@ -559,14 +564,28 @@ function correlatePromptIds(
   }
 
   const txTextToIndices = new Map<string, number[]>();
+  const txTextToUntimestampedIndices = new Map<string, number[]>();
   for (let idx = 0; idx < interactions.length; idx++) {
+    if (!isTranscriptCorrelationCandidate(interactions[idx], effectiveCorrelationStartMs)) {
+      continue;
+    }
     const text = interactions[idx].prompt;
-    if (!txTextToIndices.has(text)) txTextToIndices.set(text, []);
-    txTextToIndices.get(text)?.push(idx);
+    const interactionMs = parseTimestampMs(interactions[idx].timestamp);
+    const map =
+      effectiveCorrelationStartMs !== null && interactionMs === null
+        ? txTextToUntimestampedIndices
+        : txTextToIndices;
+    if (!map.has(text)) map.set(text, []);
+    map.get(text)?.push(idx);
   }
 
   for (const [text, ids] of sessionTextToIds) {
-    const indices = txTextToIndices.get(text) ?? [];
+    const indices = selectTranscriptIndicesForText(
+      txTextToIndices.get(text) ?? [],
+      txTextToUntimestampedIndices.get(text) ?? [],
+      ids.length,
+      effectiveCorrelationStartMs,
+    );
     if (indices.length < ids.length) continue; // ambiguous — skip this text group
     // Transcript has >= session. Pair the first N transcript occurrences
     // (in chronological order) with session's N prompts; the session is a
@@ -576,6 +595,45 @@ function correlatePromptIds(
       interactions[indices[i]].prompt_id = ids[i];
     }
   }
+}
+
+function selectTranscriptIndicesForText(
+  timestampedIndices: number[],
+  untimestampedIndices: number[],
+  expectedCount: number,
+  transcriptCorrelationStartMs: number | null,
+): number[] {
+  if (transcriptCorrelationStartMs === null) return timestampedIndices;
+  if (timestampedIndices.length >= expectedCount) return timestampedIndices;
+  if (timestampedIndices.length === 0) return untimestampedIndices;
+  return [];
+}
+
+function hasTranscriptCandidateAtOrAfter(
+  interactions: TranscriptInteraction[],
+  transcriptCorrelationStartMs: number | null,
+): boolean {
+  if (transcriptCorrelationStartMs === null) return true;
+  return interactions.some((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs !== null && interactionMs >= transcriptCorrelationStartMs;
+  });
+}
+
+function isTranscriptCorrelationCandidate(
+  interaction: TranscriptInteraction,
+  transcriptCorrelationStartMs: number | null,
+): boolean {
+  if (transcriptCorrelationStartMs === null) return true;
+  const interactionMs = parseTimestampMs(interaction.timestamp);
+  if (interactionMs === null) return true;
+  return interactionMs >= transcriptCorrelationStartMs;
+}
+
+function parseTimestampMs(value: unknown): number | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 function toRecordedInteraction(
@@ -1871,6 +1929,23 @@ async function readResponsesByTurn(sessionDir: string): Promise<Map<number, stri
     responsesByTurn.set(turn, { response, priority });
   }
   return new Map([...responsesByTurn.entries()].map(([turn, value]) => [turn, value.response]));
+}
+
+async function readTranscriptCorrelationStartMs(sessionDir: string): Promise<number | null> {
+  const eventsFile = join(sessionDir, EVENTS_FILE);
+  if (!existsSync(eventsFile)) return null;
+
+  const entries = await readJsonlEntries(eventsFile);
+  let latestSessionStartMs: number | null = null;
+  for (const entry of entries) {
+    if (entry.event !== "session_start") continue;
+    const timestampMs = parseTimestampMs(entry.timestamp);
+    if (timestampMs === null) continue;
+    if (latestSessionStartMs === null || timestampMs > latestSessionStartMs) {
+      latestSessionStartMs = timestampMs;
+    }
+  }
+  return latestSessionStartMs;
 }
 
 /** Read the most useful model field from the session's events.jsonl. */
