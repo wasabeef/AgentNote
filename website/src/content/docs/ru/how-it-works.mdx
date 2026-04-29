@@ -67,6 +67,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "Реализуй JWT auth middleware",
+      "context": "Предыдущий response объясняет, почему этот middleware нужно изменить.",
       "response": "Я создам middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -118,7 +119,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  Списки prompt берутся из окна разговора между commit, а не из всей истории сессии. Agent Note сохраняет полезные prompt для планирования, уточнения и review текущего commit, но убирает процитированную старую историю prompt и edit turn, которые не попали в этот commit.
+  Списки prompt берутся из окна разговора между commit, а не из всей истории сессии. Agent Note сохраняет полезные prompt для планирования, уточнения и review текущего commit, но убирает процитированную старую историю prompt и edit turn, которые не попали в этот commit. Если короткий prompt зависит от предыдущего response, но этот предыдущий turn уже относится к более старому commit, Agent Note может добавить перед prompt отображаемое только для чтения поле `context`; attribution от этого не меняется.
 </Aside>
 
 <Aside>

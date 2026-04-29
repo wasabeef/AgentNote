@@ -110,6 +110,7 @@ describe("agentnote pr", () => {
         model: "gpt-5.4",
         interactions: [
           {
+            context: "The report renderer already knows the Dashboard URL for this repository.",
             prompt: "wire the dashboard link into the report",
             response: "I'll surface the shared Dashboard URL in the header.",
           },
@@ -136,7 +137,21 @@ describe("agentnote pr", () => {
           '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>',
         ),
       );
+      assert.ok(output.includes("**📝 Context**"));
+      assert.ok(
+        output.includes("The report renderer already knows the Dashboard URL for this repository."),
+      );
       assert.ok(!output.includes("About PR previews"));
+
+      const jsonOutput = execSync(`node ${cliPath} pr HEAD~1 --json`, {
+        cwd: dashboardDir,
+        encoding: "utf-8",
+      });
+      const report = JSON.parse(jsonOutput);
+      assert.equal(
+        report.commits[0].interactions[0].context,
+        "The report renderer already knows the Dashboard URL for this repository.",
+      );
     } finally {
       rmSync(dashboardDir, { recursive: true, force: true });
     }

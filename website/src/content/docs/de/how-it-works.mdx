@@ -67,6 +67,7 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi
   "interactions": [
     {
       "prompt": "JWT-Auth-Middleware implementieren",
+      "context": "Die vorherige Antwort erklärt, warum diese Middleware geändert werden muss.",
       "response": "Ich erstelle die Middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -118,7 +119,7 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi
 </CardGrid>
 
 <Aside type="tip">
-  Prompt-Listen stammen aus dem Gesprächsfenster von Commit zu Commit, nicht aus dem gesamten Sitzungsverlauf. Agent Note behält nützliche Planungs-, Klärungs- und Review-Prompts für den aktuellen Commit und entfernt zitierte Prompt-Historie sowie Edit-Turns, die in diesem Commit nicht überlebt haben.
+  Prompt-Listen stammen aus dem Gesprächsfenster von Commit zu Commit, nicht aus dem gesamten Sitzungsverlauf. Agent Note behält nützliche Planungs-, Klärungs- und Review-Prompts für den aktuellen Commit und entfernt zitierte Prompt-Historie sowie Edit-Turns, die in diesem Commit nicht überlebt haben. Wenn ein kurzer Prompt von der vorherigen Antwort abhängt, dieser vorherige Turn aber schon zu einem älteren Commit gehört, kann Agent Note ein reines Anzeige-Feld `context` vor dem Prompt ergänzen; die Attribution ändert sich dadurch nie.
 </Aside>
 
 <Aside>

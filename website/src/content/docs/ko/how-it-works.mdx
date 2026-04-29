@@ -67,6 +67,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "JWT auth middleware 구현",
+      "context": "이전 response 가 이 middleware 를 바꿔야 하는 이유를 설명합니다.",
       "response": "middleware 를 만들겠습니다...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -118,7 +119,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 목록은 session 전체가 아니라 commit 과 다음 commit 사이의 대화 window 에서 가져옵니다. Agent Note 는 현재 commit 을 설명하는 planning, clarification, review prompt 를 남기고, 인용된 과거 prompt 기록이나 이 commit 에 남지 않은 edit turn 은 잘라냅니다.
+  prompt 목록은 session 전체가 아니라 commit 과 다음 commit 사이의 대화 window 에서 가져옵니다. Agent Note 는 현재 commit 을 설명하는 planning, clarification, review prompt 를 남기고, 인용된 과거 prompt 기록이나 이 commit 에 남지 않은 edit turn 은 잘라냅니다. 짧은 prompt 가 이전 response 에 의존하지만 그 이전 turn 이 이미 이전 commit 에 속한다면, Agent Note 는 표시 전용 `context` 를 prompt 앞에 붙일 수 있습니다. attribution 에는 영향을 주지 않습니다.
 </Aside>
 
 <Aside>

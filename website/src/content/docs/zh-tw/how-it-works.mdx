@@ -67,6 +67,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "實作 JWT auth middleware",
+      "context": "上一則 response 說明了為什麼這個 middleware 需要修改。",
       "response": "我會建立這個 middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -118,7 +119,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </CardGrid>
 
 <Aside type="tip">
-  prompt 清單來自 commit 到下一個 commit 之間的對話 window，而不是整個 session backlog。Agent Note 會保留能解釋目前 commit 的 planning、clarification 與 review prompt，同時裁掉被引用的舊 prompt 歷史，以及沒有保留到這個 commit 中的 edit turn。
+  prompt 清單來自 commit 到下一個 commit 之間的對話 window，而不是整個 session backlog。Agent Note 會保留能解釋目前 commit 的 planning、clarification 與 review prompt，同時裁掉被引用的舊 prompt 歷史，以及沒有保留到這個 commit 中的 edit turn。如果很短的 prompt 依賴上一則 response，但上一個 turn 已經屬於更早的 commit，Agent Note 可能會在 prompt 前加入只用於顯示的 `context` 欄位；它不會改變 attribution。
 </Aside>
 
 <Aside>

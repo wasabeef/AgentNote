@@ -9,6 +9,7 @@ import {
   CHANGES_FILE,
   COMMITTED_PAIRS_FILE,
   EMPTY_BLOB,
+  EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
   SESSIONS_DIR,
@@ -330,6 +331,177 @@ describe("recordCommitEntry", () => {
     assert.equal(interactions[0].files_touched, undefined);
     assert.equal(interactions[1].files_touched, undefined);
     assert.deepEqual(interactions[2].files_touched, ["impl.ts"]);
+  });
+
+  it("attaches display-only context from the previous response when it anchors to the commit", async () => {
+    const filePath = "packages/cli/src/core/record.ts";
+    mkdirSync(dirname(join(repoDir, filePath)), { recursive: true });
+    writeFileSync(
+      join(repoDir, filePath),
+      "export function isQuotedPromptHistory(value: string): boolean {\n  return value.length > 0;\n}\n",
+    );
+    execSync(`git add ${filePath}`, { cwd: repoDir });
+    execSync('git commit -m "fix(record): preserve primary prompt rows"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"review the prompt selector","prompt_id":"id-context","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"本当にこの修正で改善できるのか","prompt_id":"id-current","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Edit","file":"${filePath}","turn":2,"prompt_id":"id-current"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"response","turn":1,"response":"The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows."}\n' +
+        '{"event":"response","turn":2,"response":"I will keep the primary row and limit quoted-history filtering to surrounding context."}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    assert.equal(result.promptCount, 1);
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      response: string | null;
+      context?: string;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions.length, 1);
+    assert.equal(interactions[0].prompt, "本当にこの修正で改善できるのか");
+    assert.equal(
+      interactions[0].context,
+      "The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows.",
+    );
+    assert.equal(
+      interactions[0].response,
+      "I will keep the primary row and limit quoted-history filtering to surrounding context.",
+    );
+    assert.deepEqual(interactions[0].files_touched, [filePath]);
+  });
+
+  it("does not attach context when the previous response lacks a commit anchor", async () => {
+    writeFileSync(join(repoDir, "target.ts"), "export const targetValue = 1;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: update target value"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"review the idea","prompt_id":"id-context","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"apply the fix","prompt_id":"id-current","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"target.ts","turn":2,"prompt_id":"id-current"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"response","turn":1,"response":"The previous discussion only covered the general design tradeoff."}\n' +
+        '{"event":"response","turn":2,"response":"I will apply the fix now."}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    assert.equal(result.promptCount, 1);
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+    const interactions = note.interactions as Array<{
+      context?: string;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions[0].context, undefined);
+    assert.deepEqual(interactions[0].files_touched, ["target.ts"]);
+  });
+
+  it("attaches display-only context from transcript responses when hook events are absent", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "context-source.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T09:31:23Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T09:31:23Z"}}`,
+          '{"timestamp":"2026-04-15T09:31:24Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"review selector behavior"}]}}',
+          '{"timestamp":"2026-04-15T09:31:25Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"The issue is in target.ts and targetValue because the selector needs a structural anchor."}]}}',
+          '{"timestamp":"2026-04-15T09:31:26Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"does this fix it?"}]}}',
+          '{"timestamp":"2026-04-15T09:31:27Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will update the selector now."}]}}',
+          '{"timestamp":"2026-04-15T09:31:28Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: target.ts\\\\n+export const targetValue = 1;\\\\n*** End Patch\\"}"}}',
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"review selector behavior","prompt_id":"id-context","turn":1,"timestamp":"2026-04-15T09:31:24Z"}\n' +
+          '{"event":"prompt","prompt":"does this fix it?","prompt_id":"id-current","turn":2,"timestamp":"2026-04-15T09:31:26Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "target.ts"), "export const targetValue = 1;\n");
+      execSync("git add target.ts", { cwd: repoDir });
+      execSync('git commit -m "fix: update selector target"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+        context?: string;
+      }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "does this fix it?");
+      assert.equal(
+        interactions[0].context,
+        "The issue is in target.ts and targetValue because the selector needs a structural anchor.",
+      );
+      assert.equal(interactions[0].response, "I will update the selector now.");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
   });
 
   it("excludes older overwritten edit turns from the causal prompt window", async () => {
@@ -740,6 +912,122 @@ describe("recordCommitEntry", () => {
       "Is packages/dashboard itself repository-specific?",
       "improve it",
     ]);
+  });
+
+  it("prompt window keeps a quoted-looking primary review prompt", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":547,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+
+    const reviewPrompt = [
+      "Validation result: 15/16 passed, 1 partial.",
+      "",
+      "  R1 transcript primary uses prompt_id:file consumed state.",
+      "  R2 legacy prompt-only entries are treated as fully consumed.",
+      "  R3 prompt-window markers only advance maxConsumedTurn.",
+      "  R4 transcript consumption is stored per file.",
+      "  R5 synthetic edit fallback is post-window only.",
+      "  R6 PR #32 stale revival prevention test exists.",
+      "  R7 split commit prompt reuse test exists.",
+      "  R8 commit-to-commit prompt window exists.",
+      "  R9 language-neutral selection logic uses structural signals.",
+      "  R10 PR #29 package split history is covered.",
+      "",
+      "R14 gap: add direct record-level coverage for Cursor and Gemini. Update packages/cli/src/core/record.test.ts and docs/TODO.md.",
+    ].join("\n");
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      `${JSON.stringify({
+        event: "prompt",
+        prompt: reviewPrompt,
+        turn: 548,
+        timestamp: "2026-04-13T10:00:00Z",
+      })}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `${JSON.stringify({
+        event: "file_change",
+        tool: "Edit",
+        file: "packages/cli/src/core/record.test.ts",
+        turn: 548,
+      })}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "548\n");
+
+    mkdirSync(join(repoDir, "packages", "cli", "src", "core"), { recursive: true });
+    writeFileSync(join(repoDir, "packages", "cli", "src", "core", "record.test.ts"), "test\n");
+    execSync("git add packages/cli/src/core/record.test.ts", { cwd: repoDir });
+    execSync('git commit -m "test: cover prompt selection"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, [reviewPrompt]);
+  });
+
+  it("prompt window trimming preserves primary turns outside the tail", async () => {
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":100,"file":"previous.ts","change_id":null,"tool_use_id":null}\n',
+    );
+
+    const promptLines: string[] = [];
+    for (let turn = 101; turn <= 140; turn += 1) {
+      const prompt =
+        turn === 110
+          ? "primary implementation prompt for target.ts that must survive trimming"
+          : `context prompt ${turn} for target.ts`;
+      promptLines.push(
+        JSON.stringify({
+          event: "prompt",
+          prompt,
+          turn,
+          timestamp: `2026-04-13T10:00:${String(turn - 100).padStart(2, "0")}Z`,
+        }),
+      );
+    }
+
+    writeFileSync(join(sessionDir, PROMPTS_FILE), `${promptLines.join("\n")}\n`);
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"target.ts","turn":110}\n' +
+        '{"event":"file_change","tool":"Edit","file":"tail.ts","turn":140}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "140\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    writeFileSync(join(repoDir, "tail.ts"), "export const tail = true;\n");
+    execSync("git add target.ts tail.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: trim prompt window"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.equal(prompts.length, 24);
+    assert.ok(
+      prompts.includes("primary implementation prompt for target.ts that must survive trimming"),
+    );
   });
 
   it("excludes generated artifacts from line-level AI ratio", async () => {
@@ -1259,6 +1547,92 @@ describe("recordCommitEntry", () => {
     );
   });
 
+  it("record-level Cursor path does not revive consumed same-file changes", async () => {
+    writeFileSync(join(sessionDir, "agent"), "cursor\n");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"old cursor edit","prompt_id":"cursor-old-prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"plan current cursor fix","prompt_id":"cursor-plan","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"apply current cursor fix","prompt_id":"cursor-apply","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"review current cursor fix","prompt_id":"cursor-review","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"afterFileEdit","file":"src/cursor.ts","turn":1,"prompt_id":"cursor-old-prompt","change_id":"cursor-old"}\n' +
+        '{"event":"file_change","tool":"afterFileEdit","file":"src/cursor.ts","turn":3,"prompt_id":"cursor-apply","change_id":"cursor-new"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"src/cursor.ts","change_id":"cursor-old","tool_use_id":null}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "cursor.ts"), "export const cursor = 1;\n");
+    execSync("git add src/cursor.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: cursor current change"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal(note.agent, "cursor");
+    const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
+    assert.deepEqual(prompts, ["plan current cursor fix", "apply current cursor fix"]);
+    assert.deepEqual((note.interactions as Array<{ files_touched?: string[] }>)[1]?.files_touched, [
+      "src/cursor.ts",
+    ]);
+    const files = note.files as Array<{ path: string; by_ai: boolean }>;
+    assert.deepEqual(files, [{ path: "src/cursor.ts", by_ai: true }]);
+  });
+
+  it("record-level Gemini path keeps context for a new tool use after a consumed tool use", async () => {
+    writeFileSync(join(sessionDir, "agent"), "gemini\n");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"old Gemini write","prompt_id":"gemini-old-prompt","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"plan current Gemini write","prompt_id":"gemini-plan","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"write current Gemini file","prompt_id":"gemini-write","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
+        '{"event":"prompt","prompt":"review current Gemini file","prompt_id":"gemini-review","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"replace","file":"src/gemini.ts","turn":1,"prompt_id":"gemini-old-prompt","tool_use_id":"gemini-old-tool"}\n' +
+        '{"event":"file_change","tool":"replace","file":"src/gemini.ts","turn":3,"prompt_id":"gemini-write","tool_use_id":"gemini-new-tool"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"file":"src/gemini.ts","change_id":null,"tool_use_id":"gemini-old-tool"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "gemini.ts"), "export const gemini = 1;\n");
+    execSync("git add src/gemini.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: gemini current change"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    assert.equal(note.agent, "gemini");
+    const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
+    assert.deepEqual(prompts, ["plan current Gemini write", "write current Gemini file"]);
+    assert.deepEqual((note.interactions as Array<{ files_touched?: string[] }>)[1]?.files_touched, [
+      "src/gemini.ts",
+    ]);
+    const files = note.files as Array<{ path: string; by_ai: boolean }>;
+    assert.deepEqual(files, [{ path: "src/gemini.ts", by_ai: true }]);
+  });
+
   it("prompt_id lookup pairs the right identical-text prompt with its response", async () => {
     // Transcript has FOUR "continue" interactions (responses A, B, C, D).
     // Session only ran turns 1 and 2 (mapped to transcript positions 0 and 1
@@ -1625,6 +1999,272 @@ describe("recordCommitEntry", () => {
         "commit 2 must not re-include the prompt already billed to commit 1",
       );
       assert.deepEqual(prompts, ["edit second"], "commit 2 shows only its edit-linked prompt");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex: consumed same-file prompts do not revive when the current edit is synthetic", async () => {
+    // PR #32 regression shape:
+    // - an old Codex transcript interaction touched the same file and already
+    //   has a consumed prompt entry;
+    // - the current edit is visible in the transcript, but under a synthetic
+    //   tool/skill prompt that has no session prompt_id;
+    // - the note should keep the current user-visible prompt window, not revive
+    //   the old same-file prompt via primaryTurns bypassing maxConsumedTurn.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      writeFileSync(join(repoDir, "workflow.mjs"), "export const persisted = false;\n");
+      execSync("git add workflow.mjs", { cwd: repoDir });
+      execSync('git commit -m "baseline workflow"', { cwd: repoDir });
+
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "synthetic-current-edit.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T11:00:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T11:00:00Z"}}`,
+          '{"timestamp":"2026-04-15T11:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"old package split work"}]}}',
+          '{"timestamp":"2026-04-15T11:00:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"old edit"}]}}',
+          '{"timestamp":"2026-04-15T11:00:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"old","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: workflow.mjs\\\\n@@\\\\n-export const persisted = false;\\\\n+export const persisted = \\\\\\"old\\\\\\";\\\\n*** End Patch\\\\n\\"}"}}',
+          '{"timestamp":"2026-04-15T11:10:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"fix the current dashboard persistence workflow"}]}}',
+          '{"timestamp":"2026-04-15T11:10:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will fix the current workflow."}]}}',
+          '{"timestamp":"2026-04-15T11:10:03Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<skill>common:pr-checks</skill>"}]}}',
+          '{"timestamp":"2026-04-15T11:10:04Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Applying the workflow fix."}]}}',
+          '{"timestamp":"2026-04-15T11:10:05Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"current","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: workflow.mjs\\\\n@@\\\\n-export const persisted = false;\\\\n+export const persisted = true;\\\\n*** End Patch\\\\n\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"old package split work","prompt_id":"id-old","turn":1,"timestamp":"2026-04-15T11:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"fix the current dashboard persistence workflow","prompt_id":"id-current","turn":2,"timestamp":"2026-04-15T11:10:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"prompt_id":"id-old","file":null,"change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "workflow.mjs"), "export const persisted = true;\n");
+      execSync("git add workflow.mjs", { cwd: repoDir });
+      execSync('git commit -m "fix dashboard persistence"', { cwd: repoDir });
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
+      assert.deepEqual(prompts, ["fix the current dashboard persistence workflow"]);
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex: stale unlinked transcript edits do not rescue later prompt-only windows", async () => {
+    // A prompt_id-less transcript edit is only useful when it happens after the
+    // current user-visible prompt window starts. Otherwise, an old synthetic
+    // tool message could make an unrelated later human-only commit look AI-led.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      writeFileSync(join(repoDir, "workflow.mjs"), "export const persisted = false;\n");
+      execSync("git add workflow.mjs", { cwd: repoDir });
+      execSync('git commit -m "baseline workflow"', { cwd: repoDir });
+
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "stale-unlinked-edit.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T11:20:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T11:20:00Z"}}`,
+          '{"timestamp":"2026-04-15T11:20:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<skill>old helper</skill>"}]}}',
+          '{"timestamp":"2026-04-15T11:20:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"old synthetic edit"}]}}',
+          '{"timestamp":"2026-04-15T11:20:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"old","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: workflow.mjs\\\\n@@\\\\n-export const persisted = false;\\\\n+export const persisted = true;\\\\n*** End Patch\\\\n\\"}"}}',
+          '{"timestamp":"2026-04-15T11:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"review current workflow status"}]}}',
+          '{"timestamp":"2026-04-15T11:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"No file edit is needed."}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"review current workflow status","prompt_id":"id-current","turn":2,"timestamp":"2026-04-15T11:30:01Z"}\n',
+      );
+      writeFileSync(join(sessionDir, COMMITTED_PAIRS_FILE), '{"turn":1,"file":null}\n');
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+      writeFileSync(join(repoDir, "workflow.mjs"), "export const persisted = true;\n");
+      execSync("git add workflow.mjs", { cwd: repoDir });
+      execSync('git commit -m "manual workflow persistence"', { cwd: repoDir });
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.equal(note, null, "stale unlinked transcript edits must not create a note");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex: split commits can reuse a prompt for a different unconsumed file", async () => {
+    // The stale-primary fix must not remove legitimate split-commit behavior:
+    // a prompt already consumed for src/a.ts may still be the correct prompt
+    // for a later src/b.ts commit.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "split-file.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T11:30:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T11:30:00Z"}}`,
+          '{"timestamp":"2026-04-15T11:30:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"refactor src/a.ts and src/b.ts together"}]}}',
+          '{"timestamp":"2026-04-15T11:30:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"refactoring both files"}]}}',
+          '{"timestamp":"2026-04-15T11:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"both","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Add File: src/a.ts\\\\n+export const a = 1;\\\\n*** Add File: src/b.ts\\\\n+export const b = 1;\\\\n*** End Patch\\\\n\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"refactor src/a.ts and src/b.ts together","prompt_id":"id-split","turn":1,"timestamp":"2026-04-15T11:30:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"prompt_id":"id-split","file":"src/a.ts","change_id":null,"tool_use_id":null}\n' +
+          '{"turn":1,"prompt_id":"id-split","file":null,"prompt_scope":"window","change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(join(repoDir, "src", "b.ts"), "export const b = 1;\n");
+      execSync("git add src/b.ts", { cwd: repoDir });
+      execSync('git commit -m "split commit b"', { cwd: repoDir });
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
+      assert.deepEqual(prompts, ["refactor src/a.ts and src/b.ts together"]);
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex: split commits do not re-attribute consumed files in mixed commits", async () => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(join(repoDir, "src", "a.ts"), "export const a = 0;\n");
+      execSync("git add src/a.ts", { cwd: repoDir });
+      execSync('git commit -m "baseline a"', { cwd: repoDir });
+
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "mixed-split-file.jsonl");
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-04-15T11:40:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-04-15T11:40:00Z"}}`,
+          '{"timestamp":"2026-04-15T11:40:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"refactor src/a.ts src/b.ts and src/c.ts together"}]}}',
+          '{"timestamp":"2026-04-15T11:40:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"refactoring all three files"}]}}',
+          '{"timestamp":"2026-04-15T11:40:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"three","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Update File: src/a.ts\\\\n@@\\\\n-export const a = 0;\\\\n+export const a = 1;\\\\n*** Add File: src/b.ts\\\\n+export const b = 1;\\\\n*** Add File: src/c.ts\\\\n+export const c = 1;\\\\n*** End Patch\\\\n\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"refactor src/a.ts src/b.ts and src/c.ts together","prompt_id":"id-mixed-split","turn":1,"timestamp":"2026-04-15T11:40:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"prompt_id":"id-mixed-split","file":"src/a.ts","change_id":null,"tool_use_id":null}\n' +
+          '{"turn":1,"prompt_id":"id-mixed-split","file":null,"prompt_scope":"window","change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+      writeFileSync(join(repoDir, "src", "a.ts"), "export const a = 2;\n");
+      writeFileSync(join(repoDir, "src", "b.ts"), "export const b = 1;\n");
+      writeFileSync(join(repoDir, "src", "c.ts"), "export const c = 1;\n");
+      execSync("git add src", { cwd: repoDir });
+      execSync('git commit -m "mixed split commit"', { cwd: repoDir });
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const files = Object.fromEntries(
+        (note.files as Array<{ path: string; by_ai: boolean }>).map((file) => [
+          file.path,
+          file.by_ai,
+        ]),
+      );
+      assert.equal(files["src/a.ts"], false);
+      assert.equal(files["src/b.ts"], true);
+      assert.equal(files["src/c.ts"], true);
+      assert.deepEqual(
+        (note.interactions as Array<{ files_touched?: string[] }>)[0]?.files_touched,
+        ["src/b.ts", "src/c.ts"],
+      );
+      assert.deepEqual(note.attribution, { ai_ratio: 67, method: "file" });
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;

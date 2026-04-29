@@ -11,6 +11,7 @@ import { inferDashboardUrl } from "./github.js";
 export interface Interaction {
   prompt: string;
   response: string | null;
+  context?: string;
 }
 
 export interface CommitEntry {
@@ -259,16 +260,22 @@ export function renderMarkdown(report: PrReport): string {
       lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
       lines.push("");
 
-      for (const { prompt, response } of commit.interactions) {
+      for (const { context, prompt, response } of commit.interactions) {
+        if (context && context.trim().length > 0) {
+          const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
+          pushBlockquoteSection(lines, "📝 Context", cleanedContext);
+          lines.push(">");
+        }
+
         const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
-        lines.push(`> **🧑 Prompt:** ${cleaned.split("\n").join("\n> ")}`);
+        pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
         if (response) {
           const truncated =
             response.length > TRUNCATE_RESPONSE_PR
               ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
               : response;
           lines.push(">");
-          lines.push(`> **🤖 Response:** ${truncated.split("\n").join("\n> ")}`);
+          pushBlockquoteSection(lines, "🤖 Response", truncated);
         }
         lines.push("");
       }
@@ -321,6 +328,11 @@ function cleanPrompt(prompt: string, maxLen: number): string {
 
   if (body.length <= maxLen) return body;
   return `${body.slice(0, maxLen)}…`;
+}
+
+function pushBlockquoteSection(lines: string[], label: string, body: string): void {
+  lines.push(`> **${label}**`);
+  lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 
 function basename(path: string): string {

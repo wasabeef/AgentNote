@@ -1682,9 +1682,9 @@ function isGeneratedArtifactPath(path) {
   if (segments.some((segment) => GENERATED_DIR_SEGMENTS.has(segment))) {
     return true;
   }
-  const basename2 = segments.at(-1) ?? normalized;
-  if (GENERATED_FILE_NAMES.has(basename2)) return true;
-  return GENERATED_FILE_SUFFIXES.some((suffix) => basename2.endsWith(suffix));
+  const basename3 = segments.at(-1) ?? normalized;
+  if (GENERATED_FILE_NAMES.has(basename3)) return true;
+  return GENERATED_FILE_SUFFIXES.some((suffix) => basename3.endsWith(suffix));
 }
 function hasGeneratedArtifactMarkers(content) {
   const header = content.slice(0, 2048).toLowerCase();
@@ -1732,6 +1732,9 @@ function buildEntry(opts) {
   }
   const interactions = opts.interactions.map((i, idx) => {
     const base = { prompt: i.prompt, response: i.response };
+    if (i.context && i.context.trim().length > 0) {
+      base.context = i.context;
+    }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
     }
@@ -1844,6 +1847,190 @@ var init_entry = __esm({
   }
 });
 
+// src/core/interaction-context.ts
+function buildCommitContextSignature(opts) {
+  return {
+    changedFiles: unique(opts.changedFiles.map((file) => normalizePath(file))),
+    changedFileBasenames: unique(
+      opts.changedFiles.map((file) => basename(normalizePath(file))).filter(Boolean)
+    ),
+    codeIdentifiers: extractCodeIdentifiers(opts.diffText),
+    commitSubjectTokens: tokenizeSubject(opts.commitSubject)
+  };
+}
+function extractCodeIdentifiers(diffText) {
+  const identifiers = /* @__PURE__ */ new Set();
+  for (const pattern of [CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER]) {
+    for (const match of diffText.matchAll(pattern)) {
+      const identifier = match[0];
+      if (isGenericIdentifier(identifier)) continue;
+      identifiers.add(identifier);
+    }
+  }
+  return identifiers;
+}
+function selectInteractionContext(candidate, signature) {
+  if (candidate.previousTurnSelected) return void 0;
+  if (!candidate.previousResponse) return void 0;
+  if (hasStrongAnchor(candidate.prompt, signature)) return void 0;
+  const scored = splitParagraphs(candidate.previousResponse).filter((paragraph) => !isRejectedParagraph(paragraph)).map((paragraph, index) => scoreParagraph(paragraph, index, signature)).filter((score) => hasStrongParagraphAnchor(score)).sort(compareParagraphScores);
+  if (scored.length === 0) return void 0;
+  const maxChars = Math.min(MAX_CONTEXT_CHARS, candidate.previousResponse.length);
+  const selected = scored.slice(0, 2).sort((a, b) => a.index - b.index);
+  const output = [];
+  let length = 0;
+  for (const item of selected) {
+    const nextLength = length + item.paragraph.length + (output.length > 0 ? 2 : 0);
+    if (nextLength > maxChars) continue;
+    output.push(item.paragraph);
+    length = nextLength;
+  }
+  return output.length > 0 ? output.join("\n\n") : void 0;
+}
+function scoreParagraph(paragraph, index, signature) {
+  return {
+    paragraph,
+    index,
+    exactPathHits: countLiteralHits(paragraph, signature.changedFiles),
+    basenameHits: countLiteralHits(paragraph, signature.changedFileBasenames),
+    codeIdentifierHits: countIdentifierHits(paragraph, signature.codeIdentifiers),
+    subjectTokenHits: countSubjectTokenHits(paragraph, signature.commitSubjectTokens)
+  };
+}
+function compareParagraphScores(a, b) {
+  return b.exactPathHits - a.exactPathHits || b.basenameHits - a.basenameHits || b.codeIdentifierHits - a.codeIdentifierHits || b.subjectTokenHits - a.subjectTokenHits || a.index - b.index;
+}
+function hasStrongParagraphAnchor(score) {
+  return score.exactPathHits > 0 || score.basenameHits > 0 || score.codeIdentifierHits > 0;
+}
+function hasStrongAnchor(text, signature) {
+  return countLiteralHits(text, signature.changedFiles) > 0 || countLiteralHits(text, signature.changedFileBasenames) > 0 || countIdentifierHits(text, signature.codeIdentifiers) > 0;
+}
+function splitParagraphs(text) {
+  const paragraphs = [];
+  let current = [];
+  let inFence = false;
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trimEnd();
+    if (line.trim().startsWith("```")) {
+      inFence = !inFence;
+      current.push(line);
+      continue;
+    }
+    if (!inFence && line.trim() === "") {
+      if (current.length > 0) {
+        paragraphs.push(current.join("\n").trim());
+        current = [];
+      }
+      continue;
+    }
+    current.push(line);
+  }
+  if (current.length > 0) paragraphs.push(current.join("\n").trim());
+  return paragraphs.filter((paragraph) => paragraph.length > 0);
+}
+function isRejectedParagraph(paragraph) {
+  return hasBrokenCodeFence(paragraph) || isIntroOnlyParagraph(paragraph) || isOperationalNoise(paragraph) || hasLocalAbsolutePath(paragraph);
+}
+function hasBrokenCodeFence(paragraph) {
+  return (paragraph.match(/```/g) ?? []).length % 2 !== 0;
+}
+function isIntroOnlyParagraph(paragraph) {
+  const trimmed = paragraph.trim();
+  return /^#{1,6}\s+\S/.test(trimmed) || /[:：]\s*$/.test(trimmed);
+}
+function isOperationalNoise(paragraph) {
+  const lower = paragraph.toLowerCase();
+  return lower.includes("working tree") || lower.includes("ready for review") || /\bci\b/.test(lower) && /\b(pass|passed|green|failed|failure)\b/.test(lower) || lower.includes("git diff --check");
+}
+function hasLocalAbsolutePath(paragraph) {
+  return /(?:^|[\s("'`])(?:\/Users\/|\/home\/|[A-Za-z]:\\)/.test(paragraph);
+}
+function countLiteralHits(text, literals) {
+  let count = 0;
+  for (const literal of literals) {
+    if (!literal) continue;
+    if (containsLiteral(text, literal)) count += 1;
+  }
+  return count;
+}
+function containsLiteral(text, literal) {
+  const escaped = escapeRegExp(literal);
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_./-])${escaped}($|[^A-Za-z0-9_/-])`, "i");
+  return pattern.test(text);
+}
+function countIdentifierHits(text, identifiers) {
+  let count = 0;
+  for (const identifier of identifiers) {
+    if (containsIdentifier(text, identifier)) count += 1;
+  }
+  return count;
+}
+function containsIdentifier(text, identifier) {
+  const escaped = escapeRegExp(identifier);
+  return new RegExp(`\\b${escaped}\\b`).test(text);
+}
+function countSubjectTokenHits(text, tokens) {
+  const textTokens = new Set(tokenizeSubject(text));
+  return tokens.filter((token) => textTokens.has(token)).length;
+}
+function tokenizeSubject(text) {
+  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}_-]+/u).map((token) => token.trim()).filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token));
+  return unique(tokens);
+}
+function isGenericIdentifier(identifier) {
+  return GENERIC_TOKENS.has(identifier.toLowerCase());
+}
+function normalizePath(path) {
+  return path.replaceAll("\\", "/");
+}
+function basename(path) {
+  return path.split("/").pop() ?? path;
+}
+function unique(values) {
+  return [...new Set(values.filter((value) => value.length > 0))];
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+var MAX_CONTEXT_CHARS, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER;
+var init_interaction_context = __esm({
+  "src/core/interaction-context.ts"() {
+    "use strict";
+    MAX_CONTEXT_CHARS = 900;
+    GENERIC_TOKENS = /* @__PURE__ */ new Set([
+      "agent",
+      "agentnote",
+      "build",
+      "case",
+      "change",
+      "commit",
+      "context",
+      "diff",
+      "file",
+      "files",
+      "fix",
+      "html",
+      "http",
+      "https",
+      "json",
+      "note",
+      "prompt",
+      "record",
+      "response",
+      "test",
+      "tests",
+      "todo",
+      "turn",
+      "utf8",
+      "yaml"
+    ]);
+    CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
+    SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
+    ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{3,}\b/g;
+  }
+});
+
 // src/core/jsonl.ts
 import { existsSync as existsSync5 } from "node:fs";
 import { appendFile, readFile as readFile5 } from "node:fs/promises";
@@ -1953,6 +2140,16 @@ async function recordCommitEntry(opts) {
     commitSubject = await git(["show", "-s", "--format=%s", "HEAD"]);
   } catch {
   }
+  let commitDiffText = "";
+  try {
+    commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
+  } catch {
+  }
+  const contextSignature = buildCommitContextSignature({
+    changedFiles: commitFiles,
+    diffText: commitDiffText,
+    commitSubject
+  });
   const allChangeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
   const promptEntries = await readAllSessionJsonl(sessionDir, PROMPTS_FILE);
   const allPreBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
@@ -1975,6 +2172,7 @@ async function recordCommitEntry(opts) {
   const preBlobEntriesForTurnFix = allPreBlobEntries.filter(
     (e) => !consumedPairs.has(consumedKey(e))
   );
+  const consumedPromptState = await readConsumedPromptState(sessionDir);
   const maxConsumedTurn = await readMaxConsumedTurn(sessionDir);
   const currentTurn = await readCurrentTurn(sessionDir);
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -2045,6 +2243,7 @@ async function recordCommitEntry(opts) {
   let interactions;
   let transcriptLineCounts;
   let consumedPromptEntries = [];
+  let consumedTranscriptPromptFiles = [];
   let allInteractions = [];
   if (transcriptPath) {
     try {
@@ -2065,7 +2264,13 @@ async function recordCommitEntry(opts) {
     const touched = i.files_touched ?? [];
     return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
   });
-  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject) : { selected: [], consumed: [] };
+  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(
+    promptEntries,
+    maxConsumedTurn,
+    commitFiles,
+    commitSubject,
+    currentTurn
+  ) : { selected: [], consumed: [] };
   const canUsePromptOnlyFallback = promptOnlyFallbackEntries.selected.length >= 2 && promptOnlyFallbackEntries.selected.some((entry2) => {
     const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
     return !!id && interactionsById.has(id);
@@ -2076,7 +2281,7 @@ async function recordCommitEntry(opts) {
     interactions = relevantPromptEntries.map((entry2) => {
       const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
       const matched = id ? interactionsById.get(id) : void 0;
-      if (matched) return toRecordedInteraction(matched, commitFileSet);
+      if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
       return { prompt: entry2.prompt ?? "", response: null };
     });
     consumedPromptEntries = promptWindowConsumedEntries.length > 0 ? promptWindowConsumedEntries : relevantPromptEntries;
@@ -2090,13 +2295,14 @@ async function recordCommitEntry(opts) {
       aiFiles = [
         ...new Set(
           transcriptMatched.flatMap(
-            (i) => (i.files_touched ?? []).filter((f) => commitFileSet.has(f))
+            (i) => filterInteractionCommitFiles(i, commitFileSet, consumedPromptState)
           )
         )
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         attributionCommitFileSet,
-        transcriptMatched
+        transcriptMatched,
+        consumedPromptState
       );
     }
   } else if (canUsePromptOnlyFallback) {
@@ -2105,7 +2311,7 @@ async function recordCommitEntry(opts) {
     interactions = promptOnlyFallbackEntries.selected.map((entry2) => {
       const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
       const matched = id ? interactionsById.get(id) : void 0;
-      if (matched) return toRecordedInteraction(matched, commitFileSet);
+      if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
       return { prompt: entry2.prompt ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
@@ -2113,20 +2319,45 @@ async function recordCommitEntry(opts) {
     const transcriptMatched = allInteractions.filter(
       (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
     );
-    const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
+    const selectableTranscriptMatched = filterSelectableTranscriptInteractions(
       transcriptMatched,
+      promptEntries,
+      attributionCommitFileSet,
+      consumedPromptState,
+      currentTurn
+    );
+    const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
+      selectableTranscriptMatched,
       promptEntries,
       attributionCommitFileSet
     );
     const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
-    const promptWindow = selectPromptWindowEntries(
+    let promptWindow = emptyPromptWindowSelection();
+    let useSelectableTranscriptAttribution = false;
+    if (transcriptPrimaryTurns.size > 0) {
+      promptWindow = selectPromptWindowEntries(
+        promptEntries,
+        transcriptPrimaryTurns,
+        transcriptEditTurns,
+        maxConsumedTurn,
+        commitFiles,
+        commitSubject
+      );
+    } else if (hasUnlinkedCurrentTranscriptEdit(
+      allInteractions,
+      selectableTranscriptMatched,
       promptEntries,
-      transcriptPrimaryTurns,
-      transcriptEditTurns,
       maxConsumedTurn,
-      commitFiles,
-      commitSubject
-    );
+      currentTurn
+    )) {
+      promptWindow = selectPromptOnlyFallbackEntries(
+        promptEntries,
+        maxConsumedTurn,
+        commitFiles,
+        commitSubject,
+        currentTurn
+      );
+    }
     relevantPromptEntries = promptWindow.selected;
     promptWindowConsumedEntries = promptWindow.consumed;
     prompts = relevantPromptEntries.map((entry2) => entry2.prompt ?? "");
@@ -2134,34 +2365,53 @@ async function recordCommitEntry(opts) {
       interactions = relevantPromptEntries.map((entry2) => {
         const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
         const matched = id ? interactionsById.get(id) : void 0;
-        if (matched) return toRecordedInteraction(matched, commitFileSet);
+        if (matched) return toRecordedInteraction(matched, commitFileSet, consumedPromptState);
         return { prompt: entry2.prompt ?? "", response: null };
       });
       consumedPromptEntries = promptWindowConsumedEntries.length > 0 ? promptWindowConsumedEntries : relevantPromptEntries;
-    } else if (transcriptMatched.length > 0) {
-      interactions = transcriptMatched.map((i) => toRecordedInteraction(i, commitFileSet));
-    } else if (!crossTurnCommit) {
+      useSelectableTranscriptAttribution = true;
+    } else if (selectableTranscriptMatched.length > 0 && (promptEntries.length === 0 || transcriptPrimaryTurns.size > 0)) {
+      interactions = selectableTranscriptMatched.map(
+        (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
+      );
+      useSelectableTranscriptAttribution = true;
+    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
       interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
     } else {
       interactions = [];
     }
-    if (transcriptMatched.length > 0) {
+    if (useSelectableTranscriptAttribution && selectableTranscriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
-          transcriptMatched.flatMap(
-            (i) => (i.files_touched ?? []).filter((f) => commitFileSet.has(f))
+          selectableTranscriptMatched.flatMap(
+            (i) => filterInteractionCommitFiles(i, commitFileSet, consumedPromptState)
           )
         )
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         attributionCommitFileSet,
-        transcriptMatched
+        selectableTranscriptMatched,
+        consumedPromptState
+      );
+      consumedTranscriptPromptFiles = collectConsumedTranscriptPromptFiles(
+        selectableTranscriptMatched,
+        promptEntries,
+        commitFileSet,
+        consumedPromptState
       );
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
   }
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
+  await attachInteractionContexts(
+    sessionDir,
+    promptEntries,
+    relevantPromptEntries,
+    interactions,
+    contextSignature,
+    interactionsById
+  );
   if (hasTurnData) {
     attachFilesTouched(changeEntries, relevantPromptEntries, interactions, commitFileSet);
   }
@@ -2191,7 +2441,8 @@ async function recordCommitEntry(opts) {
     changeEntries,
     preBlobEntriesForTurnFix,
     commitFileSet,
-    consumedPromptEntries
+    consumedPromptEntries,
+    consumedTranscriptPromptFiles
   );
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
@@ -2218,12 +2469,16 @@ function correlatePromptIds(interactions, sessionPromptEntries) {
     }
   }
 }
-function toRecordedInteraction(interaction, commitFileSet) {
+function toRecordedInteraction(interaction, commitFileSet, consumedPromptState) {
   const recorded = {
     prompt: interaction.prompt,
     response: interaction.response
   };
-  const filesTouched = interaction.files_touched?.filter((file) => commitFileSet.has(file));
+  const filesTouched = filterInteractionCommitFiles(
+    interaction,
+    commitFileSet,
+    consumedPromptState
+  );
   if (filesTouched && filesTouched.length > 0) {
     recorded.files_touched = [...new Set(filesTouched)];
   }
@@ -2231,6 +2486,14 @@ function toRecordedInteraction(interaction, commitFileSet) {
     recorded.tools = interaction.tools;
   }
   return recorded;
+}
+function filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState) {
+  const files = (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file));
+  if (!consumedPromptState || !interaction.prompt_id) return files;
+  const promptId = interaction.prompt_id;
+  return files.filter(
+    (file) => !consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file))
+  );
 }
 function selectTranscriptFallbackInteractions(interactions, commitFileSet) {
   const latestToolBacked = [...interactions].reverse().find((interaction) => (interaction.tools?.length ?? 0) > 0);
@@ -2252,11 +2515,45 @@ async function fillInteractionResponsesFromEvents(sessionDir, promptEntries, int
     }
   }
 }
-async function resolveTranscriptLineCounts(commitFileSet, interactions) {
+async function attachInteractionContexts(sessionDir, allPromptEntries, promptEntries, interactions, signature, interactionsById) {
+  if (interactions.length === 0 || promptEntries.length === 0) return;
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
+  for (const entry of allPromptEntries) {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!turn || responsesByTurn.has(turn)) continue;
+    const id = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const response = id ? interactionsById.get(id)?.response?.trim() : "";
+    if (response) responsesByTurn.set(turn, response);
+  }
+  if (responsesByTurn.size === 0) return;
+  const selectedTurns = new Set(
+    promptEntries.map((entry) => typeof entry.turn === "number" ? entry.turn : 0).filter((turn) => turn > 0)
+  );
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) continue;
+    const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+    if (turn <= 1) continue;
+    const context = selectInteractionContext(
+      {
+        prompt: interaction.prompt,
+        previousResponse: responsesByTurn.get(turn - 1) ?? null,
+        previousTurnSelected: selectedTurns.has(turn - 1)
+      },
+      signature
+    );
+    if (context) interaction.context = context;
+  }
+}
+async function resolveTranscriptLineCounts(commitFileSet, interactions, consumedPromptState) {
   const transcriptStats = /* @__PURE__ */ new Map();
   for (const interaction of interactions) {
+    const eligibleFiles = new Set(
+      filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState)
+    );
     for (const [file, stats] of Object.entries(interaction.line_stats ?? {})) {
-      if (!commitFileSet.has(file)) continue;
+      if (!eligibleFiles.has(file)) continue;
       const previous = transcriptStats.get(file) ?? { added: 0, deleted: 0 };
       transcriptStats.set(file, {
         added: previous.added + stats.added,
@@ -2358,12 +2655,7 @@ function collectSessionEditTurns(changeEntries, preBlobEntries) {
   return turns;
 }
 function collectTranscriptEditTurns(interactions, promptEntries) {
-  const promptTurnById = /* @__PURE__ */ new Map();
-  for (const entry of promptEntries) {
-    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
-  }
+  const promptTurnById = buildPromptTurnById(promptEntries);
   const turns = /* @__PURE__ */ new Set();
   for (const interaction of interactions) {
     if (!interaction.prompt_id || (interaction.files_touched?.length ?? 0) === 0) continue;
@@ -2371,6 +2663,82 @@ function collectTranscriptEditTurns(interactions, promptEntries) {
     if (turn > 0) turns.add(turn);
   }
   return turns;
+}
+function buildPromptTurnById(promptEntries) {
+  const promptTurnById = /* @__PURE__ */ new Map();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
+  }
+  return promptTurnById;
+}
+function promptFilePairKey(promptId, file) {
+  return `${promptId}\0${file}`;
+}
+function filterSelectableTranscriptInteractions(interactions, promptEntries, commitFileSet, consumedPromptState, currentTurn) {
+  const promptTurnById = buildPromptTurnById(promptEntries);
+  return interactions.filter((interaction) => {
+    if (!transcriptTouchesCommitFile(interaction, commitFileSet)) return false;
+    if (!interaction.prompt_id) return true;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (currentTurn > 0 && turn > currentTurn) return false;
+    return !isTranscriptPromptConsumedForCommit(interaction, commitFileSet, consumedPromptState);
+  });
+}
+function transcriptTouchesCommitFile(interaction, commitFileSet) {
+  return (interaction.files_touched ?? []).some((file) => commitFileSet.has(file));
+}
+function isTranscriptPromptConsumedForCommit(interaction, commitFileSet, consumedPromptState) {
+  const promptId = interaction.prompt_id;
+  if (!promptId) return false;
+  if (consumedPromptState.legacyPromptIds.has(promptId)) return true;
+  const files = (interaction.files_touched ?? []).filter((file) => commitFileSet.has(file));
+  return files.length > 0 && files.every(
+    (file) => consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file))
+  );
+}
+function hasUnlinkedCurrentTranscriptEdit(allInteractions, interactions, promptEntries, maxConsumedTurn, currentTurn) {
+  const unlinkedMatches = new Set(interactions.filter((interaction) => !interaction.prompt_id));
+  if (unlinkedMatches.size === 0) return false;
+  const currentPromptIds = /* @__PURE__ */ new Set();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (promptId && turn > maxConsumedTurn && (currentTurn <= 0 || turn <= currentTurn)) {
+      currentPromptIds.add(promptId);
+    }
+  }
+  if (currentPromptIds.size === 0) return false;
+  let sawCurrentPrompt = false;
+  for (const interaction of allInteractions) {
+    if (interaction.prompt_id && currentPromptIds.has(interaction.prompt_id)) {
+      sawCurrentPrompt = true;
+    }
+    if (sawCurrentPrompt && unlinkedMatches.has(interaction)) return true;
+  }
+  return false;
+}
+function collectConsumedTranscriptPromptFiles(interactions, promptEntries, commitFileSet, consumedPromptState) {
+  const promptTurnById = buildPromptTurnById(promptEntries);
+  const consumed = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id) continue;
+    const turn = promptTurnById.get(interaction.prompt_id) ?? 0;
+    if (turn <= 0) continue;
+    for (const file of filterInteractionCommitFiles(
+      interaction,
+      commitFileSet,
+      consumedPromptState
+    )) {
+      const key = promptFilePairKey(interaction.prompt_id, file);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      consumed.push({ turn, promptId: interaction.prompt_id, file });
+    }
+  }
+  return consumed;
 }
 function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, commitFiles, commitSubject) {
   if (primaryTurns.size === 0) return emptyPromptWindowSelection();
@@ -2386,9 +2754,11 @@ function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxCo
     commitSubject
   );
 }
-function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject) {
+function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject, currentTurn = Number.POSITIVE_INFINITY) {
+  const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
   const latestPromptTurn = promptEntries.reduce((latest, entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (turn > upperTurn) return latest;
     return turn > latest ? turn : latest;
   }, 0);
   if (latestPromptTurn <= maxConsumedTurn) return emptyPromptWindowSelection();
@@ -2436,7 +2806,7 @@ function selectCommitPromptWindow(promptEntries, lowerTurn, upperTurn, primaryTu
     startIndex = hardStartIndex;
   }
   const consumed = rows.map((row) => row.entry);
-  const selectedRows = rows.slice(startIndex).filter((row) => !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn);
+  const selectedRows = rows.slice(startIndex).filter(shouldKeepPromptWindowRow);
   const selected = selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES ? trimLongPromptWindow(selectedRows).map((row) => row.entry) : selectedRows.map((row) => row.entry);
   return { selected, consumed };
 }
@@ -2457,11 +2827,17 @@ function buildPromptWindowRow(entry, primaryTurns, editTurns, commitFiles, commi
     isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn
   };
 }
+function shouldKeepPromptWindowRow(row) {
+  if (row.isPrimaryTurn) return true;
+  return !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn;
+}
 function isPromptWindowAnchor(row) {
-  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
+  if (row.isPrimaryTurn) return true;
+  if (!shouldKeepPromptWindowRow(row)) return false;
   return row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
 }
 function isHardTrimPromptRow(row) {
+  if (row.isPrimaryTurn) return false;
   return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn;
 }
 function isLowShapePromptRow(row) {
@@ -2469,9 +2845,13 @@ function isLowShapePromptRow(row) {
 }
 function trimLongPromptWindow(rows) {
   const first = rows[0];
-  const tail = rows.slice(-(PROMPT_WINDOW_MAX_ENTRIES - 1));
   const selected = /* @__PURE__ */ new Map();
   if (first) selected.set(promptRowTurn(first), first);
+  for (const row of rows) {
+    if (row.isPrimaryTurn) selected.set(promptRowTurn(row), row);
+  }
+  const remainingSlots = Math.max(PROMPT_WINDOW_MAX_ENTRIES - selected.size, 0);
+  const tail = remainingSlots > 0 ? rows.filter((row) => !selected.has(promptRowTurn(row))).slice(-remainingSlots) : [];
   for (const row of tail) selected.set(promptRowTurn(row), row);
   return [...selected.values()].sort((left, right) => promptRowTurn(left) - promptRowTurn(right));
 }
@@ -2520,8 +2900,8 @@ function scorePromptFileRefs(prompt, commitFiles) {
     for (const segment of segments) {
       if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
     }
-    const basename2 = file.split("/").pop();
-    if (basename2 && lowerPrompt.includes(basename2.toLowerCase())) score += 20;
+    const basename3 = file.split("/").pop();
+    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += 20;
   }
   return score;
 }
@@ -2538,12 +2918,7 @@ function tokenizePromptSelectionText(text) {
   return tokens;
 }
 async function selectTranscriptPrimaryTurns(transcriptMatched, promptEntries, commitFileSet) {
-  const promptTurnById = /* @__PURE__ */ new Map();
-  for (const entry of promptEntries) {
-    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (promptId && turn > 0) promptTurnById.set(promptId, turn);
-  }
+  const promptTurnById = buildPromptTurnById(promptEntries);
   const matchedTurns = /* @__PURE__ */ new Set();
   for (const interaction of transcriptMatched) {
     if (!interaction.prompt_id) continue;
@@ -2887,6 +3262,28 @@ async function readConsumedPairs(sessionDir) {
   }
   return set;
 }
+async function readConsumedPromptState(sessionDir) {
+  const file = join6(sessionDir, COMMITTED_PAIRS_FILE);
+  const state = {
+    legacyPromptIds: /* @__PURE__ */ new Set(),
+    promptFilePairs: /* @__PURE__ */ new Set()
+  };
+  if (!existsSync7(file)) return state;
+  const entries = await readJsonlEntries(file);
+  for (const entry of entries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    if (!promptId) continue;
+    const filePath = typeof entry.file === "string" ? entry.file : void 0;
+    if (filePath) {
+      state.promptFilePairs.add(promptFilePairKey(promptId, filePath));
+      continue;
+    }
+    if (entry.prompt_scope !== "window") {
+      state.legacyPromptIds.add(promptId);
+    }
+  }
+  return state;
+}
 function consumedKey(entry) {
   if (typeof entry.change_id === "string" && entry.change_id) {
     return `change:${entry.change_id}`;
@@ -2894,7 +3291,7 @@ function consumedKey(entry) {
   if (entry.tool_use_id) return `id:${entry.tool_use_id}`;
   return `${entry.turn}:${entry.file}`;
 }
-async function recordConsumedPairs(sessionDir, changeEntries, preBlobEntries, commitFileSet, consumedPromptEntries = []) {
+async function recordConsumedPairs(sessionDir, changeEntries, preBlobEntries, commitFileSet, consumedPromptEntries = [], consumedTranscriptPromptFiles = []) {
   const seen = /* @__PURE__ */ new Set();
   const pairsFile = join6(sessionDir, COMMITTED_PAIRS_FILE);
   const allEntries = [...changeEntries, ...preBlobEntries];
@@ -2911,6 +3308,20 @@ async function recordConsumedPairs(sessionDir, changeEntries, preBlobEntries, co
       tool_use_id: entry.tool_use_id ?? null
     });
   }
+  const promptFileSeen = /* @__PURE__ */ new Set();
+  for (const entry of consumedTranscriptPromptFiles) {
+    if (!entry.promptId || !entry.file || !commitFileSet.has(entry.file)) continue;
+    const key = promptFilePairKey(entry.promptId, entry.file);
+    if (promptFileSeen.has(key) || seen.has(key)) continue;
+    promptFileSeen.add(key);
+    await appendJsonl(pairsFile, {
+      turn: entry.turn,
+      prompt_id: entry.promptId,
+      file: entry.file,
+      change_id: null,
+      tool_use_id: null
+    });
+  }
   const promptSeen = /* @__PURE__ */ new Set();
   for (const entry of consumedPromptEntries) {
     const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
@@ -2923,6 +3334,7 @@ async function recordConsumedPairs(sessionDir, changeEntries, preBlobEntries, co
       turn,
       prompt_id: promptId,
       file: null,
+      prompt_scope: "window",
       change_id: null,
       tool_use_id: null
     });
@@ -3004,6 +3416,7 @@ var init_record = __esm({
     init_attribution();
     init_constants();
     init_entry();
+    init_interaction_context();
     init_jsonl();
     init_session();
     init_storage();
@@ -4258,7 +4671,7 @@ function renderMarkdown(report) {
       continue;
     }
     const fileList = escapeTableCell(
-      commit2.files.map((file) => `${basename(file.path)} ${file.by_ai ? "\u{1F916}" : "\u{1F464}"}`).join(", ")
+      commit2.files.map((file) => `${basename2(file.path)} ${file.by_ai ? "\u{1F916}" : "\u{1F464}"}`).join(", ")
     );
     const aiRatioCell = renderRatioWithBar(commit2.ai_ratio, 5);
     lines.push(
@@ -4285,13 +4698,18 @@ function renderMarkdown(report) {
     for (const commit2 of withPrompts) {
       lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
       lines.push("");
-      for (const { prompt, response } of commit2.interactions) {
+      for (const { context, prompt, response } of commit2.interactions) {
+        if (context && context.trim().length > 0) {
+          const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
+          pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanedContext);
+          lines.push(">");
+        }
         const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
-        lines.push(`> **\u{1F9D1} Prompt:** ${cleaned.split("\n").join("\n> ")}`);
+        pushBlockquoteSection(lines, "\u{1F9D1} Prompt", cleaned);
         if (response) {
           const truncated = response.length > TRUNCATE_RESPONSE_PR ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : response;
           lines.push(">");
-          lines.push(`> **\u{1F916} Response:** ${truncated.split("\n").join("\n> ")}`);
+          pushBlockquoteSection(lines, "\u{1F916} Response", truncated);
         }
         lines.push("");
       }
@@ -4335,7 +4753,11 @@ function cleanPrompt(prompt, maxLen) {
   if (body.length <= maxLen) return body;
   return `${body.slice(0, maxLen)}\u2026`;
 }
-function basename(path) {
+function pushBlockquoteSection(lines, label, body) {
+  lines.push(`> **${label}**`);
+  lines.push(`> ${body.split("\n").join("\n> ")}`);
+}
+function basename2(path) {
   return path.split("/").pop() ?? path;
 }
 

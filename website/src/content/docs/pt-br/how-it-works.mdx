@@ -67,6 +67,7 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast
   "interactions": [
     {
       "prompt": "Implementar middleware de autenticação JWT",
+      "context": "A response anterior explica por que esse middleware precisa mudar.",
       "response": "Vou criar o middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -118,7 +119,7 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast
 </CardGrid>
 
 <Aside type="tip">
-  As listas de prompts vêm da janela de conversa entre commits, não de todo o backlog da sessão. O Agent Note mantém prompts úteis de planejamento, esclarecimento e revisão do commit atual, e remove históricos de prompts citados e turnos de edição que não sobreviveram neste commit.
+  As listas de prompts vêm da janela de conversa entre commits, não de todo o backlog da sessão. O Agent Note mantém prompts úteis de planejamento, esclarecimento e revisão do commit atual, e remove históricos de prompts citados e turnos de edição que não sobreviveram neste commit. Se um prompt curto depende da response anterior, mas esse turn anterior já pertence a um commit antigo, o Agent Note pode adicionar um campo `context` apenas visual antes do prompt; isso nunca muda a attribution.
 </Aside>
 
 <Aside>

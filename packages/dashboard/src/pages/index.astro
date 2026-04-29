@@ -958,6 +958,32 @@ const dashboardIndex = buildDashboardIndex();
         padding-top: 0.9rem;
         padding-bottom: 0.9rem;
       }
+      .context-row {
+        display: flex;
+        justify-content: center;
+      }
+      .context-card {
+        width: min(78%, 620px);
+        padding: 0.7rem 0.95rem;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(21, 128, 61, 0.08));
+        color: var(--muted);
+      }
+      .context-label {
+        margin-bottom: 0.35rem;
+        color: var(--accent-2);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .context-card .md {
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.6;
+      }
       /* ─── Markdown content inside bubbles ─── */
       .md {
         white-space: normal;
@@ -1490,6 +1516,9 @@ const dashboardIndex = buildDashboardIndex();
         }
         .bubble {
           max-width: calc(100vw - 5rem);
+        }
+        .context-card {
+          width: 100%;
         }
         .turn-label {
           display: none;
@@ -2242,6 +2271,18 @@ const dashboardIndex = buildDashboardIndex();
         const tools = interaction.tools || [];
         const files = interaction.files_touched || [];
         const turnId = anchorPrefix + "t-" + (idx + 1);
+        const contextText = String(interaction.context || "").trim();
+        let contextRow = null;
+        if (contextText) {
+          const contextBody = h("div", {});
+          renderMarkdownInto(contextBody, contextText);
+          contextRow = h("div", { className: "context-row" }, [
+            h("div", { className: "context-card" }, [
+              h("div", { className: "context-label" }, "📝 Context"),
+              contextBody,
+            ]),
+          ]);
+        }
 
         // User bubble — prompts are usually plain text (user input), render as markdown too for inline code support
         const userBody = h("div", {});
@@ -2295,6 +2336,7 @@ const dashboardIndex = buildDashboardIndex();
 
         return h("div", { className: "turn", id: turnId }, [
           h("div", { className: "turn-divider" }, "turn " + (idx + 1) + " / " + total),
+          contextRow,
           userRow,
           aiRow,
           footer.length > 0 && h("div", { className: "bubble-footer", style: "margin-left: 2.3rem;" }, footer),

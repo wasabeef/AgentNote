@@ -23,6 +23,7 @@ export interface Attribution {
 export interface Interaction {
   prompt: string;
   response: string | null;
+  context?: string;
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
@@ -219,6 +220,9 @@ export function buildEntry(opts: {
 
   const interactions = opts.interactions.map((i, idx) => {
     const base: Interaction = { prompt: i.prompt, response: i.response };
+    if (i.context && i.context.trim().length > 0) {
+      base.context = i.context;
+    }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
     }

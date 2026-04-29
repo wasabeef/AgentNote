@@ -253,6 +253,44 @@ describe("buildEntry", () => {
     assert.deepEqual(entry.interactions[0].tools, ["Bash"]);
   });
 
+  it("preserves interaction context when provided", () => {
+    const entry = buildEntry({
+      sessionId,
+      interactions: [{ prompt: "p", response: "r", context: "previous response context" }],
+      commitFiles: [],
+      aiFiles: [],
+    });
+    assert.equal(entry.interactions[0].context, "previous response context");
+  });
+
+  it("omits blank interaction context", () => {
+    const entry = buildEntry({
+      sessionId,
+      interactions: [{ prompt: "p", response: "r", context: "   " }],
+      commitFiles: [],
+      aiFiles: [],
+    });
+    assert.equal(entry.interactions[0].context, undefined);
+  });
+
+  it("does not change attribution when interaction context is present", () => {
+    const base = buildEntry({
+      sessionId,
+      interactions: [{ prompt: "p", response: "r" }],
+      commitFiles: ["a.ts", "b.ts"],
+      aiFiles: ["a.ts"],
+    });
+    const withContext = buildEntry({
+      sessionId,
+      interactions: [{ prompt: "p", response: "r", context: "why this prompt matters" }],
+      commitFiles: ["a.ts", "b.ts"],
+      aiFiles: ["a.ts"],
+    });
+
+    assert.deepEqual(withContext.attribution, base.attribution);
+    assert.deepEqual(withContext.files, base.files);
+  });
+
   it("omits files_touched when empty", () => {
     const entry = buildEntry({
       sessionId,
