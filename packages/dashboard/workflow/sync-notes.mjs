@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
 const eventName = process.env.EVENT_NAME || "";
@@ -14,19 +15,8 @@ const prHeadRepo = process.env.PR_HEAD_REPO || "";
 const refName = process.env.REF_NAME || "";
 const githubOutput = process.env.GITHUB_OUTPUT || "";
 const zeroSha = /^0+$/;
-const MAX_DIFF_LINES_PER_FILE = 1000;
-const MAX_DIFF_TOTAL_LINES = 3000;
-
-mkdirSync(notesDir, { recursive: true });
-
-try {
-  execFileSync("git", ["fetch", "origin", "refs/notes/agentnote:refs/notes/agentnote"], {
-    stdio: "pipe",
-    encoding: "utf-8",
-  });
-} catch {
-  // allow empty note refs
-}
+export const MAX_DIFF_LINES_PER_FILE = 1000;
+export const MAX_DIFF_TOTAL_LINES = 3000;
 
 function run(command, args) {
   return execFileSync(command, args, {
@@ -105,6 +95,7 @@ function createDiffFile(path) {
     path: path || "(unknown)",
     lines: [],
     truncated: false,
+    binary: false,
   };
 }
 
@@ -113,7 +104,7 @@ function normalizeDiffPath(rawPath) {
   return rawPath.replace(/^[ab]\//, "");
 }
 
-function parseDiffFiles(rawDiff) {
+export function parseDiffFiles(rawDiff) {
   const files = [];
   let current = null;
   let totalLines = 0;
@@ -128,8 +119,12 @@ function parseDiffFiles(rawDiff) {
 
     if (!current) continue;
     if (line.startsWith("GIT binary patch") || line.startsWith("Binary files ")) {
+      current.binary = true;
       current.truncated = true;
       current.lines = [];
+      continue;
+    }
+    if (current.binary) {
       continue;
     }
 
@@ -146,7 +141,7 @@ function parseDiffFiles(rawDiff) {
     totalLines += 1;
   }
 
-  return files.filter((file) => file.lines.length > 0);
+  return files.filter((file) => file.lines.length > 0 || file.truncated || file.binary);
 }
 
 function readCommitDiff(sha) {
@@ -309,69 +304,86 @@ function setFlags({ build, persist, deploy }) {
   setOutput("should_deploy", deploy);
 }
 
-backfillDashboardNotes();
+function main() {
+  mkdirSync(notesDir, { recursive: true });
 
-if (eventName === "pull_request") {
-  if (!Number.isInteger(prNumber) || !prTitle) {
-    console.log("Pull request metadata is missing.");
+  try {
+    execFileSync("git", ["fetch", "origin", "refs/notes/agentnote:refs/notes/agentnote"], {
+      stdio: "pipe",
+      encoding: "utf-8",
+    });
+  } catch {
+    // allow empty note refs
+  }
+
+  backfillDashboardNotes();
+
+  if (eventName === "pull_request") {
+    if (!Number.isInteger(prNumber) || !prTitle) {
+      console.log("Pull request metadata is missing.");
+      setFlags({ build: "false", persist: "false", deploy: "false" });
+      return;
+    }
+
+    const isForkPullRequest = prHeadRepo && repo && prHeadRepo !== repo;
+    if (isForkPullRequest) {
+      console.log(`Skip Dashboard note persistence for fork pull request #${prNumber}.`);
+    }
+
+    setFlags({
+      build: "true",
+      persist: isForkPullRequest ? "false" : "true",
+      deploy: isForkPullRequest ? "false" : "true",
+    });
+    removeNotesForPr(prNumber);
+
+    const pullRequest = {
+      number: prNumber,
+      title: prTitle,
+      state: "open",
+    };
+
+    for (const sha of fetchPullRequestCommits(prNumber)) {
+      writeDashboardNote(sha, pullRequest);
+    }
+    return;
+  }
+
+  if (defaultBranch && refName && refName !== defaultBranch) {
+    console.log(`Skip Dashboard publish on non-default branch ${refName}.`);
     setFlags({ build: "false", persist: "false", deploy: "false" });
-    process.exit(0);
+    return;
   }
 
-  const isForkPullRequest = prHeadRepo && repo && prHeadRepo !== repo;
-  if (isForkPullRequest) {
-    console.log(`Skip Dashboard note persistence for fork pull request #${prNumber}.`);
+  setFlags({ build: "true", persist: "true", deploy: "true" });
+  const mergedPullRequests = new Map();
+  for (const sha of buildCommitRange()) {
+    const pulls = fetchCommitPulls(sha);
+    const merged = pulls
+      .filter((pull) => pull && pull.merged_at)
+      .sort((left, right) =>
+        String(right.merged_at || "").localeCompare(String(left.merged_at || "")),
+      );
+    const pull = merged[0] || pulls[0] || null;
+    const pullRequest =
+      pull && typeof pull.number === "number" && typeof pull.title === "string"
+        ? {
+            number: pull.number,
+            title: pull.title,
+            state: pull.merged_at ? "merged" : "open",
+          }
+        : null;
+
+    if (writeDashboardNote(sha, pullRequest) && pullRequest) {
+      mergedPullRequests.set(pullRequest.number, pullRequest);
+    }
   }
 
-  setFlags({
-    build: "true",
-    persist: isForkPullRequest ? "false" : "true",
-    deploy: isForkPullRequest ? "false" : "true",
-  });
-  removeNotesForPr(prNumber);
-
-  const pullRequest = {
-    number: prNumber,
-    title: prTitle,
-    state: "open",
-  };
-
-  for (const sha of fetchPullRequestCommits(prNumber)) {
-    writeDashboardNote(sha, pullRequest);
-  }
-  process.exit(0);
-}
-
-if (defaultBranch && refName && refName !== defaultBranch) {
-  console.log(`Skip Dashboard publish on non-default branch ${refName}.`);
-  setFlags({ build: "false", persist: "false", deploy: "false" });
-  process.exit(0);
-}
-
-setFlags({ build: "true", persist: "true", deploy: "true" });
-const mergedPullRequests = new Map();
-for (const sha of buildCommitRange()) {
-  const pulls = fetchCommitPulls(sha);
-  const merged = pulls
-    .filter((pull) => pull && pull.merged_at)
-    .sort((left, right) =>
-      String(right.merged_at || "").localeCompare(String(left.merged_at || "")),
-    );
-  const pull = merged[0] || pulls[0] || null;
-  const pullRequest =
-    pull && typeof pull.number === "number" && typeof pull.title === "string"
-      ? {
-          number: pull.number,
-          title: pull.title,
-          state: pull.merged_at ? "merged" : "open",
-        }
-      : null;
-
-  if (writeDashboardNote(sha, pullRequest) && pullRequest) {
-    mergedPullRequests.set(pullRequest.number, pullRequest);
+  for (const pullRequest of mergedPullRequests.values()) {
+    updateNotesForPr(pullRequest.number, { state: pullRequest.state });
   }
 }
 
-for (const pullRequest of mergedPullRequests.values()) {
-  updateNotesForPr(pullRequest.number, { state: pullRequest.state });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
 }

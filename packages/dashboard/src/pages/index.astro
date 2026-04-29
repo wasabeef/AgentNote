@@ -2370,6 +2370,7 @@ const dashboardIndex = buildDashboardIndex();
         }
         for (const file of diff.files) {
           const { added, removed } = diffStats(file);
+          const diffLines = file.lines || [];
           const header = h("div", {
             className: "diff-file-header",
             onClick: (e) => {
@@ -2385,9 +2386,9 @@ const dashboardIndex = buildDashboardIndex();
             ]),
           ]);
 
-          const body = h("div", { className: "diff-body" });
+          const body = diffLines.length > 0 ? h("div", { className: "diff-body" }) : null;
           let oldNo = 0, newNo = 0;
-          for (const line of file.lines || []) {
+          for (const line of diffLines) {
             let cls = "diff-line";
             let num = "";
             if (line.startsWith("@@")) {
@@ -2412,11 +2413,18 @@ const dashboardIndex = buildDashboardIndex();
               h("span", { className: "content" }, line || " "),
             ]));
           }
+          const diffNotice = file.binary
+            ? "Binary diff not shown"
+            : file.truncated
+              ? diffLines.length > 0
+                ? "Diff truncated"
+                : "Diff omitted after size limit"
+              : null;
 
           const fileEl = h("div", { className: "diff-file" }, [
             header,
             body,
-            file.truncated && h("div", { className: "diff-truncated" }, "(diff truncated)"),
+            diffNotice && h("div", { className: "diff-truncated" }, diffNotice),
           ].filter(Boolean));
           wrap.appendChild(fileEl);
         }
