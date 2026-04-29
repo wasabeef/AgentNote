@@ -406,6 +406,6 @@
   "pull_request": {
     "number": 38,
     "title": "fix(dashboard): render markdown without cdn imports",
-    "state": "open"
+    "state": "merged"
   }
 }
