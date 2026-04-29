@@ -1708,46 +1708,234 @@ const dashboardIndex = buildDashboardIndex();
         if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast("Copied"));
       }
 
-      // Markdown renderer (lazy-loaded from CDN + sanitized).
-      let _markdownPromise = null;
-      function loadMarkdown() {
-        if (!_markdownPromise) {
-          _markdownPromise = Promise.all([
-            import("https://esm.sh/marked@12"),
-            import("https://esm.sh/dompurify@3"),
-          ]).then(([markedMod, dompurifyMod]) => {
-            const marked = markedMod.marked ?? markedMod.default;
-            const DOMPurify = dompurifyMod.default ?? dompurifyMod;
-            marked.setOptions({
-              breaks: true,
-              gfm: true,
-            });
-            return { marked, DOMPurify };
-          });
+      // Small dependency-free Markdown renderer for prompt/response bubbles.
+      // It never interprets raw HTML; text becomes text nodes, and links are
+      // allowlisted before becoming anchors. This keeps the dashboard readable
+      // without relying on runtime CDN imports or CSP-sensitive libraries.
+      function safeMarkdownHref(rawHref) {
+        const href = String(rawHref || "").trim();
+        if (!href) return null;
+        if (href.startsWith("#")) return href;
+        try {
+          const url = new URL(href, window.location.href);
+          if (["http:", "https:", "mailto:"].includes(url.protocol)) return url.href;
+        } catch {
+          return null;
         }
-        return _markdownPromise;
+        return null;
+      }
+      function appendTextWithBreaks(parent, text) {
+        const parts = String(text || "").split("\n");
+        parts.forEach((part, index) => {
+          if (index > 0) parent.appendChild(h("br"));
+          if (part) parent.appendChild(document.createTextNode(part));
+        });
+      }
+      function appendInlineMarkdown(parent, text) {
+        const pattern = /(`[^`]+`|\*\*[^*]+?\*\*|\*[^*\n]+?\*|\[[^\]\n]+?\]\([^) \n]+?\))/g;
+        let cursor = 0;
+        for (const match of String(text || "").matchAll(pattern)) {
+          if (match.index > cursor) {
+            appendTextWithBreaks(parent, text.slice(cursor, match.index));
+          }
+          const token = match[0];
+          if (token.startsWith("`")) {
+            parent.appendChild(h("code", {}, token.slice(1, -1)));
+          } else if (token.startsWith("**")) {
+            const strong = h("strong");
+            appendInlineMarkdown(strong, token.slice(2, -2));
+            parent.appendChild(strong);
+          } else if (token.startsWith("*")) {
+            const em = h("em");
+            appendInlineMarkdown(em, token.slice(1, -1));
+            parent.appendChild(em);
+          } else {
+            const linkMatch = token.match(/^\[([^\]\n]+?)\]\(([^) \n]+?)\)$/);
+            const href = safeMarkdownHref(linkMatch?.[2]);
+            if (linkMatch && href) {
+              const a = h("a", { href, target: "_blank", rel: "noopener noreferrer" });
+              appendInlineMarkdown(a, linkMatch[1]);
+              parent.appendChild(a);
+            } else {
+              appendTextWithBreaks(parent, token);
+            }
+          }
+          cursor = match.index + token.length;
+        }
+        if (cursor < String(text || "").length) {
+          appendTextWithBreaks(parent, String(text || "").slice(cursor));
+        }
+      }
+      function appendParagraph(container, lines) {
+        const text = lines.join("\n").trim();
+        if (!text) return;
+        const p = h("p");
+        appendInlineMarkdown(p, text);
+        container.appendChild(p);
+      }
+      function appendTaskMarkerIfPresent(li, text) {
+        const task = text.match(/^\[([ xX])\]\s+(.*)$/);
+        if (!task) return text;
+        li.appendChild(h("input", {
+          type: "checkbox",
+          disabled: true,
+          ...(task[1].toLowerCase() === "x" ? { checked: true } : {}),
+        }));
+        return task[2];
+      }
+      function appendList(container, lines, ordered) {
+        const list = h(ordered ? "ol" : "ul");
+        const marker = ordered ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/;
+        lines.forEach((line) => {
+          const li = h("li");
+          appendInlineMarkdown(li, appendTaskMarkerIfPresent(li, line.replace(marker, "")));
+          list.appendChild(li);
+        });
+        container.appendChild(list);
+      }
+      function splitMarkdownTableRow(line) {
+        return String(line || "")
+          .trim()
+          .replace(/^\|/, "")
+          .replace(/\|$/, "")
+          .split("|")
+          .map((cell) => cell.trim());
+      }
+      function isMarkdownTableSeparator(line, expectedCells) {
+        const cells = splitMarkdownTableRow(line);
+        return cells.length === expectedCells && cells.length > 1 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+      }
+      function appendTable(container, headerLine, bodyLines) {
+        const headers = splitMarkdownTableRow(headerLine);
+        const table = h("table");
+        const thead = h("thead");
+        const headerRow = h("tr");
+        headers.forEach((header) => {
+          const th = h("th");
+          appendInlineMarkdown(th, header);
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = h("tbody");
+        bodyLines.forEach((line) => {
+          const row = h("tr");
+          const cells = splitMarkdownTableRow(line);
+          headers.forEach((_, cellIndex) => {
+            const td = h("td");
+            appendInlineMarkdown(td, cells[cellIndex] || "");
+            row.appendChild(td);
+          });
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
       }
       function renderMarkdownInto(container, text) {
         container.classList.add("md");
-        // Render sync with fallback (plain text) so UI shows something immediately;
-        // upgrade to rendered markdown once the library lands.
-        container.textContent = text || "";
-        loadMarkdown().then(({ marked, DOMPurify }) => {
-          try {
-            const html = marked.parse(text || "");
-            const safe = DOMPurify.sanitize(html, {
-              ALLOWED_ATTR: ["href", "title", "target", "rel", "class", "type", "checked", "disabled"],
-            });
-            container.innerHTML = safe;
-            // Open links in new tab
-            container.querySelectorAll("a").forEach((a) => {
-              a.setAttribute("target", "_blank");
-              a.setAttribute("rel", "noopener noreferrer");
-            });
-          } catch (err) {
-            // keep the plain text fallback
+        container.replaceChildren();
+        const source = String(text || "").replace(/\r\n/g, "\n");
+        if (!source.trim()) return;
+
+        const lines = source.split("\n");
+        let paragraph = [];
+        const flushParagraph = () => {
+          appendParagraph(container, paragraph);
+          paragraph = [];
+        };
+
+        for (let index = 0; index < lines.length; index += 1) {
+          const line = lines[index];
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            flushParagraph();
+            continue;
           }
-        }).catch(() => { /* keep fallback */ });
+
+          const fence = trimmed.match(/^```(\S*)?/);
+          if (fence) {
+            flushParagraph();
+            const codeLines = [];
+            index += 1;
+            while (index < lines.length && !lines[index].trim().startsWith("```")) {
+              codeLines.push(lines[index]);
+              index += 1;
+            }
+            const code = h("code", {}, codeLines.join("\n"));
+            if (fence[1]) code.setAttribute("data-language", fence[1]);
+            container.appendChild(h("pre", {}, code));
+            continue;
+          }
+
+          if (/^([-*_])\s*\1\s*\1\s*$/.test(trimmed)) {
+            flushParagraph();
+            container.appendChild(h("hr"));
+            continue;
+          }
+
+          const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
+          if (heading) {
+            flushParagraph();
+            const level = String(heading[1]).length;
+            const el = h("h" + level);
+            appendInlineMarkdown(el, heading[2]);
+            container.appendChild(el);
+            continue;
+          }
+
+          if (/^>\s?/.test(line)) {
+            flushParagraph();
+            const quoteLines = [];
+            while (index < lines.length && /^>\s?/.test(lines[index])) {
+              quoteLines.push(lines[index].replace(/^>\s?/, ""));
+              index += 1;
+            }
+            index -= 1;
+            const blockquote = h("blockquote");
+            appendParagraph(blockquote, quoteLines);
+            container.appendChild(blockquote);
+            continue;
+          }
+
+          const tableHeaders = line.includes("|") ? splitMarkdownTableRow(line) : [];
+          if (
+            tableHeaders.length > 1
+            && index + 1 < lines.length
+            && isMarkdownTableSeparator(lines[index + 1], tableHeaders.length)
+          ) {
+            flushParagraph();
+            const headerLine = line;
+            const bodyLines = [];
+            index += 2;
+            while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+              bodyLines.push(lines[index]);
+              index += 1;
+            }
+            index -= 1;
+            appendTable(container, headerLine, bodyLines);
+            continue;
+          }
+
+          const unordered = /^\s*[-*]\s+/.test(line);
+          const ordered = /^\s*\d+[.)]\s+/.test(line);
+          if (unordered || ordered) {
+            flushParagraph();
+            const listLines = [];
+            const marker = ordered ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/;
+            while (index < lines.length && marker.test(lines[index])) {
+              listLines.push(lines[index]);
+              index += 1;
+            }
+            index -= 1;
+            appendList(container, listLines, ordered);
+            continue;
+          }
+
+          paragraph.push(line);
+        }
+        flushParagraph();
       }
 
       function compactText(text, max = 44) {
