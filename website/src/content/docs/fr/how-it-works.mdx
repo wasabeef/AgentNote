@@ -123,7 +123,7 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
 </Aside>
 
 <Aside>
-  Les artefacts générés les plus courants sont exclus du dénominateur de `AI ratio` en best effort, notamment les sorties de build web, les registrants Flutter, le codegen Dart, les protobufs Go, les bindings Rust et les sources Swift / Kotlin générées.
+  Les generated artifacts courants sont exclus du dénominateur de `AI ratio` en best effort à partir de signaux précis, comme les chemins de framework/cache, les noms ou suffixes générés et les en-têtes des fichiers commités. Les noms de dossiers génériques comme `build/`, `dist/`, `gen/`, `generated/` et `target/` ne suffisent pas à eux seuls.
 </Aside>
 
 ## Cycle de vie de la session

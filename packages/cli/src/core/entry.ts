@@ -55,8 +55,6 @@ const GENERATED_DIR_SEGMENTS = new Set([
   ".next",
   ".nuxt",
   "coverage",
-  "dist",
-  "out",
   // Monorepo / remote-cache build outputs
   ".turbo",
   ".yarn",
@@ -66,11 +64,6 @@ const GENERATED_DIR_SEGMENTS = new Set([
   // Mobile / Flutter build caches
   ".dart_tool",
   "DerivedData",
-  // Multi-language generic build directories (Android, Kotlin, Rust, Go, Dart)
-  "build",
-  "gen",
-  "generated",
-  "target",
 ]);
 const GENERATED_FILE_NAMES = new Set([
   // Flutter tool-managed dependency snapshot

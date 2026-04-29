@@ -123,7 +123,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </Aside>
 
 <Aside>
-  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort, включая web build outputs, Flutter registrants, Dart codegen, Go protobufs, Rust bindings и generated sources для Swift / Kotlin.
+  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort по конкретным сигналам: путям framework/cache, generated именам или суффиксам файлов и заголовкам закоммиченных файлов. Общих имён директорий вроде `build/`, `dist/`, `gen/`, `generated/` и `target/` самих по себе недостаточно.
 </Aside>
 
 ## Жизненный цикл сессии

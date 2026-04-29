@@ -123,7 +123,7 @@ Quando i git hook generati sono installati, nella maggior parte dei repository b
 </Aside>
 
 <Aside>
-  I generated artifact più comuni vengono esclusi dal denominatore di `AI ratio` in best effort, inclusi gli output di build web, i Flutter registrants, il Dart codegen, i Go protobuf, i Rust bindings e i generated source Swift / Kotlin.
+  I generated artifact comuni vengono esclusi dal denominatore di `AI ratio` in best effort usando segnali specifici, come path di framework/cache, nomi o suffissi generati e header dei file committati. I nomi di directory generici come `build/`, `dist/`, `gen/`, `generated/` e `target/` non bastano da soli.
 </Aside>
 
 ## Ciclo di vita della sessione

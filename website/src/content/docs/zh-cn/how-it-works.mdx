@@ -123,7 +123,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 </Aside>
 
 <Aside>
-  常见的 generated artifacts 会以 best-effort 的方式排除在 `AI ratio` 分母之外，包括 Web build outputs、Flutter registrants、Dart codegen、Go protobufs、Rust bindings，以及 Swift / Kotlin generated sources。
+  常见的 generated artifacts 会以 best-effort 的方式根据具体 signal 排除在 `AI ratio` 分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。仅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 这类通用目录名并不足以判定为 generated。
 </Aside>
 
 ## Session 生命周期
