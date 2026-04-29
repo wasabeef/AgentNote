@@ -2,6 +2,7 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
+import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes agent-note hook --agent gemini";
@@ -174,7 +175,7 @@ function isValidTranscriptPath(p: string): boolean {
 }
 
 function isGitCommit(cmd: string): boolean {
-  return cmd.includes("git commit") && !cmd.includes("--amend");
+  return findGitCommitCommand(cmd) !== null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

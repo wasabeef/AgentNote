@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
+import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes agent-note hook";
@@ -78,7 +79,7 @@ function isSystemInjectedPrompt(prompt: string): boolean {
 
 function isGitCommit(cmd: string): boolean {
   // Support chained commands like "git add ... && git commit ..."
-  return cmd.includes("git commit") && !cmd.includes("--amend");
+  return findGitCommitCommand(cmd) !== null;
 }
 
 export const claude: AgentAdapter = {
