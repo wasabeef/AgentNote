@@ -27,6 +27,7 @@ try {
 }
 
 const extractDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-restore-"));
+let archiveExtracted = false;
 try {
   execFileSync(
     "/bin/sh",
@@ -39,11 +40,18 @@ try {
       encoding: "utf-8",
     },
   );
+  archiveExtracted = true;
 } catch {
-  process.exit(0);
+  // No Dashboard notes have been published yet.
 }
 
-const archivedNotesDir = join(extractDir, "dashboard", "notes");
-if (existsSync(archivedNotesDir)) {
-  copyDirectoryContents(archivedNotesDir, notesDir);
+try {
+  if (archiveExtracted) {
+    const archivedNotesDir = join(extractDir, "dashboard", "notes");
+    if (existsSync(archivedNotesDir)) {
+      copyDirectoryContents(archivedNotesDir, notesDir);
+    }
+  }
+} finally {
+  rmSync(extractDir, { recursive: true, force: true });
 }
