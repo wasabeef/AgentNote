@@ -3,6 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
+import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOKS_REL_PATH = ".cursor/hooks.json";
@@ -330,7 +331,7 @@ function buildHooksConfig(): CursorHooksConfig {
 }
 
 function isGitCommit(command: string): boolean {
-  return command.includes("git commit") && !command.includes("--amend");
+  return findGitCommitCommand(command) !== null;
 }
 
 function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {

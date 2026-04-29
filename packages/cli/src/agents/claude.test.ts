@@ -290,6 +290,21 @@ describe("claude adapter", () => {
       assert.equal(event, null);
     });
 
+    it("returns null when Bash only mentions git commit in a quoted string or comment", () => {
+      for (const command of ['echo "git commit -m test"', "git status # git commit -m test"]) {
+        const event = claude.parseEvent({
+          raw: JSON.stringify({
+            hook_event_name: "PreToolUse",
+            session_id: VALID_SESSION_ID,
+            tool_name: "Bash",
+            tool_input: { command },
+          }),
+          sync: true,
+        });
+        assert.equal(event, null, command);
+      }
+    });
+
     it("parses PostToolUse Edit as file_change with toolUseId", () => {
       const event = claude.parseEvent({
         raw: JSON.stringify({

@@ -185,6 +185,24 @@ describe("agent-note hook", () => {
     assert.equal(out.trim(), "", "should produce no output for non-commit command");
   });
 
+  it("does not inject trailer when git commit is only mentioned in a quoted string or comment", () => {
+    for (const command of ['echo "git commit -m test"', "git status # git commit -m test"]) {
+      const event = JSON.stringify({
+        hook_event_name: "PreToolUse",
+        session_id: "a1b2c3d4-0001-0001-0001-000000000001",
+        tool_name: "Bash",
+        tool_input: { command },
+      });
+
+      const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
+        cwd: testDir,
+        encoding: "utf-8",
+      });
+
+      assert.equal(out.trim(), "", `should produce no output for ${command}`);
+    }
+  });
+
   it("does not inject trailer on PreToolUse for git commit --amend", () => {
     const event = JSON.stringify({
       hook_event_name: "PreToolUse",

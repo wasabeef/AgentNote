@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`;
+}
 
 describe("agentnote init", () => {
   let testDir: string;
@@ -141,6 +145,36 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       !upgradedHook.includes('git push "$REMOTE" refs/notes/agentnote 2>/dev/null &'),
       "outdated async notes push should be removed during upgrade",
     );
+  });
+
+  it("quotes chained git hook backup paths for shell-special repository paths", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-hook-$`'-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    const hookPath = join(dir, ".git", "hooks", "prepare-commit-msg");
+    const markerPath = join(dir, "chained-hook-ran");
+    writeFileSync(hookPath, `#!/bin/sh\necho ran > ${shellSingleQuote(markerPath)}\n`, {
+      mode: 0o755,
+    });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const messagePath = join(dir, "message.txt");
+    writeFileSync(messagePath, "subject\n");
+    execFileSync(hookPath, [messagePath], { cwd: dir });
+
+    assert.ok(existsSync(markerPath), "the chained original hook should run");
+
+    const hook = readFileSync(hookPath, "utf-8");
+    assert.ok(!hook.includes('if [ -f "'), "backup path should not use double quotes");
+
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("pushes notes synchronously alongside the main branch push", () => {

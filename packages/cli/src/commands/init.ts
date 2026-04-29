@@ -402,7 +402,7 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
       const target = existsSync(backupPath)
         ? script.replace(
             "#!/bin/sh",
-            `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f "${backupPath}" ]; then "${backupPath}" "$@" || exit $?; fi`,
+            `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`,
           )
         : script;
       if (existing.trim() === target.trim()) return false; // already up-to-date
@@ -421,7 +421,7 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
     // If the original hook fails, abort — don't override repo protections.
     const chainedScript = script.replace(
       "#!/bin/sh",
-      `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f "${backupPath}" ]; then "${backupPath}" "$@" || exit $?; fi`,
+      `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`,
     );
     await writeFile(hookPath, chainedScript);
     await chmod(hookPath, 0o755);

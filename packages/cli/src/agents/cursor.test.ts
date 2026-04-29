@@ -204,6 +204,30 @@ describe("cursor adapter", () => {
     });
   });
 
+  it("returns null when shell hooks only mention git commit in a quoted string or comment", () => {
+    for (const command of ['echo "git commit -m test"', "git status # git commit -m test"]) {
+      const before = cursor.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "beforeShellExecution",
+          conversation_id: "conv-123",
+          command,
+        }),
+        sync: true,
+      });
+      const after = cursor.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "afterShellExecution",
+          conversation_id: "conv-123",
+          command,
+        }),
+        sync: false,
+      });
+
+      assert.equal(before, null, `beforeShellExecution ${command}`);
+      assert.equal(after, null, `afterShellExecution ${command}`);
+    }
+  });
+
   it("finds Cursor transcripts in nested and flat layouts", () => {
     const nestedSessionId = "cursor-nested";
     const flatSessionId = "cursor-flat";

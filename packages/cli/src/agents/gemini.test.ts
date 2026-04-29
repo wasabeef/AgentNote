@@ -217,6 +217,32 @@ describe("gemini adapter", () => {
       assert.equal(event, null);
     });
 
+    it("returns null when shell tools only mention git commit in a quoted string or comment", () => {
+      for (const command of ['echo "git commit -m test"', "git status # git commit -m test"]) {
+        const before = gemini.parseEvent({
+          raw: JSON.stringify({
+            hook_event_name: "BeforeTool",
+            session_id: VALID_SESSION_ID,
+            tool_name: "run_shell_command",
+            tool_input: { command },
+          }),
+          sync: true,
+        });
+        const after = gemini.parseEvent({
+          raw: JSON.stringify({
+            hook_event_name: "AfterTool",
+            session_id: VALID_SESSION_ID,
+            tool_name: "run_shell_command",
+            tool_input: { command },
+          }),
+          sync: false,
+        });
+
+        assert.equal(before, null, `BeforeTool ${command}`);
+        assert.equal(after, null, `AfterTool ${command}`);
+      }
+    });
+
     it("returns null for BeforeTool with unknown tool", () => {
       const event = gemini.parseEvent({
         raw: JSON.stringify({

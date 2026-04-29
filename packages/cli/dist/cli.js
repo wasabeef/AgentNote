@@ -46,6 +46,201 @@ var init_constants = __esm({
   }
 });
 
+// src/git.ts
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+async function git(args2, options) {
+  const { stdout } = await execFileAsync("git", args2, {
+    cwd: options?.cwd,
+    encoding: "utf-8"
+  });
+  return stdout.trim();
+}
+async function gitSafe(args2, options) {
+  try {
+    const stdout = await git(args2, options);
+    return { stdout, exitCode: 0 };
+  } catch (err) {
+    const e = err;
+    return {
+      stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+      exitCode: typeof e.code === "number" ? e.code : 1
+    };
+  }
+}
+async function repoRoot() {
+  return git(["rev-parse", "--show-toplevel"]);
+}
+function isShellControlStart(command2, index) {
+  const char = command2[index];
+  const next = command2[index + 1];
+  if (char === "&" && next === "&") return 2;
+  if (char === "|" && next === "|") return 2;
+  if (char === ";" || char === "|" || char === "\n") return 1;
+  return 0;
+}
+function isEnvAssignment(value) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(value);
+}
+function tokenizeShellCommand(command2) {
+  const segments = [[]];
+  let token = null;
+  let quote = null;
+  let escaped = false;
+  let comment = false;
+  const currentSegment = () => segments[segments.length - 1];
+  const ensureToken = (index) => {
+    token ??= { value: "", start: index, end: index };
+    return token;
+  };
+  const finishToken = (index) => {
+    if (!token) return;
+    token.end = index;
+    currentSegment().push(token);
+    token = null;
+  };
+  const markTokenEnd = (index) => {
+    if (!token) return;
+    token.end = index;
+  };
+  const finishSegment = () => {
+    if (currentSegment().length > 0) segments.push([]);
+  };
+  for (let index = 0; index < command2.length; index += 1) {
+    const char = command2[index];
+    if (comment) {
+      if (char === "\n") {
+        comment = false;
+        finishSegment();
+      }
+      continue;
+    }
+    if (escaped) {
+      ensureToken(index - 1).value += char;
+      escaped = false;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+        markTokenEnd(index + 1);
+        continue;
+      }
+      if (quote === '"' && char === "\\") {
+        escaped = true;
+        continue;
+      }
+      ensureToken(index).value += char;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      ensureToken(index);
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      ensureToken(index);
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      finishToken(index);
+      if (char === "\n") finishSegment();
+      continue;
+    }
+    if (char === "#" && !token) {
+      comment = true;
+      continue;
+    }
+    const controlLength = isShellControlStart(command2, index);
+    if (controlLength > 0) {
+      finishToken(index);
+      finishSegment();
+      index += controlLength - 1;
+      continue;
+    }
+    ensureToken(index).value += char;
+  }
+  finishToken(command2.length);
+  return segments.filter((segment) => segment.length > 0);
+}
+function findSimpleCommandIndex(tokens) {
+  let index = 0;
+  while (index < tokens.length && isEnvAssignment(tokens[index].value)) {
+    index += 1;
+  }
+  if (tokens[index]?.value === "env") {
+    index += 1;
+    while (index < tokens.length) {
+      const value = tokens[index].value;
+      if (isEnvAssignment(value)) {
+        index += 1;
+        continue;
+      }
+      if (value === "-i" || value === "--ignore-environment") {
+        index += 1;
+        continue;
+      }
+      break;
+    }
+  }
+  if (tokens[index]?.value === "command") {
+    index += 1;
+  }
+  return index;
+}
+function gitOptionConsumesValue(value) {
+  return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
+}
+function findGitCommitToken(tokens) {
+  let index = findSimpleCommandIndex(tokens);
+  if (tokens[index]?.value !== "git") return null;
+  index += 1;
+  while (index < tokens.length) {
+    const value = tokens[index].value;
+    if (value === "commit") {
+      const hasAmend = tokens.slice(index + 1).some((token) => {
+        return token.value === "--amend" || token.value.startsWith("--amend=");
+      });
+      return hasAmend ? null : tokens[index];
+    }
+    if (value === "--") return null;
+    if (gitOptionConsumesValue(value)) {
+      index += 2;
+      continue;
+    }
+    if (value.startsWith("--git-dir=") || value.startsWith("--work-tree=") || value.startsWith("--namespace=") || value.startsWith("-c=")) {
+      index += 1;
+      continue;
+    }
+    if (value.startsWith("-")) {
+      index += 1;
+      continue;
+    }
+    return null;
+  }
+  return null;
+}
+function findGitCommitCommand(command2) {
+  for (const segment of tokenizeShellCommand(command2)) {
+    const commitToken = findGitCommitToken(segment);
+    if (commitToken) return { insertAt: commitToken.end };
+  }
+  return null;
+}
+function injectGitCommitTrailer(command2, trailer) {
+  const match = findGitCommitCommand(command2);
+  if (!match) return null;
+  return `${command2.slice(0, match.insertAt)} ${trailer}${command2.slice(match.insertAt)}`;
+}
+var execFileAsync;
+var init_git = __esm({
+  "src/git.ts"() {
+    "use strict";
+    execFileAsync = promisify(execFile);
+  }
+});
+
 // src/agents/claude.ts
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -74,12 +269,13 @@ function isSystemInjectedPrompt(prompt) {
   return false;
 }
 function isGitCommit(cmd) {
-  return cmd.includes("git commit") && !cmd.includes("--amend");
+  return findGitCommitCommand(cmd) !== null;
 }
 var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
 var init_claude = __esm({
   "src/agents/claude.ts"() {
     "use strict";
+    init_git();
     HOOK_COMMAND = "npx --yes agent-note hook";
     CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
     HOOKS_CONFIG = {
@@ -837,7 +1033,7 @@ function extractEditStats(value) {
   }
   return sawEdit ? { added, deleted } : null;
 }
-function repoRoot() {
+function repoRoot2() {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"], {
       cwd: process.cwd(),
@@ -850,7 +1046,7 @@ function repoRoot() {
 function cursorTranscriptDir() {
   const override = process.env[CURSOR_TRANSCRIPTS_DIR_ENV]?.trim();
   if (override) return resolve3(override);
-  return join3(CURSOR_PROJECTS_DIR, sanitizePathForCursor(repoRoot()), "agent-transcripts");
+  return join3(CURSOR_PROJECTS_DIR, sanitizePathForCursor(repoRoot2()), "agent-transcripts");
 }
 function isValidTranscriptPath3(transcriptPath) {
   const normalized = resolve3(transcriptPath);
@@ -985,7 +1181,7 @@ function buildHooksConfig2() {
   };
 }
 function isGitCommit2(command2) {
-  return command2.includes("git commit") && !command2.includes("--amend");
+  return findGitCommitCommand(command2) !== null;
 }
 function stripAgentnoteHooks2(config) {
   if (!config.hooks) {
@@ -1015,6 +1211,7 @@ var HOOKS_REL_PATH2, HOOK_COMMAND3, CURSOR_PROJECTS_DIR, CURSOR_TRANSCRIPTS_DIR_
 var init_cursor = __esm({
   "src/agents/cursor.ts"() {
     "use strict";
+    init_git();
     HOOKS_REL_PATH2 = ".cursor/hooks.json";
     HOOK_COMMAND3 = "npx --yes agent-note hook --agent cursor";
     CURSOR_PROJECTS_DIR = join3(homedir3(), ".cursor", "projects");
@@ -1171,7 +1368,7 @@ function isValidTranscriptPath4(p) {
   return normalized === base || normalized.startsWith(`${base}${sep4}`);
 }
 function isGitCommit3(cmd) {
-  return cmd.includes("git commit") && !cmd.includes("--amend");
+  return findGitCommitCommand(cmd) !== null;
 }
 function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1235,6 +1432,7 @@ var HOOK_COMMAND4, SETTINGS_REL_PATH, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HO
 var init_gemini = __esm({
   "src/agents/gemini.ts"() {
     "use strict";
+    init_git();
     HOOK_COMMAND4 = "npx --yes agent-note hook --agent gemini";
     SETTINGS_REL_PATH = ".gemini/settings.json";
     EDIT_TOOLS = /* @__PURE__ */ new Set(["write_file", "replace"]);
@@ -1558,39 +1756,6 @@ var init_agents = __esm({
       [cursor.name, cursor],
       [gemini.name, gemini]
     ]);
-  }
-});
-
-// src/git.ts
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-async function git(args2, options) {
-  const { stdout } = await execFileAsync("git", args2, {
-    cwd: options?.cwd,
-    encoding: "utf-8"
-  });
-  return stdout.trim();
-}
-async function gitSafe(args2, options) {
-  try {
-    const stdout = await git(args2, options);
-    return { stdout, exitCode: 0 };
-  } catch (err) {
-    const e = err;
-    return {
-      stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
-      exitCode: typeof e.code === "number" ? e.code : 1
-    };
-  }
-}
-async function repoRoot2() {
-  return git(["rev-parse", "--show-toplevel"]);
-}
-var execFileAsync;
-var init_git = __esm({
-  "src/git.ts"() {
-    "use strict";
-    execFileAsync = promisify(execFile);
   }
 });
 
@@ -3502,7 +3667,7 @@ import { join as join7 } from "node:path";
 async function root() {
   if (!_root) {
     try {
-      _root = await repoRoot2();
+      _root = await repoRoot();
     } catch {
       console.error("error: git repository not found");
       process.exit(1);
@@ -3947,7 +4112,7 @@ async function installGitHook(hookDir, name, script) {
         "#!/bin/sh",
         `#!/bin/sh
 # Chain to original hook \u2014 preserve exit status.
-if [ -f "${backupPath2}" ]; then "${backupPath2}" "$@" || exit $?; fi`
+if [ -f ${shellSingleQuote(backupPath2)} ]; then ${shellSingleQuote(backupPath2)} "$@" || exit $?; fi`
       ) : script;
       if (existing.trim() === target.trim()) return false;
       await writeFile7(hookPath, target);
@@ -3963,7 +4128,7 @@ if [ -f "${backupPath2}" ]; then "${backupPath2}" "$@" || exit $?; fi`
       "#!/bin/sh",
       `#!/bin/sh
 # Chain to original hook \u2014 preserve exit status.
-if [ -f "${backupPath}" ]; then "${backupPath}" "$@" || exit $?; fi`
+if [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`
     );
     await writeFile7(hookPath, chainedScript);
     await chmod(hookPath, 493);
@@ -4380,17 +4545,19 @@ async function hook(args2 = []) {
       const cmd = event.commitCommand ?? "";
       if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
-        const updatedCmd = cmd.replace(/(git\s+commit)/, `$1 ${trailer}`);
-        process.stdout.write(
-          JSON.stringify({
-            hookSpecificOutput: {
-              hookEventName: "PreToolUse",
-              updatedInput: {
-                command: updatedCmd
+        const updatedCmd = injectGitCommitTrailer(cmd, trailer);
+        if (updatedCmd) {
+          process.stdout.write(
+            JSON.stringify({
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                updatedInput: {
+                  command: updatedCmd
+                }
               }
-            }
-          })
-        );
+            })
+          );
+        }
       }
       break;
     }

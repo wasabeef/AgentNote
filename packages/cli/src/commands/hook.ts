@@ -22,7 +22,7 @@ import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
 import { writeSessionAgent, writeSessionTranscriptPath } from "../core/session.js";
-import { git } from "../git.js";
+import { git, injectGitCommitTrailer } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -385,19 +385,19 @@ export async function hook(args: string[] = []): Promise<void> {
       const cmd = event.commitCommand ?? "";
       if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
-        // Replace "git commit" with "git commit --trailer ..." to ensure the trailer
-        // is attached to the commit command, not to a subsequent chained command.
-        const updatedCmd = cmd.replace(/(git\s+commit)/, `$1 ${trailer}`);
-        process.stdout.write(
-          JSON.stringify({
-            hookSpecificOutput: {
-              hookEventName: "PreToolUse",
-              updatedInput: {
-                command: updatedCmd,
+        const updatedCmd = injectGitCommitTrailer(cmd, trailer);
+        if (updatedCmd) {
+          process.stdout.write(
+            JSON.stringify({
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                updatedInput: {
+                  command: updatedCmd,
+                },
               },
-            },
-          }),
-        );
+            }),
+          );
+        }
       }
       break;
     }
