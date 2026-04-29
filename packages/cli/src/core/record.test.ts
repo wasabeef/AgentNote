@@ -1713,6 +1713,126 @@ describe("recordCommitEntry", () => {
     }
   });
 
+  it("correlatePromptIds ignores resumed transcript turns before the current session start", async () => {
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"timestamp":"2026-04-13T09:59:00Z","type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"timestamp":"2026-04-13T09:59:01Z","type":"assistant","message":{"content":[{"type":"text","text":"old response from previous run"}]}}',
+          '{"timestamp":"2026-04-13T10:00:10Z","type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"timestamp":"2026-04-13T10:00:11Z","type":"assistant","message":{"content":[{"type":"text","text":"current response"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, EVENTS_FILE),
+        '{"event":"session_start","session_id":"' +
+          SESSION_ID +
+          '","timestamp":"2026-04-13T10:00:00Z","agent":"claude","model":"test-model"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"continue","prompt_id":"id-current","turn":1,"timestamp":"2026-04-13T10:00:10Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"current.ts","turn":1,"prompt_id":"id-current"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+      writeFileSync(join(repoDir, "current.ts"), "export const current = true;\n");
+      execSync("git add current.ts", { cwd: repoDir });
+      execSync('git commit -m "current continue"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "continue");
+      assert.equal(interactions[0].response, "current response");
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
+  it("correlatePromptIds prefers timestamped current turns over mixed untimestamped history", async () => {
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const prevClaudeHome = process.env.AGENTNOTE_CLAUDE_HOME;
+    process.env.AGENTNOTE_CLAUDE_HOME = claudeHome;
+
+    try {
+      const transcriptPath = join(claudeHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          '{"type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"type":"assistant","message":{"content":[{"type":"text","text":"untimestamped old response"}]}}',
+          '{"timestamp":"2026-04-13T10:00:10Z","type":"user","message":{"content":[{"type":"text","text":"continue"}]}}',
+          '{"timestamp":"2026-04-13T10:00:11Z","type":"assistant","message":{"content":[{"type":"text","text":"timestamped current response"}]}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, EVENTS_FILE),
+        '{"event":"session_start","session_id":"' +
+          SESSION_ID +
+          '","timestamp":"2026-04-13T10:00:00Z","agent":"claude","model":"test-model"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"continue","prompt_id":"id-current","turn":1,"timestamp":"2026-04-13T10:00:10Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, CHANGES_FILE),
+        '{"event":"file_change","tool":"Write","file":"current.ts","turn":1,"prompt_id":"id-current"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+      writeFileSync(join(repoDir, "current.ts"), "export const current = true;\n");
+      execSync("git add current.ts", { cwd: repoDir });
+      execSync('git commit -m "current mixed continue"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const interactions = note.interactions as Array<{ prompt: string; response: string | null }>;
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "continue");
+      assert.equal(interactions[0].response, "timestamped current response");
+    } finally {
+      if (prevClaudeHome === undefined) {
+        delete process.env.AGENTNOTE_CLAUDE_HOME;
+      } else {
+        process.env.AGENTNOTE_CLAUDE_HOME = prevClaudeHome;
+      }
+      rmSync(claudeHome, { recursive: true, force: true });
+    }
+  });
+
   it("correlatePromptIds skips missing transcript prompts instead of cascade-failing", async () => {
     // Session has 3 prompts [A, B, C], but the transcript only recorded A
     // and C (B missing — e.g. a dropped event or transcript truncation).

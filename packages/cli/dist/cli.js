@@ -257,12 +257,16 @@ var init_claude = __esm({
           const lines = content.trim().split("\n");
           const interactions = [];
           let pendingPrompt = null;
+          let pendingPromptTimestamp;
           let pendingResponseTexts = [];
           const flush = () => {
             if (pendingPrompt === null) return;
             const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
-            interactions.push({ prompt: pendingPrompt, response });
+            const interaction = { prompt: pendingPrompt, response };
+            if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
+            interactions.push(interaction);
             pendingPrompt = null;
+            pendingPromptTimestamp = void 0;
             pendingResponseTexts = [];
           };
           const extractUserText = (content2) => {
@@ -283,6 +287,7 @@ var init_claude = __esm({
                 if (userText) {
                   flush();
                   pendingPrompt = userText;
+                  pendingPromptTimestamp = typeof entry.timestamp === "string" ? entry.timestamp : void 0;
                 }
               }
               if (entry.type === "assistant" && entry.message?.content && pendingPrompt !== null) {
@@ -695,6 +700,7 @@ var init_codex = __esm({
             if (!prompt) continue;
             if (current) interactions.push(current);
             current = { prompt, response: null };
+            if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
             continue;
           }
           if (!current) continue;
@@ -800,6 +806,10 @@ function extractRole(value) {
     return directRole.trim().toLowerCase();
   }
   return extractRole(value.message) ?? extractRole(value.payload);
+}
+function extractTimestamp(value) {
+  if (!isRecord2(value)) return void 0;
+  return typeof value.timestamp === "string" ? value.timestamp : void 0;
 }
 function sanitizePathForCursor(path) {
   return path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9]/g, "-");
@@ -917,13 +927,16 @@ async function waitForTranscriptReady(transcriptPath) {
 function extractJsonlInteractions(content) {
   const interactions = [];
   let pendingPrompt = null;
+  let pendingPromptTimestamp;
   let pendingResponse = [];
   const flush = () => {
     if (!pendingPrompt?.trim()) return;
-    interactions.push({
+    const interaction = {
       prompt: pendingPrompt.trim(),
       response: pendingResponse.length > 0 ? pendingResponse.join("\n").trim() : null
-    });
+    };
+    if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
+    interactions.push(interaction);
   };
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
@@ -941,6 +954,7 @@ function extractJsonlInteractions(content) {
     if (role === "user" || role === "human") {
       flush();
       pendingPrompt = text;
+      pendingPromptTimestamp = extractTimestamp(parsed);
       pendingResponse = [];
       continue;
     }
@@ -1487,6 +1501,7 @@ var init_gemini = __esm({
             if (!prompt) continue;
             if (current) interactions.push(current);
             current = { prompt, response: null };
+            if (typeof record.timestamp === "string") current.timestamp = record.timestamp;
             continue;
           }
           if (type === "gemini" && current) {
@@ -2252,7 +2267,8 @@ async function recordCommitEntry(opts) {
       if (!crossTurnCommit) throw err;
     }
   }
-  correlatePromptIds(allInteractions, promptEntries);
+  const transcriptCorrelationStartMs = await readTranscriptCorrelationStartMs(sessionDir);
+  correlatePromptIds(allInteractions, promptEntries, transcriptCorrelationStartMs);
   const interactionsById = /* @__PURE__ */ new Map();
   for (const i of allInteractions) {
     if (i.prompt_id) interactionsById.set(i.prompt_id, i);
@@ -2446,7 +2462,11 @@ async function recordCommitEntry(opts) {
   );
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
-function correlatePromptIds(interactions, sessionPromptEntries) {
+function correlatePromptIds(interactions, sessionPromptEntries, transcriptCorrelationStartMs = null) {
+  const effectiveCorrelationStartMs = hasTranscriptCandidateAtOrAfter(
+    interactions,
+    transcriptCorrelationStartMs
+  ) ? transcriptCorrelationStartMs : null;
   const sessionTextToIds = /* @__PURE__ */ new Map();
   for (const entry of sessionPromptEntries) {
     const text = typeof entry.prompt === "string" ? entry.prompt : void 0;
@@ -2456,18 +2476,53 @@ function correlatePromptIds(interactions, sessionPromptEntries) {
     sessionTextToIds.get(text)?.push(id);
   }
   const txTextToIndices = /* @__PURE__ */ new Map();
+  const txTextToUntimestampedIndices = /* @__PURE__ */ new Map();
   for (let idx = 0; idx < interactions.length; idx++) {
+    if (!isTranscriptCorrelationCandidate(interactions[idx], effectiveCorrelationStartMs)) {
+      continue;
+    }
     const text = interactions[idx].prompt;
-    if (!txTextToIndices.has(text)) txTextToIndices.set(text, []);
-    txTextToIndices.get(text)?.push(idx);
+    const interactionMs = parseTimestampMs(interactions[idx].timestamp);
+    const map = effectiveCorrelationStartMs !== null && interactionMs === null ? txTextToUntimestampedIndices : txTextToIndices;
+    if (!map.has(text)) map.set(text, []);
+    map.get(text)?.push(idx);
   }
   for (const [text, ids] of sessionTextToIds) {
-    const indices = txTextToIndices.get(text) ?? [];
+    const indices = selectTranscriptIndicesForText(
+      txTextToIndices.get(text) ?? [],
+      txTextToUntimestampedIndices.get(text) ?? [],
+      ids.length,
+      effectiveCorrelationStartMs
+    );
     if (indices.length < ids.length) continue;
     for (let i = 0; i < ids.length; i++) {
       interactions[indices[i]].prompt_id = ids[i];
     }
   }
+}
+function selectTranscriptIndicesForText(timestampedIndices, untimestampedIndices, expectedCount, transcriptCorrelationStartMs) {
+  if (transcriptCorrelationStartMs === null) return timestampedIndices;
+  if (timestampedIndices.length >= expectedCount) return timestampedIndices;
+  if (timestampedIndices.length === 0) return untimestampedIndices;
+  return [];
+}
+function hasTranscriptCandidateAtOrAfter(interactions, transcriptCorrelationStartMs) {
+  if (transcriptCorrelationStartMs === null) return true;
+  return interactions.some((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs !== null && interactionMs >= transcriptCorrelationStartMs;
+  });
+}
+function isTranscriptCorrelationCandidate(interaction, transcriptCorrelationStartMs) {
+  if (transcriptCorrelationStartMs === null) return true;
+  const interactionMs = parseTimestampMs(interaction.timestamp);
+  if (interactionMs === null) return true;
+  return interactionMs >= transcriptCorrelationStartMs;
+}
+function parseTimestampMs(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 function toRecordedInteraction(interaction, commitFileSet, consumedPromptState) {
   const recorded = {
@@ -3356,6 +3411,21 @@ async function readResponsesByTurn(sessionDir) {
     responsesByTurn.set(turn, { response, priority });
   }
   return new Map([...responsesByTurn.entries()].map(([turn, value]) => [turn, value.response]));
+}
+async function readTranscriptCorrelationStartMs(sessionDir) {
+  const eventsFile = join6(sessionDir, EVENTS_FILE);
+  if (!existsSync7(eventsFile)) return null;
+  const entries = await readJsonlEntries(eventsFile);
+  let latestSessionStartMs = null;
+  for (const entry of entries) {
+    if (entry.event !== "session_start") continue;
+    const timestampMs = parseTimestampMs(entry.timestamp);
+    if (timestampMs === null) continue;
+    if (latestSessionStartMs === null || timestampMs > latestSessionStartMs) {
+      latestSessionStartMs = timestampMs;
+    }
+  }
+  return latestSessionStartMs;
 }
 async function readSessionModel(sessionDir) {
   const eventsFile = join6(sessionDir, EVENTS_FILE);

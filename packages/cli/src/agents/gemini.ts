@@ -447,6 +447,7 @@ export const gemini: AgentAdapter = {
         if (!prompt) continue;
         if (current) interactions.push(current);
         current = { prompt, response: null };
+        if (typeof record.timestamp === "string") current.timestamp = record.timestamp;
         continue;
       }
 

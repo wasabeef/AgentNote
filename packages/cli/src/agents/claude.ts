@@ -268,15 +268,19 @@ export const claude: AgentAdapter = {
     try {
       const content = await readFile(transcriptPath, "utf-8");
       const lines = content.trim().split("\n");
-      const interactions: Array<{ prompt: string; response: string | null }> = [];
+      const interactions: TranscriptInteraction[] = [];
       let pendingPrompt: string | null = null;
+      let pendingPromptTimestamp: string | undefined;
       let pendingResponseTexts: string[] = [];
 
       const flush = () => {
         if (pendingPrompt === null) return;
         const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
-        interactions.push({ prompt: pendingPrompt, response });
+        const interaction: TranscriptInteraction = { prompt: pendingPrompt, response };
+        if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
+        interactions.push(interaction);
         pendingPrompt = null;
+        pendingPromptTimestamp = undefined;
         pendingResponseTexts = [];
       };
 
@@ -305,6 +309,8 @@ export const claude: AgentAdapter = {
               // New user prompt: flush previous pair first.
               flush();
               pendingPrompt = userText;
+              pendingPromptTimestamp =
+                typeof entry.timestamp === "string" ? entry.timestamp : undefined;
             }
           }
 

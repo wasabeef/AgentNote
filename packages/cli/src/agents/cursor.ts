@@ -102,6 +102,11 @@ function extractRole(value: unknown): string | null {
   return extractRole(value.message) ?? extractRole(value.payload);
 }
 
+function extractTimestamp(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  return typeof value.timestamp === "string" ? value.timestamp : undefined;
+}
+
 function sanitizePathForCursor(path: string): string {
   return path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9]/g, "-");
 }
@@ -251,14 +256,17 @@ async function waitForTranscriptReady(transcriptPath: string): Promise<boolean> 
 function extractJsonlInteractions(content: string): TranscriptInteraction[] {
   const interactions: TranscriptInteraction[] = [];
   let pendingPrompt: string | null = null;
+  let pendingPromptTimestamp: string | undefined;
   let pendingResponse: string[] = [];
 
   const flush = () => {
     if (!pendingPrompt?.trim()) return;
-    interactions.push({
+    const interaction: TranscriptInteraction = {
       prompt: pendingPrompt.trim(),
       response: pendingResponse.length > 0 ? pendingResponse.join("\n").trim() : null,
-    });
+    };
+    if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
+    interactions.push(interaction);
   };
 
   for (const line of content.split("\n")) {
@@ -281,6 +289,7 @@ function extractJsonlInteractions(content: string): TranscriptInteraction[] {
     if (role === "user" || role === "human") {
       flush();
       pendingPrompt = text;
+      pendingPromptTimestamp = extractTimestamp(parsed);
       pendingResponse = [];
       continue;
     }

@@ -9,6 +9,12 @@ export interface TranscriptInteraction {
   prompt: string;
   response: string | null;
   /**
+   * Timestamp of the user prompt in the source transcript when available.
+   * Used only as a safety lower bound for resumed transcripts; older
+   * transcripts without timestamps keep the existing pairing behavior.
+   */
+  timestamp?: string;
+  /**
    * Authoritative identity for this prompt, assigned by the hook at
    * UserPromptSubmit time. Used to pair transcript-derived interactions with
    * session prompts without relying on text-content comparison. Undefined on
