@@ -547,6 +547,6 @@
   "pull_request": {
     "number": 36,
     "title": "fix(record): avoid generic generated directory exclusions",
-    "state": "open"
+    "state": "merged"
   }
 }
