@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node --test workflow/sync-notes.test.mjs",
+    "test": "node --test workflow/*.test.mjs",
     "workflow:restore-notes": "node workflow/restore-notes.mjs",
     "workflow:sync-notes": "node workflow/sync-notes.mjs",
     "workflow:build-pages": "node workflow/build-pages.mjs",
