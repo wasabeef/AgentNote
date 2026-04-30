@@ -108,6 +108,6 @@
   "pull_request": {
     "number": 42,
     "title": "chore: update frontend dependencies",
-    "state": "open"
+    "state": "merged"
   }
 }
