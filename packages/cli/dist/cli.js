@@ -2161,11 +2161,12 @@ function splitScopeSentences(response) {
   }
   const rest = current.trim();
   if (rest) sentences.push(rest);
+  const leadingSentences = sentences.slice(0, MAX_SCOPE_SENTENCES);
   const windows = [];
-  for (let index = 0; index < sentences.length; index++) {
-    windows.push(sentences[index]);
-    const next = sentences[index + 1];
-    if (next) windows.push(`${sentences[index]} ${next}`);
+  for (let index = 0; index < leadingSentences.length; index++) {
+    windows.push(leadingSentences[index]);
+    const next = leadingSentences[index + 1];
+    if (next) windows.push(`${leadingSentences[index]} ${next}`);
   }
   return windows;
 }
@@ -2208,15 +2209,19 @@ function scoreScopeSentence(sentence, index, signature) {
     issueScopedTitleHits,
     markdownIssueHits,
     subjectTokenHits,
+    issueRefHits,
     index
   };
 }
 function isValidScopeScore(score) {
   if (score.context.rank < MIN_SCOPE_SCORE) return false;
+  const hasScopedTitle = score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0;
+  const hasIssueCodeScope = score.issueRefHits > 0 && score.codeIdentifierHits > 0;
+  const hasCodeSubjectScope = score.codeIdentifierHits > 0 && score.subjectTokenHits > 0;
   if (score.fileHits > 0) {
-    return score.codeIdentifierHits > 0 || score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0 || score.markdownIssueHits > 0;
+    return score.codeIdentifierHits > 0 || hasScopedTitle || score.markdownIssueHits > 0;
   }
-  return score.codeIdentifierHits > 0 || score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0 || score.markdownIssueHits > 0;
+  return hasScopedTitle || score.markdownIssueHits > 0 || hasIssueCodeScope || hasCodeSubjectScope;
 }
 function compareScopeScores(a, b) {
   return b.context.rank - a.context.rank || b.issueScopedTitleHits - a.issueScopedTitleHits || b.markdownIssueHits - a.markdownIssueHits || b.codeIdentifierHits - a.codeIdentifierHits || b.scopedTitleHits - a.scopedTitleHits || a.index - b.index;
@@ -2344,13 +2349,14 @@ function stripRank(context) {
     text: context.text
   };
 }
-var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MIN_SCOPE_SCORE, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
+var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MAX_SCOPE_SENTENCES, MIN_SCOPE_SCORE, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
 var init_interaction_context = __esm({
   "src/core/interaction-context.ts"() {
     "use strict";
     MAX_CONTEXT_CHARS = 900;
     MAX_SCOPE_PROMPT_CHARS = 120;
     MAX_SCOPE_LINES = 10;
+    MAX_SCOPE_SENTENCES = 4;
     MIN_SCOPE_SCORE = 2;
     GENERIC_TOKENS = /* @__PURE__ */ new Set([
       "agent",
@@ -5135,11 +5141,10 @@ function renderMarkdown(report) {
     for (const commit2 of withPrompts) {
       lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
       lines.push("");
-      for (const interaction of commit2.interactions) {
+      for (const interaction of mergePromptOnlyDisplayInteractions(commit2.interactions)) {
         const context = renderInteractionContext(interaction);
         if (context) {
-          const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
-          pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanedContext);
+          pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanContext(context));
           lines.push(">");
         }
         const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
@@ -5171,6 +5176,35 @@ function commitLink(commit2, repoUrl) {
 }
 function escapeTableCell(value) {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+function mergePromptOnlyDisplayInteractions(interactions) {
+  const result = [];
+  let pendingPrompts = [];
+  for (const interaction of interactions) {
+    if (isPromptOnlyDisplayPrefix(interaction)) {
+      pendingPrompts.push(interaction.prompt);
+      continue;
+    }
+    if (pendingPrompts.length > 0) {
+      result.push({
+        ...interaction,
+        prompt: [...pendingPrompts, interaction.prompt].join("\n\n")
+      });
+      pendingPrompts = [];
+      continue;
+    }
+    result.push(interaction);
+  }
+  for (const prompt of pendingPrompts) {
+    result.push({ prompt, response: null });
+  }
+  return result;
+}
+function isPromptOnlyDisplayPrefix(interaction) {
+  return interaction.response === null && !interaction.context && (!interaction.contexts || interaction.contexts.length === 0) && (!interaction.files_touched || interaction.files_touched.length === 0) && interaction.tools === void 0;
+}
+function cleanContext(context) {
+  return context.trim();
 }
 function cleanPrompt(prompt, maxLen) {
   const trimmed = prompt.trim();

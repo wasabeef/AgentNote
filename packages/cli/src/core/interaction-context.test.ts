@@ -290,23 +290,60 @@ describe("selectInteractionContext", () => {
 });
 
 describe("selectInteractionScopeContext", () => {
-  it("attaches scope context for a short prompt when the current response has a code identifier anchor", () => {
+  it("attaches scope context when a code identifier is tied to the commit subject", () => {
     const context = selectInteractionScopeContext(
       {
         prompt: "これが最後かな",
-        response: "I will implement renderMarkdownInto without CDN imports.",
+        response: "I will implement the markdown renderer with renderMarkdownInto.",
       },
       signature({
         codeIdentifiers: new Set(["renderMarkdownInto", "CDN"]),
+        commitSubjectTokens: ["markdown"],
       }),
     );
 
     assert.deepEqual(context && { ...context, rank: undefined }, {
       kind: "scope",
       source: "current_response",
-      text: "I will implement renderMarkdownInto without CDN imports.",
+      text: "I will implement the markdown renderer with renderMarkdownInto.",
       rank: undefined,
     });
+  });
+
+  it("does not attach scope context from code identifiers alone", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "review five times",
+        response:
+          "The third pass checks selectInteractionContext and InteractionContext migration.",
+      },
+      signature({
+        codeIdentifiers: new Set(["selectInteractionContext", "InteractionContext"]),
+        commitSubjectTokens: ["scoped", "contexts"],
+      }),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("does not attach scope context from late implementation details", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "review five times",
+        response:
+          "I will review the design from five angles. " +
+          "The first pass checks schema compatibility. " +
+          "The second pass checks rendering. " +
+          "The third pass checks selector behavior. " +
+          "A later detail mentions #36 and docs/knowledge/PROMPT_CONTEXT_DESIGN.md.",
+      },
+      signature({
+        changedFiles: ["docs/knowledge/PROMPT_CONTEXT_DESIGN.md"],
+        changedFileBasenames: ["PROMPT_CONTEXT_DESIGN.md"],
+      }),
+    );
+
+    assert.equal(context, undefined);
   });
 
   it("attaches scope context from a PR reference with a scoped title", () => {

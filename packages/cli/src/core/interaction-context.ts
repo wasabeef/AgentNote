@@ -21,6 +21,7 @@ export type CommitContextSignature = {
 const MAX_CONTEXT_CHARS = 900;
 const MAX_SCOPE_PROMPT_CHARS = 120;
 const MAX_SCOPE_LINES = 10;
+const MAX_SCOPE_SENTENCES = 4;
 const MIN_SCOPE_SCORE = 2;
 const GENERIC_TOKENS = new Set([
   "agent",
@@ -86,6 +87,7 @@ type ScopeScore = {
   issueScopedTitleHits: number;
   markdownIssueHits: number;
   subjectTokenHits: number;
+  issueRefHits: number;
   index: number;
 };
 
@@ -283,11 +285,12 @@ function splitScopeSentences(response: string): string[] {
   const rest = current.trim();
   if (rest) sentences.push(rest);
 
+  const leadingSentences = sentences.slice(0, MAX_SCOPE_SENTENCES);
   const windows: string[] = [];
-  for (let index = 0; index < sentences.length; index++) {
-    windows.push(sentences[index]);
-    const next = sentences[index + 1];
-    if (next) windows.push(`${sentences[index]} ${next}`);
+  for (let index = 0; index < leadingSentences.length; index++) {
+    windows.push(leadingSentences[index]);
+    const next = leadingSentences[index + 1];
+    if (next) windows.push(`${leadingSentences[index]} ${next}`);
   }
   return windows;
 }
@@ -349,26 +352,20 @@ function scoreScopeSentence(
     issueScopedTitleHits,
     markdownIssueHits,
     subjectTokenHits,
+    issueRefHits,
     index,
   };
 }
 
 function isValidScopeScore(score: ScopeScore): boolean {
   if (score.context.rank < MIN_SCOPE_SCORE) return false;
+  const hasScopedTitle = score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0;
+  const hasIssueCodeScope = score.issueRefHits > 0 && score.codeIdentifierHits > 0;
+  const hasCodeSubjectScope = score.codeIdentifierHits > 0 && score.subjectTokenHits > 0;
   if (score.fileHits > 0) {
-    return (
-      score.codeIdentifierHits > 0 ||
-      score.scopedTitleHits > 0 ||
-      score.issueScopedTitleHits > 0 ||
-      score.markdownIssueHits > 0
-    );
+    return score.codeIdentifierHits > 0 || hasScopedTitle || score.markdownIssueHits > 0;
   }
-  return (
-    score.codeIdentifierHits > 0 ||
-    score.scopedTitleHits > 0 ||
-    score.issueScopedTitleHits > 0 ||
-    score.markdownIssueHits > 0
-  );
+  return hasScopedTitle || score.markdownIssueHits > 0 || hasIssueCodeScope || hasCodeSubjectScope;
 }
 
 function compareScopeScores(a: ScopeScore, b: ScopeScore): number {

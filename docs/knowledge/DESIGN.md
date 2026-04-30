@@ -262,7 +262,7 @@ This keeps a readable commit narrative such as “remember the package redesign?
 If a selected prompt is short and needs nearby context, Agent Note may attach `interactions[].contexts[]`. This is a conservative display helper, not a second attribution signal.
 
 - `reference` context comes from the immediately previous response. It must overlap the current commit through a strong structural anchor: changed file path, changed file basename, or code-like identifier extracted from the final diff.
-- `scope` context comes from the current response. It is used when the prompt is short and the response's opening sentence has structural anchors such as code identifiers, scoped titles, or PR / issue references with a title.
+- `scope` context comes from the current response. It is used when the prompt is short and the response's opening sentence has broad structural anchors such as scoped titles, PR / issue references with a title, or code identifiers tied to the commit subject. Code identifiers alone are not enough because they often describe a local implementation step rather than the work scope.
 - Commit subject words can only break ties. A single subject word cannot create context by itself.
 - Current prompts that already contain a strong anchor do not get extra context.
 - If the immediately previous turn is already selected, no context is attached because the same information will appear as a normal prompt / response pair.

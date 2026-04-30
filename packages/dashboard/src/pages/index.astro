@@ -2558,11 +2558,50 @@ const dashboardIndex = buildDashboardIndex();
 
       function renderChat(note, anchorPrefix = "") {
         const thread = h("div", { className: "chat-pane" });
-        const interactions = note.interactions || [];
+        const interactions = mergePromptOnlyDisplayInteractions(note.interactions || []);
         interactions.forEach((i, idx) => {
           thread.appendChild(renderTurn(i, idx, interactions.length, note.agent, note.model, anchorPrefix));
         });
         return thread;
+      }
+
+      function mergePromptOnlyDisplayInteractions(interactions) {
+        const result = [];
+        let pendingPrompts = [];
+
+        for (const interaction of interactions) {
+          if (isPromptOnlyDisplayPrefix(interaction)) {
+            pendingPrompts.push(interaction.prompt || "");
+            continue;
+          }
+
+          if (pendingPrompts.length > 0) {
+            result.push({
+              ...interaction,
+              prompt: [...pendingPrompts, interaction.prompt || ""].join("\n\n"),
+            });
+            pendingPrompts = [];
+            continue;
+          }
+
+          result.push(interaction);
+        }
+
+        for (const prompt of pendingPrompts) {
+          result.push({ prompt, response: null });
+        }
+
+        return result;
+      }
+
+      function isPromptOnlyDisplayPrefix(interaction) {
+        return (
+          interaction?.response === null &&
+          !interaction?.context &&
+          !(interaction?.contexts || []).length &&
+          !(interaction?.files_touched || []).length &&
+          interaction?.tools === undefined
+        );
       }
 
       function diffStats(file) {

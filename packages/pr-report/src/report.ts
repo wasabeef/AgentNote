@@ -13,6 +13,8 @@ export interface Interaction {
   response: string | null;
   context?: string;
   contexts?: InteractionContext[];
+  files_touched?: string[];
+  tools?: string[] | null;
 }
 
 export interface CommitEntry {
@@ -261,11 +263,10 @@ export function renderMarkdown(report: PrReport): string {
       lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
       lines.push("");
 
-      for (const interaction of commit.interactions) {
+      for (const interaction of mergePromptOnlyDisplayInteractions(commit.interactions)) {
         const context = renderInteractionContext(interaction);
         if (context) {
-          const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
-          pushBlockquoteSection(lines, "📝 Context", cleanedContext);
+          pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
           lines.push(">");
         }
 
@@ -306,6 +307,49 @@ function commitLink(commit: CommitEntry, repoUrl: string | null): string {
 
 function escapeTableCell(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function mergePromptOnlyDisplayInteractions(interactions: Interaction[]): Interaction[] {
+  const result: Interaction[] = [];
+  let pendingPrompts: string[] = [];
+
+  for (const interaction of interactions) {
+    if (isPromptOnlyDisplayPrefix(interaction)) {
+      pendingPrompts.push(interaction.prompt);
+      continue;
+    }
+
+    if (pendingPrompts.length > 0) {
+      result.push({
+        ...interaction,
+        prompt: [...pendingPrompts, interaction.prompt].join("\n\n"),
+      });
+      pendingPrompts = [];
+      continue;
+    }
+
+    result.push(interaction);
+  }
+
+  for (const prompt of pendingPrompts) {
+    result.push({ prompt, response: null });
+  }
+
+  return result;
+}
+
+function isPromptOnlyDisplayPrefix(interaction: Interaction): boolean {
+  return (
+    interaction.response === null &&
+    !interaction.context &&
+    (!interaction.contexts || interaction.contexts.length === 0) &&
+    (!interaction.files_touched || interaction.files_touched.length === 0) &&
+    interaction.tools === undefined
+  );
+}
+
+function cleanContext(context: string): string {
+  return context.trim();
 }
 
 function cleanPrompt(prompt: string, maxLen: number): string {

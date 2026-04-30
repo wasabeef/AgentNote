@@ -145,4 +145,74 @@ describe("renderMarkdown", () => {
     assert.ok(!markdown.includes("**📝 Context**"));
     assert.ok(markdown.includes("**🧑 Prompt**"));
   });
+
+  it("renders prompt-only bursts with the following response", () => {
+    const report = baseReport({
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 2,
+          interactions: [
+            {
+              prompt: "Please avoid keyword heuristics.",
+              response: null,
+            },
+            {
+              prompt: "This also applies to PROMPT_CONTEXT_DESIGN.md.",
+              response: "I will use structural anchors only.",
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+
+    assert.equal(markdown.match(/\*\*🧑 Prompt\*\*/g)?.length, 1);
+    assert.equal(markdown.match(/\*\*🤖 Response\*\*/g)?.length, 1);
+    assert.ok(markdown.includes("Please avoid keyword heuristics."));
+    assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
+    assert.ok(markdown.includes("I will use structural anchors only."));
+  });
+
+  it("does not truncate long context text in the middle", () => {
+    const reference = "Reference context " + "alpha ".repeat(55);
+    const scope = "Scope context " + "beta ".repeat(55);
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              contexts: [
+                {
+                  kind: "reference",
+                  source: "previous_response",
+                  text: reference,
+                },
+                {
+                  kind: "scope",
+                  source: "current_response",
+                  text: scope,
+                },
+              ],
+              prompt: "continue",
+              response: "Done.",
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const contextStart = markdown.indexOf("**📝 Context**");
+    const promptStart = markdown.indexOf("**🧑 Prompt**");
+    const contextBlock = markdown.slice(contextStart, promptStart);
+
+    assert.ok(contextBlock.length > 600, "fixture should exceed the old response limit");
+    assert.ok(contextBlock.includes(reference.trim()));
+    assert.ok(contextBlock.includes(scope.trim()));
+    assert.ok(!contextBlock.includes("…"));
+  });
 });

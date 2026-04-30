@@ -198,7 +198,7 @@ code-like identifier の初期定義:
 1. current response を normalize する。
 2. 先頭 10 non-empty lines だけを候補にする。
 3. list item / blockquote marker を取り除く。
-4. sentence boundary で最大 2 sentence まで切り出す。
+4. sentence boundary で先頭 4 sentence だけを残し、各 sentence と隣接 2 sentence window を候補にする。
 5. local absolute path や broken code fence を含む sentence を候補から除外する。
 6. structural anchor を持つ sentence だけを scoring する。
 7. threshold 以上の最上位 sentence を `{ kind: "scope", source: "current_response" }` として保存する。
@@ -212,7 +212,7 @@ Scope scoring の初期仕様:
 - changed file path / basename hit: `+1`
 - commit subject token hit: 1 token だけなら tie-breaker のみ。2 token 以上が同じ sentence にある場合は `scopedTitle` hit として扱う。
 
-合格条件は `score >= 2` とします。ただし file path / basename だけで `2` 点に届くような合算は許可しません。Scope Context は作業範囲を示すため、少なくとも 1 つは file 以外の structural anchor、または file anchor と file 以外の anchor の組み合わせが必要です。これにより、`PR #N` だけ、changed file path だけ、generic subject token だけの sentence は落ちます。`PR #N` と 1 つ以上の non-generic subject token が同じ sentence にある場合は、PR 番号単体ではなく scoped title 付きの参照として扱えます。
+合格条件は `score >= 2` とします。ただし file path / basename だけで `2` 点に届くような合算は許可しません。Scope Context は作業範囲を示すため、少なくとも 1 つは file 以外の structural anchor、または file anchor と file 以外の anchor の組み合わせが必要です。これにより、`PR #N` だけ、changed file path だけ、generic subject token だけの sentence は落ちます。code identifier だけの sentence も局所的な implementation step に寄りやすいため、Scope Context では採用しません。`PR #N` と 1 つ以上の non-generic subject token が同じ sentence にある場合は、PR 番号単体ではなく scoped title 付きの参照として扱えます。
 
 次は positive signal にしません。
 
@@ -220,6 +220,7 @@ Scope scoring の初期仕様:
 - action cue keyword
 - operational / housekeeping keyword
 - `PR #N` だけの reference
+- code identifier だけの local implementation step
 - short code span だけの reference
 - changed file path だけの reference
 
