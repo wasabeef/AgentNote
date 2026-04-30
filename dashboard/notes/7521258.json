@@ -3492,6 +3492,6 @@
   "pull_request": {
     "number": 39,
     "title": "feat(record): add scoped prompt contexts",
-    "state": "open"
+    "state": "merged"
   }
 }
