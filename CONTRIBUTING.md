@@ -39,7 +39,8 @@ We welcome various types of contributions:
 
 ### Prerequisites
 
-- **Node.js** >= 20
+- **Node.js** >= 22.12.0 for repository development, docs, and Dashboard builds
+- The published `agent-note` CLI package still supports Node.js >= 20
 - **Git**
 - **Claude Code** (for testing hooks integration)
 

@@ -15,13 +15,13 @@
     "test": "find src -name '*.test.ts' | xargs node --import tsx/esm --test"
   },
   "dependencies": {
-    "@actions/core": "^1.11.0",
-    "@actions/github": "^6.0.0"
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2",
-    "@vercel/ncc": "^0.38.0",
-    "tsx": "^4.19.0",
-    "typescript": "^6.0.2"
+    "@types/node": "^25.6.0",
+    "@vercel/ncc": "^0.38.4",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }
