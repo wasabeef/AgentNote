@@ -92,7 +92,10 @@ git push
 Agent Note 保存 commit story：
 
 - `prompt` / `response`：变更背后的对话
-- `contexts[]`：prompt 太短时的 display-only 提示
+- `contexts[]`：prompt 太短时会显示为 `📝 Context` 的 display-only 提示
+
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+
 - `files`：变更的 file，以及 AI 是否触碰过
 - `attribution`：AI ratio、method，以及可用时的 line counts
 

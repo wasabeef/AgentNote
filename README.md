@@ -92,7 +92,10 @@ With the generated git hooks installed, Agent Note records commits automatically
 Agent Note stores the commit story:
 
 - `prompt` / `response`: the conversation behind the change
-- `contexts[]`: small display-only hints when a prompt is too short
+- `contexts[]`: display-only hints shown as `📝 Context` when a prompt is too short
+
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+
 - `files`: changed files and whether AI touched them
 - `attribution`: AI ratio, method, and line counts when available
 
