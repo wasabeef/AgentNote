@@ -1,0 +1,215 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-04-30T05:55:37.010Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "よさそう。いったんこれでブランチきってからコミットプッシュ",
+      "response": "README 改善はいったんまとまったので、ここから専用ブランチに切って、今回触った README/docs/website だけを stage して commit/push します。`BUGS.md` と `docs/plans/` は unrelated untracked として触らず残します。\ndiff check は通っています。ここから `docs/readme-locales` ブランチを作って、README の新規 locale ファイルと docs/website の整合性修正だけを stage します。\nstage 対象は意図通りで、unrelated な `BUGS.md` と `docs/plans/` は未 stage のままです。commit 前に staged diff check をもう一度通してから commit します。\ncommit できました。続けて branch を remote に push します。\nブランチ作成、commit、push まで完了しました。\n\n- Branch: `docs/readme-locales`\n- Commit: `b320ab4 docs: improve multilingual README`\n- Push: `origin/docs/readme-locales`\n- PR 作成 URL: https://github.com/wasabeef/AgentNote/pull/new/docs/readme-locales\n\n未追跡の `BUGS.md` と `docs/plans/` は触らず残しています。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "Dashboard section を全言語で圧縮しました。README には「使うために必要なもの」として、`--dashboard` 生成コマンド、commit すべき 2 つの workflow、GitHub Pages source の設定、`/dashboard/` を開く流れだけ残しています。既存 Pages との同居や artifact/persist の詳細は Dashboard docs へ誘導しました。"
+        },
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "README 改善はいったんまとまったので、ここから専用ブランチに切って、今回触った README/docs/website だけを stage して commit/push します。"
+        }
+      ],
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "PR作成して",
+      "response": "PR 作成しました。\n\nhttps://github.com/wasabeef/AgentNote/pull/41\n\n未追跡の `BUGS.md` と `docs/plans/` は引き続き PR 対象外です。\n\nMay the Force be with you."
+    },
+    {
+      "prompt": "docs 以下、更新漏れや knowledge でまとめたほうがいいものなどあればまとめてほしいな",
+      "response": "`common:check-fact` を使って、docs 配下の記述が現在の実装・README/website とズレていないか確認します。まず docs/knowledge の構成と重複・古い schema 例を洗い出して、必要なら既存 knowledge に集約する形で修正します。\ndocs/knowledge は研究メモ・設計メモ・現行仕様が混ざっているので、まず「canonical に残すべき現在仕様」と「過去調査として残すだけでいいもの」を分けて見ています。今のところ、README で詳細を削った分は `website` と `docs/knowledge/DESIGN.md` が受け皿になっているかを重点的に確認しています。\n更新漏れとして見つかったのは、`PROMPT_CONTEXT_DESIGN.md` がまだ「これから `contexts[]` に寄せる」口調になっていた点と、`DESIGN.md` の agent 一覧・team sharing の表現が少し古い点です。ここは現行仕様の knowledge として読めるように修正します。\ndocs 配下を見直して、更新漏れっぽいところを 2 点直しました。\n\n- [docs/knowledge/DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/DESIGN.md:84) に `Knowledge map` を追加して、`DESIGN.md` を canonical、各 agent plan / research 系は historical context として読む方針を明記しました。\n- [docs/knowledge/PROMPT_CONTEXT_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_CONTEXT_DESIGN.md:63) を現行実装に合わせて、現在 schema は `contexts[]`、`context?: string` は legacy reader 互換という説明に更新しました。\n\nついでに `DESIGN.md` の古い記述も少し直しています。agent 一覧に `codex/cursor/gemini` を追加し、git notes 共有は手動 push ではなく generated `pre-push` hook で auto-push される表現にしました。\n\n確認: `git diff --check` は通っています。まだ commit / push はしていないので、PR #41 に反映するなら `y` ください。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "docs/knowledge は研究メモ・設計メモ・現行仕様が混ざっているので、まず「canonical に残すべき現在仕様」と「過去調査として残すだけでいいもの」を分けて見ています。 今のところ、README で詳細を削った分は `website` と `docs/knowledge/DESIGN.md` が受け皿になっているかを重点的に確認しています。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/DESIGN.md",
+        "docs/knowledge/PROMPT_CONTEXT_DESIGN.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/PROMPT_CONTEXT_DESIGN.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "afad8f73d3a2d8777ddd91a131df6b8c2667d138",
+    "short_sha": "afad8f7",
+    "message": "docs: align knowledge notes",
+    "date": "2026-04-30T14:55:36+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/DESIGN.md",
+        "lines": [
+          "index 1caa30d..3e24b8c 100644",
+          "--- a/docs/knowledge/DESIGN.md",
+          "+++ b/docs/knowledge/DESIGN.md",
+          "@@ -28,13 +28,19 @@ wasabeef/AgentNote/",
+          " │   │   │   │   ├── attribution.ts  # line-level AI attribution (3-diff algorithm)",
+          " │   │   │   │   ├── constants.ts    # shared constants (file names, patterns)",
+          " │   │   │   │   ├── entry.ts        # build entry JSON, calc ai_ratio",
+          "+│   │   │   │   ├── interaction-context.ts # display-only context selector",
+          " │   │   │   │   ├── jsonl.ts        # JSONL read/append helpers",
+          " │   │   │   │   ├── record.ts       # shared recordCommitEntry()",
+          " │   │   │   │   ├── rotate.ts       # log rotation after commit",
+          "+│   │   │   │   ├── session.ts      # per-session agent/transcript metadata",
+          " │   │   │   │   └── storage.ts      # git notes read/write",
+          " │   │   │   ├── agents/             # one file per agent",
+          "+│   │   │   │   ├── index.ts        # agent registry",
+          " │   │   │   │   ├── types.ts        # AgentAdapter interface + NormalizedEvent",
+          "-│   │   │   │   └── claude.ts       # Claude Code adapter",
+          "+│   │   │   │   ├── claude.ts       # Claude Code adapter",
+          "+│   │   │   │   ├── codex.ts        # Codex CLI adapter",
+          "+│   │   │   │   ├── cursor.ts       # Cursor adapter",
+          "+│   │   │   │   └── gemini.ts       # Gemini CLI adapter",
+          " │   │   │   └── commands/           # user-facing, delegates to agents/ + core/",
+          " │   │   │       ├── init.ts",
+          " │   │   │       ├── hook.ts",
+          "@@ -75,11 +81,22 @@ wasabeef/AgentNote/",
+          " └── CLAUDE.md",
+          " ```",
+          " ",
+          "+### Knowledge map",
+          "+",
+          "+`docs/knowledge/DESIGN.md` is the canonical architecture reference. Keep current implementation details here first.",
+          "+",
+          "+Other knowledge files are narrower design or research records:",
+          "+",
+          "+- `PROMPT_CONTEXT_DESIGN.md` — deterministic `interactions[].contexts[]` selection and display rules.",
+          "+- `AGENT_SUPPORT_PROMOTION_PLAN.md` — support-tier gates for promoting agent adapters.",
+          "+- `CODEX_SUPPORT_PLAN.md`, `CURSOR_SUPPORT_PLAN.md`, `GEMINI_SUPPORT_PLAN.md` — agent-specific research and implementation history. Treat them as historical context unless they explicitly say otherwise.",
+          "+- `AGENTNOTE_VS_ENTIRE.md`, `PROBLEMS.md`, `RESEARCH.md` — competitive / architecture research that motivated the current design.",
+          "+",
+          " ### Why monorepo",
+          " ",
+          "-The action calls `agent-note pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:",
+          "+The PR Report action reads the same git note schema that the CLI writes and the dashboard renders. Keeping them in one repo means:",
+          " ",
+          "-- A single PR can change CLI output + action parsing in lockstep",
+          "+- A single PR can change note schema, PR Report rendering, and Dashboard rendering in lockstep",
+          " - The static dashboard can reuse the same note schema without a second data contract",
+          " - No cross-repo version coordination",
+          " - Shared CI",
+          "@@ -117,7 +134,7 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b",
+          " ### Two execution paths",
+          " ",
+          " 1. **CLI** (`packages/cli/`) — `agent-note init`, `agent-note show`, `agent-note log`, `agent-note pr`. Run by users and CI.",
+          "-2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude` or `--agent codex`). All data collection.",
+          "+2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.",
+          " ",
+          " ### Data flow",
+          " ",
+          "@@ -752,5 +769,5 @@ interface AgentAdapter {",
+          " | GitHub UI | \"Compare & PR\" banner on every push | **None** (notes are invisible) |",
+          " | Dependencies | go-git, gitleaks, PostHog, entire.io auth | **Zero** (CLI), ncc-bundled (action) |",
+          " | Performance | Sync hooks, 2min 44s commit | **Async agent hooks** + lightweight git hooks |",
+          "-| Team sharing | Auto-push checkpoint branch | **Explicit** `git push origin refs/notes/agentnote` |",
+          "+| Team sharing | Auto-push checkpoint branch | **Auto-pushes git notes** via the generated `pre-push` hook |",
+          " | PR integration | None built-in | **GitHub Action** with structured outputs |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/PROMPT_CONTEXT_DESIGN.md",
+        "lines": [
+          "index f554cbc..70361c6 100644",
+          "--- a/docs/knowledge/PROMPT_CONTEXT_DESIGN.md",
+          "+++ b/docs/knowledge/PROMPT_CONTEXT_DESIGN.md",
+          "@@ -60,7 +60,9 @@ Context は prompt selection を広げません。古い prompt を追加採用",
+          " ",
+          " ## データモデル",
+          " ",
+          "-現在の schema は `context?: string` だけを持ちます。これは previous response 由来の `reference` context を 1 つだけ保存する形です。",
+          "+現在の schema は `contexts[]` です。`context?: string` は過去 note 互換の legacy field として reader / renderer 側だけが読みます。",
+          "+",
+          "+過去 note は `context?: string` だけを持つ場合があります。これは previous response 由来の `reference` context を 1 つだけ保存する形でした。",
+          " ",
+          " ```ts",
+          " interface Interaction {",
+          "@@ -73,7 +75,7 @@ interface Interaction {",
+          " }",
+          " ```",
+          " ",
+          "-次の schema では `contexts[]` に寄せます。",
+          "+新規 note は次の `contexts[]` に寄せます。",
+          " ",
+          " ```ts",
+          " interface InteractionContext {",
+          "@@ -102,7 +104,7 @@ interface Interaction {",
+          " }",
+          " ```",
+          " ",
+          "-新規保存は `contexts[]` に寄せます。PR Report / Dashboard は `context?: string` と `contexts[]` の両方を読める必要があります。",
+          "+PR Report / Dashboard は `context?: string` と `contexts[]` の両方を読める必要があります。",
+          " ",
+          " 正規化方針:",
+          " ",
+          "@@ -423,17 +425,17 @@ Scope negative:",
+          " ",
+          " ## Documentation / Website",
+          " ",
+          "-実装と表示が固まるまでは、website の各 locale を先に厚く更新しません。仕様が揺れている段階で翻訳を増やすと、後続変更のコストが高くなるためです。",
+          "+実装済みの公開説明は、README では短く、website では使う人向けに説明します。詳細な抽出条件はこの knowledge と `DESIGN.md` に集約します。",
+          " ",
+          "-更新対象は次を想定します。",
+          "+反映対象:",
+          " ",
+          " - `README.md`",
+          " - `docs/knowledge/` の設計・調査メモ",
+          " - `website/src/content/docs/*/github-action.mdx`",
+          " - `website/src/content/docs/*/dashboard.mdx`",
+          "-- `website/src/content/docs/*/mechanism.mdx` または同等の仕組み説明ページ",
+          "+- `website/src/content/docs/*/how-it-works.mdx`",
+          " ",
+          "-website では次だけを短く説明します。",
+          "+website では次を短く説明します。",
+          " ",
+          " - Prompt だけでは意味が分かりにくい場合、`📝 Context` が表示されることがある。",
+          " - Context は保存済み response から deterministic に抽出される。"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 41,
+    "title": "docs: improve multilingual README",
+    "state": "open"
+  }
+}
