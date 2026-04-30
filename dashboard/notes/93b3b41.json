@@ -1449,6 +1449,6 @@
   "pull_request": {
     "number": 40,
     "title": "feat(action): auto-detect dashboard Pages target",
-    "state": "open"
+    "state": "merged"
   }
 }
