@@ -121,8 +121,26 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus
   </Card>
 </CardGrid>
 
+## Cara mengumpulkan `📝 Context`
+
+`📝 Context` adalah metadata khusus tampilan untuk prompt pendek seperti "continue" atau "kerjakan yang berikutnya". Context membantu pembaca memahami prompt tanpa mengubah attribution.
+
+- `reference` context diambil dari response tepat sebelumnya ketika response itu memiliki structural anchor kuat, seperti changed file path, file basename, atau code identifier dari diff final.
+- `scope` context diambil dari response saat ini ketika awal response menyebut scope pekerjaan dengan structural anchor.
+- Agent Note tidak memakai approval keyword seperti `yes`, `continue`, atau `お願いします` sebagai aturan seleksi. Jika tidak ada structural anchor, Context dilewati.
+- Context tidak pernah mengubah `files_touched`, prompt ownership, AI ratio, attribution method, atau apakah git note disimpan.
+
+## Agent Note vs Entire
+
+Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.
+
+- Agent Note menghubungkan git commit dengan AI conversation yang membuatnya. Entire adalah checkpoint product yang lebih luas dengan workflow rewind / resume.
+- Agent Note menyimpan record permanen di `refs/notes/agentnote`; file sementara sesi tetap berada di `.git/agentnote/`. Entire berpusat pada checkpoint metadata dan hosted web application.
+- Dashboard Agent Note adalah static GitHub Pages opsional yang didukung git notes. Agent Note tetap bisa dipakai tanpa hosted service.
+- Agent Note tidak mencoba memulihkan workspace state lama. Fokusnya adalah reviewability: mengapa commit berubah, prompt mana yang terlibat, dan seberapa besar diff yang AI-authored.
+
 <Aside type="tip">
-  Daftar prompt berasal dari jendela percakapan antar-commit, bukan dari seluruh backlog sesi. Agent Note mempertahankan prompt planning, clarification, dan review yang berguna untuk commit saat ini, sambil memangkas riwayat prompt yang dikutip dan edit turn yang tidak bertahan di commit ini. Jika prompt pendek bergantung pada response sebelumnya tetapi turn sebelumnya sudah menjadi bagian dari commit lama, Agent Note dapat menambahkan field `context` khusus tampilan sebelum prompt; ini tidak pernah mengubah attribution.
+  Daftar prompt berasal dari jendela percakapan antar-commit, bukan dari seluruh backlog sesi. Agent Note mempertahankan prompt planning, clarification, dan review yang berguna untuk commit saat ini, sambil memangkas riwayat prompt yang dikutip dan edit turn yang tidak bertahan di commit ini.
 </Aside>
 
 <Aside>

@@ -121,8 +121,26 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
 </CardGrid>
 
+## `📝 Context` 的收集方式
+
+`📝 Context` 是只用於顯示的 metadata，用來幫助理解 `continue` 或 `做下一個` 這類很短的 prompt。它不會改變 attribution。
+
+- `reference` context 來自上一則 response。只有當上一則 response 包含最終 diff 中的 changed file path、file basename、code identifier 等強 structural anchor 時才會使用。
+- `scope` context 來自目前的 response。只有當 response 開頭用 structural anchor 說明工作範圍時才會使用。
+- Agent Note 不會把 `yes`、`continue`、`お願いします` 這類 approval keyword 當成選擇規則。如果沒有 structural anchor，就不會加入 Context。
+- Context 永遠不會改變 `files_touched`、prompt ownership、AI ratio、attribution method，也不會影響是否保存 git note。
+
+## Agent Note vs Entire
+
+Agent Note 和 Entire 解決的是相關但不同的問題。
+
+- Agent Note 會把 git commit 與產生該 commit 的 AI conversation 關聯起來。Entire 是更廣義的 checkpoint product，包含 rewind / resume workflow。
+- Agent Note 會把永久記錄保存到 `refs/notes/agentnote`；暫時 session 檔案保留在 `.git/agentnote/` 下。Entire 以 checkpoint metadata 和 hosted web application 為中心。
+- Agent Note 的 Dashboard 是以 git notes 為基礎的 optional static GitHub Pages。即使沒有 hosted service，也可以繼續使用 Agent Note。
+- Agent Note 不嘗試還原舊的 workspace state。它專注於 reviewability：commit 為什麼改變、哪些 prompt 參與其中，以及 diff 中有多少是 AI-authored。
+
 <Aside type="tip">
-  prompt 清單來自 commit 到下一個 commit 之間的對話 window，而不是整個 session backlog。Agent Note 會保留能解釋目前 commit 的 planning、clarification 與 review prompt，同時裁掉被引用的舊 prompt 歷史，以及沒有保留到這個 commit 中的 edit turn。如果很短的 prompt 依賴上一則 response，但上一個 turn 已經屬於更早的 commit，Agent Note 可能會在 prompt 前加入只用於顯示的 `context` 欄位；它不會改變 attribution。
+  prompt 清單來自 commit 到下一個 commit 之間的對話 window，而不是整個 session backlog。Agent Note 會保留能解釋目前 commit 的 planning、clarification 與 review prompt，同時裁掉被引用的舊 prompt 歷史，以及沒有保留到這個 commit 中的 edit turn。
 </Aside>
 
 <Aside>

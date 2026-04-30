@@ -121,8 +121,26 @@ With the generated git hooks installed, most repos can keep using plain `git com
   </Card>
 </CardGrid>
 
+## How `📝 Context` Is Collected
+
+`📝 Context` is display-only metadata for short prompts such as "continue" or "do the next one". It helps readers understand the prompt without changing attribution.
+
+- `reference` context comes from the immediately previous response when that response contains a strong structural anchor such as a changed file path, file basename, or code identifier from the final diff.
+- `scope` context comes from the current response when the response starts by naming the work scope with structural anchors.
+- Agent Note does not use approval keywords such as `yes`, `continue`, or `お願いします` as selection rules. If there is no structural anchor, it skips Context.
+- Context never changes `files_touched`, prompt ownership, AI ratio, attribution method, or whether a git note is saved.
+
+## Agent Note vs Entire
+
+Agent Note and Entire solve related but different problems.
+
+- Agent Note links git commits to the AI conversation that produced them. Entire is a broader checkpoint product with rewind / resume workflows.
+- Agent Note stores the permanent record in `refs/notes/agentnote`; temporary session files stay under `.git/agentnote/`. Entire centers checkpoint metadata and a hosted web application.
+- Agent Note's Dashboard is optional static GitHub Pages backed by git notes. You can keep using Agent Note without a hosted service.
+- Agent Note does not try to restore an old workspace state. It focuses on reviewability: why a commit changed, which prompts were involved, and how much of the diff was AI-authored.
+
 <Aside type="tip">
-  Prompt lists come from the commit-to-commit conversation window, not the whole session backlog. Agent Note keeps the useful planning, clarification, and review prompts for the current commit, while trimming quoted prompt-history blocks and edit turns that did not survive into this commit. If a short prompt needs help to read, Agent Note may attach display-only `contexts[]` before the prompt. A context can point back to the previous response or summarize the current response's work scope; it never changes attribution.
+  Prompt lists come from the commit-to-commit conversation window, not the whole session backlog. Agent Note keeps the useful planning, clarification, and review prompts for the current commit, while trimming quoted prompt-history blocks and edit turns that did not survive into this commit.
 </Aside>
 
 <Aside>
