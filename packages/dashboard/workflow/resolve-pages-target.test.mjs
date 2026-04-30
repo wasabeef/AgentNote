@@ -6,6 +6,7 @@ import {
   hasPagesPublishStep,
   parseUploadPagesArtifactPath,
   resolvePagesTarget,
+  resolveWorkflowPath,
 } from "./resolve-pages-target.mjs";
 
 test("parseUploadPagesArtifactPath returns null when the workflow does not upload Pages", () => {
@@ -36,6 +37,21 @@ jobs:
   );
 });
 
+test("parseUploadPagesArtifactPath reads quoted paths and skips comments in the with block", () => {
+  assert.equal(
+    parseUploadPagesArtifactPath(`name: Docs
+jobs:
+  build:
+    steps:
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          # GitHub Pages site output
+          path: 'website/dist'
+`),
+    "website/dist",
+  );
+});
+
 test("parseUploadPagesArtifactPath uses the GitHub action default when path is omitted", () => {
   assert.equal(
     parseUploadPagesArtifactPath(`name: Docs
@@ -58,6 +74,24 @@ test("resolvePagesTarget selects standalone mode without an external Pages artif
   assert.equal(target.internalUpload, "true");
   assert.equal(target.canBuild, "true");
   assert.equal(target.pagesDir, join("/repo", ".agentnote-pages"));
+});
+
+test("resolvePagesTarget falls back to whole-workflow scan when jobId is empty", () => {
+  const target = resolvePagesTarget({
+    workspaceDir: "/repo",
+    jobId: "",
+    workflowText: `name: Docs
+jobs:
+  build:
+    steps:
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
+`,
+  });
+
+  assert.equal(target.publishMode, "integrated");
+  assert.equal(target.pagesDir, join("/repo", "website", "dist"));
 });
 
 test("resolvePagesTarget integrates into the existing Pages artifact path", () => {
@@ -156,6 +190,38 @@ jobs:
   assert.equal(target.reason, "dynamic-path");
 });
 
+test("resolvePagesTarget blocks Pages artifact paths outside the workspace", () => {
+  const relativeEscape = resolvePagesTarget({
+    workspaceDir: "/repo",
+    jobId: "build",
+    workflowText: `name: Docs
+jobs:
+  build:
+    steps:
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ../outside
+`,
+  });
+  const absoluteEscape = resolvePagesTarget({
+    workspaceDir: "/repo",
+    jobId: "build",
+    workflowText: `name: Docs
+jobs:
+  build:
+    steps:
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: /tmp/site
+`,
+  });
+
+  assert.equal(relativeEscape.publishMode, "blocked");
+  assert.equal(relativeEscape.reason, "outside-workspace");
+  assert.equal(absoluteEscape.publishMode, "blocked");
+  assert.equal(absoluteEscape.reason, "outside-workspace");
+});
+
 test("extractJobBlock returns the requested job body only", () => {
   const block = extractJobBlock(`name: Docs
 jobs:
@@ -171,8 +237,58 @@ jobs:
   assert.ok(!block?.includes("deploy-pages"));
 });
 
+test("extractJobBlock supports quoted job ids", () => {
+  const block = extractJobBlock(`name: Docs
+jobs:
+  'build-site':
+    steps:
+      - run: npm run build
+  deploy:
+    steps:
+      - uses: actions/deploy-pages@v4
+`, "build-site");
+
+  assert.ok(block?.includes("npm run build"));
+  assert.ok(!block?.includes("deploy-pages"));
+});
+
 test("hasPagesPublishStep detects Pages upload and deploy actions", () => {
   assert.equal(hasPagesPublishStep("uses: actions/upload-pages-artifact@v5"), true);
   assert.equal(hasPagesPublishStep("uses: actions/deploy-pages@v4"), true);
   assert.equal(hasPagesPublishStep("uses: actions/checkout@v6"), false);
+});
+
+test("resolveWorkflowPath resolves only workflow files in the caller repository", () => {
+  assert.equal(
+    resolveWorkflowPath({
+      repositoryName: "wasabeef/AgentNote",
+      workflowReference: "wasabeef/AgentNote/.github/workflows/docs.yml@refs/heads/main",
+      workspaceDir: "/repo",
+    }),
+    join("/repo", ".github", "workflows", "docs.yml"),
+  );
+  assert.equal(
+    resolveWorkflowPath({
+      repositoryName: "wasabeef/AgentNote",
+      workflowReference: "",
+      workspaceDir: "/repo",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveWorkflowPath({
+      repositoryName: "wasabeef/AgentNote",
+      workflowReference: "other/AgentNote/.github/workflows/docs.yml@refs/heads/main",
+      workspaceDir: "/repo",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveWorkflowPath({
+      repositoryName: "wasabeef/AgentNote",
+      workflowReference: "wasabeef/AgentNote/scripts/docs.yml@refs/heads/main",
+      workspaceDir: "/repo",
+    }),
+    null,
+  );
 });

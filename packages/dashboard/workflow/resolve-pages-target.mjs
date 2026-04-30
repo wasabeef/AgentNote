@@ -1,6 +1,10 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
+export const PUBLISH_MODE_BLOCKED = "blocked";
+export const PUBLISH_MODE_INTEGRATED = "integrated";
+export const PUBLISH_MODE_STANDALONE = "standalone";
 
 const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
 const repository = process.env.GITHUB_REPOSITORY || "";
@@ -24,19 +28,22 @@ function leadingSpaces(line) {
   return line.match(/^\s*/)?.[0].length ?? 0;
 }
 
-function resolveWorkflowPath() {
-  if (!repository || !workflowRef) return null;
+export function resolveWorkflowPath({
+  repositoryName = repository,
+  workflowReference = workflowRef,
+  workspaceDir = workspace,
+} = {}) {
+  if (!repositoryName || !workflowReference) return null;
 
-  const marker = `${repository}/`;
-  const markerIndex = workflowRef.indexOf(marker);
-  const refIndex = workflowRef.lastIndexOf("@");
-  if (markerIndex === -1 || refIndex === -1 || refIndex <= markerIndex + marker.length) {
+  const marker = `${repositoryName}/`;
+  const refIndex = workflowReference.lastIndexOf("@");
+  if (!workflowReference.startsWith(marker) || refIndex === -1 || refIndex <= marker.length) {
     return null;
   }
 
-  const relativePath = workflowRef.slice(markerIndex + marker.length, refIndex);
+  const relativePath = workflowReference.slice(marker.length, refIndex);
   if (!relativePath.startsWith(".github/workflows/")) return null;
-  return join(workspace, relativePath);
+  return join(workspaceDir, relativePath);
 }
 
 export function parseUploadPagesArtifactPath(workflowText) {
@@ -131,6 +138,22 @@ function isStaticPath(value) {
   return Boolean(value) && !/[`${}*?[\]\n\r]/.test(value);
 }
 
+function realpathIfExists(path) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
+  }
+}
+
+function isInsideWorkspace(path, workspaceDir) {
+  const realPath = realpathIfExists(resolve(path));
+  const realWorkspaceDir = realpathIfExists(resolve(workspaceDir));
+  const relativePath = relative(realWorkspaceDir, realPath);
+  return relativePath === "" ||
+    (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
 export function resolvePagesTarget({
   workflowText,
   otherWorkflowTexts = [],
@@ -156,7 +179,7 @@ export function resolvePagesTarget({
     return {
       notesDir,
       pagesDir: standalonePagesDir,
-      publishMode: "blocked",
+      publishMode: PUBLISH_MODE_BLOCKED,
       internalUpload: "false",
       canBuild: "false",
       reason: hasOtherPagesArtifact ? "other-job" : "other-workflow",
@@ -167,7 +190,7 @@ export function resolvePagesTarget({
     return {
       notesDir,
       pagesDir: standalonePagesDir,
-      publishMode: "standalone",
+      publishMode: PUBLISH_MODE_STANDALONE,
       internalUpload: "true",
       canBuild: "true",
       reason: "",
@@ -178,19 +201,32 @@ export function resolvePagesTarget({
     return {
       notesDir,
       pagesDir: standalonePagesDir,
-      publishMode: "blocked",
+      publishMode: PUBLISH_MODE_BLOCKED,
       internalUpload: "false",
       canBuild: "false",
       reason: "dynamic-path",
     };
   }
 
+  const resolvedPagesDir = isAbsolute(artifactPath)
+    ? artifactPath
+    : resolve(workspaceDir, artifactPath);
+  const resolvedWorkspaceDir = resolve(workspaceDir);
+  if (!isInsideWorkspace(resolvedPagesDir, resolvedWorkspaceDir)) {
+    return {
+      notesDir,
+      pagesDir: standalonePagesDir,
+      publishMode: PUBLISH_MODE_BLOCKED,
+      internalUpload: "false",
+      canBuild: "false",
+      reason: "outside-workspace",
+    };
+  }
+
   return {
     notesDir,
-    pagesDir: isAbsolute(artifactPath)
-      ? artifactPath
-      : resolve(workspaceDir, artifactPath),
-    publishMode: "integrated",
+    pagesDir: resolvedPagesDir,
+    publishMode: PUBLISH_MODE_INTEGRATED,
     internalUpload: "false",
     canBuild: "true",
     reason: "",
@@ -226,13 +262,13 @@ function main() {
     workspaceDir: workspace,
   });
 
-  if (target.publishMode === "integrated") {
+  if (target.publishMode === PUBLISH_MODE_INTEGRATED) {
     console.log(`Detected existing Pages artifact path: ${target.pagesDir}`);
     console.log("Dashboard will be added under the existing artifact's dashboard/ directory.");
-  } else if (target.publishMode === "blocked") {
+  } else if (target.publishMode === PUBLISH_MODE_BLOCKED) {
     console.log(
       "Detected an existing Pages publish path that Agent Note cannot safely merge into from this step. " +
-        "Skipping Agent Note's standalone Pages artifact to avoid overwriting an existing site.",
+        `Skipping Agent Note's standalone Pages artifact to avoid overwriting an existing site. Reason: ${target.reason || "unknown"}.`,
     );
   } else {
     console.log("No external Pages artifact step detected. Agent Note will publish Dashboard standalone.");
@@ -243,6 +279,7 @@ function main() {
   setOutput("publish_mode", target.publishMode);
   setOutput("internal_upload", target.internalUpload);
   setOutput("can_build", target.canBuild);
+  setOutput("skip_reason", target.reason);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

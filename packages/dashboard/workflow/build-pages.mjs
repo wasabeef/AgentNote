@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PUBLISH_MODE_INTEGRATED } from "./resolve-pages-target.mjs";
 
 const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
 const pagesDir = process.env.PAGES_DIR || ".pages";
@@ -57,7 +58,7 @@ try {
     },
   });
 
-  if (pagesMode === "integrated") {
+  if (pagesMode === PUBLISH_MODE_INTEGRATED) {
     mkdirSync(pagesDir, { recursive: true });
     rmSync(join(pagesDir, "dashboard"), { recursive: true, force: true });
   } else {
