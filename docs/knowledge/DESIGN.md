@@ -28,13 +28,19 @@ wasabeef/AgentNote/
 │   │   │   │   ├── attribution.ts  # line-level AI attribution (3-diff algorithm)
 │   │   │   │   ├── constants.ts    # shared constants (file names, patterns)
 │   │   │   │   ├── entry.ts        # build entry JSON, calc ai_ratio
+│   │   │   │   ├── interaction-context.ts # display-only context selector
 │   │   │   │   ├── jsonl.ts        # JSONL read/append helpers
 │   │   │   │   ├── record.ts       # shared recordCommitEntry()
 │   │   │   │   ├── rotate.ts       # log rotation after commit
+│   │   │   │   ├── session.ts      # per-session agent/transcript metadata
 │   │   │   │   └── storage.ts      # git notes read/write
 │   │   │   ├── agents/             # one file per agent
+│   │   │   │   ├── index.ts        # agent registry
 │   │   │   │   ├── types.ts        # AgentAdapter interface + NormalizedEvent
-│   │   │   │   └── claude.ts       # Claude Code adapter
+│   │   │   │   ├── claude.ts       # Claude Code adapter
+│   │   │   │   ├── codex.ts        # Codex CLI adapter
+│   │   │   │   ├── cursor.ts       # Cursor adapter
+│   │   │   │   └── gemini.ts       # Gemini CLI adapter
 │   │   │   └── commands/           # user-facing, delegates to agents/ + core/
 │   │   │       ├── init.ts
 │   │   │       ├── hook.ts
@@ -75,11 +81,22 @@ wasabeef/AgentNote/
 └── CLAUDE.md
 ```
 
+### Knowledge map
+
+`docs/knowledge/DESIGN.md` is the canonical architecture reference. Keep current implementation details here first.
+
+Other knowledge files are narrower design or research records:
+
+- `PROMPT_CONTEXT_DESIGN.md` — deterministic `interactions[].contexts[]` selection and display rules.
+- `AGENT_SUPPORT_PROMOTION_PLAN.md` — support-tier gates for promoting agent adapters.
+- `CODEX_SUPPORT_PLAN.md`, `CURSOR_SUPPORT_PLAN.md`, `GEMINI_SUPPORT_PLAN.md` — agent-specific research and implementation history. Treat them as historical context unless they explicitly say otherwise.
+- `AGENTNOTE_VS_ENTIRE.md`, `PROBLEMS.md`, `RESEARCH.md` — competitive / architecture research that motivated the current design.
+
 ### Why monorepo
 
-The action calls `agent-note pr --json` — it's tightly coupled to the CLI's output format. Keeping both in one repo means:
+The PR Report action reads the same git note schema that the CLI writes and the dashboard renders. Keeping them in one repo means:
 
-- A single PR can change CLI output + action parsing in lockstep
+- A single PR can change note schema, PR Report rendering, and Dashboard rendering in lockstep
 - The static dashboard can reuse the same note schema without a second data contract
 - No cross-repo version coordination
 - Shared CI
@@ -117,7 +134,7 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b
 ### Two execution paths
 
 1. **CLI** (`packages/cli/`) — `agent-note init`, `agent-note show`, `agent-note log`, `agent-note pr`. Run by users and CI.
-2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude` or `--agent codex`). All data collection.
+2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.
 
 ### Data flow
 
@@ -752,5 +769,5 @@ interface AgentAdapter {
 | GitHub UI | "Compare & PR" banner on every push | **None** (notes are invisible) |
 | Dependencies | go-git, gitleaks, PostHog, entire.io auth | **Zero** (CLI), ncc-bundled (action) |
 | Performance | Sync hooks, 2min 44s commit | **Async agent hooks** + lightweight git hooks |
-| Team sharing | Auto-push checkpoint branch | **Explicit** `git push origin refs/notes/agentnote` |
+| Team sharing | Auto-push checkpoint branch | **Auto-pushes git notes** via the generated `pre-push` hook |
 | PR integration | None built-in | **GitHub Action** with structured outputs |
