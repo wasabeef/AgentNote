@@ -73,6 +73,17 @@ jobs:
           npm run dashboard:build-pages
       - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/index.html
       - run: test -f /tmp/agentnote-dashboard-ci-pages/dashboard/notes/abc.json
+      - name: Smoke test integrated dashboard workflow build
+        run: |
+          mkdir -p /tmp/agentnote-dashboard-ci-site
+          printf '<!doctype html><title>Docs</title>\n' > /tmp/agentnote-dashboard-ci-site/index.html
+          NOTES_DIR=/tmp/agentnote-dashboard-ci-notes \
+          PAGES_DIR=/tmp/agentnote-dashboard-ci-site \
+          DASHBOARD_PAGES_MODE=integrated \
+          PUBLIC_REPO=wasabeef/AgentNote \
+          npm run dashboard:build-pages
+      - run: test -f /tmp/agentnote-dashboard-ci-site/index.html
+      - run: test -f /tmp/agentnote-dashboard-ci-site/dashboard/index.html
 
   website:
     name: Website

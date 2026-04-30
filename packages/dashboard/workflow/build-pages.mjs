@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
 const pagesDir = process.env.PAGES_DIR || ".pages";
+const pagesMode = process.env.DASHBOARD_PAGES_MODE || "standalone";
 const repository = process.env.PUBLIC_REPO || process.env.GITHUB_REPOSITORY || "";
 const [repositoryOwner = "", repositoryName = ""] = repository.split("/");
 
@@ -56,7 +57,12 @@ try {
     },
   });
 
-  rmSync(pagesDir, { recursive: true, force: true });
+  if (pagesMode === "integrated") {
+    mkdirSync(pagesDir, { recursive: true });
+    rmSync(join(pagesDir, "dashboard"), { recursive: true, force: true });
+  } else {
+    rmSync(pagesDir, { recursive: true, force: true });
+  }
   mkdirSync(join(pagesDir, "dashboard"), { recursive: true });
   cpSync(join(dashboardDir, "dist"), join(pagesDir, "dashboard"), { recursive: true });
 } finally {

@@ -8,6 +8,7 @@
     "preview": "astro preview",
     "test": "node --test workflow/*.test.mjs",
     "workflow:restore-notes": "node workflow/restore-notes.mjs",
+    "workflow:resolve-pages-target": "node workflow/resolve-pages-target.mjs",
     "workflow:sync-notes": "node workflow/sync-notes.mjs",
     "workflow:build-pages": "node workflow/build-pages.mjs",
     "workflow:persist-notes": "node workflow/persist-notes.mjs"

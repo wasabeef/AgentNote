@@ -88,7 +88,7 @@ The action calls `agent-note pr --json` — it's tightly coupled to the CLI's ou
 
 The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
 
-For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
+For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
@@ -476,7 +476,7 @@ JSON output structure:
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
 | `markdown` | string | Rendered markdown report |
-| `should_deploy` | boolean string | Dashboard mode output used by the deploy job |
+| `should_deploy` | boolean string | Dashboard mode output that tells the caller workflow whether Pages should publish |
 
 ### Action internals
 
@@ -492,7 +492,7 @@ In PR Report mode (`dashboard` omitted or `false`), it:
 
 Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a single `dist/index.js` that is committed to the repo. No `npm install` needed at runtime.
 
-In Dashboard mode (`dashboard: true`), it checks out the caller repository, restores existing Dashboard notes from `gh-pages`, syncs current git notes into the Dashboard note bundle, uploads the Pages artifact when deploy is allowed, and persists the updated notes back to `gh-pages`.
+In Dashboard mode (`dashboard: true`), it prepares the caller repository without clobbering an existing checkout, restores existing Dashboard notes from `gh-pages`, syncs current git notes into the Dashboard note bundle, and persists the updated notes back to `gh-pages`. When the current job already uploads a Pages artifact, Dashboard mode writes into that artifact path. Otherwise it uploads a standalone Dashboard artifact when deploy is allowed and no other Pages workflow is detected.
 
 ## Distribution
 
