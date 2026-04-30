@@ -180,7 +180,13 @@ Note content per commit:
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "context": "The previous response explains why this middleware needs to change.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "The previous response explains why this middleware needs to change."
+        }
+      ],
       "response": "I'll create the middleware with... ",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -210,7 +216,7 @@ Note content per commit:
   - **`method`**: `"line"` (blob-based 3-diff), `"file"` (binary file-count), or `"none"` (deletion-only, no valid ratio).
   - **`lines`**: Present when blob data available. `ai_added`, `total_added`, `deleted`.
 - **`interactions[].tools`**: File-edit tools used in this interaction. Optional field — omitted when no tool data is available, `null` when adapter doesn't support tool tracking, `string[]` when tools were observed.
-- **`interactions[].context`**: Optional display-only excerpt from the immediately previous response when a short prompt needs nearby rationale. It is never used for attribution, prompt counts, or file ownership.
+- **`interactions[].contexts[]`**: Optional display-only excerpts for short prompts. `reference` points to the immediately previous response; `scope` captures the current response's work scope. These contexts are never used for attribution, prompt counts, or file ownership. Older notes may still contain legacy `interactions[].context`, which readers treat as a `reference` context.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID
@@ -231,7 +237,7 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 ### Prompt selection for notes
 
-A commit note records a list of `interactions` (prompt + optional display-only context + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
+A commit note records a list of `interactions` (prompt + optional display-only `contexts[]` + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
 **Current: commit-to-commit window.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
 
@@ -253,10 +259,11 @@ This keeps a readable commit narrative such as “remember the package redesign?
 
 **Display-only context.**
 
-If a selected prompt is short and depends on the immediately previous response, but that previous turn is not selected for the current commit, Agent Note may attach `interactions[].context`. This is a conservative display helper, not a second attribution signal.
+If a selected prompt is short and needs nearby context, Agent Note may attach `interactions[].contexts[]`. This is a conservative display helper, not a second attribution signal.
 
-- The previous response must overlap the current commit through a strong structural anchor: changed file path, changed file basename, or code-like identifier extracted from the final diff.
-- Commit subject words can only break ties. They cannot create context without a file or code-symbol anchor.
+- `reference` context comes from the immediately previous response. It must overlap the current commit through a strong structural anchor: changed file path, changed file basename, or code-like identifier extracted from the final diff.
+- `scope` context comes from the current response. It is used when the prompt is short and the response's opening sentence has broad structural anchors such as scoped titles, PR / issue references with a title, or code identifiers tied to the commit subject. Code identifiers alone are not enough because they often describe a local implementation step rather than the work scope.
+- Commit subject words can only break ties. A single subject word cannot create context by itself.
 - Current prompts that already contain a strong anchor do not get extra context.
 - If the immediately previous turn is already selected, no context is attached because the same information will appear as a normal prompt / response pair.
 - Context selection uses language-neutral structural signals only. It does not use approval keywords such as "yes", "do it", or equivalents in any language.
@@ -430,7 +437,7 @@ JSON output structure:
       "ai_ratio": 100,
       "attribution": { "ai_ratio": 100, "method": "line", "lines": { "ai_added": 32, "total_added": 32, "deleted": 0 } },
       "files": [{"path": "button.tsx", "by_ai": true}],
-      "interactions": [{"prompt": "...", "context": "...", "response": "...", "tools": ["Write"]}]
+      "interactions": [{"prompt": "...", "contexts": [{"kind": "scope", "source": "current_response", "text": "..."}], "response": "...", "tools": ["Write"]}]
     }
   ]
 }

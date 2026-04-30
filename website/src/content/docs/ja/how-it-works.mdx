@@ -57,7 +57,9 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "JWT 認証ミドルウェアを実装して",
-      "context": "直前の response が、この middleware を変更する理由を説明しています。",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "直前の response が、この middleware を変更する理由を説明しています。" }
+      ],
       "response": "ミドルウェアを作成します...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

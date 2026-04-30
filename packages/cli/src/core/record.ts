@@ -22,7 +22,10 @@ import { buildEntry, hasGeneratedArtifactMarkers, isGeneratedArtifactPath } from
 import {
   buildCommitContextSignature,
   type CommitContextSignature,
+  composeInteractionContexts,
   selectInteractionContext,
+  selectInteractionScopeContext,
+  toReferenceContext,
 } from "./interaction-context.js";
 import { appendJsonl, readJsonlEntries } from "./jsonl.js";
 import { readSessionAgent, readSessionTranscriptPath } from "./session.js";
@@ -726,7 +729,6 @@ async function attachInteractionContexts(
     const response = id ? interactionsById.get(id)?.response?.trim() : "";
     if (response) responsesByTurn.set(turn, response);
   }
-  if (responsesByTurn.size === 0) return;
 
   const selectedTurns = new Set(
     promptEntries
@@ -739,17 +741,32 @@ async function attachInteractionContexts(
     const promptEntry = promptEntries[index];
     if (!interaction || !promptEntry) continue;
     const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
-    if (turn <= 1) continue;
-
-    const context = selectInteractionContext(
+    const reference =
+      turn > 1
+        ? selectInteractionContext(
+            {
+              prompt: interaction.prompt,
+              previousResponse: responsesByTurn.get(turn - 1) ?? null,
+              previousTurnSelected: selectedTurns.has(turn - 1),
+            },
+            signature,
+          )
+        : undefined;
+    const scope = selectInteractionScopeContext(
       {
         prompt: interaction.prompt,
-        previousResponse: responsesByTurn.get(turn - 1) ?? null,
-        previousTurnSelected: selectedTurns.has(turn - 1),
+        response: interaction.response,
       },
       signature,
     );
-    if (context) interaction.context = context;
+    const contexts = composeInteractionContexts([
+      toReferenceContext(interaction.context ?? reference),
+      scope,
+    ]);
+    if (contexts.length > 0) {
+      interaction.contexts = contexts;
+      delete interaction.context;
+    }
   }
 }
 

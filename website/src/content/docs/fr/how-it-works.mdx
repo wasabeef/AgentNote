@@ -67,7 +67,9 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
   "interactions": [
     {
       "prompt": "Implémenter un middleware d'auth JWT",
-      "context": "La réponse précédente explique pourquoi ce middleware doit changer.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "La réponse précédente explique pourquoi ce middleware doit changer." }
+      ],
       "response": "Je vais créer le middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

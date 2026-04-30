@@ -2459,7 +2459,7 @@ const dashboardIndex = buildDashboardIndex();
         const tools = interaction.tools || [];
         const files = interaction.files_touched || [];
         const turnId = anchorPrefix + "t-" + (idx + 1);
-        const contextText = String(interaction.context || "").trim();
+        const contextText = getInteractionContextText(interaction);
         let contextRow = null;
         if (contextText) {
           const contextBody = h("div", {});
@@ -2531,13 +2531,77 @@ const dashboardIndex = buildDashboardIndex();
         ].filter(Boolean));
       }
 
+      function getInteractionContextText(interaction) {
+        const contexts = [];
+        const seen = new Set();
+        const add = (context) => {
+          const text = String(context?.text || "").trim();
+          if (!text || seen.has(text)) return;
+          seen.add(text);
+          contexts.push({ kind: context?.kind || "reference", text });
+        };
+
+        const legacy = String(interaction?.context || "").trim();
+        if (legacy) add({ kind: "reference", text: legacy });
+        for (const context of interaction?.contexts || []) add(context);
+
+        return contexts
+          .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
+          .map((context) => context.text)
+          .join("\n\n")
+          .trim();
+      }
+
+      function contextKindOrder(kind) {
+        return kind === "reference" ? 0 : 1;
+      }
+
       function renderChat(note, anchorPrefix = "") {
         const thread = h("div", { className: "chat-pane" });
-        const interactions = note.interactions || [];
+        const interactions = mergePromptOnlyDisplayInteractions(note.interactions || []);
         interactions.forEach((i, idx) => {
           thread.appendChild(renderTurn(i, idx, interactions.length, note.agent, note.model, anchorPrefix));
         });
         return thread;
+      }
+
+      function mergePromptOnlyDisplayInteractions(interactions) {
+        const result = [];
+        let pendingPrompts = [];
+
+        for (const interaction of interactions) {
+          if (isPromptOnlyDisplayPrefix(interaction)) {
+            pendingPrompts.push(interaction.prompt || "");
+            continue;
+          }
+
+          if (pendingPrompts.length > 0) {
+            result.push({
+              ...interaction,
+              prompt: [...pendingPrompts, interaction.prompt || ""].join("\n\n"),
+            });
+            pendingPrompts = [];
+            continue;
+          }
+
+          result.push(interaction);
+        }
+
+        for (const prompt of pendingPrompts) {
+          result.push({ prompt, response: null });
+        }
+
+        return result;
+      }
+
+      function isPromptOnlyDisplayPrefix(interaction) {
+        return (
+          interaction?.response === null &&
+          !interaction?.context &&
+          !(interaction?.contexts || []).length &&
+          !(interaction?.files_touched || []).length &&
+          interaction?.tools === undefined
+        );
       }
 
       function diffStats(file) {

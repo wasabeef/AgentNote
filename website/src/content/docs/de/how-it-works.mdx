@@ -67,7 +67,9 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi
   "interactions": [
     {
       "prompt": "JWT-Auth-Middleware implementieren",
-      "context": "Die vorherige Antwort erklärt, warum diese Middleware geändert werden muss.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "Die vorherige Antwort erklärt, warum diese Middleware geändert werden muss." }
+      ],
       "response": "Ich erstelle die Middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

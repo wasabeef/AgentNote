@@ -31871,8 +31871,6 @@ const GENERATED_DIR_SEGMENTS = new Set([
     ".next",
     ".nuxt",
     "coverage",
-    "dist",
-    "out",
     // Monorepo / remote-cache build outputs
     ".turbo",
     ".yarn",
@@ -31882,11 +31880,6 @@ const GENERATED_DIR_SEGMENTS = new Set([
     // Mobile / Flutter build caches
     ".dart_tool",
     "DerivedData",
-    // Multi-language generic build directories (Android, Kotlin, Rust, Go, Dart)
-    "build",
-    "gen",
-    "generated",
-    "target",
 ]);
 const GENERATED_FILE_NAMES = new Set([
     // Flutter tool-managed dependency snapshot
@@ -31974,6 +31967,28 @@ function countAiRatioEligibleFiles(files) {
         ai: eligible.filter((file) => file.by_ai).length,
     };
 }
+function normalizeInteractionContexts(interaction) {
+    const normalized = [];
+    const seen = new Set();
+    const add = (context) => {
+        const text = context?.text.trim();
+        if (!context || !text)
+            return;
+        const key = text;
+        if (seen.has(key))
+            return;
+        seen.add(key);
+        normalized.push({ kind: context.kind, source: context.source, text });
+    };
+    const legacy = interaction.context?.trim();
+    if (legacy) {
+        add({ kind: "reference", source: "previous_response", text: legacy });
+    }
+    for (const context of interaction.contexts ?? []) {
+        add(context);
+    }
+    return normalized;
+}
 // ─── Functions ───
 /**
  * Calculate AI ratio.
@@ -32017,8 +32032,9 @@ function buildEntry(opts) {
     }
     const interactions = opts.interactions.map((i, idx) => {
         const base = { prompt: i.prompt, response: i.response };
-        if (i.context && i.context.trim().length > 0) {
-            base.context = i.context;
+        const contexts = normalizeInteractionContexts(i);
+        if (contexts.length > 0) {
+            base.contexts = contexts;
         }
         if (i.files_touched && i.files_touched.length > 0) {
             base.files_touched = i.files_touched;
@@ -32073,6 +32089,182 @@ async function git_gitSafe(args, options) {
 /** Get the repository root path. */
 async function repoRoot() {
     return git(["rev-parse", "--show-toplevel"]);
+}
+function isShellControlStart(command, index) {
+    const char = command[index];
+    const next = command[index + 1];
+    if (char === "&" && next === "&")
+        return 2;
+    if (char === "|" && next === "|")
+        return 2;
+    if (char === ";" || char === "|" || char === "\n")
+        return 1;
+    return 0;
+}
+function isEnvAssignment(value) {
+    return /^[A-Za-z_][A-Za-z0-9_]*=/.test(value);
+}
+function tokenizeShellCommand(command) {
+    const segments = [[]];
+    let token = null;
+    let quote = null;
+    let escaped = false;
+    let comment = false;
+    const currentSegment = () => segments[segments.length - 1];
+    const ensureToken = (index) => {
+        token ??= { value: "", start: index, end: index };
+        return token;
+    };
+    const finishToken = (index) => {
+        if (!token)
+            return;
+        token.end = index;
+        currentSegment().push(token);
+        token = null;
+    };
+    const markTokenEnd = (index) => {
+        if (!token)
+            return;
+        token.end = index;
+    };
+    const finishSegment = () => {
+        if (currentSegment().length > 0)
+            segments.push([]);
+    };
+    for (let index = 0; index < command.length; index += 1) {
+        const char = command[index];
+        if (comment) {
+            if (char === "\n") {
+                comment = false;
+                finishSegment();
+            }
+            continue;
+        }
+        if (escaped) {
+            ensureToken(index - 1).value += char;
+            escaped = false;
+            continue;
+        }
+        if (quote) {
+            if (char === quote) {
+                quote = null;
+                markTokenEnd(index + 1);
+                continue;
+            }
+            if (quote === '"' && char === "\\") {
+                escaped = true;
+                continue;
+            }
+            ensureToken(index).value += char;
+            continue;
+        }
+        if (char === "\\") {
+            escaped = true;
+            ensureToken(index);
+            continue;
+        }
+        if (char === "'" || char === '"') {
+            ensureToken(index);
+            quote = char;
+            continue;
+        }
+        if (/\s/.test(char)) {
+            finishToken(index);
+            if (char === "\n")
+                finishSegment();
+            continue;
+        }
+        if (char === "#" && !token) {
+            comment = true;
+            continue;
+        }
+        const controlLength = isShellControlStart(command, index);
+        if (controlLength > 0) {
+            finishToken(index);
+            finishSegment();
+            index += controlLength - 1;
+            continue;
+        }
+        ensureToken(index).value += char;
+    }
+    finishToken(command.length);
+    return segments.filter((segment) => segment.length > 0);
+}
+function findSimpleCommandIndex(tokens) {
+    let index = 0;
+    while (index < tokens.length && isEnvAssignment(tokens[index].value)) {
+        index += 1;
+    }
+    if (tokens[index]?.value === "env") {
+        index += 1;
+        while (index < tokens.length) {
+            const value = tokens[index].value;
+            if (isEnvAssignment(value)) {
+                index += 1;
+                continue;
+            }
+            if (value === "-i" || value === "--ignore-environment") {
+                index += 1;
+                continue;
+            }
+            break;
+        }
+    }
+    if (tokens[index]?.value === "command") {
+        index += 1;
+    }
+    return index;
+}
+function gitOptionConsumesValue(value) {
+    return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
+}
+function findGitCommitToken(tokens) {
+    let index = findSimpleCommandIndex(tokens);
+    if (tokens[index]?.value !== "git")
+        return null;
+    index += 1;
+    while (index < tokens.length) {
+        const value = tokens[index].value;
+        if (value === "commit") {
+            const hasAmend = tokens.slice(index + 1).some((token) => {
+                return token.value === "--amend" || token.value.startsWith("--amend=");
+            });
+            return hasAmend ? null : tokens[index];
+        }
+        if (value === "--")
+            return null;
+        if (gitOptionConsumesValue(value)) {
+            index += 2;
+            continue;
+        }
+        if (value.startsWith("--git-dir=") ||
+            value.startsWith("--work-tree=") ||
+            value.startsWith("--namespace=") ||
+            value.startsWith("-c=")) {
+            index += 1;
+            continue;
+        }
+        if (value.startsWith("-")) {
+            index += 1;
+            continue;
+        }
+        return null;
+    }
+    return null;
+}
+function findGitCommitCommand(command) {
+    for (const segment of tokenizeShellCommand(command)) {
+        const commitToken = findGitCommitToken(segment);
+        if (commitToken)
+            return { insertAt: commitToken.end };
+    }
+    return null;
+}
+function injectGitCommitTrailer(command, trailer) {
+    const match = findGitCommitCommand(command);
+    if (!match)
+        return null;
+    return `${command.slice(0, match.insertAt)} ${trailer}${command.slice(match.insertAt)}`;
 }
 
 ;// CONCATENATED MODULE: ../cli/src/core/storage.ts
@@ -32294,18 +32486,18 @@ function renderMarkdown(report) {
         for (const commit of withPrompts) {
             lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
             lines.push("");
-            for (const { context, prompt, response } of commit.interactions) {
-                if (context && context.trim().length > 0) {
-                    const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
-                    pushBlockquoteSection(lines, "📝 Context", cleanedContext);
+            for (const interaction of mergePromptOnlyDisplayInteractions(commit.interactions)) {
+                const context = renderInteractionContext(interaction);
+                if (context) {
+                    pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
                     lines.push(">");
                 }
-                const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
+                const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
                 pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
-                if (response) {
-                    const truncated = response.length > TRUNCATE_RESPONSE_PR
-                        ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
-                        : response;
+                if (interaction.response) {
+                    const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR
+                        ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+                        : interaction.response;
                     lines.push(">");
                     pushBlockquoteSection(lines, "🤖 Response", truncated);
                 }
@@ -32333,6 +32525,39 @@ function commitLink(commit, repoUrl) {
 function escapeTableCell(value) {
     return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
+function mergePromptOnlyDisplayInteractions(interactions) {
+    const result = [];
+    let pendingPrompts = [];
+    for (const interaction of interactions) {
+        if (isPromptOnlyDisplayPrefix(interaction)) {
+            pendingPrompts.push(interaction.prompt);
+            continue;
+        }
+        if (pendingPrompts.length > 0) {
+            result.push({
+                ...interaction,
+                prompt: [...pendingPrompts, interaction.prompt].join("\n\n"),
+            });
+            pendingPrompts = [];
+            continue;
+        }
+        result.push(interaction);
+    }
+    for (const prompt of pendingPrompts) {
+        result.push({ prompt, response: null });
+    }
+    return result;
+}
+function isPromptOnlyDisplayPrefix(interaction) {
+    return (interaction.response === null &&
+        !interaction.context &&
+        (!interaction.contexts || interaction.contexts.length === 0) &&
+        (!interaction.files_touched || interaction.files_touched.length === 0) &&
+        interaction.tools === undefined);
+}
+function cleanContext(context) {
+    return context.trim();
+}
 function cleanPrompt(prompt, maxLen) {
     const trimmed = prompt.trim();
     if (trimmed.length === 0)
@@ -32356,6 +32581,16 @@ function cleanPrompt(prompt, maxLen) {
 function pushBlockquoteSection(lines, label, body) {
     lines.push(`> **${label}**`);
     lines.push(`> ${body.split("\n").join("\n> ")}`);
+}
+function renderInteractionContext(interaction) {
+    return normalizeInteractionContexts(interaction)
+        .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
+        .map((context) => context.text)
+        .join("\n\n")
+        .trim();
+}
+function contextKindOrder(kind) {
+    return kind === "reference" ? 0 : 1;
 }
 function basename(path) {
     return path.split("/").pop() ?? path;

@@ -267,7 +267,42 @@ describe("buildEntry", () => {
       commitFiles: [],
       aiFiles: [],
     });
-    assert.equal(entry.interactions[0].context, "previous response context");
+    assert.equal(entry.interactions[0].context, undefined);
+    assert.deepEqual(entry.interactions[0].contexts, [
+      {
+        kind: "reference",
+        source: "previous_response",
+        text: "previous response context",
+      },
+    ]);
+  });
+
+  it("preserves interaction contexts when provided", () => {
+    const entry = buildEntry({
+      sessionId,
+      interactions: [
+        {
+          prompt: "p",
+          response: "r",
+          contexts: [
+            {
+              kind: "scope",
+              source: "current_response",
+              text: "Implement the Dashboard markdown renderer.",
+            },
+          ],
+        },
+      ],
+      commitFiles: [],
+      aiFiles: [],
+    });
+    assert.deepEqual(entry.interactions[0].contexts, [
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "Implement the Dashboard markdown renderer.",
+      },
+    ]);
   });
 
   it("omits blank interaction context", () => {
@@ -278,6 +313,63 @@ describe("buildEntry", () => {
       aiFiles: [],
     });
     assert.equal(entry.interactions[0].context, undefined);
+  });
+
+  it("omits blank interaction contexts", () => {
+    const entry = buildEntry({
+      sessionId,
+      interactions: [
+        {
+          prompt: "p",
+          response: "r",
+          contexts: [
+            {
+              kind: "scope",
+              source: "current_response",
+              text: "   ",
+            },
+          ],
+        },
+      ],
+      commitFiles: [],
+      aiFiles: [],
+    });
+    assert.equal(entry.interactions[0].contexts, undefined);
+  });
+
+  it("deduplicates legacy context and contexts", () => {
+    const entry = buildEntry({
+      sessionId,
+      interactions: [
+        {
+          prompt: "p",
+          response: "r",
+          context: "same text",
+          contexts: [
+            {
+              kind: "reference",
+              source: "previous_response",
+              text: "same text",
+            },
+            {
+              kind: "scope",
+              source: "current_response",
+              text: "same text",
+            },
+          ],
+        },
+      ],
+      commitFiles: [],
+      aiFiles: [],
+    });
+
+    assert.deepEqual(entry.interactions[0].contexts, [
+      {
+        kind: "reference",
+        source: "previous_response",
+        text: "same text",
+      },
+    ]);
   });
 
   it("does not change attribution when interaction context is present", () => {
@@ -296,6 +388,7 @@ describe("buildEntry", () => {
 
     assert.deepEqual(withContext.attribution, base.attribution);
     assert.deepEqual(withContext.files, base.files);
+    assert.equal(withContext.interactions.length, base.interactions.length);
   });
 
   it("omits files_touched when empty", () => {

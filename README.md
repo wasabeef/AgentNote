@@ -78,11 +78,11 @@ With the generated git hooks installed, Agent Note records commits automatically
 ## What Agent Note Saves
 
 - The prompts and responses behind a commit
-- Optional display-only context before a short prompt when the previous response explains it
+- Optional display-only context before a short prompt when nearby saved responses explain it
 - The files touched by the agent
 - An AI ratio for the commit
 
-Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. If a short prompt depends on the previous response but that previous turn already belongs to an earlier commit, Agent Note may attach a display-only `context` field before the prompt. Context never changes attribution. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves.
+Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. If a short prompt needs help to read, Agent Note may attach display-only `contexts[]` before the prompt. A context can point back to the previous response or summarize the current response's work scope, but it never changes attribution. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves.
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
@@ -268,7 +268,13 @@ $ git notes --ref=agentnote show ce941f7
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "context": "The previous response explains why this middleware needs to change.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "I will create the JWT auth middleware and wire it into the request pipeline."
+        }
+      ],
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

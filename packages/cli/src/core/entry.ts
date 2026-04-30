@@ -20,10 +20,17 @@ export interface Attribution {
   lines?: AttributionLines;
 }
 
+export interface InteractionContext {
+  kind: "reference" | "scope";
+  source: "previous_response" | "current_response";
+  text: string;
+}
+
 export interface Interaction {
   prompt: string;
   response: string | null;
   context?: string;
+  contexts?: InteractionContext[];
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
@@ -156,6 +163,34 @@ export function countAiRatioEligibleFiles(files: FileEntry[]): { total: number; 
   };
 }
 
+export function normalizeInteractionContexts(interaction: {
+  context?: string;
+  contexts?: InteractionContext[];
+}): InteractionContext[] {
+  const normalized: InteractionContext[] = [];
+  const seen = new Set<string>();
+
+  const add = (context: InteractionContext | undefined) => {
+    const text = context?.text.trim();
+    if (!context || !text) return;
+    const key = text;
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push({ kind: context.kind, source: context.source, text });
+  };
+
+  const legacy = interaction.context?.trim();
+  if (legacy) {
+    add({ kind: "reference", source: "previous_response", text: legacy });
+  }
+
+  for (const context of interaction.contexts ?? []) {
+    add(context);
+  }
+
+  return normalized;
+}
+
 // ─── Functions ───
 
 /**
@@ -213,8 +248,9 @@ export function buildEntry(opts: {
 
   const interactions = opts.interactions.map((i, idx) => {
     const base: Interaction = { prompt: i.prompt, response: i.response };
-    if (i.context && i.context.trim().length > 0) {
-      base.context = i.context;
+    const contexts = normalizeInteractionContexts(i);
+    if (contexts.length > 0) {
+      base.contexts = contexts;
     }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
