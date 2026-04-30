@@ -1,18 +1,7 @@
 # Agent Note
 
 <p align="center">
-  <a href="./README.md">English</a> ·
-  <a href="./README.ja.md">日本語</a> ·
-  <a href="./README.fr.md">Français</a> ·
-  <a href="./README.de.md">Deutsch</a> ·
-  <a href="./README.it.md">Italiano</a> ·
-  <a href="./README.es.md">Español</a> ·
-  <a href="./README.ko.md">한국어</a> ·
-  <a href="./README.zh-cn.md">简体中文</a> ·
-  <a href="./README.zh-tw.md">繁體中文</a> ·
-  <a href="./README.ru.md">Русский</a> ·
-  <a href="./README.id.md">Bahasa Indonesia</a> ·
-  <a href="./README.pt-br.md">Português (BR)</a>
+  <a href="./README.md">[en]</a> <a href="./README.ja.md">[ja]</a> <a href="./README.fr.md">[fr]</a> <a href="./README.de.md">[de]</a> <a href="./README.it.md">[it]</a> <a href="./README.es.md">[es]</a> <a href="./README.ko.md">[ko]</a> <a href="./README.zh-cn.md">[zh-CN]</a> <a href="./README.zh-tw.md">[zh-TW]</a> <a href="./README.ru.md">[ru]</a> <a href="./README.id.md">[id]</a> <a href="./README.pt-br.md">[pt-BR]</a>
 </p>
 
 <p align="center">
