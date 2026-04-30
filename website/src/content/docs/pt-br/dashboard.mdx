@@ -15,7 +15,7 @@ O Dashboard dá ao time uma URL única para consultar o histórico do Agent Note
 
 - PRs abertas e mergeadas em um só lugar
 - Commits, prompts e attribution sem abrir cada PR
-- Ver context apenas visual antes de prompts curtos quando o Agent Note recupera referência ou escopo
+- Ver `📝 Context` apenas visual antes de prompts curtos quando o Agent Note recupera referência ou escopo
 - Uma única URL do GitHub Pages, normalmente em `/dashboard/`
 
 Use isso quando o relatório da PR não basta mais e você quer uma visão compartilhada para o time.
@@ -45,7 +45,7 @@ git push
 
 3. No GitHub Pages, escolha **GitHub Actions** como source.
 
-O workflow gerado do Dashboard usa `wasabeef/AgentNote@v0` com `dashboard: true` para restaurar, sincronizar, fazer build, enviar o artefato e persistir as notas, e então publica a visualização compartilhada em `/dashboard/`. Se o mesmo workflow já envia um artefato do GitHub Pages, o Agent Note adiciona o Dashboard ao diretório `dashboard/` desse artefato em vez de substituir o site existente. Se outro workflow já publica Pages, o Agent Note pula a publicação standalone; coloque o step do Dashboard antes do upload de artefato desse workflow para combiná-los.
+O workflow gerado do Dashboard usa `wasabeef/AgentNote@v0` com `dashboard: true` para restaurar, sincronizar, fazer build, enviar o artefato e persistir as notas, e então publica a visualização compartilhada em `/dashboard/`. Se o mesmo job já envia um artefato do GitHub Pages, o Agent Note adiciona o Dashboard ao diretório `dashboard/` desse artefato em vez de substituir o site existente. Se outro job ou workflow já publica Pages, o Agent Note pula a publicação standalone; coloque Agent Note no mesmo job antes de `actions/upload-pages-artifact` para combinar docs site e Dashboard.
 
 ## URL pública
 

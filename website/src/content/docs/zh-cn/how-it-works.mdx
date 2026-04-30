@@ -63,6 +63,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "v": 1,
   "agent": "claude",
   "session_id": "a1b2c3d4-...",
+  "timestamp": "2026-04-02T10:30:00Z",
   "model": "claude-sonnet-4-20250514",
   "interactions": [
     {
@@ -120,8 +121,28 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
 </CardGrid>
 
+## `📝 Context` 的收集方式
+
+`📝 Context` 是只用于展示的 metadata，用来帮助理解 `continue` 或 `做下一个` 这类很短的 prompt。它不会改变 attribution。
+
+<img src="/AgentNote/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+
+- `reference` context 来自上一条 response。只有当上一条 response 包含最终 diff 中的 changed file path、file basename、code identifier 等强 structural anchor 时才会使用。
+- `scope` context 来自当前 response。只有当 response 开头用 structural anchor 说明工作范围时才会使用。
+- Agent Note 不会把 `yes`、`continue`、`お願いします` 这类 approval keyword 当作选择规则。如果没有 structural anchor，就不会添加 Context。
+- Context 永远不会改变 `files_touched`、prompt ownership、AI ratio、attribution method，也不会影响是否保存 git note。
+
+## Agent Note vs Entire
+
+Agent Note 和 Entire 解决的是相关但不同的问题。
+
+- Agent Note 将 git commit 与产生该 commit 的 AI conversation 关联起来。Entire 是更广义的 checkpoint product，包含 rewind / resume workflow。
+- Agent Note 将永久记录保存在 `refs/notes/agentnote`；临时 session 文件保留在 `.git/agentnote/` 下。Entire 以 checkpoint metadata 和 hosted web application 为中心。
+- Agent Note 的 Dashboard 是基于 git notes 的 optional static GitHub Pages。即使没有 hosted service，也可以继续使用 Agent Note。
+- Agent Note 不尝试恢复旧的 workspace state。它专注于 reviewability：commit 为什么变化、哪些 prompt 参与其中，以及 diff 中有多少是 AI-authored。
+
 <Aside type="tip">
-  prompt 列表来自 commit 到下一个 commit 之间的对话 window，而不是整个 session backlog。Agent Note 会保留能解释当前 commit 的 planning、clarification 和 review prompt，同时裁掉被引用的旧 prompt 历史，以及没有保留到这个 commit 中的 edit turn。如果一个很短的 prompt 依赖上一条 response，但上一轮已经属于之前的 commit，Agent Note 可能会在 prompt 前添加仅用于展示的 `context` 字段；它不会改变 attribution。
+  prompt 列表来自 commit 到下一个 commit 之间的对话 window，而不是整个 session backlog。Agent Note 会保留能解释当前 commit 的 planning、clarification 和 review prompt，同时裁掉被引用的旧 prompt 历史，以及没有保留到这个 commit 中的 edit turn。
 </Aside>
 
 <Aside>

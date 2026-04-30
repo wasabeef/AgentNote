@@ -63,6 +63,7 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
   "v": 1,
   "agent": "claude",
   "session_id": "a1b2c3d4-...",
+  "timestamp": "2026-04-02T10:30:00Z",
   "model": "claude-sonnet-4-20250514",
   "interactions": [
     {
@@ -120,8 +121,28 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
   </Card>
 </CardGrid>
 
+## Comment `📝 Context` est collecté
+
+`📝 Context` est une metadata uniquement destinée à l’affichage pour les prompts courts comme "continue" ou "fais le suivant". Elle aide à comprendre le prompt sans changer l’attribution.
+
+<img src="/AgentNote/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
+
+- Le `reference` context vient de la response immédiatement précédente lorsque cette response contient un structural anchor fort, comme un changed file path, un file basename ou un code identifier du diff final.
+- Le `scope` context vient de la response courante lorsqu’elle commence par nommer le périmètre du travail avec des structural anchors.
+- Agent Note n’utilise pas des approval keywords comme `yes`, `continue` ou `お願いします` comme règles de sélection. Sans structural anchor, Context est ignoré.
+- Context ne change jamais `files_touched`, prompt ownership, AI ratio, attribution method ni le fait qu’une git note soit enregistrée.
+
+## Agent Note vs Entire
+
+Agent Note et Entire résolvent des problèmes proches, mais différents.
+
+- Agent Note relie les git commits à l’AI conversation qui les a produits. Entire est un checkpoint product plus large avec des workflows rewind / resume.
+- Agent Note stocke l’enregistrement permanent dans `refs/notes/agentnote`; les fichiers temporaires de session restent sous `.git/agentnote/`. Entire se concentre sur la checkpoint metadata et une hosted web application.
+- Le Dashboard d’Agent Note est un static GitHub Pages optionnel, alimenté par les git notes. Vous pouvez utiliser Agent Note sans hosted service.
+- Agent Note ne cherche pas à restaurer un ancien workspace state. Il optimise la reviewability: pourquoi un commit a changé, quels prompts sont intervenus et quelle part du diff est AI-authored.
+
 <Aside type="tip">
-  Les listes de prompts viennent de la fenêtre de conversation entre deux commits, pas de tout l’historique de la session. Agent Note garde les prompts utiles de planification, de clarification et de revue pour le commit courant, et retire l’historique de prompts cité ainsi que les tours d’édition qui ne survivent pas dans ce commit. Si un prompt court dépend de la réponse précédente mais que ce turn appartient déjà à un commit plus ancien, Agent Note peut ajouter un champ `context` uniquement pour l’affichage avant le prompt; cela ne change jamais l’attribution.
+  Les listes de prompts viennent de la fenêtre de conversation entre deux commits, pas de tout l’historique de la session. Agent Note garde les prompts utiles de planification, de clarification et de revue pour le commit courant, et retire l’historique de prompts cité ainsi que les tours d’édition qui ne survivent pas dans ce commit.
 </Aside>
 
 <Aside>

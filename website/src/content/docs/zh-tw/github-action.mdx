@@ -44,7 +44,7 @@ jobs:
 |---|---|---|
 | `base` | PR 的 base branch | 用來比較的分支 |
 | `pr_output` | `description` | PR 報告的輸出位置：`description`、`comment` 或 `none` |
-| `dashboard` | `false` | 執行 Dashboard mode，而不是 PR Report mode。通常由 `agent-note init --dashboard` 產生 |
+| `dashboard` | `false` | 執行 Dashboard Mode，而不是 PR Report Mode。通常由 `agent-note init --dashboard` 產生 |
 
 ## Dashboard
 
@@ -67,7 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | 所有 commit 的 prompt 總數 |
 | `json` | string | 完整的結構化報告 |
 | `markdown` | string | 已渲染的 Markdown 報告 |
-| `should_deploy` | boolean string | Dashboard mode 輸出，用來告訴呼叫方 workflow 是否需要發布 Pages |
+| `should_deploy` | boolean string | Dashboard Mode 輸出，用來告訴呼叫方 workflow 是否需要發布 Pages |
 
 ## 報告內容
 
@@ -75,7 +75,7 @@ PR 報告包含：
 
 - **Header** — `Total AI Ratio` 與進度條，以及下一行的 `Model`
 - **表格** — 每個 commit 的 AI ratio、prompt 數與檔案列表
-- **Prompts** — 可折疊的 context / prompt / response 區塊
+- **Prompts** — 可折疊的 `📝 Context`、`🧑 Prompt`、`🤖 Response` 區塊
 
 <Aside type="tip">
   報告中的 commit hash 會直接連到 GitHub 上對應的 commit 頁面。

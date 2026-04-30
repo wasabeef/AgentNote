@@ -44,7 +44,7 @@ jobs:
 |---|---|---|
 | `base` | PR base branch | 비교 기준 branch |
 | `pr_output` | `description` | PR 리포트의 출력 위치: `description`, `comment`, `none` |
-| `dashboard` | `false` | PR Report mode 대신 Dashboard mode 를 실행합니다. 보통 `agent-note init --dashboard` 가 생성합니다 |
+| `dashboard` | `false` | PR Report Mode 대신 Dashboard Mode 를 실행합니다. 보통 `agent-note init --dashboard` 가 생성합니다 |
 
 ## Dashboard
 
@@ -67,7 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | 모든 commit 의 전체 prompt 수 |
 | `json` | string | 전체 구조화 리포트 |
 | `markdown` | string | 렌더링된 Markdown 리포트 |
-| `should_deploy` | boolean string | Dashboard mode 에서 Pages 공개 여부를 caller workflow 에 알려주는 출력 |
+| `should_deploy` | boolean string | Dashboard Mode 에서 Pages 공개 여부를 caller workflow 에 알려주는 출력 |
 
 ## 리포트 구성
 
@@ -75,7 +75,7 @@ PR 리포트에는 다음이 들어갑니다.
 
 - **Header** — `Total AI Ratio` 와 bar, 그리고 그 아래 `Model`
 - **Table** — commit 별 AI 비율, prompt 수, file 목록
-- **Prompts** — commit 별 context / prompt / response 를 접어서 보여주는 섹션
+- **Prompts** — commit 별 `📝 Context`, `🧑 Prompt`, `🤖 Response` 를 접어서 보여주는 섹션
 
 <Aside type="tip">
   리포트 안의 commit hash 는 GitHub 의 commit 페이지로 바로 연결됩니다.
