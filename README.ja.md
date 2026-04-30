@@ -17,7 +17,7 @@
 <p align="center"><strong>コードが<em>何に</em>変わったかだけでなく、<em>なぜ</em>変わったかを残します。</strong></p>
 
 <p align="center">
-Agent Note は prompt、response、AI が触った file を記録し、その context を git commit に紐づけます。agent が十分な edit history を出せる場合は line-level attribution まで行います。
+Agent Note は prompt、response、AI が触ったファイルを記録し、その文脈を git commit に紐づけます。agent が十分な edit history を出せる場合は line-level attribution まで行います。
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ Agent Note は prompt、response、AI が触った file を記録し、その co
 
 - AI-assisted commit の prompt と response を後から確認できます。
 - AI-authored files と AI ratio を Pull Request 上で確認できます。
-- shared Dashboard で commit history を読みやすい story として開けます。
+- 共有 Dashboard で commit 履歴を読みやすい流れとして開けます。
 - データは `refs/notes/agentnote` に残る git-native 方式です。hosted service も telemetry もありません。
 
 ## 要件
@@ -56,19 +56,19 @@ npx agent-note init --agent claude
 
 clone 後に各 developer が一度だけ実行してください。
 
-同じ repository で複数 agent を有効化できます。
+同じリポジトリで複数 agent を有効化できます。
 
 ```bash
 npx agent-note init --agent claude cursor
 ```
 
-GitHub Pages の shared Dashboard も使う場合:
+GitHub Pages の共有 Dashboard も使う場合:
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-2. 生成された file を commit して push します。
+2. 生成されたファイルを commit して push します。
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .claude/settings.json
@@ -83,23 +83,23 @@ git push
 - Cursor: `.cursor/hooks.json` を commit
 - Gemini CLI: `.gemini/settings.json` を commit
 
-3. いつもの `git commit` workflow をそのまま使います。
+3. いつもの `git commit` の流れをそのまま使います。
 
-生成された git hooks が入っていれば、Agent Note は commit を自動記録します。git hooks が使えない場合だけ fallback として `agent-note commit -m "..."` を使ってください。
+生成された git hooks が入っていれば、Agent Note は commit を自動記録します。git hooks が使えない場合だけ、代替手段として `agent-note commit -m "..."` を使ってください。
 
 ## 保存するもの
 
-Agent Note は commit story を保存します。
+Agent Note は commit の文脈を保存します。
 
 - `prompt` / `response`: 変更に至った会話
 - `contexts[]`: prompt が短すぎるときに `📝 Context` として表示される display-only な補足
 
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
-- `files`: 変更された file と AI が触ったかどうか
+- `files`: 変更されたファイルと AI が触ったかどうか
 - `attribution`: AI ratio、method、取得できる場合は line counts
 
-Temporary session data は `.git/agentnote/` に置かれます。permanent record は `refs/notes/agentnote` に保存され、`git push` で共有されます。
+一時的な session data は `.git/agentnote/` に置かれます。永続的な record は `refs/notes/agentnote` に保存され、`git push` で共有されます。
 
 ## Agent Support
 
@@ -132,7 +132,7 @@ linked:  3/20 recent commits
 
 ## 得られるもの
 
-### すべての commit が story を持つ
+### すべての commit に文脈が残る
 
 ```
 $ npx agent-note show
@@ -157,7 +157,7 @@ prompts: 2
   2. Add tests for expired token and invalid signature
 ```
 
-### history をひと目で scan
+### 履歴をひと目で確認
 
 ```
 $ npx agent-note log
@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -197,7 +197,7 @@ coding agent に prompt を送る
 hooks が prompt と session metadata を記録する
         │
         ▼
-agent が files を編集する
+agent がファイルを編集する
         │
         ▼
 hooks または local transcripts が touched files と attribution signals を記録する
@@ -234,10 +234,10 @@ Agent Note がその commit に git note を書く
 
 root action には 2 つの mode があります。
 
-- PR Report mode は Pull Request description を更新するか comment を投稿します。
-- Dashboard mode は shared Dashboard data を build し、GitHub Pages の `/dashboard/` に publish します。
+- PR Report Mode は Pull Request description を更新するか comment を投稿します。
+- Dashboard Mode は共有 Dashboard データを生成し、GitHub Pages の `/dashboard/` に公開します。
 
-PR Report mode が default です。
+PR Report Mode が既定です。
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode が default です。
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode は同じ action に `dashboard: true` を渡します。
+Dashboard Mode は同じ action に `dashboard: true` を渡します。
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,15 +253,15 @@ Dashboard mode は同じ action に `dashboard: true` を渡します。
     dashboard: true
 ```
 
-### Dashboard data
+### Dashboard データ
 
-ほとんどの repository では workflow を手書きする必要はありません。生成します。
+ほとんどのリポジトリでは workflow を手書きする必要はありません。`init` で生成できます。
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-`.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` を commit し、GitHub Pages の source に `GitHub Actions` を選び、`/dashboard/` を開きます。
+`.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` を commit し、GitHub Pages の source に `GitHub Actions` を選んでから `/dashboard/` を開きます。
 
 既存の GitHub Pages site がある場合は、安全に同居させる方法を [Dashboard docs](https://wasabeef.github.io/AgentNote/ja/dashboard/) で確認してください。
 
@@ -326,8 +326,8 @@ $ git notes --ref=agentnote show ce941f7
 ## Security & Privacy
 
 - Agent Note は local-first です。core CLI は hosted service なしで動作します。
-- Temporary session data は repository 内の `.git/agentnote/` に保存されます。
-- Permanent record は tracked source files ではなく `refs/notes/agentnote` に保存されます。
+- 一時的な session data はリポジトリ内の `.git/agentnote/` に保存されます。
+- 永続的な record は tracked source files ではなく `refs/notes/agentnote` に保存されます。
 - Transcript-driven agents の場合、Agent Note は agent 自身の data directory にある local transcript files を読みます。
 - CLI は telemetry を送信しません。
 - Commit tracking は best-effort です。hook 中に Agent Note が失敗しても `git commit` は成功します。

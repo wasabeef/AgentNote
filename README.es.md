@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Para el flow detallado, las attribution rules y el schema, consulta [Cómo funci
 
 La root action tiene dos modos:
 
-- PR Report mode actualiza la Pull Request description o publica un comment.
-- Dashboard mode construye datos del Dashboard compartido y publica `/dashboard/` mediante GitHub Pages.
+- PR Report Mode actualiza la Pull Request description o publica un comment.
+- Dashboard Mode genera los datos del Dashboard compartido y publica `/dashboard/` mediante GitHub Pages.
 
-PR Report mode es el predeterminado:
+PR Report Mode es el predeterminado:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode es el predeterminado:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode usa la misma action con `dashboard: true`:
+Dashboard Mode usa la misma action con `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode usa la misma action con `dashboard: true`:
     dashboard: true
 ```
 
-### Dashboard data
+### Datos del Dashboard
 
-En la mayoría de repositories no necesitas escribir el workflow a mano. Genéralo:
+En la mayoría de repositorios no necesitas escribir el workflow a mano. Genéralo con `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Seguridad y privacidad
 
 - Agent Note es local-first. El core CLI funciona sin hosted service.
-- Los datos temporales de sesión se almacenan en `.git/agentnote/` dentro de tu repository.
+- Los datos temporales de sesión se almacenan en `.git/agentnote/` dentro de tu repositorio.
 - El registro permanente se almacena en `refs/notes/agentnote`, no en archivos fuente versionados.
 - Para agents basados en transcript, Agent Note lee archivos transcript locales desde el directorio de datos propio del agent.
 - El CLI no envía telemetry.

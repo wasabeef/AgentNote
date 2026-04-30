@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Untuk flow detail, attribution rules, dan schema, lihat [Cara kerja](https://was
 
 Root action punya dua mode:
 
-- PR Report mode memperbarui Pull Request description atau memposting comment.
-- Dashboard mode membangun shared Dashboard data dan memublikasikan `/dashboard/` melalui GitHub Pages.
+- PR Report Mode memperbarui Pull Request description atau memposting comment.
+- Dashboard Mode membangun data Dashboard bersama dan memublikasikan `/dashboard/` melalui GitHub Pages.
 
-PR Report mode adalah default:
+PR Report Mode adalah default:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode adalah default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode memakai action yang sama dengan `dashboard: true`:
+Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode memakai action yang sama dengan `dashboard: true`:
     dashboard: true
 ```
 
-### Dashboard data
+### Data Dashboard
 
-Untuk sebagian besar repository, Anda tidak perlu menulis workflow manual. Generate saja:
+Untuk sebagian besar repositori, Anda tidak perlu menulis workflow manual. Generate dengan `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Security & Privacy
 
 - Agent Note local-first. Core CLI bekerja tanpa hosted service.
-- Temporary session data disimpan di `.git/agentnote/` dalam repository Anda.
+- Temporary session data disimpan di `.git/agentnote/` dalam repositori Anda.
 - Permanent record disimpan di `refs/notes/agentnote`, bukan di tracked source files.
 - Untuk transcript-driven agents, Agent Note membaca local transcript files dari data directory milik agent.
 - CLI tidak mengirim telemetry.

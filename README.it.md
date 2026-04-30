@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Per il flow dettagliato, le attribution rules e lo schema, vedi [Come funziona](
 
 La root action ha due mode:
 
-- PR Report mode aggiorna la Pull Request description o pubblica un comment.
-- Dashboard mode builda i dati del Dashboard condiviso e pubblica `/dashboard/` tramite GitHub Pages.
+- PR Report Mode aggiorna la Pull Request description o pubblica un comment.
+- Dashboard Mode genera i dati del Dashboard condiviso e pubblica `/dashboard/` tramite GitHub Pages.
 
-PR Report mode è il default:
+PR Report Mode è il default:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode è il default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode usa la stessa action con `dashboard: true`:
+Dashboard Mode usa la stessa action con `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode usa la stessa action con `dashboard: true`:
     dashboard: true
 ```
 
-### Dashboard data
+### Dati del Dashboard
 
-Per la maggior parte dei repository non serve scrivere il workflow a mano. Generalo:
+Per la maggior parte dei repository non serve scrivere il workflow a mano. Generalo con `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard

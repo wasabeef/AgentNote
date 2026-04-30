@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Pour le flow détaillé, les attribution rules et le schema, consultez [Fonction
 
 L'action racine a deux modes:
 
-- PR Report mode met à jour la description de la Pull Request ou poste un commentaire.
-- Dashboard mode build les données du Dashboard partagé et publie `/dashboard/` via GitHub Pages.
+- PR Report Mode met à jour la description de la Pull Request ou poste un commentaire.
+- Dashboard Mode construit les données du Dashboard partagé et publie `/dashboard/` via GitHub Pages.
 
-PR Report mode est le mode par défaut:
+PR Report Mode est le mode par défaut:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode est le mode par défaut:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode utilise la même action avec `dashboard: true`:
+Dashboard Mode utilise la même action avec `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode utilise la même action avec `dashboard: true`:
     dashboard: true
 ```
 
-### Données Dashboard
+### Données du Dashboard
 
-Pour la plupart des repositories, vous n'avez pas besoin d'écrire le workflow à la main. Générez-le:
+Pour la plupart des dépôts, vous n'avez pas besoin d'écrire le workflow à la main. Générez-le avec `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Sécurité et confidentialité
 
 - Agent Note est local-first. Le core CLI fonctionne sans service hébergé.
-- Les données temporaires de session sont stockées sous `.git/agentnote/` dans votre repository.
+- Les données temporaires de session sont stockées sous `.git/agentnote/` dans votre dépôt.
 - L'enregistrement permanent est stocké dans `refs/notes/agentnote`, pas dans les fichiers source suivis.
 - Pour les agents pilotés par transcript, Agent Note lit les fichiers transcript locaux dans le répertoire de données de l'agent.
 - Le CLI n'envoie pas de télémétrie.

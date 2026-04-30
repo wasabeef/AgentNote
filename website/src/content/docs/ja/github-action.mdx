@@ -44,7 +44,7 @@ jobs:
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
 | `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
-| `dashboard` | `false` | PR Report mode の代わりに Dashboard mode を実行します。通常は `agent-note init --dashboard` が生成します |
+| `dashboard` | `false` | PR Report Mode の代わりに Dashboard Mode を実行します。通常は `agent-note init --dashboard` が生成します |
 
 ## Dashboard も使いたいとき
 
@@ -67,7 +67,7 @@ npx agent-note init --agent claude --dashboard
 | `total_prompts` | number | 全プロンプト数 |
 | `json` | string | 構造化レポート全体 |
 | `markdown` | string | レンダリング済みのマークダウンレポート |
-| `should_deploy` | boolean string | Dashboard mode で Pages を公開するかどうかを caller workflow に伝えます |
+| `should_deploy` | boolean string | Dashboard Mode で Pages を公開するかどうかを caller workflow に伝えます |
 
 ## レポート形式
 
@@ -75,7 +75,7 @@ PR レポートには次が入ります。
 
 - **Header** — `Total AI Ratio` と bar、その下に `Model`
 - **Table** — commit ごとの AI ratio、prompt 数、attribution 付き files
-- **Prompts** — commit ごとの context / prompt / response を折りたたんで表示
+- **Prompts** — commit ごとの `📝 Context`、`🧑 Prompt`、`🤖 Response` を折りたたんで表示
 
 <Aside type="tip">
   レポート内のコミットハッシュは GitHub のコミットページにリンクされます。

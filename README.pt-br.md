@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Para o flow detalhado, as attribution rules e o schema, veja [Como funciona](htt
 
 A root action tem dois modes:
 
-- PR Report mode atualiza a Pull Request description ou publica um comment.
-- Dashboard mode faz build dos shared Dashboard data e publica `/dashboard/` via GitHub Pages.
+- PR Report Mode atualiza a Pull Request description ou publica um comment.
+- Dashboard Mode gera os dados do Dashboard compartilhado e publica `/dashboard/` via GitHub Pages.
 
-PR Report mode é o default:
+PR Report Mode é o default:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode é o default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode usa a mesma action com `dashboard: true`:
+Dashboard Mode usa a mesma action com `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode usa a mesma action com `dashboard: true`:
     dashboard: true
 ```
 
-### Dashboard data
+### Dados do Dashboard
 
-Na maioria dos repositories, você não precisa escrever o workflow manualmente. Gere-o:
+Na maioria dos repositórios, você não precisa escrever o workflow manualmente. Gere com `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Security & Privacy
 
 - Agent Note é local-first. O core CLI funciona sem hosted service.
-- Temporary session data são armazenados em `.git/agentnote/` dentro do seu repository.
+- Temporary session data são armazenados em `.git/agentnote/` dentro do seu repositório.
 - O permanent record é armazenado em `refs/notes/agentnote`, não em tracked source files.
 - Para transcript-driven agents, Agent Note lê local transcript files do data directory do próprio agent.
 - O CLI não envia telemetry.

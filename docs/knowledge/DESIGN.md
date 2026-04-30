@@ -105,7 +105,7 @@ The PR Report action reads the same git note schema that the CLI writes and the 
 
 The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
 
-For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
+For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard Mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard Mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
@@ -118,10 +118,10 @@ A brand-new Repository can therefore accumulate Dashboard note data before the D
 GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is the public facade:
 
 ```yaml
-# PR Report mode
+# PR Report Mode
 - uses: wasabeef/AgentNote@v0
 
-# Dashboard mode
+# Dashboard Mode
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
@@ -424,7 +424,7 @@ agent-note pr --output description --update 42  # upsert into PR description
 agent-note pr --output comment --update 42      # post as PR comment
 ```
 
-Output: table format with summary header, per-commit rows, and collapsible context / prompt / response section.
+Output: table format with summary header, per-commit rows, and collapsible `📝 Context` / `🧑 Prompt` / `🤖 Response` section.
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -482,7 +482,7 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
-| `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report mode |
+| `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report Mode |
 
 ### Action outputs
 
@@ -495,13 +495,13 @@ JSON output structure:
 | `total_prompts` | number | Total prompts across all commits |
 | `json` | string | Full structured report (use with `fromJSON()`) |
 | `markdown` | string | Rendered markdown report |
-| `should_deploy` | boolean string | Dashboard mode output that tells the caller workflow whether Pages should publish |
+| `should_deploy` | boolean string | Dashboard Mode output that tells the caller workflow whether Pages should publish |
 
 ### Action internals
 
 The root Action is a composite dispatcher.
 
-In PR Report mode (`dashboard` omitted or `false`), it:
+In PR Report Mode (`dashboard` omitted or `false`), it:
 
 1. `git fetch origin refs/notes/agentnote:refs/notes/agentnote`
 2. Collects PR entries via `packages/pr-report`
@@ -511,7 +511,7 @@ In PR Report mode (`dashboard` omitted or `false`), it:
 
 Dependencies (`@actions/core`, `@actions/github`) are bundled with `ncc` into a single `dist/index.js` that is committed to the repo. No `npm install` needed at runtime.
 
-In Dashboard mode (`dashboard: true`), it prepares the caller repository without clobbering an existing checkout, restores existing Dashboard notes from `gh-pages`, syncs current git notes into the Dashboard note bundle, and persists the updated notes back to `gh-pages`. When the current job already uploads a Pages artifact, Dashboard mode writes into that artifact path. Otherwise it uploads a standalone Dashboard artifact when deploy is allowed and no other Pages workflow is detected.
+In Dashboard Mode (`dashboard: true`), it prepares the caller repository without clobbering an existing checkout, restores existing Dashboard notes from `gh-pages`, syncs current git notes into the Dashboard note bundle, and persists the updated notes back to `gh-pages`. When the current job already uploads a Pages artifact, Dashboard Mode writes into that artifact path. Otherwise it uploads a standalone Dashboard artifact when deploy is allowed and no other Pages workflow is detected.
 
 ## Distribution
 

@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Agent Note 为该 commit 写入 git note
 
 root action 有两种 mode：
 
-- PR Report mode 更新 Pull Request description 或发布 comment。
-- Dashboard mode 构建 shared Dashboard data，并通过 GitHub Pages 发布到 `/dashboard/`。
+- PR Report Mode 更新 Pull Request description 或发布 comment。
+- Dashboard Mode 构建共享 Dashboard 数据，并通过 GitHub Pages 发布到 `/dashboard/`。
 
-PR Report mode 是 default：
+PR Report Mode 是默认值：
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode 是 default：
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode 使用同一个 action，并传入 `dashboard: true`：
+Dashboard Mode 使用同一个 action，并传入 `dashboard: true`：
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode 使用同一个 action，并传入 `dashboard: true`：
     dashboard: true
 ```
 
-### Dashboard data
+### Dashboard 数据
 
-大多数 repository 不需要手写 workflow。直接生成：
+大多数仓库不需要手写 workflow。直接用 `init` 生成：
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Security & Privacy
 
 - Agent Note 是 local-first。core CLI 不需要 hosted service。
-- Temporary session data 存储在 repository 内的 `.git/agentnote/`。
+- Temporary session data 存储在仓库内的 `.git/agentnote/`。
 - Permanent record 存储在 `refs/notes/agentnote`，而不是 tracked source files。
 - 对于 transcript-driven agents，Agent Note 会从 agent 自己的 data directory 读取 local transcript files。
 - CLI 不发送 telemetry。

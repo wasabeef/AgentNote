@@ -15,7 +15,7 @@ Dashboard 會給團隊一個共享 URL，用來查看 Agent Note 的歷史記錄
 
 - 在同一個地方查看 open 與 merged 的 PR 歷史
 - 不用逐一打開 PR，也能查看 commit、prompt 與 attribution
-- 當 Agent Note 可以還原 reference 或 scope 時，在短 prompt 前顯示只用於展示的 Context
+- 當 Agent Note 可以還原 reference 或 scope 時，在短 prompt 前顯示只用於展示的 `📝 Context`
 - 一個共享的 GitHub Pages URL，通常位於 `/dashboard/`
 
 當 PR 報告已經不夠用，而團隊需要一個共同查看的頁面時，就適合使用 Dashboard。
@@ -68,7 +68,7 @@ git push
 ## 運作方式
 
 - `refs/notes/agentnote` 仍然是 Source of Truth
-- Dashboard mode 的 `wasabeef/AgentNote@v0` 會把 note 快照寫入 `gh-pages/dashboard/notes/*.json`
+- Dashboard Mode 的 `wasabeef/AgentNote@v0` 會把 note 快照寫入 `gh-pages/dashboard/notes/*.json`
 - GitHub Pages 會在 `/dashboard/` 提供建置完成的 Dashboard
 
 倉庫本身不會提交範例 Dashboard JSON。新的 Dashboard 會一直保持為空，直到 workflow 還原或產生 note file。`pull_request` 會發佈 Open 狀態，而推送到 `default branch` 後則會替換成 Merged 狀態。

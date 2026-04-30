@@ -15,7 +15,7 @@ The Dashboard gives your team one shared URL for Agent Note history.
 
 - Browse Open / Merged PR history in one place
 - Inspect Commits, Prompts, and Attribution without opening each PR
-- See display-only Context before short prompts when Agent Note can recover reference or scope
+- See display-only `📝 Context` before short prompts when Agent Note can recover reference or scope
 - Share one GitHub Pages URL with your team, usually `/dashboard/`
 
 Use it when the PR Report is not enough and you want one team-facing view of recent work.
@@ -74,7 +74,7 @@ A brand-new Repository can accumulate Dashboard note data before the Dashboard i
 ## How It Works
 
 - `refs/notes/agentnote` remains the source of truth
-- `wasabeef/AgentNote@v0` in Dashboard mode writes note snapshots to `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v0` in Dashboard Mode writes note snapshots to `gh-pages/dashboard/notes/*.json`
 - GitHub Pages serves the built Dashboard at `/dashboard/`
 
 The Repository does not commit sample JSON for the Dashboard. A new Dashboard stays empty until the workflow restores or generates note files. Pull Request runs publish the Open state, and `default branch` pushes replace it with the Merged state.

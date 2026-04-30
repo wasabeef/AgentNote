@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Agent Note 가 해당 commit 에 git note 를 씁니다
 
 root action 에는 두 가지 mode 가 있습니다.
 
-- PR Report mode 는 Pull Request description 을 업데이트하거나 comment 를 게시합니다.
-- Dashboard mode 는 shared Dashboard data 를 build 하고 GitHub Pages 의 `/dashboard/` 로 publish 합니다.
+- PR Report Mode 는 Pull Request description 을 업데이트하거나 comment 를 게시합니다.
+- Dashboard Mode 는 공유 Dashboard 데이터를 빌드하고 GitHub Pages 의 `/dashboard/` 로 게시합니다.
 
-PR Report mode 가 default 입니다.
+PR Report Mode 가 기본값입니다.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode 가 default 입니다.
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode 는 같은 action 에 `dashboard: true` 를 전달합니다.
+Dashboard Mode 는 같은 action 에 `dashboard: true` 를 전달합니다.
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode 는 같은 action 에 `dashboard: true` 를 전달합니다.
     dashboard: true
 ```
 
-### Dashboard data
+### Dashboard 데이터
 
-대부분의 repository 에서는 workflow 를 직접 작성할 필요가 없습니다. 생성하세요.
+대부분의 리포지토리에서는 workflow 를 직접 작성할 필요가 없습니다. `init` 으로 생성하세요.
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Security & Privacy
 
 - Agent Note 는 local-first 입니다. core CLI 는 hosted service 없이 동작합니다.
-- Temporary session data 는 repository 내부 `.git/agentnote/` 에 저장됩니다.
+- Temporary session data 는 리포지토리 내부 `.git/agentnote/` 에 저장됩니다.
 - Permanent record 는 tracked source files 가 아니라 `refs/notes/agentnote` 에 저장됩니다.
 - Transcript-driven agents 의 경우 Agent Note 는 agent 의 data directory 에 있는 local transcript files 를 읽습니다.
 - CLI 는 telemetry 를 보내지 않습니다.

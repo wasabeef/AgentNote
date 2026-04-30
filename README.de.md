@@ -167,7 +167,7 @@ ce941f7 feat: add JWT auth middleware  [a1b2c3d4… | 🤖60% | 2p]
 ba091be fix: update dependencies
 ```
 
-### PR Reports
+### PR Report
 
 ```
 $ npx agent-note pr --output description --update 42
@@ -234,10 +234,10 @@ Den detaillierten flow, die attribution rules und das schema finden Sie unter [F
 
 Die root action hat zwei Modi:
 
-- PR Report mode aktualisiert die Pull Request description oder postet einen comment.
-- Dashboard mode baut shared Dashboard data und veröffentlicht `/dashboard/` über GitHub Pages.
+- PR Report Mode aktualisiert die Pull Request description oder postet einen comment.
+- Dashboard Mode erstellt die gemeinsamen Dashboard-Daten und veröffentlicht `/dashboard/` über GitHub Pages.
 
-PR Report mode ist der Standard:
+PR Report Mode ist der Standard:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -245,7 +245,7 @@ PR Report mode ist der Standard:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Dashboard mode nutzt dieselbe action mit `dashboard: true`:
+Dashboard Mode nutzt dieselbe action mit `dashboard: true`:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
@@ -253,9 +253,9 @@ Dashboard mode nutzt dieselbe action mit `dashboard: true`:
     dashboard: true
 ```
 
-### Dashboard data
+### Dashboard-Daten
 
-Für die meisten repositories müssen Sie den workflow nicht von Hand schreiben. Generieren Sie ihn:
+Für die meisten Repositorys müssen Sie den workflow nicht von Hand schreiben. Generieren Sie ihn mit `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
@@ -326,7 +326,7 @@ $ git notes --ref=agentnote show ce941f7
 ## Sicherheit & Datenschutz
 
 - Agent Note ist local-first. Der core CLI funktioniert ohne hosted service.
-- Temporäre session data werden unter `.git/agentnote/` in Ihrem repository gespeichert.
+- Temporäre session data werden unter `.git/agentnote/` in Ihrem Repository gespeichert.
 - Der permanente record wird in `refs/notes/agentnote` gespeichert, nicht in getrackten source files.
 - Für transcript-driven agents liest Agent Note lokale transcript files aus dem data directory des Agents.
 - Der CLI sendet keine Telemetrie.
