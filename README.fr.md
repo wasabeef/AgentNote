@@ -1,7 +1,7 @@
 # Agent Note
 
 <p align="center">
-  <a href="./README.md">[en]</a> <a href="./README.ja.md">[ja]</a> <a href="./README.fr.md">[fr]</a> <a href="./README.de.md">[de]</a> <a href="./README.it.md">[it]</a> <a href="./README.es.md">[es]</a> <a href="./README.ko.md">[ko]</a> <a href="./README.zh-cn.md">[zh-CN]</a> <a href="./README.zh-tw.md">[zh-TW]</a> <a href="./README.ru.md">[ru]</a> <a href="./README.id.md">[id]</a> <a href="./README.pt-br.md">[pt-BR]</a>
+  [<a href="./README.md">en</a>] [<a href="./README.ja.md">ja</a>] [fr] [<a href="./README.de.md">de</a>] [<a href="./README.it.md">it</a>] [<a href="./README.es.md">es</a>] [<a href="./README.ko.md">ko</a>] [<a href="./README.zh-cn.md">zh-CN</a>] [<a href="./README.zh-tw.md">zh-TW</a>] [<a href="./README.ru.md">ru</a>] [<a href="./README.id.md">id</a>] [<a href="./README.pt-br.md">pt-BR</a>]
 </p>
 
 <p align="center">
