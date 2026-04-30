@@ -60,6 +60,70 @@ describe("renderMarkdown", () => {
     assert.ok(markdown.includes("The previous response explains why src/record.ts needs this fix."));
   });
 
+  it("renders contexts array in a single context block", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              contexts: [
+                {
+                  kind: "scope",
+                  source: "current_response",
+                  text: "I will update the Dashboard markdown renderer.",
+                },
+                {
+                  kind: "reference",
+                  source: "previous_response",
+                  text: "The previous response pointed at src/record.ts.",
+                },
+              ],
+              prompt: "continue",
+              response: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const contextLabels = markdown.match(/\*\*📝 Context\*\*/g) ?? [];
+    const referenceIndex = markdown.indexOf("The previous response pointed at src/record.ts.");
+    const scopeIndex = markdown.indexOf("I will update the Dashboard markdown renderer.");
+
+    assert.equal(contextLabels.length, 1);
+    assert.ok(referenceIndex > -1);
+    assert.ok(scopeIndex > referenceIndex);
+  });
+
+  it("deduplicates legacy context and contexts with the same text", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              context: "same context",
+              contexts: [
+                {
+                  kind: "scope",
+                  source: "current_response",
+                  text: "same context",
+                },
+              ],
+              prompt: "continue",
+              response: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    assert.equal(markdown.match(/same context/g)?.length, 1);
+  });
+
   it("omits blank interaction context", () => {
     const report = baseReport({
       commits: [

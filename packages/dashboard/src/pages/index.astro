@@ -2459,7 +2459,7 @@ const dashboardIndex = buildDashboardIndex();
         const tools = interaction.tools || [];
         const files = interaction.files_touched || [];
         const turnId = anchorPrefix + "t-" + (idx + 1);
-        const contextText = String(interaction.context || "").trim();
+        const contextText = getInteractionContextText(interaction);
         let contextRow = null;
         if (contextText) {
           const contextBody = h("div", {});
@@ -2529,6 +2529,31 @@ const dashboardIndex = buildDashboardIndex();
           aiRow,
           footer.length > 0 && h("div", { className: "bubble-footer", style: "margin-left: 2.3rem;" }, footer),
         ].filter(Boolean));
+      }
+
+      function getInteractionContextText(interaction) {
+        const contexts = [];
+        const seen = new Set();
+        const add = (context) => {
+          const text = String(context?.text || "").trim();
+          if (!text || seen.has(text)) return;
+          seen.add(text);
+          contexts.push({ kind: context?.kind || "reference", text });
+        };
+
+        const legacy = String(interaction?.context || "").trim();
+        if (legacy) add({ kind: "reference", text: legacy });
+        for (const context of interaction?.contexts || []) add(context);
+
+        return contexts
+          .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
+          .map((context) => context.text)
+          .join("\n\n")
+          .trim();
+      }
+
+      function contextKindOrder(kind) {
+        return kind === "reference" ? 0 : 1;
       }
 
       function renderChat(note, anchorPrefix = "") {

@@ -67,7 +67,9 @@ With the generated git hooks installed, most repos can keep using plain `git com
   "interactions": [
     {
       "prompt": "Implement JWT auth middleware",
-      "context": "The previous response explains why this middleware needs to change.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "The previous response explains why this middleware needs to change." }
+      ],
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -119,7 +121,7 @@ With the generated git hooks installed, most repos can keep using plain `git com
 </CardGrid>
 
 <Aside type="tip">
-  Prompt lists come from the commit-to-commit conversation window, not the whole session backlog. Agent Note keeps the useful planning, clarification, and review prompts for the current commit, while trimming quoted prompt-history blocks and edit turns that did not survive into this commit. If a short prompt depends on the previous response but that previous turn already belongs to an earlier commit, Agent Note may attach a display-only `context` field before the prompt; it never changes attribution.
+  Prompt lists come from the commit-to-commit conversation window, not the whole session backlog. Agent Note keeps the useful planning, clarification, and review prompts for the current commit, while trimming quoted prompt-history blocks and edit turns that did not survive into this commit. If a short prompt needs help to read, Agent Note may attach display-only `contexts[]` before the prompt. A context can point back to the previous response or summarize the current response's work scope; it never changes attribution.
 </Aside>
 
 <Aside>

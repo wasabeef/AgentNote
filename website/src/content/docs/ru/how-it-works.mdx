@@ -67,7 +67,9 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   "interactions": [
     {
       "prompt": "Реализуй JWT auth middleware",
-      "context": "Предыдущий response объясняет, почему этот middleware нужно изменить.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "Предыдущий response объясняет, почему этот middleware нужно изменить." }
+      ],
       "response": "Я создам middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

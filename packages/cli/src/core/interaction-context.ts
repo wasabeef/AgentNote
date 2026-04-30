@@ -1,7 +1,14 @@
+import type { InteractionContext } from "./entry.js";
+
 export type ContextCandidate = {
   prompt: string;
   previousResponse: string | null;
   previousTurnSelected: boolean;
+};
+
+export type ScopeContextCandidate = {
+  prompt: string;
+  response: string | null;
 };
 
 export type CommitContextSignature = {
@@ -12,9 +19,15 @@ export type CommitContextSignature = {
 };
 
 const MAX_CONTEXT_CHARS = 900;
+const MAX_SCOPE_PROMPT_CHARS = 120;
+const MAX_SCOPE_LINES = 10;
+const MIN_SCOPE_SCORE = 2;
 const GENERIC_TOKENS = new Set([
   "agent",
   "agentnote",
+  "add",
+  "added",
+  "adds",
   "build",
   "case",
   "change",
@@ -27,22 +40,34 @@ const GENERIC_TOKENS = new Set([
   "html",
   "http",
   "https",
+  "implement",
+  "implemented",
+  "implements",
   "json",
   "note",
   "prompt",
   "record",
+  "remove",
+  "removed",
+  "removes",
   "response",
   "test",
   "tests",
   "todo",
   "turn",
+  "update",
+  "updated",
+  "updates",
   "utf8",
   "yaml",
 ]);
 
 const CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
 const SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
-const ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{3,}\b/g;
+const ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{2,}\b/g;
+const ISSUE_OR_PR_REFERENCE = /\b(?:PR|Issue|GH)[\s#-]*\d+\b|#\d+\b/iu;
+const MARKDOWN_FILE_REFERENCE =
+  /(?:^|[\s("'`])(?:\.{0,2}\/)?[A-Za-z0-9_.-]+\/[^\s"'`]+\.[A-Za-z0-9]{1,8}\b/;
 
 type ParagraphScore = {
   paragraph: string;
@@ -51,6 +76,21 @@ type ParagraphScore = {
   basenameHits: number;
   codeIdentifierHits: number;
   subjectTokenHits: number;
+};
+
+type ScopeScore = {
+  context: RankedInteractionContext;
+  fileHits: number;
+  codeIdentifierHits: number;
+  scopedTitleHits: number;
+  issueScopedTitleHits: number;
+  markdownIssueHits: number;
+  subjectTokenHits: number;
+  index: number;
+};
+
+export type RankedInteractionContext = InteractionContext & {
+  rank: number;
 };
 
 export function buildCommitContextSignature(opts: {
@@ -111,6 +151,63 @@ export function selectInteractionContext(
   return output.length > 0 ? output.join("\n\n") : undefined;
 }
 
+export function toReferenceContext(
+  context: string | undefined,
+): RankedInteractionContext | undefined {
+  const text = context?.trim();
+  if (!text) return undefined;
+  return {
+    kind: "reference",
+    source: "previous_response",
+    text,
+    rank: 3,
+  };
+}
+
+export function selectInteractionScopeContext(
+  candidate: ScopeContextCandidate,
+  signature: CommitContextSignature,
+): RankedInteractionContext | undefined {
+  if (!candidate.response) return undefined;
+  if (!isShortPrompt(candidate.prompt)) return undefined;
+  if (hasStrongAnchor(candidate.prompt, signature)) return undefined;
+
+  const sentences = splitScopeSentences(candidate.response)
+    .map((sentence, index) => ({ sentence, index }))
+    .filter(({ sentence }) => !isRejectedParagraph(sentence));
+
+  const scored = sentences
+    .map(({ sentence, index }) => scoreScopeSentence(sentence, index, signature))
+    .filter((score) => isValidScopeScore(score))
+    .sort(compareScopeScores);
+
+  return scored[0]?.context;
+}
+
+export function composeInteractionContexts(
+  contexts: Array<RankedInteractionContext | undefined>,
+  maxChars = MAX_CONTEXT_CHARS,
+): InteractionContext[] {
+  const uniqueContexts = dedupeContexts(
+    contexts.filter((context): context is RankedInteractionContext => context !== undefined),
+  );
+  if (uniqueContexts.length === 0) return [];
+
+  const fullLength = contextBlockLength(uniqueContexts);
+  if (fullLength <= maxChars) return sortContextsForDisplay(uniqueContexts).map(stripRank);
+
+  const selected: RankedInteractionContext[] = [];
+  for (const context of [...uniqueContexts].sort(compareContextRanks)) {
+    if (context.text.length > maxChars) continue;
+    const next = [...selected, context];
+    if (contextBlockLength(next) <= maxChars) {
+      selected.push(context);
+    }
+  }
+
+  return sortContextsForDisplay(selected).map(stripRank);
+}
+
 function scoreParagraph(
   paragraph: string,
   index: number,
@@ -145,6 +242,143 @@ function hasStrongAnchor(text: string, signature: CommitContextSignature): boole
     countLiteralHits(text, signature.changedFiles) > 0 ||
     countLiteralHits(text, signature.changedFileBasenames) > 0 ||
     countIdentifierHits(text, signature.codeIdentifiers) > 0
+  );
+}
+
+function isShortPrompt(prompt: string): boolean {
+  const lines = prompt
+    .trim()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= 3;
+}
+
+function splitScopeSentences(response: string): string[] {
+  const lines = response
+    .split("\n")
+    .map((line) => stripListOrQuoteMarker(line.trim()))
+    .filter(Boolean)
+    .slice(0, MAX_SCOPE_LINES);
+  const text = lines.join(" ");
+  const sentences: string[] = [];
+  let current = "";
+  let inBacktick = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    current += char;
+    if (char === "`") {
+      inBacktick = !inBacktick;
+      continue;
+    }
+    if (inBacktick) continue;
+    if (isSentenceBoundary(text, index)) {
+      const sentence = current.trim();
+      if (sentence) sentences.push(sentence);
+      current = "";
+    }
+  }
+
+  const rest = current.trim();
+  if (rest) sentences.push(rest);
+
+  const windows: string[] = [];
+  for (let index = 0; index < sentences.length; index++) {
+    windows.push(sentences[index]);
+    const next = sentences[index + 1];
+    if (next) windows.push(`${sentences[index]} ${next}`);
+  }
+  return windows;
+}
+
+function stripListOrQuoteMarker(line: string): string {
+  return line
+    .replace(/^>\s*/, "")
+    .replace(/^(?:[-*]|\d+[.)])\s+/, "")
+    .trim();
+}
+
+function isSentenceBoundary(text: string, index: number): boolean {
+  const char = text[index];
+  if (char === "。" || char === "！" || char === "？") return true;
+  if (char !== "." && char !== "!" && char !== "?") return false;
+  const next = text[index + 1] ?? "";
+  if (next && !/\s/.test(next)) return false;
+  if (char === "." && isLikelyFileOrDomainDot(text, index)) return false;
+  return true;
+}
+
+function isLikelyFileOrDomainDot(text: string, index: number): boolean {
+  const before = text.slice(Math.max(0, index - 32), index);
+  const after = text.slice(index + 1, index + 16);
+  return /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(`${before}.${after}`) && /\w/.test(after);
+}
+
+function scoreScopeSentence(
+  sentence: string,
+  index: number,
+  signature: CommitContextSignature,
+): ScopeScore {
+  const fileHits =
+    countLiteralHits(sentence, signature.changedFiles) +
+    countLiteralHits(sentence, signature.changedFileBasenames);
+  const codeIdentifierHits = countIdentifierHits(sentence, signature.codeIdentifiers);
+  const subjectTokenHits = countSubjectTokenHits(sentence, signature.commitSubjectTokens);
+  const issueRefHits = ISSUE_OR_PR_REFERENCE.test(sentence) ? 1 : 0;
+  const scopedTitleHits = subjectTokenHits >= 2 ? 1 : 0;
+  const issueScopedTitleHits = issueRefHits > 0 && subjectTokenHits > 0 ? 1 : 0;
+  const markdownIssueHits = issueRefHits > 0 && MARKDOWN_FILE_REFERENCE.test(sentence) ? 1 : 0;
+  const structuralScore =
+    codeIdentifierHits * 2 +
+    scopedTitleHits * 2 +
+    issueScopedTitleHits * 2 +
+    markdownIssueHits * 2 +
+    fileHits;
+
+  return {
+    context: {
+      kind: "scope",
+      source: "current_response",
+      text: sentence,
+      rank: structuralScore,
+    },
+    fileHits,
+    codeIdentifierHits,
+    scopedTitleHits,
+    issueScopedTitleHits,
+    markdownIssueHits,
+    subjectTokenHits,
+    index,
+  };
+}
+
+function isValidScopeScore(score: ScopeScore): boolean {
+  if (score.context.rank < MIN_SCOPE_SCORE) return false;
+  if (score.fileHits > 0) {
+    return (
+      score.codeIdentifierHits > 0 ||
+      score.scopedTitleHits > 0 ||
+      score.issueScopedTitleHits > 0 ||
+      score.markdownIssueHits > 0
+    );
+  }
+  return (
+    score.codeIdentifierHits > 0 ||
+    score.scopedTitleHits > 0 ||
+    score.issueScopedTitleHits > 0 ||
+    score.markdownIssueHits > 0
+  );
+}
+
+function compareScopeScores(a: ScopeScore, b: ScopeScore): number {
+  return (
+    b.context.rank - a.context.rank ||
+    b.issueScopedTitleHits - a.issueScopedTitleHits ||
+    b.markdownIssueHits - a.markdownIssueHits ||
+    b.codeIdentifierHits - a.codeIdentifierHits ||
+    b.scopedTitleHits - a.scopedTitleHits ||
+    a.index - b.index
   );
 }
 
@@ -266,4 +500,46 @@ function unique(values: string[]): string[] {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function dedupeContexts(contexts: RankedInteractionContext[]): RankedInteractionContext[] {
+  const seen = new Set<string>();
+  const result: RankedInteractionContext[] = [];
+  for (const context of contexts) {
+    const text = context.text.trim();
+    if (!text) continue;
+    const key = text;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ ...context, text });
+  }
+  return result;
+}
+
+function contextBlockLength(contexts: RankedInteractionContext[]): number {
+  return contexts.reduce((length, context, index) => {
+    return length + context.text.length + (index > 0 ? 2 : 0);
+  }, 0);
+}
+
+function compareContextRanks(a: RankedInteractionContext, b: RankedInteractionContext): number {
+  return b.rank - a.rank || contextKindOrder(a.kind) - contextKindOrder(b.kind);
+}
+
+function sortContextsForDisplay(contexts: RankedInteractionContext[]): RankedInteractionContext[] {
+  return [...contexts].sort(
+    (a, b) => contextKindOrder(a.kind) - contextKindOrder(b.kind) || b.rank - a.rank,
+  );
+}
+
+function contextKindOrder(kind: InteractionContext["kind"]): number {
+  return kind === "reference" ? 0 : 1;
+}
+
+function stripRank(context: RankedInteractionContext): InteractionContext {
+  return {
+    kind: context.kind,
+    source: context.source,
+    text: context.text,
+  };
 }

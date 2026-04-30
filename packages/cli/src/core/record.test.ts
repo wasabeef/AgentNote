@@ -378,14 +378,19 @@ describe("recordCommitEntry", () => {
       prompt: string;
       response: string | null;
       context?: string;
+      contexts?: Array<{ kind: string; source: string; text: string }>;
       files_touched?: string[];
     }>;
     assert.equal(interactions.length, 1);
     assert.equal(interactions[0].prompt, "本当にこの修正で改善できるのか");
-    assert.equal(
-      interactions[0].context,
-      "The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows.",
-    );
+    assert.equal(interactions[0].context, undefined);
+    assert.deepEqual(interactions[0].contexts, [
+      {
+        kind: "reference",
+        source: "previous_response",
+        text: "The risk is in packages/cli/src/core/record.ts and isQuotedPromptHistory filtering primary rows.",
+      },
+    ]);
     assert.equal(
       interactions[0].response,
       "I will keep the primary row and limit quoted-history filtering to surrounding context.",
@@ -431,10 +436,62 @@ describe("recordCommitEntry", () => {
     assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
     const interactions = note.interactions as Array<{
       context?: string;
+      contexts?: Array<{ kind: string; source: string; text: string }>;
       files_touched?: string[];
     }>;
     assert.equal(interactions[0].context, undefined);
+    assert.equal(interactions[0].contexts, undefined);
     assert.deepEqual(interactions[0].files_touched, ["target.ts"]);
+  });
+
+  it("attaches display-only scope context from the current response for short prompts", async () => {
+    writeFileSync(
+      join(repoDir, "renderer.ts"),
+      'export function renderMarkdownInto(value: string): string {\n  return value.replace("CDN", "local");\n}\n',
+    );
+    execSync("git add renderer.ts", { cwd: repoDir });
+    execSync('git commit -m "fix(dashboard): remove cdn markdown renderer"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"これが最後かな","prompt_id":"id-scope","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"renderer.ts","turn":1,"prompt_id":"id-scope"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"response","turn":1,"response":"I will implement renderMarkdownInto without CDN imports."}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    const result = await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    assert.equal(result.promptCount, 1);
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      context?: string;
+      contexts?: Array<{ kind: string; source: string; text: string }>;
+      files_touched?: string[];
+    }>;
+    assert.equal(interactions[0].prompt, "これが最後かな");
+    assert.equal(interactions[0].context, undefined);
+    assert.deepEqual(interactions[0].contexts, [
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "I will implement renderMarkdownInto without CDN imports.",
+      },
+    ]);
+    assert.deepEqual(interactions[0].files_touched, ["renderer.ts"]);
   });
 
   it("attaches display-only context from transcript responses when hook events are absent", async () => {
@@ -486,13 +543,18 @@ describe("recordCommitEntry", () => {
         prompt: string;
         response: string | null;
         context?: string;
+        contexts?: Array<{ kind: string; source: string; text: string }>;
       }>;
       assert.equal(interactions.length, 1);
       assert.equal(interactions[0].prompt, "does this fix it?");
-      assert.equal(
-        interactions[0].context,
-        "The issue is in target.ts and targetValue because the selector needs a structural anchor.",
-      );
+      assert.equal(interactions[0].context, undefined);
+      assert.deepEqual(interactions[0].contexts, [
+        {
+          kind: "reference",
+          source: "previous_response",
+          text: "The issue is in target.ts and targetValue because the selector needs a structural anchor.",
+        },
+      ]);
       assert.equal(interactions[0].response, "I will update the selector now.");
     } finally {
       if (prevCodexHome === undefined) {

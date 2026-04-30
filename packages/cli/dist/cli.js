@@ -1880,6 +1880,26 @@ function countAiRatioEligibleFiles(files) {
     ai: eligible.filter((file) => file.by_ai).length
   };
 }
+function normalizeInteractionContexts(interaction) {
+  const normalized = [];
+  const seen = /* @__PURE__ */ new Set();
+  const add = (context) => {
+    const text = context?.text.trim();
+    if (!context || !text) return;
+    const key = text;
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push({ kind: context.kind, source: context.source, text });
+  };
+  const legacy = interaction.context?.trim();
+  if (legacy) {
+    add({ kind: "reference", source: "previous_response", text: legacy });
+  }
+  for (const context of interaction.contexts ?? []) {
+    add(context);
+  }
+  return normalized;
+}
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
     return Math.round(lineCounts.aiAddedLines / lineCounts.totalAddedLines * 100);
@@ -1912,8 +1932,9 @@ function buildEntry(opts) {
   }
   const interactions = opts.interactions.map((i, idx) => {
     const base = { prompt: i.prompt, response: i.response };
-    if (i.context && i.context.trim().length > 0) {
-      base.context = i.context;
+    const contexts = normalizeInteractionContexts(i);
+    if (contexts.length > 0) {
+      base.contexts = contexts;
     }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
@@ -2060,6 +2081,41 @@ function selectInteractionContext(candidate, signature) {
   }
   return output.length > 0 ? output.join("\n\n") : void 0;
 }
+function toReferenceContext(context) {
+  const text = context?.trim();
+  if (!text) return void 0;
+  return {
+    kind: "reference",
+    source: "previous_response",
+    text,
+    rank: 3
+  };
+}
+function selectInteractionScopeContext(candidate, signature) {
+  if (!candidate.response) return void 0;
+  if (!isShortPrompt(candidate.prompt)) return void 0;
+  if (hasStrongAnchor(candidate.prompt, signature)) return void 0;
+  const sentences = splitScopeSentences(candidate.response).map((sentence, index) => ({ sentence, index })).filter(({ sentence }) => !isRejectedParagraph(sentence));
+  const scored = sentences.map(({ sentence, index }) => scoreScopeSentence(sentence, index, signature)).filter((score) => isValidScopeScore(score)).sort(compareScopeScores);
+  return scored[0]?.context;
+}
+function composeInteractionContexts(contexts, maxChars = MAX_CONTEXT_CHARS) {
+  const uniqueContexts = dedupeContexts(
+    contexts.filter((context) => context !== void 0)
+  );
+  if (uniqueContexts.length === 0) return [];
+  const fullLength = contextBlockLength(uniqueContexts);
+  if (fullLength <= maxChars) return sortContextsForDisplay(uniqueContexts).map(stripRank);
+  const selected = [];
+  for (const context of [...uniqueContexts].sort(compareContextRanks)) {
+    if (context.text.length > maxChars) continue;
+    const next = [...selected, context];
+    if (contextBlockLength(next) <= maxChars) {
+      selected.push(context);
+    }
+  }
+  return sortContextsForDisplay(selected).map(stripRank);
+}
 function scoreParagraph(paragraph, index, signature) {
   return {
     paragraph,
@@ -2078,6 +2134,92 @@ function hasStrongParagraphAnchor(score) {
 }
 function hasStrongAnchor(text, signature) {
   return countLiteralHits(text, signature.changedFiles) > 0 || countLiteralHits(text, signature.changedFileBasenames) > 0 || countIdentifierHits(text, signature.codeIdentifiers) > 0;
+}
+function isShortPrompt(prompt) {
+  const lines = prompt.trim().split("\n").map((line) => line.trim()).filter(Boolean);
+  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= 3;
+}
+function splitScopeSentences(response) {
+  const lines = response.split("\n").map((line) => stripListOrQuoteMarker(line.trim())).filter(Boolean).slice(0, MAX_SCOPE_LINES);
+  const text = lines.join(" ");
+  const sentences = [];
+  let current = "";
+  let inBacktick = false;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    current += char;
+    if (char === "`") {
+      inBacktick = !inBacktick;
+      continue;
+    }
+    if (inBacktick) continue;
+    if (isSentenceBoundary(text, index)) {
+      const sentence = current.trim();
+      if (sentence) sentences.push(sentence);
+      current = "";
+    }
+  }
+  const rest = current.trim();
+  if (rest) sentences.push(rest);
+  const windows = [];
+  for (let index = 0; index < sentences.length; index++) {
+    windows.push(sentences[index]);
+    const next = sentences[index + 1];
+    if (next) windows.push(`${sentences[index]} ${next}`);
+  }
+  return windows;
+}
+function stripListOrQuoteMarker(line) {
+  return line.replace(/^>\s*/, "").replace(/^(?:[-*]|\d+[.)])\s+/, "").trim();
+}
+function isSentenceBoundary(text, index) {
+  const char = text[index];
+  if (char === "\u3002" || char === "\uFF01" || char === "\uFF1F") return true;
+  if (char !== "." && char !== "!" && char !== "?") return false;
+  const next = text[index + 1] ?? "";
+  if (next && !/\s/.test(next)) return false;
+  if (char === "." && isLikelyFileOrDomainDot(text, index)) return false;
+  return true;
+}
+function isLikelyFileOrDomainDot(text, index) {
+  const before = text.slice(Math.max(0, index - 32), index);
+  const after = text.slice(index + 1, index + 16);
+  return /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(`${before}.${after}`) && /\w/.test(after);
+}
+function scoreScopeSentence(sentence, index, signature) {
+  const fileHits = countLiteralHits(sentence, signature.changedFiles) + countLiteralHits(sentence, signature.changedFileBasenames);
+  const codeIdentifierHits = countIdentifierHits(sentence, signature.codeIdentifiers);
+  const subjectTokenHits = countSubjectTokenHits(sentence, signature.commitSubjectTokens);
+  const issueRefHits = ISSUE_OR_PR_REFERENCE.test(sentence) ? 1 : 0;
+  const scopedTitleHits = subjectTokenHits >= 2 ? 1 : 0;
+  const issueScopedTitleHits = issueRefHits > 0 && subjectTokenHits > 0 ? 1 : 0;
+  const markdownIssueHits = issueRefHits > 0 && MARKDOWN_FILE_REFERENCE.test(sentence) ? 1 : 0;
+  const structuralScore = codeIdentifierHits * 2 + scopedTitleHits * 2 + issueScopedTitleHits * 2 + markdownIssueHits * 2 + fileHits;
+  return {
+    context: {
+      kind: "scope",
+      source: "current_response",
+      text: sentence,
+      rank: structuralScore
+    },
+    fileHits,
+    codeIdentifierHits,
+    scopedTitleHits,
+    issueScopedTitleHits,
+    markdownIssueHits,
+    subjectTokenHits,
+    index
+  };
+}
+function isValidScopeScore(score) {
+  if (score.context.rank < MIN_SCOPE_SCORE) return false;
+  if (score.fileHits > 0) {
+    return score.codeIdentifierHits > 0 || score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0 || score.markdownIssueHits > 0;
+  }
+  return score.codeIdentifierHits > 0 || score.scopedTitleHits > 0 || score.issueScopedTitleHits > 0 || score.markdownIssueHits > 0;
+}
+function compareScopeScores(a, b) {
+  return b.context.rank - a.context.rank || b.issueScopedTitleHits - a.issueScopedTitleHits || b.markdownIssueHits - a.markdownIssueHits || b.codeIdentifierHits - a.codeIdentifierHits || b.scopedTitleHits - a.scopedTitleHits || a.index - b.index;
 }
 function splitParagraphs(text) {
   const paragraphs = [];
@@ -2166,14 +2308,56 @@ function unique(values) {
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-var MAX_CONTEXT_CHARS, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER;
+function dedupeContexts(contexts) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const context of contexts) {
+    const text = context.text.trim();
+    if (!text) continue;
+    const key = text;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ ...context, text });
+  }
+  return result;
+}
+function contextBlockLength(contexts) {
+  return contexts.reduce((length, context, index) => {
+    return length + context.text.length + (index > 0 ? 2 : 0);
+  }, 0);
+}
+function compareContextRanks(a, b) {
+  return b.rank - a.rank || contextKindOrder(a.kind) - contextKindOrder(b.kind);
+}
+function sortContextsForDisplay(contexts) {
+  return [...contexts].sort(
+    (a, b) => contextKindOrder(a.kind) - contextKindOrder(b.kind) || b.rank - a.rank
+  );
+}
+function contextKindOrder(kind) {
+  return kind === "reference" ? 0 : 1;
+}
+function stripRank(context) {
+  return {
+    kind: context.kind,
+    source: context.source,
+    text: context.text
+  };
+}
+var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MIN_SCOPE_SCORE, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
 var init_interaction_context = __esm({
   "src/core/interaction-context.ts"() {
     "use strict";
     MAX_CONTEXT_CHARS = 900;
+    MAX_SCOPE_PROMPT_CHARS = 120;
+    MAX_SCOPE_LINES = 10;
+    MIN_SCOPE_SCORE = 2;
     GENERIC_TOKENS = /* @__PURE__ */ new Set([
       "agent",
       "agentnote",
+      "add",
+      "added",
+      "adds",
       "build",
       "case",
       "change",
@@ -2186,21 +2370,32 @@ var init_interaction_context = __esm({
       "html",
       "http",
       "https",
+      "implement",
+      "implemented",
+      "implements",
       "json",
       "note",
       "prompt",
       "record",
+      "remove",
+      "removed",
+      "removes",
       "response",
       "test",
       "tests",
       "todo",
       "turn",
+      "update",
+      "updated",
+      "updates",
       "utf8",
       "yaml"
     ]);
     CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
     SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
-    ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{3,}\b/g;
+    ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{2,}\b/g;
+    ISSUE_OR_PR_REFERENCE = /\b(?:PR|Issue|GH)[\s#-]*\d+\b|#\d+\b/iu;
+    MARKDOWN_FILE_REFERENCE = /(?:^|[\s("'`])(?:\.{0,2}\/)?[A-Za-z0-9_.-]+\/[^\s"'`]+\.[A-Za-z0-9]{1,8}\b/;
   }
 });
 
@@ -2738,7 +2933,6 @@ async function attachInteractionContexts(sessionDir, allPromptEntries, promptEnt
     const response = id ? interactionsById.get(id)?.response?.trim() : "";
     if (response) responsesByTurn.set(turn, response);
   }
-  if (responsesByTurn.size === 0) return;
   const selectedTurns = new Set(
     promptEntries.map((entry) => typeof entry.turn === "number" ? entry.turn : 0).filter((turn) => turn > 0)
   );
@@ -2747,16 +2941,29 @@ async function attachInteractionContexts(sessionDir, allPromptEntries, promptEnt
     const promptEntry = promptEntries[index];
     if (!interaction || !promptEntry) continue;
     const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
-    if (turn <= 1) continue;
-    const context = selectInteractionContext(
+    const reference = turn > 1 ? selectInteractionContext(
       {
         prompt: interaction.prompt,
         previousResponse: responsesByTurn.get(turn - 1) ?? null,
         previousTurnSelected: selectedTurns.has(turn - 1)
       },
       signature
+    ) : void 0;
+    const scope = selectInteractionScopeContext(
+      {
+        prompt: interaction.prompt,
+        response: interaction.response
+      },
+      signature
     );
-    if (context) interaction.context = context;
+    const contexts = composeInteractionContexts([
+      toReferenceContext(interaction.context ?? reference),
+      scope
+    ]);
+    if (contexts.length > 0) {
+      interaction.contexts = contexts;
+      delete interaction.context;
+    }
   }
 }
 async function resolveTranscriptLineCounts(commitFileSet, interactions, consumedPromptState) {
@@ -4928,16 +5135,17 @@ function renderMarkdown(report) {
     for (const commit2 of withPrompts) {
       lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
       lines.push("");
-      for (const { context, prompt, response } of commit2.interactions) {
-        if (context && context.trim().length > 0) {
+      for (const interaction of commit2.interactions) {
+        const context = renderInteractionContext(interaction);
+        if (context) {
           const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
           pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanedContext);
           lines.push(">");
         }
-        const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
+        const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
         pushBlockquoteSection(lines, "\u{1F9D1} Prompt", cleaned);
-        if (response) {
-          const truncated = response.length > TRUNCATE_RESPONSE_PR ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : response;
+        if (interaction.response) {
+          const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : interaction.response;
           lines.push(">");
           pushBlockquoteSection(lines, "\u{1F916} Response", truncated);
         }
@@ -4986,6 +5194,12 @@ function cleanPrompt(prompt, maxLen) {
 function pushBlockquoteSection(lines, label, body) {
   lines.push(`> **${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
+}
+function renderInteractionContext(interaction) {
+  return normalizeInteractionContexts(interaction).sort((left, right) => contextKindOrder2(left.kind) - contextKindOrder2(right.kind)).map((context) => context.text).join("\n\n").trim();
+}
+function contextKindOrder2(kind) {
+  return kind === "reference" ? 0 : 1;
 }
 function basename2(path) {
   return path.split("/").pop() ?? path;

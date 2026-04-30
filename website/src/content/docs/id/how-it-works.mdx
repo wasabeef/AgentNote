@@ -67,7 +67,9 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus
   "interactions": [
     {
       "prompt": "Implementasikan middleware auth JWT",
-      "context": "Response sebelumnya menjelaskan mengapa middleware ini perlu berubah.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "Response sebelumnya menjelaskan mengapa middleware ini perlu berubah." }
+      ],
       "response": "Saya akan membuat middleware-nya...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

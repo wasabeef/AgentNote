@@ -67,7 +67,9 @@ Con los git hooks generados instalados, en la mayoría de los repos basta con se
   "interactions": [
     {
       "prompt": "Implementa middleware JWT auth",
-      "context": "La respuesta anterior explica por qué este middleware debe cambiar.",
+      "contexts": [
+        { "kind": "reference", "source": "previous_response", "text": "La respuesta anterior explica por qué este middleware debe cambiar." }
+      ],
       "response": "Crearé el middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

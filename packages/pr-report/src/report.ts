@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../../cli/src/core/constants.js";
-import type { Attribution } from "../../cli/src/core/entry.js";
-import { countAiRatioEligibleFiles } from "../../cli/src/core/entry.js";
+import type { Attribution, InteractionContext } from "../../cli/src/core/entry.js";
+import { countAiRatioEligibleFiles, normalizeInteractionContexts } from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
@@ -12,6 +12,7 @@ export interface Interaction {
   prompt: string;
   response: string | null;
   context?: string;
+  contexts?: InteractionContext[];
 }
 
 export interface CommitEntry {
@@ -260,20 +261,21 @@ export function renderMarkdown(report: PrReport): string {
       lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
       lines.push("");
 
-      for (const { context, prompt, response } of commit.interactions) {
-        if (context && context.trim().length > 0) {
+      for (const interaction of commit.interactions) {
+        const context = renderInteractionContext(interaction);
+        if (context) {
           const cleanedContext = cleanPrompt(context, TRUNCATE_RESPONSE_PR);
           pushBlockquoteSection(lines, "📝 Context", cleanedContext);
           lines.push(">");
         }
 
-        const cleaned = cleanPrompt(prompt, TRUNCATE_PROMPT_PR);
+        const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
         pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
-        if (response) {
+        if (interaction.response) {
           const truncated =
-            response.length > TRUNCATE_RESPONSE_PR
-              ? `${response.slice(0, TRUNCATE_RESPONSE_PR)}…`
-              : response;
+            interaction.response.length > TRUNCATE_RESPONSE_PR
+              ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+              : interaction.response;
           lines.push(">");
           pushBlockquoteSection(lines, "🤖 Response", truncated);
         }
@@ -333,6 +335,18 @@ function cleanPrompt(prompt: string, maxLen: number): string {
 function pushBlockquoteSection(lines: string[], label: string, body: string): void {
   lines.push(`> **${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
+}
+
+function renderInteractionContext(interaction: Interaction): string {
+  return normalizeInteractionContexts(interaction)
+    .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
+    .map((context) => context.text)
+    .join("\n\n")
+    .trim();
+}
+
+function contextKindOrder(kind: InteractionContext["kind"]): number {
+  return kind === "reference" ? 0 : 1;
 }
 
 function basename(path: string): string {

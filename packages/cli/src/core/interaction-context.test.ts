@@ -3,8 +3,11 @@ import { describe, it } from "node:test";
 import {
   buildCommitContextSignature,
   type CommitContextSignature,
+  composeInteractionContexts,
   extractCodeIdentifiers,
   selectInteractionContext,
+  selectInteractionScopeContext,
+  toReferenceContext,
 } from "./interaction-context.js";
 
 function signature(overrides: Partial<CommitContextSignature> = {}): CommitContextSignature {
@@ -45,6 +48,16 @@ describe("extractCodeIdentifiers", () => {
     assert.equal(identifiers.has("TODO"), false);
     assert.equal(identifiers.has("HTTP"), false);
     assert.equal(identifiers.has("toYAML"), true);
+  });
+
+  it("extracts three-letter all-caps identifiers when they are not generic", () => {
+    const identifiers = extractCodeIdentifiers(`
+      +const CDN_IMPORT_STATUS = "removed";
+      +const CDN = "disabled";
+    `);
+
+    assert.equal(identifiers.has("CDN_IMPORT_STATUS"), true);
+    assert.equal(identifiers.has("CDN"), true);
   });
 });
 
@@ -273,5 +286,207 @@ describe("selectInteractionContext", () => {
     assert.equal(built.codeIdentifiers.has("PROMPT_WINDOW_LIMIT"), true);
     assert.deepEqual(built.commitSubjectTokens, ["preserve", "primary", "rows"]);
     assert.equal("diffText" in built, false);
+  });
+});
+
+describe("selectInteractionScopeContext", () => {
+  it("attaches scope context for a short prompt when the current response has a code identifier anchor", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "これが最後かな",
+        response: "I will implement renderMarkdownInto without CDN imports.",
+      },
+      signature({
+        codeIdentifiers: new Set(["renderMarkdownInto", "CDN"]),
+      }),
+    );
+
+    assert.deepEqual(context && { ...context, rank: undefined }, {
+      kind: "scope",
+      source: "current_response",
+      text: "I will implement renderMarkdownInto without CDN imports.",
+      rank: undefined,
+    });
+  });
+
+  it("attaches scope context from a PR reference with a scoped title", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "ブランチ切って作業開始",
+        response: "作業順どおり、まずは PR 1 の Dashboard diff 欠落表示から着手します。",
+      },
+      signature({
+        commitSubjectTokens: ["dashboard", "diff", "preserve", "truncated"],
+      }),
+    );
+
+    assert.equal(
+      context?.text,
+      "作業順どおり、まずは PR 1 の Dashboard diff 欠落表示から着手します。",
+    );
+    assert.equal(context?.kind, "scope");
+  });
+
+  it("does not attach scope context from a short go-ahead prompt alone", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "yes, do it",
+        response: "Ready to continue with the next implementation step.",
+      },
+      signature(),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("does not attach scope context from a PR reference alone", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "y",
+        response: "This branch needs a commit before PR #29 can show the updated report.",
+      },
+      signature(),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("does not attach scope context from a changed file path alone", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "c",
+        response: "I will update packages/cli/src/core/record.ts.",
+      },
+      signature(),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("does not attach scope context from generic implementation verbs and one subject token", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "continue",
+        response: "I will update the selector now.",
+      },
+      signature({
+        commitSubjectTokens: ["selector", "target"],
+      }),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("does not attach scope context when the prompt already has a strong anchor", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "update packages/cli/src/core/record.ts",
+        response: "I will update packages/cli/src/core/record.ts and isQuotedPromptHistory.",
+      },
+      signature(),
+    );
+
+    assert.equal(context, undefined);
+  });
+
+  it("handles mixed Japanese and English sentence boundaries", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "進めて",
+        response: "Dashboard markdown renderer を直します。It no longer imports from esm.sh.",
+      },
+      signature({
+        commitSubjectTokens: ["dashboard", "markdown", "renderer"],
+      }),
+    );
+
+    assert.equal(context?.text, "Dashboard markdown renderer を直します。");
+  });
+
+  it("returns undefined when response is missing", () => {
+    const context = selectInteractionScopeContext(
+      {
+        prompt: "continue",
+        response: null,
+      },
+      signature(),
+    );
+
+    assert.equal(context, undefined);
+  });
+});
+
+describe("composeInteractionContexts", () => {
+  it("renders reference before scope when both are present", () => {
+    const contexts = composeInteractionContexts([
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "scope",
+        rank: 6,
+      },
+      toReferenceContext("reference"),
+    ]);
+
+    assert.deepEqual(contexts, [
+      {
+        kind: "reference",
+        source: "previous_response",
+        text: "reference",
+      },
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "scope",
+      },
+    ]);
+  });
+
+  it("deduplicates identical context text", () => {
+    const contexts = composeInteractionContexts([
+      toReferenceContext("same"),
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "same",
+        rank: 6,
+      },
+    ]);
+
+    assert.deepEqual(contexts, [
+      {
+        kind: "reference",
+        source: "previous_response",
+        text: "same",
+      },
+    ]);
+  });
+
+  it("drops lower-ranked context instead of truncating when over the limit", () => {
+    const contexts = composeInteractionContexts(
+      [
+        {
+          kind: "scope",
+          source: "current_response",
+          text: "s".repeat(80),
+          rank: 6,
+        },
+        {
+          kind: "reference",
+          source: "previous_response",
+          text: "r".repeat(80),
+          rank: 3,
+        },
+      ],
+      100,
+    );
+
+    assert.deepEqual(contexts, [
+      {
+        kind: "scope",
+        source: "current_response",
+        text: "s".repeat(80),
+      },
+    ]);
   });
 });
