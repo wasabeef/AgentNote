@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Agent Note (`agent-note`) is a monorepo CLI + GitHub Action that links AI coding sessions to git commits. It records every prompt, AI response, file change, and AI authorship ratio so you can trace back to *why* code changed.
 
+Repository development uses Node.js >= 22.12.0 and npm 11.13.0. The published CLI package still supports Node.js >= 20.
+
 ## Repository structure
 
 ```
