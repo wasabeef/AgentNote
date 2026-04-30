@@ -1,0 +1,482 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-04-30T05:46:18.008Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "README.md を更新したいな。",
+      "response": "README 更新に入ります。まず `pull` の完了を確認してから、現在の README と直近で入った Dashboard Pages 自動判定まわりの記述を見て、足りない説明をこちらで整理します。\nREADME は既に Dashboard 自動判定の説明が入っていますが、初見だと「既存 Pages site がある場合どうなるか」と「どの workflow を commit すればいいか」が少し読み取りづらいです。ここをユーザー向けに短く整理して、重複感を減らす方向で直します。\nREADME は「使い手が迷うところ」に寄せます。具体的には Setup の generated file 説明、PR Report / Dashboard の役割、既存 GitHub Pages site と共存する workflow 例を整理します。\n一通り更新しました。これから差分を自己レビューして、README の例が実装とズレていないか確認します。\nREADME.md を更新しました。主に `Dashboard` まわりを初見向けに整理して、既存 GitHub Pages site と共存する場合の動きと workflow 例を追加しています。\n\n`git diff --check` は通っています。変更はまだ commit していません。commit するなら `y` ください。",
+      "files_touched": [
+        "README.md"
+      ],
+      "tools": [
+        "write_stdin",
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "各言語を用意して\nREADME の相互リンクできない？",
+      "response": "できます。まず website 側でサポートしている locale 一覧と既存ドキュメントの言語構成を確認して、README の多言語ファイル名と相互リンクの置き方を揃えます。\n方針としては、英語の `README.md` を canonical にしつつ、各 locale の短めの README を追加して相互リンクします。全文を 12 言語で巨大化させるより、導入・Setup・Dashboard・Security を各言語で読める形にして、詳細は同じ言語の docs site に流すのが保守しやすそうです。\nこれから `README.<locale>.md` を追加します。website の locale と同じ `ja/fr/de/it/es/ko/zh-cn/zh-tw/ru/id/pt-br` に揃え、各ファイルから他言語 README と該当 docs URL へ辿れるようにします。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "それと、docs/ website/ README のスキーマなど実装と相違がないかもチェック。",
+      "response": null
+    },
+    {
+      "prompt": "https://github.com/entireio/cli\n\nのようにすぐにスター数3k行くようなユーザーが求めるREADMEになっているかどうかを３回チェック",
+      "response": "`docs/`、`website/`、各 README の実装差分チェックまで含めて見直します。あわせて `entireio/cli` の README を参考にしつつ、「初見で欲しくなるか」を 3 ラウンドでレビューして、必要ならその場で README を磨きます。\n`entireio/cli` は headline → benefit list → quick start → workflow → concepts の順で、最初の 30 秒に価値と導入手順をかなり強く出しています。Agent Note の README もそこに寄せつつ、実装と schema の整合性を先に潰します。\n実装側を見ると、note schema は `contexts[]` が正で、legacy の `context` は reader 側だけ normalize しています。README の JSON 例はこの方針に合っていますが、多言語 README は短縮版なので schema detail を docs に逃がす構成にしておくのがよさそうです。\n1 回目の整合性レビューで、実装と大きく矛盾する schema 記述は見つかっていません。ただし Dashboard の「別 workflow が Pages を持っている場合」の説明がやや曖昧で、正確には「同じ job の artifact upload 前に Agent Note を置くと合流できる」です。ここは全言語で直します。\n2 回目の README 観点では、今の README は機能説明は正しい一方で、スターされる README としては「なぜ必要か」「30 秒で試す」「何が嬉しいか」が少し奥にあります。`entireio/cli` 型に寄せて、上部に punchy な価値、quick start、何が得られるかを追加します。\nschema 整合性で 1 件見つけました。実装の note schema は `timestamp` を持ちますが、README と website の `Note Schema` 例では抜けていました。これは実装との差分なので全言語ページの例に足します。\n3 回目は「実際に読んで star したくなるか」の観点で見ています。英語 README は上部に `Why Agent Note` を追加してかなり良くなりましたが、多言語 README は短縮版として保守しやすさ優先です。ここから docs build で MDX / link 周りの破損がないか確認します。\ndocs build は通りました。次に action の README 例が実際の generated workflow とズレていないかを見直しています。ここは小さな落とし穴があって、PR Report の書き込みには generated workflow と同じく `GITHUB_TOKEN` env を見せた方が安全そうです。\n追加で PR Report の token 例も揃えました。実装上 `GITHUB_TOKEN` が無いと PR 本文更新は skip されるので、README の最小例にも token を出しておくのが正確です。\nもう 1 箇所、`docs/knowledge/DESIGN.md` の schema 例だけ `agent` が抜けていました。実装では optional ですが実際の note に入るので、ここも揃えます。\nREADME / docs / website をまとめて更新しました。\n\n- `README.<locale>.md` を 11 言語分追加し、全 README に相互リンクを追加しました。\n- README 上部を `Why Agent Note` / `Quick Start` 寄りにして、初見で価値が伝わる構成に改善しました。\n- PR Report 例に `GITHUB_TOKEN` を追加し、実装上の挙動と揃えました。\n- note schema 例に不足していた `timestamp` を README / website 全言語へ追加しました。\n- `docs/knowledge/DESIGN.md` に `agent` field の schema 説明を追加しました。\n- Dashboard の Pages 共存説明を「同じ job の artifact upload 前に置く」と全言語で明確化しました。\n\n3 回レビュー済みです。観点は、実装との整合性、`entireio/cli` 的な README の初速訴求、全言語リンクと docs build の破損確認です。\n\n確認済み:\n- `npm run docs:build` pass\n- `git diff --check` pass\n- README 相互リンクの file existence check pass\n- trailing whitespace check pass\n\n`BUGS.md` と `docs/plans/` は未追跡のまま触っていません。commit するなら `y` ください。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx",
+        "website/src/content/docs/dashboard.mdx",
+        "website/src/content/docs/ja/dashboard.mdx",
+        "website/src/content/docs/fr/dashboard.mdx",
+        "website/src/content/docs/de/dashboard.mdx",
+        "website/src/content/docs/it/dashboard.mdx",
+        "website/src/content/docs/es/dashboard.mdx",
+        "website/src/content/docs/ko/dashboard.mdx",
+        "website/src/content/docs/zh-cn/dashboard.mdx",
+        "website/src/content/docs/zh-tw/dashboard.mdx",
+        "website/src/content/docs/ru/dashboard.mdx",
+        "website/src/content/docs/id/dashboard.mdx",
+        "website/src/content/docs/pt-br/dashboard.mdx",
+        "docs/knowledge/DESIGN.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "各言語で文量が違うのはなぜ？省略しないで",
+      "response": "その通りです。いまの多言語 README は保守しやすさを優先して短縮版にしたので、英語 README と文量・情報量が揃っていません。ここは省略せず、英語 README と同じ構成・同じ情報量の翻訳版に揃えます。\n省略した短縮版にしたのはこちらの判断ミスでした。英語 README を canonical として、各言語 README も同じ章立て・同じ情報量に展開します。まず構成を完全に揃えてから、差分チェックで「抜け章」がないか確認します。\n日本語 README は英語版と同じ章立て・同じ情報量に戻しました。続けて残り 10 言語も同じ形に展開します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "その通りです。 いまの多言語 README は保守しやすさを優先して短縮版にしたので、英語 README と文量・情報量が揃っていません。"
+        }
+      ],
+      "files_touched": [
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "エージェントノートが保存するもの\n\nは説明的すぎるのでもっとシンプルにしたほうがよくないか？\n\n\n今後、変更する場合はすべての言語を対象",
+      "response": "はい、そこはシンプルにした方がいいです。詳細な prompt selection / generated artifact の説明は README の冒頭には重すぎるので、README では「保存するもの」と「保存場所」だけに絞り、細かい仕組みは docs / design に逃がします。変更は全 README 言語に反映します。\nまず該当 section を全 README で短くします。詳細な prompt selection や generated artifact の説明は `docs/knowledge/DESIGN.md` と website の仕組みページに残し、README では「commit story と保存場所」に絞ります。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "はい、そこはシンプルにした方がいいです。 詳細な prompt selection / generated artifact の説明は README の冒頭には重すぎるので、README では「保存するもの」と「保存場所」だけに絞り、細かい仕組みは docs / design に逃がします。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "様々な有名なOSSを確認して、何が一番完成形なのかを自分で考えてREADMEを作ってください。\n\nまた、サンプル画像が必要な場合は、シミュレーションデータを作成して実行してスクショとれるところまでやってほしい（スクショは私がとる）",
+      "response": "README を「単なる説明書」ではなく、OSS の landing page として作り直します。まず有名 OSS の README 構成を確認して、Agent Note に合う完成形を決めたうえで、全言語 README を同じ情報量に揃えます。スクショが必要そうなら、Dashboard demo data を生成してローカルで開けるところまで用意します。\n有名 OSS を見た結論として、README は「強い一文」「視覚」「4〜8 個の価値 bullet」「即試せる Quick Start」「詳細は docs」が最も読みやすいです。今の Agent Note は機能説明が濃すぎる箇所があるので、保存内容は短く、使う理由と結果の見え方を前面に出す構成へ寄せています。\n翻訳差分が大きいので、段階的に置き換えます。まず不足している README を英語版と同じ章立てに拡張し、その後に全言語の見出し差分を機械的に確認します。\n`Agent Note が保存するもの` は全言語で短くしました。README 全体の多言語展開はまだ途中なので、残りの短縮版も英語版と同じ章立てへ拡張してからまとめて検証します。\n全 README を同じ情報量に展開しました。これから heading の揃い、リンク切れ、Markdown の trailing whitespace、docs build を確認します。サンプル画像は既存の `docs/assets/dashboard-preview.png` が README の目的に合っているかも合わせて見ます。\nREADME は「有名 OSS の入口として強い構成」に寄せつつ、既存実装とのズレも一緒に潰しているところです。いま最後に差分とリンク・schema の整合性をもう一度確認して、必要ならその場で微修正します。\n調査した README の型は、Entire / Vite / uv / Next.js / Playwright / pnpm / Ruff / Supabase あたりです。共通して強かったのは「冒頭で価値が一瞬で伝わる」「Quick Start が短い」「スクショは 1 枚だけ強い」「詳細は docs に逃がす」だったので、その方向で今の README をさらに締めます。\n「Agent Note が保存するもの」は確かに少し説明っぽさが残っていました。全言語で heading を短い名詞形に揃えて、入口の読み味をもう一段プロダクト README っぽくします。\nheading は全言語で短く揃えました。続けて README 間リンク、行数、website build、実装 schema とのズレを再確認します。\nschema 例は README だけでなく docs/knowledge と website 全 locale の `how-it-works` まで見直しています。まだ古い JSON 例が docs 配下に残っていないか、`\"v\": 1` 起点で広めに検索します。\nREADME を有名 OSS 型に寄せて作り直しました。参考にしたのは Entire CLI、Vite、uv、Next.js、Playwright、pnpm、Ruff、Supabase です。冒頭の価値訴求、短い Quick Start、強い preview image、詳細を docs に逃がす構成を採用しています。\n\n主な変更:\n- [README.md](/Users/a12622/git/context-history/README.md:1) を再構成し、言語リンク、Why、Quick Start、Dashboard/PR Report、schema 例を整理\n- `README.ja.md` など 11 言語版を追加し、全言語 398 行の同一構成に統一\n- 「Agent Note が保存するもの」は全言語で短い heading に変更\n- docs / website の schema 例を実装に合わせて `agent`, `timestamp`, `contexts[]` へ整合\n- Dashboard Pages の説明を全 locale で現在の実装に合わせて修正\n\n確認済み:\n- `npm run docs:build` 成功\n- `git diff --check` 成功\n- README 相互リンクの存在確認済み\n- 全 README の行数・heading 数を確認済み\n\nサンプル画像は既存の `docs/assets/dashboard-preview.png` が十分に強いので、今回は新規シミュレーション作成は不要と判断しました。commit はまだしていません。commit するなら `y` ください。",
+      "files_touched": [
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md"
+      ],
+      "tools": [
+        "apply_patch",
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "仕組みの詳細は website に飛ばしたほうがいいかな",
+      "response": "README は入口なので、仕組みの詳細は website に寄せる判断がかなり合いそうです。いま README 側を「流れの概要 + 詳細リンク」へ圧縮して、全言語 README で同じ変更を入れます。\nREADME から詳細フローチャートを外し、各言語で「3 行の概要 + localized website link」にしました。次に行数・リンク・diff check を見て、README の入口感が壊れていないか確認します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "README は入口なので、仕組みの詳細は website に寄せる判断がかなり合いそうです。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "あ、以下の部分だけはシンプルなのであったほうがよかった\n\n    202 -You prompt your coding agent\n    203 -        │\n    204 -        ▼\n    205 -Hooks capture the prompt and session metadata\n    206 -        │\n    207 -        ▼\n    208 -The agent edits files\n    209 -        │\n    210 -        ▼\n    211 -Hooks or local transcripts record files touched and attribution signals\n    212 -        │\n    213 -        ▼\n    214 -You run `git commit`\n    215 -        │\n    216 -        ▼\n    217 -Agent Note writes a git note for that commit\n    218 -        │\n    219 -        ▼\n    220 -You run `git push`\n    221 -        │\n    222 -        ▼\n    223 -`refs/notes/agentnote` is pushed alongside your branch",
+      "response": "その flow は README の中でも直感的で強いですね。詳細説明は website に逃がしたまま、シンプルな ASCII flow だけ全言語 README に戻します。\nflow を復活させました。README 本体にはこのシンプルな流れだけ残し、詳細は website にリンクする形なので、入口としても説明としてもバランスが良いです。\nREADME の `How It Works / 仕組み` は、シンプルな ASCII flow を全言語で戻しました。詳細な attribution rules や schema は website の `how-it-works` に飛ばす形にしてあります。\n\n確認済み: 全 README が 400 行で揃っています。`git diff --check` も問題ありません。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "apply_patch",
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "そのフローの部分は各言語に翻訳するとおかしい？試しに日本語でここにだけ出力してみて",
+      "response": "おかしくはないです。ただ、ASCII flow は README の中で「ぱっと見で流れを掴む図」なので、完全翻訳すると少し横幅が伸びて読みづらくなる可能性はあります。\n\n日本語にするとこんな感じです。\n\n```text\ncoding agent に prompt を送る\n        │\n        ▼\nhooks が prompt と session metadata を記録する\n        │\n        ▼\nagent が file を編集する\n        │\n        ▼\nhooks または local transcript が touched files と attribution signals を記録する\n        │\n        ▼\n`git commit` を実行する\n        │\n        ▼\nAgent Note がその commit に git note を書く\n        │\n        ▼\n`git push` を実行する\n        │\n        ▼\n`refs/notes/agentnote` が branch と一緒に push される\n```\n\n個人的には、README の flow は英語のままでも OSS っぽくて読みやすいです。日本語 README だけ自然さを優先するなら、この訳でも問題ありません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "おかしくはないです。 ただ、ASCII flow は README の中で「ぱっと見で流れを掴む図」なので、完全翻訳すると少し横幅が伸びて読みづらくなる可能性はあります。"
+        }
+      ]
+    },
+    {
+      "prompt": "翻訳しよう",
+      "response": "各 locale の README で flow だけ翻訳します。技術語は無理に訳さず、図として横幅が暴れない程度に自然な短文へ揃えます。\nflow の翻訳を全 locale に反映しました。英語 README は英語のまま残し、各言語 README だけ自然な短文にしています。\nflow 部分を各言語 README に翻訳しました。英語版 [README.md](/Users/a12622/git/context-history/README.md:199) は英語のまま、[README.ja.md](/Users/a12622/git/context-history/README.ja.md:199) など各 locale はそれぞれの言語になっています。\n\n確認済み: 全 README は 400 行で揃っています。`git diff --check` も問題ありません。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "各 locale の README で flow だけ翻訳します。"
+        }
+      ],
+      "files_touched": [
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "dashboard section も説明的すぎない？\n\n詳細は全部 website の方でいいと思う",
+      "response": "Dashboard section も README では導入と最小 YAML だけで十分そうです。詳細な Pages の同居・persist・PR preview の説明は website に任せる形で、全言語 README を同じ構成のまま圧縮します。\nREADME の Dashboard はたしかに「運用設計の詳細」まで入りすぎています。今から全言語で、README には生成コマンド・最短手順・docs link だけ残す形に圧縮します。\n一括 patch が locale の細かい文言差で弾かれたので、ここは安全に実際の各 README の文面に合わせて小分けに置き換えます。差分を荒らさないように対象 block だけ触ります。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "README の Dashboard はたしかに「運用設計の詳細」まで入りすぎています。 今から全言語で、README には生成コマンド・最短手順・docs link だけ残す形に圧縮します。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "README で書いておくべきものは残しといてね",
+      "response": "了解です。削りすぎて「使い始めるために必要な情報」まで消さないように、Dashboard は README に最小手順・生成コマンド・既存 Pages がある場合の誘導だけ残します。まだ未反映の locale を同じ粒度に揃えて、最後に全 README を見直します。",
+      "files_touched": [
+        "README.ru.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md"
+      ],
+      "tools": [
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "使うだけだったら知る必要のない詳細は website で、使うものはちゃんとかく。これ大事",
+      "response": "その切り分けで整理します。README は「読むだけで導入できる」情報を残し、仕組み・運用分岐・既存 Pages との同居の細部は website に逃がす、という基準で全 README をもう一度レビューします。\n今の Dashboard section は「使うために必要な操作」は残っていますが、`commit generated workflow` が少し曖昧でした。生成される workflow 名は README にあった方が使いやすいので、そこだけ全言語で明示します。\nこれで README の Dashboard は「生成する、どの files を commit する、Pages を GitHub Actions にする、開く」まで残り、同居や artifact の細かい話だけ website へ移りました。最後に整合性チェックを回します。\nDashboard section を全言語で圧縮しました。README には「使うために必要なもの」として、`--dashboard` 生成コマンド、commit すべき 2 つの workflow、GitHub Pages source の設定、`/dashboard/` を開く流れだけ残しています。既存 Pages との同居や artifact/persist の詳細は Dashboard docs へ誘導しました。\n\n確認済み:\n- 全 README は 355 行で統一\n- `git diff --check` 成功\n- `npm run docs:build` 成功\n\ncommit はまだしていません。commit するなら `y` ください。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "その切り分けで整理します。 README は「読むだけで導入できる」情報を残し、仕組み・運用分岐・既存 Pages との同居の細部は website に逃がす、という基準で全 README をもう一度レビューします。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
