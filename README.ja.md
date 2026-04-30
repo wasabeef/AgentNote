@@ -94,7 +94,7 @@ Agent Note は commit story を保存します。
 - `prompt` / `response`: 変更に至った会話
 - `contexts[]`: prompt が短すぎるときに `📝 Context` として表示される display-only な補足
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`: 変更された file と AI が触ったかどうか
 - `attribution`: AI ratio、method、取得できる場合は line counts

@@ -94,7 +94,7 @@ Agent Note menyimpan cerita commit:
 - `prompt` / `response`: percakapan di balik perubahan
 - `contexts[]`: petunjuk display-only yang tampil sebagai `📝 Context` saat prompt terlalu pendek
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`: file yang berubah dan apakah AI menyentuhnya
 - `attribution`: AI ratio, method, dan line counts jika tersedia

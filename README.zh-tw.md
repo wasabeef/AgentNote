@@ -94,7 +94,7 @@ Agent Note 保存 commit story：
 - `prompt` / `response`：變更背後的對話
 - `contexts[]`：prompt 太短時會顯示為 `📝 Context` 的 display-only 提示
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`：變更的 file，以及 AI 是否觸碰過
 - `attribution`：AI ratio、method，以及可用時的 line counts

@@ -94,7 +94,7 @@ Agent Note stores the commit story:
 - `prompt` / `response`: the conversation behind the change
 - `contexts[]`: display-only hints shown as `📝 Context` when a prompt is too short
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`: changed files and whether AI touched them
 - `attribution`: AI ratio, method, and line counts when available

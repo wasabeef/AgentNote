@@ -94,7 +94,7 @@ Agent Note 는 commit story 를 저장합니다.
 - `prompt` / `response`: 변경으로 이어진 대화
 - `contexts[]`: prompt 가 너무 짧을 때 `📝 Context` 로 표시되는 display-only 보조 설명
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`: 변경된 file 과 AI 가 수정했는지 여부
 - `attribution`: AI ratio, method, 가능한 경우 line counts

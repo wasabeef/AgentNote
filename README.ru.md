@@ -94,7 +94,7 @@ Agent Note сохраняет commit story:
 - `prompt` / `response`: разговор за изменением
 - `contexts[]`: display-only подсказки, которые показываются как `📝 Context`, когда prompt слишком короткий
 
-  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="900">
+  <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - `files`: измененные file и факт касания AI
 - `attribution`: AI ratio, method и line counts, когда они доступны
