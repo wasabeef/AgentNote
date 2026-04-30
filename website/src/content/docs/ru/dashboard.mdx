@@ -45,7 +45,7 @@ git push
 
 3. В GitHub Pages выберите **GitHub Actions** как source.
 
-Сгенерированный workflow Dashboard использует `wasabeef/AgentNote@v0` с `dashboard: true`, чтобы восстановить, синхронизировать, собрать, загрузить artifact и сохранить notes, а затем публикует общий экран по адресу `/dashboard/`.
+Сгенерированный workflow Dashboard использует `wasabeef/AgentNote@v0` с `dashboard: true`, чтобы восстановить, синхронизировать, собрать, загрузить artifact и сохранить notes, а затем публикует общий экран по адресу `/dashboard/`. Если тот же workflow уже загружает artifact GitHub Pages, Agent Note добавляет Dashboard в каталог `dashboard/` внутри этого artifact вместо замены существующего сайта. Если другой workflow уже публикует Pages, Agent Note пропускает standalone-публикацию; поместите шаг Dashboard перед upload artifact в том workflow, чтобы объединить их.
 
 ## Публичный URL
 

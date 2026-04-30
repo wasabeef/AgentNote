@@ -38,8 +38,8 @@ outputs:
     description: "Rendered markdown report"
     value: ${{ steps.pr_report.outputs.markdown }}
   should_deploy:
-    description: "Whether the Dashboard workflow should run actions/deploy-pages"
-    value: ${{ steps.dashboard_notes.outputs.should_deploy }}
+    description: "Whether Dashboard data should be published by the caller workflow"
+    value: ${{ steps.dashboard_publish.outputs.should_deploy }}
 runs:
   using: "composite"
   steps:
@@ -59,11 +59,32 @@ runs:
         INPUT_PR_OUTPUT: ${{ inputs.pr_output }}
       run: node "$AGENT_NOTE_ACTION_PATH/packages/pr-report/dist/index.js"
 
-    - name: Check out repository
+    - name: Detect Dashboard checkout
       if: inputs.dashboard == 'true'
+      id: dashboard_checkout
+      shell: bash
+      run: |
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check out repository
+      if: inputs.dashboard == 'true' && steps.dashboard_checkout.outputs.exists != 'true'
       uses: actions/checkout@v6
       with:
         fetch-depth: 0
+
+    - name: Fetch Dashboard history
+      if: inputs.dashboard == 'true' && steps.dashboard_checkout.outputs.exists == 'true'
+      shell: bash
+      run: |
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          git fetch --no-tags --prune --unshallow origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+        else
+          git fetch --no-tags --prune origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+        fi
 
     - name: Set up Node.js for Dashboard
       if: inputs.dashboard == 'true'
@@ -71,13 +92,13 @@ runs:
       with:
         node-version: 22
 
-    - name: Resolve Dashboard paths
+    - name: Resolve Dashboard Pages target
       if: inputs.dashboard == 'true'
       id: dashboard_paths
       shell: bash
-      run: |
-        echo "notes_dir=${GITHUB_WORKSPACE}/.agentnote-dashboard-notes" >> "$GITHUB_OUTPUT"
-        echo "pages_dir=${GITHUB_WORKSPACE}/.agentnote-pages" >> "$GITHUB_OUTPUT"
+      env:
+        DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+      run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:resolve-pages-target
 
     - name: Restore Dashboard notes from gh-pages
       if: inputs.dashboard == 'true'
@@ -107,17 +128,32 @@ runs:
       run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:sync-notes
 
     - name: Build Dashboard
-      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_build == 'true'
+      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_build == 'true' && steps.dashboard_paths.outputs.can_build == 'true'
       shell: bash
       env:
         DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
         NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
         PAGES_DIR: ${{ steps.dashboard_paths.outputs.pages_dir }}
+        DASHBOARD_PAGES_MODE: ${{ steps.dashboard_paths.outputs.publish_mode }}
         PUBLIC_REPO: ${{ github.repository }}
       run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:build-pages
 
+    - name: Resolve Dashboard deploy decision
+      if: inputs.dashboard == 'true'
+      id: dashboard_publish
+      shell: bash
+      env:
+        SHOULD_DEPLOY: ${{ steps.dashboard_notes.outputs.should_deploy }}
+        CAN_BUILD: ${{ steps.dashboard_paths.outputs.can_build }}
+      run: |
+        if [ "$SHOULD_DEPLOY" = "true" ] && [ "$CAN_BUILD" = "true" ]; then
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Upload Pages artifact
-      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_deploy == 'true'
+      if: inputs.dashboard == 'true' && steps.dashboard_notes.outputs.should_deploy == 'true' && steps.dashboard_paths.outputs.internal_upload == 'true'
       uses: actions/upload-pages-artifact@v5
       with:
         path: ${{ steps.dashboard_paths.outputs.pages_dir }}

@@ -25,11 +25,25 @@ jobs:
       should_deploy: ${{ steps.dashboard.outputs.should_deploy }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci --prefix website
+      - run: npm run build --prefix website
       - name: Build Dashboard bundle
         id: dashboard
         uses: ./
         with:
           dashboard: true
+      - name: Upload Pages artifact
+        if: steps.dashboard.outputs.should_deploy == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
 
   deploy:
     if: needs.build.outputs.should_deploy == 'true'

@@ -45,7 +45,7 @@ git push
 
 3. No GitHub Pages, escolha **GitHub Actions** como source.
 
-O workflow gerado do Dashboard usa `wasabeef/AgentNote@v0` com `dashboard: true` para restaurar, sincronizar, fazer build, enviar o artefato e persistir as notas, e então publica a visualização compartilhada em `/dashboard/`.
+O workflow gerado do Dashboard usa `wasabeef/AgentNote@v0` com `dashboard: true` para restaurar, sincronizar, fazer build, enviar o artefato e persistir as notas, e então publica a visualização compartilhada em `/dashboard/`. Se o mesmo workflow já envia um artefato do GitHub Pages, o Agent Note adiciona o Dashboard ao diretório `dashboard/` desse artefato em vez de substituir o site existente. Se outro workflow já publica Pages, o Agent Note pula a publicação standalone; coloque o step do Dashboard antes do upload de artefato desse workflow para combiná-los.
 
 ## URL pública
 
