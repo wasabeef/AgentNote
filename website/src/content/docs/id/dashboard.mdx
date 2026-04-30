@@ -45,7 +45,7 @@ git push
 
 3. Di GitHub Pages, pilih **GitHub Actions** sebagai source.
 
-Workflow Dashboard yang dihasilkan memakai `wasabeef/AgentNote@v0` dengan `dashboard: true` untuk restore, sync, build, upload artifact, dan persistensi note, lalu memublikasikan tampilan bersama di `/dashboard/`. Jika workflow yang sama sudah mengunggah artifact GitHub Pages, Agent Note menambahkan Dashboard ke direktori `dashboard/` di artifact itu, bukan mengganti situs yang sudah ada. Jika workflow lain sudah memublikasikan Pages, Agent Note melewati publikasi standalone; letakkan step Dashboard sebelum upload artifact di workflow tersebut untuk menggabungkannya.
+Workflow Dashboard yang dihasilkan memakai `wasabeef/AgentNote@v0` dengan `dashboard: true` untuk restore, sync, build, upload artifact, dan persistensi note, lalu memublikasikan tampilan bersama di `/dashboard/`. Jika job yang sama sudah mengunggah artifact GitHub Pages, Agent Note menambahkan Dashboard ke direktori `dashboard/` di artifact itu, bukan mengganti situs yang sudah ada. Jika job atau workflow lain sudah memublikasikan Pages, Agent Note melewati publikasi standalone; letakkan Agent Note di job yang sama sebelum `actions/upload-pages-artifact` untuk menggabungkan docs site dan Dashboard.
 
 ## URL publik
 

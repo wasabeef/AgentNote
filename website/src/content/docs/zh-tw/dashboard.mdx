@@ -45,7 +45,7 @@ git push
 
 3. 在 GitHub Pages 中，把 source 設為 **GitHub Actions**。
 
-生成的 Dashboard workflow 會用 `wasabeef/AgentNote@v0` 並傳入 `dashboard: true`，執行還原、同步、build、artifact 上傳與 note 持久化，然後把共享視圖發布到 `/dashboard/`。如果同一個 workflow 已經上傳 GitHub Pages artifact，Agent Note 會把 Dashboard 加到該 artifact 的 `dashboard/` 目錄，而不是取代現有網站。如果另一個 workflow 已經發布 Pages，Agent Note 會跳過 standalone 發布；把 Dashboard step 放在該 workflow 的 artifact upload 之前即可合併到同一個 artifact。
+生成的 Dashboard workflow 會用 `wasabeef/AgentNote@v0` 並傳入 `dashboard: true`，執行還原、同步、build、artifact 上傳與 note 持久化，然後把共享視圖發布到 `/dashboard/`。如果同一個 job 已經上傳 GitHub Pages artifact，Agent Note 會把 Dashboard 加到該 artifact 的 `dashboard/` 目錄，而不是取代現有網站。如果另一個 job 或 workflow 已經發布 Pages，Agent Note 會跳過 standalone 發布；要合併 docs site 和 Dashboard，請把 Agent Note 放在同一個 job 中，並放在 `actions/upload-pages-artifact` 之前。
 
 ## 公開 URL
 

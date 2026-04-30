@@ -45,7 +45,7 @@ git push
 
 3. GitHub の Pages 設定で、公開元に **GitHub Actions** を選びます。
 
-生成された Dashboard workflow は、`wasabeef/AgentNote@v0` に `dashboard: true` を渡して、復元・同期・build・artifact upload・note 保存を実行し、共有用の `/dashboard/` を公開します。同じ workflow に既存の GitHub Pages artifact upload がある場合は、既存 site を置き換えず、その artifact の `dashboard/` 配下に Dashboard を追加します。別 workflow がすでに Pages を公開している場合は、上書きを避けるため standalone publish を skip します。その workflow の artifact upload より前に Dashboard step を置くと、1 つの artifact にまとめられます。
+生成された Dashboard workflow は、`wasabeef/AgentNote@v0` に `dashboard: true` を渡して、復元・同期・build・artifact upload・note 保存を実行し、共有用の `/dashboard/` を公開します。同じ job に既存の GitHub Pages artifact upload がある場合は、既存 site を置き換えず、その artifact の `dashboard/` 配下に Dashboard を追加します。別 job / workflow がすでに Pages を公開している場合は、上書きを避けるため standalone publish を skip します。docs site と Dashboard をまとめる場合は、`actions/upload-pages-artifact` より前の同じ job に Agent Note を置いてください。
 
 ## 公開 URL
 

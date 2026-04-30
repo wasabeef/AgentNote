@@ -1,6 +1,21 @@
 # Agent Note
 
 <p align="center">
+  <a href="./README.md">English</a> ·
+  <a href="./README.ja.md">日本語</a> ·
+  <a href="./README.fr.md">Français</a> ·
+  <a href="./README.de.md">Deutsch</a> ·
+  <a href="./README.it.md">Italiano</a> ·
+  <a href="./README.es.md">Español</a> ·
+  <a href="./README.ko.md">한국어</a> ·
+  <a href="./README.zh-cn.md">简体中文</a> ·
+  <a href="./README.zh-tw.md">繁體中文</a> ·
+  <a href="./README.ru.md">Русский</a> ·
+  <a href="./README.id.md">Bahasa Indonesia</a> ·
+  <a href="./README.pt-br.md">Português (BR)</a>
+</p>
+
+<p align="center">
   <img src="docs/assets/hero.png" alt="Agent Note — AI conversations saved to git" width="720">
 </p>
 
@@ -28,13 +43,20 @@ Think of it as <code>git log</code> plus the AI conversation behind the change.
   <img src="docs/assets/dashboard-preview.png" alt="Agent Note dashboard preview" width="1100">
 </p>
 
+## Why Agent Note
+
+- See the prompt and response behind every AI-assisted commit.
+- Review AI-authored files and AI ratio directly in the Pull Request.
+- Open a shared Dashboard that turns commit history into a readable story.
+- Keep the data git-native with `refs/notes/agentnote` — no hosted service, no telemetry.
+
 ## Requirements
 
 - Git
 - Node.js 20 or later
 - A supported coding agent installed and authenticated
 
-## Setup
+## Quick Start
 
 1. Enable Agent Note for your coding agent.
 
@@ -60,7 +82,8 @@ npx agent-note init --agent claude --dashboard
 2. Commit the generated files and push.
 
 ```bash
-git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+git add .github/workflows/agentnote-pr-report.yml .claude/settings.json
+# replace .claude/settings.json with your agent config below
 # with --dashboard, also add .github/workflows/agentnote-dashboard.yml
 git commit -m "chore: enable agent-note"
 git push
@@ -75,14 +98,14 @@ git push
 
 With the generated git hooks installed, Agent Note records commits automatically. Use `agent-note commit -m "..."` only as a fallback when git hooks are unavailable.
 
-## What Agent Note Saves
+## Saved Data
 
-- The prompts and responses behind a commit
-- Optional display-only context before a short prompt when nearby saved responses explain it
-- The files touched by the agent
-- An AI ratio for the commit
+Agent Note stores the commit story:
 
-Prompt lists are chosen from the commit-to-commit conversation window, not from the entire session backlog. Agent Note starts after the previous recorded commit, keeps the conversation through the current commit's surviving edit turns, and trims only structurally stale leading context such as quoted prompt history or edits that did not survive into this commit. If a short prompt needs help to read, Agent Note may attach display-only `contexts[]` before the prompt. A context can point back to the previous response or summarize the current response's work scope, but it never changes attribution. Older overwritten edit bursts are still dropped, but nearby planning, clarification, and review prompts remain with the commit. Agent Note also excludes common generated artifacts from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves.
+- `prompt` / `response`: the conversation behind the change
+- `contexts[]`: small display-only hints when a prompt is too short
+- `files`: changed files and whether AI touched them
+- `attribution`: AI ratio, method, and line counts when available
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
@@ -170,7 +193,7 @@ This posts an AI session report to the PR description:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
 ```
 
 ## How It Works
@@ -200,6 +223,8 @@ You run `git push`
 `refs/notes/agentnote` is pushed alongside your branch
 ```
 
+For the detailed flow, attribution rules, and schema, see [How it works](https://wasabeef.github.io/AgentNote/how-it-works/).
+
 ## Commands
 
 | Command | What it does |
@@ -215,27 +240,38 @@ You run `git push`
 
 ## GitHub Action
 
-Examples in this section assume `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` is set.
+The root action has two modes:
+
+- PR Report mode updates the Pull Request description or posts a comment.
+- Dashboard mode builds shared Dashboard data and publishes `/dashboard/` through GitHub Pages.
+
+PR Report mode is the default:
 
 ```yaml
 - uses: wasabeef/AgentNote@v0
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Dashboard mode uses the same action with `dashboard: true`:
+
+```yaml
+- uses: wasabeef/AgentNote@v0
+  with:
+    dashboard: true
 ```
 
 ### Dashboard data
 
-If you want the shared Dashboard on GitHub Pages:
-
-1. Run `agent-note init --agent <name...> --dashboard`.
-2. Commit `.github/workflows/agentnote-pr-report.yml` and `.github/workflows/agentnote-dashboard.yml`.
-3. Enable GitHub Pages and choose `GitHub Actions` as the source.
+For most repositories, you do not need to hand-write the workflow. Generate it:
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-The generated Dashboard workflow uses `wasabeef/AgentNote@v0` with `dashboard: true` to restore, sync, build, upload the artifact, and persist notes, then publishes the shared `/dashboard/` view. If the same workflow already has an `actions/upload-pages-artifact` step, Agent Note adds the Dashboard under that artifact's `dashboard/` directory instead of replacing the existing Pages site. If another workflow already owns Pages publishing, Agent Note skips standalone publishing to avoid overwriting it; place the Dashboard step before that workflow's Pages artifact upload to combine them.
+Then commit `.github/workflows/agentnote-pr-report.yml` and `.github/workflows/agentnote-dashboard.yml`, enable GitHub Pages with `GitHub Actions` as the source, and open `/dashboard/`.
 
-This keeps generated JSON off the `default branch` while still letting Dashboard data accumulate before the Dashboard is published for the first time. Pull Request runs update the shared Dashboard with the Open state, and `default branch` pushes replace it with the Merged state.
+If you already have a GitHub Pages site, see [Dashboard docs](https://wasabeef.github.io/AgentNote/dashboard/) for the safe combined setup.
 
 <details>
 <summary>Full example with outputs</summary>
@@ -264,6 +300,7 @@ $ git notes --ref=agentnote show ce941f7
   "v": 1,
   "agent": "claude",
   "session_id": "a1b2c3d4-...",
+  "timestamp": "2026-04-02T10:30:00Z",
   "model": "claude-sonnet-4-20250514",
   "interactions": [
     {

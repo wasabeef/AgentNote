@@ -45,7 +45,7 @@ git push
 
 3. GitHub Pages 에서 source 로 **GitHub Actions** 를 선택합니다.
 
-생성된 Dashboard workflow 는 `wasabeef/AgentNote@v0` 에 `dashboard: true` 를 전달해 restore, sync, build, artifact upload, note 저장을 실행하고, 공유용 `/dashboard/` 화면을 공개합니다. 같은 workflow 에서 이미 GitHub Pages artifact 를 업로드하고 있다면 Agent Note 는 기존 site 를 바꾸지 않고 그 artifact 의 `dashboard/` 디렉터리에 Dashboard 를 추가합니다. 다른 workflow 가 이미 Pages 를 공개하고 있다면 Agent Note 는 standalone publish 를 건너뜁니다. 그 workflow 의 artifact upload 앞에 Dashboard step 을 두면 하나의 artifact 로 합칠 수 있습니다.
+생성된 Dashboard workflow 는 `wasabeef/AgentNote@v0` 에 `dashboard: true` 를 전달해 restore, sync, build, artifact upload, note 저장을 실행하고, 공유용 `/dashboard/` 화면을 공개합니다. 같은 job 에서 이미 GitHub Pages artifact 를 업로드하고 있다면 Agent Note 는 기존 site 를 바꾸지 않고 그 artifact 의 `dashboard/` 디렉터리에 Dashboard 를 추가합니다. 다른 job 이나 workflow 가 이미 Pages 를 공개하고 있다면 Agent Note 는 standalone publish 를 건너뜁니다. docs site 와 Dashboard 를 합치려면 `actions/upload-pages-artifact` 앞의 같은 job 에 Agent Note 를 두세요.
 
 ## 공개 URL
 

@@ -174,6 +174,7 @@ Note content per commit:
 ```json
 {
   "v": 1,
+  "agent": "claude",
   "session_id": "a1b2c3d4-...",
   "timestamp": "2026-04-02T10:30:00Z",
   "model": "claude-sonnet-4-20250514",
@@ -209,6 +210,7 @@ Note content per commit:
 ```
 
 - **`v`**: Schema version. Currently `1`.
+- **`agent`**: Agent adapter that produced the note, such as `claude`, `codex`, `cursor`, or `gemini`.
 - **`model`**: LLM model identifier from SessionStart. `null` for agents that don't expose it.
 - **`files`**: Array of `{path, by_ai}`. `by_ai` is true if any AI tool (Edit/Write) targeted the file.
 - **`attribution`**: AI authorship metrics.
