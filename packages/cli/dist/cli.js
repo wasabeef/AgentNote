@@ -1943,6 +1943,9 @@ function scorePromptRuntime(opts) {
   if (opts.role === "primary") return Math.max(score, 80);
   if (opts.role === "bridge") return Math.min(score, 44);
   if (opts.role === "anchored_bridge") return Math.min(score, 65);
+  if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
+    return Math.min(score, 44);
+  }
   return score;
 }
 function resolvePromptRuntimeLevel(runtime) {
@@ -2018,6 +2021,9 @@ function signalScore(signal) {
 }
 function hasBridgeAnchorSignal(signals) {
   return signals.includes("exact_commit_path") || signals.includes("diff_identifier") || signals.includes("commit_file_basename");
+}
+function hasTailStructuralAnchorSignal(signals) {
+  return signals.includes("exact_commit_path") || signals.includes("diff_identifier") || signals.includes("commit_file_basename") || signals.includes("response_exact_commit_path") || signals.includes("commit_subject_overlap") || signals.includes("inline_code_or_path_shape");
 }
 function hasScopeSignal(signals) {
   return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");

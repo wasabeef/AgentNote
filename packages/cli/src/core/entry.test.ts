@@ -166,6 +166,51 @@ describe("prompt detail rendering", () => {
       ),
       { score: 33, role: "bridge", level: "low" },
     );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "tail",
+          signals: ["before_commit_boundary", "between_non_excluded_prompts"],
+        },
+        { prompt: "commit push" },
+      ),
+      { score: 44, role: "tail", level: "low" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "tail",
+          signals: [
+            "response_basename_or_identifier",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "explain the generated CLI bundle" },
+      ),
+      { score: 44, role: "tail", level: "low" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "tail",
+          signals: [
+            "response_exact_commit_path",
+            "response_basename_or_identifier",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "explain the generated CLI bundle" },
+      ),
+      { score: 70, role: "tail", level: "medium" },
+    );
   });
 
   it("maps prompt detail presets to runtime levels", () => {
