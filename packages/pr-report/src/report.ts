@@ -65,9 +65,14 @@ export interface RenderMarkdownOptions {
   promptDetail?: PromptDetail;
 }
 
+export interface CollectReportOptions {
+  dashboardPrNumber?: number | string | null;
+}
+
 export async function collectReport(
   base: string,
   headRef = "HEAD",
+  opts: CollectReportOptions = {},
 ): Promise<PrReport | null> {
   const head = await git(["rev-parse", "--short", headRef]);
   const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
@@ -189,7 +194,9 @@ export async function collectReport(
   const hasDashboardWorkflow = existsSync(
     join(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"),
   );
-  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
+  const dashboardUrl = hasDashboardWorkflow
+    ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)
+    : null;
 
   return {
     base,

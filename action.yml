@@ -169,4 +169,6 @@ runs:
       env:
         DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
         NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
+        EVENT_NAME: ${{ github.event_name }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:persist-notes

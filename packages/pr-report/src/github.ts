@@ -61,7 +61,10 @@ export function shouldRetryNotesFetch(report: {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
-export function inferDashboardUrl(repoUrl: string | null): string | null {
+export function inferDashboardUrl(
+	repoUrl: string | null,
+	prNumber?: number | string | null,
+): string | null {
 	if (!repoUrl) return null;
 
 	const normalized = repoUrl.replace(/\.git$/, "");
@@ -70,10 +73,24 @@ export function inferDashboardUrl(repoUrl: string | null): string | null {
 
 	const [, owner, repo] = match;
 	const pagesRoot = `https://${owner}.github.io`;
-	if (repo === `${owner}.github.io`) {
-		return `${pagesRoot}/dashboard/`;
-	}
-	return `${pagesRoot}/${repo}/dashboard/`;
+	const dashboardUrl =
+		repo === `${owner}.github.io`
+			? `${pagesRoot}/dashboard/`
+			: `${pagesRoot}/${repo}/dashboard/`;
+	return appendPrNumber(dashboardUrl, prNumber);
+}
+
+function appendPrNumber(
+	dashboardUrl: string,
+	prNumber?: number | string | null,
+): string {
+	if (prNumber == null || prNumber === "") return dashboardUrl;
+	const normalized = Number(prNumber);
+	if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;
+
+	const url = new URL(dashboardUrl);
+	url.searchParams.set("pr", String(normalized));
+	return url.toString();
 }
 
 export function hasDeploymentBranchProtection(

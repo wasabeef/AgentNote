@@ -115,6 +115,20 @@ describe("inferDashboardUrl", () => {
 		);
 	});
 
+	it("adds a pull request query parameter when a PR number is provided", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote", 48),
+			"https://wasabeef.github.io/AgentNote/dashboard/?pr=48",
+		);
+	});
+
+	it("does not add a pull request query parameter for invalid PR numbers", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote", "not-a-number"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
+		);
+	});
+
 	it("strips a trailing .git suffix from GitHub remotes", () => {
 		assert.equal(
 			inferDashboardUrl("https://github.com/wasabeef/AgentNote.git"),

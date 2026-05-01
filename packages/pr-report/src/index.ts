@@ -132,6 +132,7 @@ async function run(): Promise<void> {
 			core.getInput("base") ||
 			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
 		const headSha = github.context.payload.pull_request?.head?.sha;
+		const prNumber = github.context.payload.pull_request?.number ?? null;
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
 		const promptDetail = parsePromptDetail(core.getInput("prompt_detail"));
 		const token = process.env.GITHUB_TOKEN || "";
@@ -142,7 +143,9 @@ async function run(): Promise<void> {
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			fetchAgentnoteNotes();
 
-			report = await collectReport(base, headSha);
+			report = await collectReport(base, headSha, {
+				dashboardPrNumber: prNumber,
+			});
 			if (!report) {
 				core.info("No agent-note data found for this PR.");
 				return;

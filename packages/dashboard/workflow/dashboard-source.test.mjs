@@ -52,3 +52,13 @@ describe("dashboard line attribution display source", () => {
     assert.ok(dashboardSource.includes('h("span", { className: "stat warm" }, lineSummaryLabel(summary))'));
   });
 });
+
+describe("dashboard URL restore source", () => {
+  it("does not rewrite dashboard root or an explicit missing PR URL to the latest PR", () => {
+    const restoreSource = sourceBetween("function restoreFromUrl", "function showDashboardHome");
+    assert.ok(restoreSource.includes('return showMissingSelection(`PR #${pr}`);'));
+    assert.ok(restoreSource.includes("showDashboardHome();"));
+    assert.ok(!restoreSource.includes("state.index?.prs?.length"));
+    assert.ok(!restoreSource.includes("state.index?.commits?.length"));
+  });
+});

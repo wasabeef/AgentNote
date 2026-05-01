@@ -5303,17 +5303,23 @@ ${section}${after}`;
 
 ${section}`;
 }
-function inferDashboardUrl(repoUrl) {
+function inferDashboardUrl(repoUrl, prNumber) {
   if (!repoUrl) return null;
   const normalized = repoUrl.replace(/\.git$/, "");
   const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
   if (!match) return null;
   const [, owner, repo] = match;
   const pagesRoot = `https://${owner}.github.io`;
-  if (repo === `${owner}.github.io`) {
-    return `${pagesRoot}/dashboard/`;
-  }
-  return `${pagesRoot}/${repo}/dashboard/`;
+  const dashboardUrl = repo === `${owner}.github.io` ? `${pagesRoot}/dashboard/` : `${pagesRoot}/${repo}/dashboard/`;
+  return appendPrNumber(dashboardUrl, prNumber);
+}
+function appendPrNumber(dashboardUrl, prNumber) {
+  if (prNumber == null || prNumber === "") return dashboardUrl;
+  const normalized = Number(prNumber);
+  if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;
+  const url = new URL(dashboardUrl);
+  url.searchParams.set("pr", String(normalized));
+  return url.toString();
 }
 async function updatePrDescription(prNumber, markdown) {
   const currentBody = await readPrBody(prNumber);
@@ -5377,7 +5383,7 @@ init_storage();
 init_git();
 import { existsSync as existsSync13 } from "node:fs";
 import { join as join13 } from "node:path";
-async function collectReport(base, headRef = "HEAD") {
+async function collectReport(base, headRef = "HEAD", opts = {}) {
   const head = await git(["rev-parse", "--short", headRef]);
   const raw = await git(["log", "--reverse", "--format=%H	%h	%s", `${base}..${headRef}`]);
   if (!raw.trim()) return null;
@@ -5479,7 +5485,7 @@ async function collectReport(base, headRef = "HEAD") {
   const hasDashboardWorkflow = existsSync13(
     join13(repoRoot3, ".github", "workflows", "agentnote-dashboard.yml")
   );
-  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
+  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber) : null;
   return {
     base,
     head,
@@ -5701,7 +5707,7 @@ async function pr(args2) {
     process.exit(1);
   }
   const outputMode = outputIdx !== -1 ? args2[outputIdx + 1] : "description";
-  const report = await collectReport(base, headRef);
+  const report = await collectReport(base, headRef, { dashboardPrNumber: prNumber });
   if (!report) {
     if (isJson) {
       console.log(JSON.stringify({ error: "no commits found" }));

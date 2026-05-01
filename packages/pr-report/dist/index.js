@@ -36300,7 +36300,7 @@ function upsertDescription(existingBody, markdown) {
 function shouldRetryNotesFetch(report) {
     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
-function inferDashboardUrl(repoUrl) {
+function inferDashboardUrl(repoUrl, prNumber) {
     if (!repoUrl)
         return null;
     const normalized = repoUrl.replace(/\.git$/, "");
@@ -36309,10 +36309,20 @@ function inferDashboardUrl(repoUrl) {
         return null;
     const [, owner, repo] = match;
     const pagesRoot = `https://${owner}.github.io`;
-    if (repo === `${owner}.github.io`) {
-        return `${pagesRoot}/dashboard/`;
-    }
-    return `${pagesRoot}/${repo}/dashboard/`;
+    const dashboardUrl = repo === `${owner}.github.io`
+        ? `${pagesRoot}/dashboard/`
+        : `${pagesRoot}/${repo}/dashboard/`;
+    return appendPrNumber(dashboardUrl, prNumber);
+}
+function appendPrNumber(dashboardUrl, prNumber) {
+    if (prNumber == null || prNumber === "")
+        return dashboardUrl;
+    const normalized = Number(prNumber);
+    if (!Number.isInteger(normalized) || normalized <= 0)
+        return dashboardUrl;
+    const url = new URL(dashboardUrl);
+    url.searchParams.set("pr", String(normalized));
+    return url.toString();
 }
 function hasDeploymentBranchProtection(policy) {
     return Boolean(policy &&
@@ -37062,7 +37072,7 @@ function normalizeEntry(raw) {
 
 
 
-async function collectReport(base, headRef = "HEAD") {
+async function collectReport(base, headRef = "HEAD", opts = {}) {
     const head = await git(["rev-parse", "--short", headRef]);
     const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
     if (!raw.trim())
@@ -37166,7 +37176,9 @@ async function collectReport(base, headRef = "HEAD") {
     }
     const repoRoot = await git(["rev-parse", "--show-toplevel"]);
     const hasDashboardWorkflow = (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"));
-    const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;
+    const dashboardUrl = hasDashboardWorkflow
+        ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)
+        : null;
     return {
         base,
         head,
@@ -37469,6 +37481,7 @@ async function run() {
         const base = getInput("base") ||
             `origin/${github_context.payload.pull_request?.base?.ref ?? "main"}`;
         const headSha = github_context.payload.pull_request?.head?.sha;
+        const prNumber = github_context.payload.pull_request?.number ?? null;
         const prOutputMode = resolvePrOutputMode(getInput("pr_output"));
         const promptDetail = parsePromptDetail(getInput("prompt_detail"));
         const token = process.env.GITHUB_TOKEN || "";
@@ -37476,7 +37489,9 @@ async function run() {
         const maxAttempts = 3;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             fetchAgentnoteNotes();
-            report = await collectReport(base, headSha);
+            report = await collectReport(base, headSha, {
+                dashboardPrNumber: prNumber,
+            });
             if (!report) {
                 info("No agent-note data found for this PR.");
                 return;

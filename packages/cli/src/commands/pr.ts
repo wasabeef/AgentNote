@@ -32,7 +32,7 @@ export async function pr(args: string[]): Promise<void> {
   }
 
   const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : "description";
-  const report = await collectReport(base, headRef);
+  const report = await collectReport(base, headRef, { dashboardPrNumber: prNumber });
 
   if (!report) {
     if (isJson) {

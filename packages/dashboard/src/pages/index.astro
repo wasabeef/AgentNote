@@ -1623,6 +1623,7 @@ const dashboardIndex = buildDashboardIndex();
         flatCommits: [],
         wide: false,
         expandedSidebarCommit: null,
+        missingSelection: null,
       };
 
       // ─── Utilities ───
@@ -2275,6 +2276,7 @@ const dashboardIndex = buildDashboardIndex();
         if (!summary) return;
         const pr = getPRForCommit(shortSha);
         state.loading = true;
+        state.missingSelection = null;
         state.current = {
           mode: "commit",
           commit: shortSha,
@@ -2313,6 +2315,7 @@ const dashboardIndex = buildDashboardIndex();
         if (summaries.length === 0) return;
         const sortedSummaries = sortCommitSummaries(summaries, "asc");
         state.loading = true;
+        state.missingSelection = null;
         state.current = {
           mode: "pr",
           commit: null,
@@ -2840,6 +2843,13 @@ const dashboardIndex = buildDashboardIndex();
           return;
         }
         if (!state.current) {
+          if (state.missingSelection) {
+            root.appendChild(h("div", { className: "empty" }, [
+              h("div", { className: "big" }, "📭"),
+              `No dashboard data found for ${state.missingSelection}.`,
+            ]));
+            return;
+          }
           const hasNotes = (state.index?.commits?.length || 0) > 0;
           root.appendChild(h("div", { className: "empty" }, [
             h("div", { className: "big" }, hasNotes ? "💬" : "📭"),
@@ -2952,14 +2962,41 @@ const dashboardIndex = buildDashboardIndex();
         const tab = p.get("tab");
         if (tab === "diff") state.tab = "diff";
         const commit = p.get("commit");
-        if (commit) return selectCommit(commit);
-        const pr = p.get("pr");
-        if (pr && state.index?.prs) {
-          const match = state.index.prs.find((x) => String(x.number) === pr);
-          if (match?.commits?.length) return selectPR(match.number);
+        if (commit) {
+          if (getCommitSummary(commit)) return selectCommit(commit);
+          return showMissingSelection(`commit ${commit}`);
         }
-        if (state.index?.prs?.length) return selectPR(state.index.prs[0].number);
-        if (state.index?.commits?.length) return selectCommit(state.index.commits[0].short_sha);
+        const pr = p.get("pr");
+        if (pr) {
+          const match = (state.index?.prs || []).find((x) => String(x.number) === pr);
+          if (match?.commits?.length) return selectPR(match.number);
+          return showMissingSelection(`PR #${pr}`);
+        }
+        showDashboardHome();
+      }
+
+      function showDashboardHome() {
+        state.loading = false;
+        state.current = null;
+        state.currentNote = null;
+        state.currentGroupNotes = [];
+        state.missingSelection = null;
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
+      }
+
+      function showMissingSelection(label) {
+        state.loading = false;
+        state.current = null;
+        state.currentNote = null;
+        state.currentGroupNotes = [];
+        state.missingSelection = label;
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
       }
 
       async function init() {

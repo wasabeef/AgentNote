@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { mergeDashboardNotes, pruneDashboardNotes } from "./persist-notes.mjs";
+import { restoreDashboardNotes } from "./restore-notes.mjs";
 import {
   MAX_DIFF_TOTAL_LINES,
   parseDiffFiles,
@@ -56,3 +69,108 @@ ${Array.from({ length: count }, (_, index) => `+${path} line ${index}`).join("\n
   assert.equal(afterLimit.truncated, true);
   assert.deepEqual(afterLimit.lines, []);
 });
+
+test("mergeDashboardNotes preserves unrelated PR notes while replacing the current PR", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-persist-test-"));
+  const dashboardNotesDir = join(tempDir, "dashboard-notes");
+  const snapshotDir = join(tempDir, "snapshot");
+
+  try {
+    mkdirSync(dashboardNotesDir, { recursive: true });
+    mkdirSync(snapshotDir, { recursive: true });
+    writeNote(join(dashboardNotesDir, "old-pr46.json"), 46, "old-pr46");
+    writeNote(join(dashboardNotesDir, "old-pr47.json"), 47, "old-pr47");
+    writeNote(join(snapshotDir, "new-pr47.json"), 47, "new-pr47");
+
+    mergeDashboardNotes(snapshotDir, dashboardNotesDir, {
+      eventName: "pull_request",
+      prNumber: 47,
+    });
+
+    assert.deepEqual(readdirSync(dashboardNotesDir).sort(), ["new-pr47.json", "old-pr46.json"]);
+    assert.equal(readNoteShortSha(join(dashboardNotesDir, "old-pr46.json")), "old-pr46");
+    assert.equal(readNoteShortSha(join(dashboardNotesDir, "new-pr47.json")), "new-pr47");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("mergeDashboardNotes removes stale notes for the current PR when no replacement exists", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-persist-test-"));
+  const dashboardNotesDir = join(tempDir, "dashboard-notes");
+  const snapshotDir = join(tempDir, "snapshot");
+
+  try {
+    mkdirSync(dashboardNotesDir, { recursive: true });
+    mkdirSync(snapshotDir, { recursive: true });
+    writeNote(join(dashboardNotesDir, "old-pr46.json"), 46, "old-pr46");
+    writeNote(join(dashboardNotesDir, "old-pr47.json"), 47, "old-pr47");
+
+    mergeDashboardNotes(snapshotDir, dashboardNotesDir, {
+      eventName: "pull_request",
+      prNumber: 47,
+    });
+
+    assert.deepEqual(readdirSync(dashboardNotesDir).sort(), ["old-pr46.json"]);
+    assert.equal(readNoteShortSha(join(dashboardNotesDir, "old-pr46.json")), "old-pr46");
+    assert.equal(existsSync(join(dashboardNotesDir, "old-pr47.json")), false);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("pruneDashboardNotes keeps the newest persisted note files", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-prune-test-"));
+  const notesDir = join(tempDir, "notes");
+
+  try {
+    mkdirSync(notesDir, { recursive: true });
+    writeNote(join(notesDir, "old.json"), 41, "old", "2026-01-01T00:00:00Z");
+    writeNote(join(notesDir, "middle.json"), 42, "middle", "2026-02-01T00:00:00Z");
+    writeNote(join(notesDir, "new.json"), 43, "new", "2026-03-01T00:00:00Z");
+
+    const pruned = pruneDashboardNotes(notesDir, 2);
+
+    assert.equal(pruned, 1);
+    assert.deepEqual(readdirSync(notesDir).sort(), ["middle.json", "new.json"]);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("restoreDashboardNotes replaces local notes with the persisted gh-pages notes", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-restore-test-"));
+  const persistedNotesDir = join(tempDir, "persisted-notes");
+  const localNotesDir = join(tempDir, "local-notes");
+
+  try {
+    mkdirSync(persistedNotesDir, { recursive: true });
+    mkdirSync(localNotesDir, { recursive: true });
+    writeNote(join(persistedNotesDir, "pr47.json"), 47, "pr47");
+    writeNote(join(persistedNotesDir, "pr48.json"), 48, "pr48");
+    writeNote(join(localNotesDir, "stale-pr46.json"), 46, "stale-pr46");
+
+    const restored = restoreDashboardNotes(persistedNotesDir, localNotesDir);
+
+    assert.equal(restored, 2);
+    assert.deepEqual(readdirSync(localNotesDir).sort(), ["pr47.json", "pr48.json"]);
+    assert.equal(readNoteShortSha(join(localNotesDir, "pr47.json")), "pr47");
+    assert.equal(readNoteShortSha(join(localNotesDir, "pr48.json")), "pr48");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+function writeNote(path, prNumber, shortSha, date = "2026-04-01T00:00:00Z") {
+  writeFileSync(
+    path,
+    JSON.stringify({
+      pull_request: { number: prNumber },
+      commit: { short_sha: shortSha, date },
+    }),
+  );
+}
+
+function readNoteShortSha(path) {
+  return JSON.parse(readFileSync(path, "utf-8")).commit.short_sha;
+}
