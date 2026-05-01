@@ -738,6 +738,6 @@
   "pull_request": {
     "number": 48,
     "title": "fix(dashboard): preserve persisted PR notes",
-    "state": "open"
+    "state": "merged"
   }
 }
