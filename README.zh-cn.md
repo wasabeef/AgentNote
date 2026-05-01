@@ -253,6 +253,7 @@ Dashboard Mode 使用同一个 action，并传入 `dashboard: true`：
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
+    prompt_detail: compact
 ```
 
 ### Dashboard 数据
