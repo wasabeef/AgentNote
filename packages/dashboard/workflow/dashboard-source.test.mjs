@@ -40,3 +40,15 @@ describe("dashboard markdown renderer source", () => {
     assert.ok(!hrefSource.includes("javascript:"));
   });
 });
+
+describe("dashboard line attribution display source", () => {
+  it("does not render missing line data as 0/0 AI-added lines", () => {
+    assert.ok(dashboardSource.includes("function lineAttributionLabel"));
+    assert.ok(dashboardSource.includes("function lineSummaryLabel"));
+    assert.ok(dashboardSource.includes("File-level attribution"));
+    assert.ok(dashboardSource.includes("No AI-added lines"));
+    assert.ok(dashboardSource.includes("Line data unavailable"));
+    assert.ok(!dashboardSource.includes("lines.ai_added ?? 0} / ${lines.total_added ?? 0}"));
+    assert.ok(dashboardSource.includes('h("span", { className: "stat warm" }, lineSummaryLabel(summary))'));
+  });
+});

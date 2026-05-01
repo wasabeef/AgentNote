@@ -2,6 +2,10 @@
 
 ## 未解決の調査
 
+なし
+
+## 解決済みの調査
+
 ### Dashboard の `0/0 AI-added lines` 表示
 
 - 対象: Dashboard の PR / commit summary に出る `AI-added lines` 表示
@@ -11,8 +15,8 @@
 - 対応案: `attribution.lines` がない、または `total_added` が 0 の場合は `AI-added lines` pill を非表示にするか、`file-level attribution` / `line data unavailable` のような method-aware な表記に変えます。
 - 確認範囲: PR summary、commit summary、commit list の lines 表示をすべて見直し、line-level attribution の commit では従来通り `x/y AI-added lines` が表示されることを確認します。
 - テスト方針: Dashboard fixture か source-level test で、`method: "file"` かつ `lines` なしの note が `0/0 AI-added lines` を出さないことを検証します。
-
-## 解決済みの調査
+- 修正: line-level data がある場合だけ `x/y AI-added lines` を出し、file-level attribution では `File-level attribution`、その他の欠損では `Line data unavailable` と表示します。PR summary で一部 commit だけ line-level data を持つ場合は `partial` を付けて、集計範囲が限定されていることを示します。
+- Regression coverage: `packages/dashboard/workflow/dashboard-source.test.mjs` で、Dashboard が欠損 line data を `0/0 AI-added lines` として出さないことを source-level で検証します。
 
 ### Prompt detail filter の過剰 filter 確認
 

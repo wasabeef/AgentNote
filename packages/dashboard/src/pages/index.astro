@@ -13,8 +13,9 @@ interface DashboardCommitSummary {
   model: string | null;
   session_id: string | null;
   ai_ratio: number;
-  lines_ai: number;
-  lines_total: number;
+  lines_ai: number | null;
+  lines_total: number | null;
+  line_data_available: boolean;
   turns: number;
   note_url: string;
 }
@@ -60,6 +61,10 @@ function stringValue(value: unknown): string {
 
 function numberValue(value: unknown): number {
   return typeof value === "number" ? value : 0;
+}
+
+function hasLineData(lines: Record<string, unknown>): boolean {
+  return typeof lines.total_added === "number" && lines.total_added > 0;
 }
 
 function readCommitMetadata(sha: string) {
@@ -118,6 +123,7 @@ function buildDashboardIndex(): DashboardIndexData {
       const commit = (note.commit ?? {}) as Record<string, unknown>;
       const attribution = (note.attribution ?? {}) as Record<string, unknown>;
       const lines = (attribution.lines ?? {}) as Record<string, unknown>;
+      const lineDataAvailable = hasLineData(lines);
       const interactions = Array.isArray(note.interactions) ? note.interactions : [];
       const commitSha = stringValue(commit.sha);
       const fallbackRef =
@@ -136,8 +142,9 @@ function buildDashboardIndex(): DashboardIndexData {
         model: stringValue(note.model) || null,
         session_id: stringValue(note.session_id) || null,
         ai_ratio: numberValue(attribution.ai_ratio),
-        lines_ai: numberValue(lines.ai_added),
-        lines_total: numberValue(lines.total_added),
+        lines_ai: lineDataAvailable ? numberValue(lines.ai_added) : null,
+        lines_total: lineDataAvailable ? numberValue(lines.total_added) : null,
+        line_data_available: lineDataAvailable,
         turns: interactions.length,
         note_url: `${baseUrl}/notes/${file}`.replace(/\/+/g, "/"),
       } satisfies DashboardCommitSummary;
@@ -2000,6 +2007,22 @@ const dashboardIndex = buildDashboardIndex();
           h("span", { className: "meta-pill-value", title: String(value) }, String(value)),
         ]);
       }
+      function hasLineLevelData(lines) {
+        return typeof lines?.total_added === "number" && lines.total_added > 0;
+      }
+      function lineAttributionLabel(note) {
+        const attr = note?.attribution || {};
+        const lines = attr.lines || {};
+        if (hasLineLevelData(lines)) {
+          return `${lines.ai_added ?? 0}/${lines.total_added} AI-added lines`;
+        }
+        if (attr.method === "file") return "File-level attribution";
+        if (attr.method === "none") return "No AI-added lines";
+        return "Line data unavailable";
+      }
+      function renderLineAttributionPill(note) {
+        return renderMetaPill("lines", lineAttributionLabel(note));
+      }
       function renderAgentPill(agent, model) {
         if (!agent && !model) return null;
         const key = normalizeAgentKey(agent, model);
@@ -2341,14 +2364,24 @@ const dashboardIndex = buildDashboardIndex();
         let aiAdded = 0;
         let totalAdded = 0;
         let deleted = 0;
+        let lineDataCommits = 0;
+        let fileLevelCommits = 0;
+        let noneMethodCommits = 0;
         let ratioTotal = 0;
         const prNumbers = new Set();
 
         for (const note of notes) {
           turns += note.interactions?.length || 0;
-          aiAdded += note.attribution?.lines?.ai_added ?? 0;
-          totalAdded += note.attribution?.lines?.total_added ?? 0;
-          deleted += note.attribution?.lines?.deleted ?? 0;
+          const lines = note.attribution?.lines || {};
+          const method = note.attribution?.method;
+          if (hasLineLevelData(lines)) {
+            lineDataCommits += 1;
+            aiAdded += lines.ai_added ?? 0;
+            totalAdded += lines.total_added;
+            deleted += lines.deleted ?? 0;
+          }
+          if (method === "file") fileLevelCommits += 1;
+          if (method === "none") noneMethodCommits += 1;
           ratioTotal += note.attribution?.ai_ratio ?? 0;
           if (note.agent) agents.add(note.agent);
           if (note.commit?.author) authors.add(note.commit.author);
@@ -2369,6 +2402,9 @@ const dashboardIndex = buildDashboardIndex();
           aiAdded,
           totalAdded,
           deleted,
+          lineDataCommits,
+          fileLevelCommits,
+          noneMethodCommits,
           uniqueFiles: fileCounts.size,
           avgRatio: notes.length ? Math.round(ratioTotal / notes.length) : 0,
           firstDate: sortedByDate[0]?.commit?.date ?? null,
@@ -2378,6 +2414,19 @@ const dashboardIndex = buildDashboardIndex();
           prNumbers: [...prNumbers],
           fileCounts: [...fileCounts.values()].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)),
         };
+      }
+      function lineSummaryLabel(summary) {
+        if (summary.totalAdded > 0) {
+          const partial = summary.lineDataCommits < summary.commits ? " · partial" : "";
+          return `${summary.aiAdded}/${summary.totalAdded} AI-added lines${partial}`;
+        }
+        if (summary.commits > 0 && summary.fileLevelCommits === summary.commits) {
+          return "File-level attribution";
+        }
+        if (summary.commits > 0 && summary.noneMethodCommits === summary.commits) {
+          return "No AI-added lines";
+        }
+        return "Line data unavailable";
       }
       function commitSectionId(note) {
         return commitSectionIdFromSummary(note.commit || {});
@@ -2443,8 +2492,8 @@ const dashboardIndex = buildDashboardIndex();
                 renderMetaPill("model", note.model),
                 renderMetaPill("session", sessionShort, []),
                 renderMetaPill("method", attr.method),
-                renderMetaPill("added", `${lines.ai_added ?? 0} / ${lines.total_added ?? 0}`),
-                renderMetaPill("deleted", String(lines.deleted ?? 0)),
+                renderLineAttributionPill(note),
+                hasLineLevelData(lines) && renderMetaPill("deleted", String(lines.deleted ?? 0)),
               ].filter(Boolean)),
             ]),
             h("section", { className: "commit-context-card" }, [
@@ -2701,7 +2750,7 @@ const dashboardIndex = buildDashboardIndex();
             h("span", { className: "stat outline" }, summary.commits + " commits"),
             h("span", { className: "stat outline" }, summary.turns + " turns"),
             h("span", { className: "stat outline" }, summary.uniqueFiles + " files"),
-            h("span", { className: "stat warm" }, `${summary.aiAdded}/${summary.totalAdded} AI-added lines`),
+            h("span", { className: "stat warm" }, lineSummaryLabel(summary)),
           ]),
           h("div", { className: "collection-subtitle", style: "margin-top:0.85rem;" }, [
             summary.firstDate && h("span", {}, `${formatDate(summary.firstDate)} → ${formatDate(summary.lastDate)}`),

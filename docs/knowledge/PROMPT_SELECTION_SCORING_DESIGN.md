@@ -411,7 +411,8 @@ Basename は便利ですが、repository や言語によって「一般的なフ
 
 - whitespace 区切りがある言語では、十分な token 数がある prompt を実質的な相談として扱う。
 - 短い質問は、一定以上の token 数と `?` / `？` がある場合だけ拾う。
-- 日本語・中国語・韓国語のように whitespace token が少ない言語では、CJK/Hangul 文字数が十分ある場合だけ拾う。
+- 日本語・中国語・韓国語のように whitespace token が少ない言語では、CJK/Hangul 文字数が十分ある場合、または 4 token 以上で CJK/Hangul を含む場合だけ拾う。
+- runtime resolver でも prompt text から `substantive_prompt_shape` を再評価します。これにより、過去 note に signal が保存されていない場合でも、threshold 調整後の表示 preset を migration なしで改善できます。
 - approval word や command word の辞書は持たない。`yes`, `はい`, `OK`, `commit push`, `create PR` のような短い操作指示は、この signal だけでは `medium` にしない。
 
 `substantive_prompt_shape` は `bridge` と `tail` を `standard` に残すための補助です。`compact` に出す `high` にはしません。
