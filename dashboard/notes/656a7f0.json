@@ -168,6 +168,6 @@
   "pull_request": {
     "number": 47,
     "title": "fix(report): open dashboard link in new tab",
-    "state": "open"
+    "state": "merged"
   }
 }
