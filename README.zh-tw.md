@@ -245,7 +245,7 @@ PR Report Mode 是預設值：
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-如果想讓 prompt 歷史更短或完整顯示，可以把 `prompt_detail` 設為 `compact`、`standard` 或 `full`。預設值是 `standard`：`compact` 只顯示 high prompt，`standard` 顯示 high + medium，`full` 顯示所有已保存的 prompt。
+如果想讓 prompt 歷史更短或完整顯示，可以把 `prompt_detail` 設為 `compact` 或 `full`。預設值是 `compact`：它會顯示 high + medium prompt，`full` 會顯示所有已保存的 prompt。
 
 Dashboard Mode 使用同一個 action，並傳入 `dashboard: true`：
 
@@ -253,6 +253,7 @@ Dashboard Mode 使用同一個 action，並傳入 `dashboard: true`：
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
+    prompt_detail: compact
 ```
 
 ### Dashboard 資料

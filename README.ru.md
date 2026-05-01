@@ -245,7 +245,7 @@ PR Report Mode используется по умолчанию:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Задайте `prompt_detail` как `compact`, `standard` или `full`, если хотите более короткую или полную историю prompts. По умолчанию используется `standard`: `compact` показывает только high prompts, `standard` показывает high + medium, а `full` показывает все сохранённые prompts.
+Задайте `prompt_detail` как `compact` или `full`, если хотите более короткую или полную историю prompts. По умолчанию используется `compact`: он показывает high + medium prompts, а `full` показывает все сохранённые prompts.
 
 Dashboard Mode использует ту же action с `dashboard: true`:
 
@@ -253,6 +253,7 @@ Dashboard Mode использует ту же action с `dashboard: true`:
 - uses: wasabeef/AgentNote@v0
   with:
     dashboard: true
+    prompt_detail: compact
 ```
 
 ### Данные Dashboard

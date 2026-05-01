@@ -214,7 +214,7 @@ describe("renderMarkdown", () => {
     assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
   });
 
-  it("uses standard prompt detail by default", () => {
+  it("uses compact prompt detail by default", () => {
     const report = baseReport({
       total_prompts: 3,
       commits: [
@@ -305,9 +305,9 @@ describe("renderMarkdown", () => {
     const compact = renderMarkdown(report, { promptDetail: "compact" });
     const full = renderMarkdown(report, { promptDetail: "full" });
 
-    assert.ok(compact.includes("💬 Prompts & Responses (1 shown / 3 total)"));
+    assert.ok(compact.includes("💬 Prompts & Responses (2 shown / 3 total)"));
     assert.ok(compact.includes("Update packages/cli/src/core/record.ts"));
-    assert.ok(!compact.includes("README.md"));
+    assert.ok(compact.includes("README.md"));
     assert.ok(!compact.includes("continue"));
     assert.ok(full.includes("💬 Prompts & Responses (3 total)"));
     assert.ok(full.includes("Update packages/cli/src/core/record.ts"));

@@ -134,10 +134,10 @@ describe("countAiRatioEligibleFiles", () => {
 
 describe("prompt detail rendering", () => {
   it("parses prompt detail presets", () => {
-    assert.equal(parsePromptDetail(""), "standard");
-    assert.equal(parsePromptDetail(undefined), "standard");
+    assert.equal(parsePromptDetail(""), "compact");
+    assert.equal(parsePromptDetail(undefined), "compact");
     assert.equal(parsePromptDetail("compact"), "compact");
-    assert.equal(parsePromptDetail("STANDARD"), "standard");
+    assert.equal(parsePromptDetail("STANDARD"), "compact");
     assert.equal(parsePromptDetail(" full "), "full");
     assert.throws(() => parsePromptDetail("high"), /prompt_detail/);
   });
@@ -357,9 +357,8 @@ describe("prompt detail rendering", () => {
     };
 
     assert.equal(shouldRenderInteractionByPromptDetail(high, "compact"), true);
-    assert.equal(shouldRenderInteractionByPromptDetail(medium, "compact"), false);
-    assert.equal(shouldRenderInteractionByPromptDetail(medium, "standard"), true);
-    assert.equal(shouldRenderInteractionByPromptDetail(low, "standard"), false);
+    assert.equal(shouldRenderInteractionByPromptDetail(medium, "compact"), true);
+    assert.equal(shouldRenderInteractionByPromptDetail(low, "compact"), false);
     assert.equal(shouldRenderInteractionByPromptDetail(low, "full"), true);
   });
 });

@@ -36419,7 +36419,7 @@ const DEBUG = !!process.env.AGENTNOTE_DEBUG;
 
 ;// CONCATENATED MODULE: ../cli/src/core/entry.ts
 
-const DEFAULT_PROMPT_DETAIL = "standard";
+const DEFAULT_PROMPT_DETAIL = "compact";
 // Best-effort generated-artifact heuristics grouped by ecosystem so each rule
 // stays explainable when we broaden support across languages and frameworks.
 const GENERATED_DIR_SEGMENTS = new Set([
@@ -36549,18 +36549,18 @@ function parsePromptDetail(value) {
     const normalized = (value ?? "").trim().toLowerCase();
     if (!normalized)
         return DEFAULT_PROMPT_DETAIL;
-    if (normalized === "compact" || normalized === "standard" || normalized === "full") {
+    if (normalized === "standard")
+        return "compact";
+    if (normalized === "compact" || normalized === "full") {
         return normalized;
     }
-    throw new Error("prompt_detail must be one of: compact, standard, full");
+    throw new Error("prompt_detail must be one of: compact, full");
 }
 function shouldRenderInteractionByPromptDetail(interaction, detail) {
     const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
     if (detail === "full")
         return true;
-    if (detail === "standard")
-        return runtime.level !== "low";
-    return runtime.level === "high";
+    return runtime.level !== "low";
 }
 function resolvePromptRuntimeSelection(selection, interaction) {
     if (!selection)

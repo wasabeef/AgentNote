@@ -11,7 +11,7 @@ export async function pr(args: string[]): Promise<void> {
   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;
   const headRef = headIdx !== -1 ? args[headIdx + 1] : "HEAD";
   if (promptDetailIdx !== -1 && !args[promptDetailIdx + 1]) {
-    console.error("error: --prompt-detail requires compact, standard, or full");
+    console.error("error: --prompt-detail requires compact or full");
     process.exit(1);
   }
   const promptDetail =

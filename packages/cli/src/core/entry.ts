@@ -75,9 +75,9 @@ export type PromptRuntimeSelection = {
   level: PromptRuntimeLevel;
 };
 
-export type PromptDetail = "compact" | "standard" | "full";
+export type PromptDetail = "compact" | "full";
 
-export const DEFAULT_PROMPT_DETAIL: PromptDetail = "standard";
+export const DEFAULT_PROMPT_DETAIL: PromptDetail = "compact";
 
 export interface AgentnoteEntry {
   v: number;
@@ -237,10 +237,11 @@ export function normalizeInteractionContexts(interaction: {
 export function parsePromptDetail(value: string | null | undefined): PromptDetail {
   const normalized = (value ?? "").trim().toLowerCase();
   if (!normalized) return DEFAULT_PROMPT_DETAIL;
-  if (normalized === "compact" || normalized === "standard" || normalized === "full") {
+  if (normalized === "standard") return "compact";
+  if (normalized === "compact" || normalized === "full") {
     return normalized;
   }
-  throw new Error("prompt_detail must be one of: compact, standard, full");
+  throw new Error("prompt_detail must be one of: compact, full");
 }
 
 export function shouldRenderInteractionByPromptDetail(
@@ -249,8 +250,7 @@ export function shouldRenderInteractionByPromptDetail(
 ): boolean {
   const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
   if (detail === "full") return true;
-  if (detail === "standard") return runtime.level !== "low";
-  return runtime.level === "high";
+  return runtime.level !== "low";
 }
 
 export function resolvePromptRuntimeSelection(
