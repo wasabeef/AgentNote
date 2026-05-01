@@ -1,0 +1,350 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T15:18:41.172Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "commit push",
+      "response": "コミットして push しました。\n\n`3ac9d95 fix(record): clarify bridge prompt scoring`\n\nworking tree は clean です。May the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "マージした、ブランチ変えて TODO の確認、実装",
+      "response": "マージ後の次作業として、まず `main` に戻して最新化し、`docs/TODO.md` の未解決項目を確認してから専用ブランチで実装します。いま残っている TODO が本当に Dashboard の `0/0 AI-added lines` だけか、先に事実確認します。\n未解決 TODO は Dashboard の `0/0 AI-added lines` 表示だけです。`main` を最新化して、この件専用のブランチ `fix/dashboard-line-data-display` で進めます。\nブランチを切りました。次は Dashboard 側の lines 表示を、PR summary / commit summary / commit list の 3 箇所で確認して、`lines` がない file-level attribution では `0/0` を出さない形にします。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "できれば出したいだけど。。",
+      "response": "たしかに、完全に非表示にすると「何も情報がない」ように見えてもったいないです。数字が信頼できる line-level のときは `x/y AI-added lines` を出し、file-level で行数がないときは `File-level attribution` や `Line data unavailable` のように“出すけど 0/0 とは誤読させない”形にします。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "たしかに、完全に非表示にすると「何も情報がない」ように見えてもったいないです。 数字が信頼できる line-level のときは `x/y AI-added lines` を出し、file-level で行数がないときは `File-level attribution` や `Line data unavailable` のように“出すけど 0/0 とは誤読させない”形にします。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "entire はどうしてるか確認して",
+      "response": "Entire の実例を確認します。見る観点は「行数データがないときに 0/0 と出すのか」「そもそも unavailable を別ラベルで出すのか」「PR / Dashboard で表示を分けているか」です。\nEntire の公開 docs / GitHub / Go package docs を見ています。今のところ、Entire は “line attribution” を前提の primary metric として出していて、`0/0` を unavailable として出す設計ではなく、行数が意味を持つ場合に `73% agent (146/200 lines)` のように出す思想に見えます。もう少し source 側も確認します。\nEntire の public repo は確認できました。README では `files touched` や transcript / token usage を前面に出していて、Agent Note のような `x/y AI-added lines` を Dashboard の主要表示にしている evidence はまだ見つかっていません。念のため source tree から “line attribution / percentage / dashboard 表示” 周りの実装を探します。\nEntire の docs を確認しました。Entire は Dashboard / Sessions で `Line attribution` や `Lines added/removed` を出しますが、`0/0` のような “欠損を 0 として見せる” 例は出していません。なので Agent Note も「出せるときは数字、出せないときは method-aware な情報」を出すのがよさそうです。\n実装方針は「数字を出せるときは出す、出せないときも `File-level attribution` として出す」です。PR summary は line-level の commit が混ざる場合だけ `partial` を付け、全て file-level なら `Line data unavailable` ではなく `File-level attribution` と表示します。\n実装しました。line-level の数字がある場合だけ `x/y AI-added lines`、file-level の場合は `File-level attribution`、一部だけ line-level なら `partial` を付ける形です。これから Dashboard の test/build を通します。\nテストは意図が強すぎて落ちました。新 helper 内に `${summary.aiAdded}/${summary.totalAdded}` が残るのは正しいので、旧 inline render の消滅と helper 経由になっていることを検証する形に直します。\nDashboard test/build と diff check は通りました。次に UI 表示の差分が想定どおりか、source と TODO の最終レビューをします。\n最終レビューで 1 点だけ詰めます。PR summary が全て `method: none` の場合に `File-level attribution` と出るのは少し違うので、summary 側も method-aware にして `No AI-added lines` / `Line data unavailable` を出し分けます。\n実装しました。ブランチは `fix/dashboard-line-data-display` です。\n\nEntire を確認したところ、README / docs では `files touched`、transcript、checkpoint metadata、Web の line attribution を出す方向で、欠損行数を `0/0` として見せる設計ではなさそうでした。なので Agent Note も「出せる情報は出すが、欠損を 0 に見せない」方針にしています。参考: https://github.com/entireio/cli / https://docs.entire.io/web/checkpoints\n\n変更内容:\n- line-level data がある commit は `x/y AI-added lines` を表示。\n- file-level attribution の commit は `File-level attribution` を表示。\n- `method: none` は `No AI-added lines` を表示。\n- その他の欠損は `Line data unavailable` を表示。\n- PR summary は一部 commit だけ line-level data を持つ場合、`partial` を付けます。\n- `docs/TODO.md` の未解決 TODO を解決済みに移動しました。\n\n確認:\n- `npm test --prefix packages/dashboard`: `21 pass`\n- `npm run build --prefix packages/dashboard`: pass\n- `git diff --check`: pass\n\nまだ commit はしていません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "Entire の公開 docs / GitHub / Go package docs を見ています。 今のところ、Entire は “line attribution” を前提の primary metric として出していて、`0/0` を unavailable として出す設計ではなく、行数が意味を持つ場合に `73% agent (146/200 lines)` のように出す思想に見えます。"
+        }
+      ],
+      "files_touched": [
+        "packages/dashboard/src/pages/index.astro",
+        "packages/dashboard/workflow/dashboard-source.test.mjs",
+        "docs/TODO.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "PR まで作成して",
+      "response": "PR 作成まで進めます。まず差分を最終確認して、Dashboard 表示修正として 1 commit にまとめ、push 後に PR を作成します。\n`common:pr-create` の手順に沿って進めています。差分は Dashboard 表示修正と TODO 更新だけなので、`fix(dashboard)` の 1 commit にします。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/dashboard-source.test.mjs",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "a5b40205e233d3b3f7a2098dd84fb47c921771f6",
+    "short_sha": "a5b4020",
+    "message": "fix(dashboard): avoid zero line attribution labels",
+    "date": "2026-05-02T00:18:40+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/TODO.md",
+        "lines": [
+          "index 0f6bdd1..7d49a6f 100644",
+          "--- a/docs/TODO.md",
+          "+++ b/docs/TODO.md",
+          "@@ -2,6 +2,10 @@",
+          " ",
+          " ## 未解決の調査",
+          " ",
+          "+なし",
+          "+",
+          "+## 解決済みの調査",
+          "+",
+          " ### Dashboard の `0/0 AI-added lines` 表示",
+          " ",
+          " - 対象: Dashboard の PR / commit summary に出る `AI-added lines` 表示",
+          "@@ -11,8 +15,8 @@",
+          " - 対応案: `attribution.lines` がない、または `total_added` が 0 の場合は `AI-added lines` pill を非表示にするか、`file-level attribution` / `line data unavailable` のような method-aware な表記に変えます。",
+          " - 確認範囲: PR summary、commit summary、commit list の lines 表示をすべて見直し、line-level attribution の commit では従来通り `x/y AI-added lines` が表示されることを確認します。",
+          " - テスト方針: Dashboard fixture か source-level test で、`method: \"file\"` かつ `lines` なしの note が `0/0 AI-added lines` を出さないことを検証します。",
+          "-",
+          "-## 解決済みの調査",
+          "+- 修正: line-level data がある場合だけ `x/y AI-added lines` を出し、file-level attribution では `File-level attribution`、その他の欠損では `Line data unavailable` と表示します。PR summary で一部 commit だけ line-level data を持つ場合は `partial` を付けて、集計範囲が限定されていることを示します。",
+          "+- Regression coverage: `packages/dashboard/workflow/dashboard-source.test.mjs` で、Dashboard が欠損 line data を `0/0 AI-added lines` として出さないことを source-level で検証します。",
+          " ",
+          " ### Prompt detail filter の過剰 filter 確認",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/src/pages/index.astro",
+        "lines": [
+          "index 5fc4dd2..ff826b6 100644",
+          "--- a/packages/dashboard/src/pages/index.astro",
+          "+++ b/packages/dashboard/src/pages/index.astro",
+          "@@ -13,8 +13,9 @@ interface DashboardCommitSummary {",
+          "   model: string | null;",
+          "   session_id: string | null;",
+          "   ai_ratio: number;",
+          "-  lines_ai: number;",
+          "-  lines_total: number;",
+          "+  lines_ai: number | null;",
+          "+  lines_total: number | null;",
+          "+  line_data_available: boolean;",
+          "   turns: number;",
+          "   note_url: string;",
+          " }",
+          "@@ -62,6 +63,10 @@ function numberValue(value: unknown): number {",
+          "   return typeof value === \"number\" ? value : 0;",
+          " }",
+          " ",
+          "+function hasLineData(lines: Record<string, unknown>): boolean {",
+          "+  return typeof lines.total_added === \"number\" && lines.total_added > 0;",
+          "+}",
+          "+",
+          " function readCommitMetadata(sha: string) {",
+          "   if (!sha) return null;",
+          "   if (commitMetadataCache.has(sha)) {",
+          "@@ -118,6 +123,7 @@ function buildDashboardIndex(): DashboardIndexData {",
+          "       const commit = (note.commit ?? {}) as Record<string, unknown>;",
+          "       const attribution = (note.attribution ?? {}) as Record<string, unknown>;",
+          "       const lines = (attribution.lines ?? {}) as Record<string, unknown>;",
+          "+      const lineDataAvailable = hasLineData(lines);",
+          "       const interactions = Array.isArray(note.interactions) ? note.interactions : [];",
+          "       const commitSha = stringValue(commit.sha);",
+          "       const fallbackRef =",
+          "@@ -136,8 +142,9 @@ function buildDashboardIndex(): DashboardIndexData {",
+          "         model: stringValue(note.model) || null,",
+          "         session_id: stringValue(note.session_id) || null,",
+          "         ai_ratio: numberValue(attribution.ai_ratio),",
+          "-        lines_ai: numberValue(lines.ai_added),",
+          "-        lines_total: numberValue(lines.total_added),",
+          "+        lines_ai: lineDataAvailable ? numberValue(lines.ai_added) : null,",
+          "+        lines_total: lineDataAvailable ? numberValue(lines.total_added) : null,",
+          "+        line_data_available: lineDataAvailable,",
+          "         turns: interactions.length,",
+          "         note_url: `${baseUrl}/notes/${file}`.replace(/\\/+/g, \"/\"),",
+          "       } satisfies DashboardCommitSummary;",
+          "@@ -2000,6 +2007,22 @@ const dashboardIndex = buildDashboardIndex();",
+          "           h(\"span\", { className: \"meta-pill-value\", title: String(value) }, String(value)),",
+          "         ]);",
+          "       }",
+          "+      function hasLineLevelData(lines) {",
+          "+        return typeof lines?.total_added === \"number\" && lines.total_added > 0;",
+          "+      }",
+          "+      function lineAttributionLabel(note) {",
+          "+        const attr = note?.attribution || {};",
+          "+        const lines = attr.lines || {};",
+          "+        if (hasLineLevelData(lines)) {",
+          "+          return `${lines.ai_added ?? 0}/${lines.total_added} AI-added lines`;",
+          "+        }",
+          "+        if (attr.method === \"file\") return \"File-level attribution\";",
+          "+        if (attr.method === \"none\") return \"No AI-added lines\";",
+          "+        return \"Line data unavailable\";",
+          "+      }",
+          "+      function renderLineAttributionPill(note) {",
+          "+        return renderMetaPill(\"lines\", lineAttributionLabel(note));",
+          "+      }",
+          "       function renderAgentPill(agent, model) {",
+          "         if (!agent && !model) return null;",
+          "         const key = normalizeAgentKey(agent, model);",
+          "@@ -2341,14 +2364,24 @@ const dashboardIndex = buildDashboardIndex();",
+          "         let aiAdded = 0;",
+          "         let totalAdded = 0;",
+          "         let deleted = 0;",
+          "+        let lineDataCommits = 0;",
+          "+        let fileLevelCommits = 0;",
+          "+        let noneMethodCommits = 0;",
+          "         let ratioTotal = 0;",
+          "         const prNumbers = new Set();",
+          " ",
+          "         for (const note of notes) {",
+          "           turns += note.interactions?.length || 0;",
+          "-          aiAdded += note.attribution?.lines?.ai_added ?? 0;",
+          "-          totalAdded += note.attribution?.lines?.total_added ?? 0;",
+          "-          deleted += note.attribution?.lines?.deleted ?? 0;",
+          "+          const lines = note.attribution?.lines || {};",
+          "+          const method = note.attribution?.method;",
+          "+          if (hasLineLevelData(lines)) {",
+          "+            lineDataCommits += 1;",
+          "+            aiAdded += lines.ai_added ?? 0;",
+          "+            totalAdded += lines.total_added;",
+          "+            deleted += lines.deleted ?? 0;",
+          "+          }",
+          "+          if (method === \"file\") fileLevelCommits += 1;",
+          "+          if (method === \"none\") noneMethodCommits += 1;",
+          "           ratioTotal += note.attribution?.ai_ratio ?? 0;",
+          "           if (note.agent) agents.add(note.agent);",
+          "           if (note.commit?.author) authors.add(note.commit.author);",
+          "@@ -2369,6 +2402,9 @@ const dashboardIndex = buildDashboardIndex();",
+          "           aiAdded,",
+          "           totalAdded,",
+          "           deleted,",
+          "+          lineDataCommits,",
+          "+          fileLevelCommits,",
+          "+          noneMethodCommits,",
+          "           uniqueFiles: fileCounts.size,",
+          "           avgRatio: notes.length ? Math.round(ratioTotal / notes.length) : 0,",
+          "           firstDate: sortedByDate[0]?.commit?.date ?? null,",
+          "@@ -2379,6 +2415,19 @@ const dashboardIndex = buildDashboardIndex();",
+          "           fileCounts: [...fileCounts.values()].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)),",
+          "         };",
+          "       }",
+          "+      function lineSummaryLabel(summary) {",
+          "+        if (summary.totalAdded > 0) {",
+          "+          const partial = summary.lineDataCommits < summary.commits ? \" · partial\" : \"\";",
+          "+          return `${summary.aiAdded}/${summary.totalAdded} AI-added lines${partial}`;",
+          "+        }",
+          "+        if (summary.commits > 0 && summary.fileLevelCommits === summary.commits) {",
+          "+          return \"File-level attribution\";",
+          "+        }",
+          "+        if (summary.commits > 0 && summary.noneMethodCommits === summary.commits) {",
+          "+          return \"No AI-added lines\";",
+          "+        }",
+          "+        return \"Line data unavailable\";",
+          "+      }",
+          "       function commitSectionId(note) {",
+          "         return commitSectionIdFromSummary(note.commit || {});",
+          "       }",
+          "@@ -2443,8 +2492,8 @@ const dashboardIndex = buildDashboardIndex();",
+          "                 renderMetaPill(\"model\", note.model),",
+          "                 renderMetaPill(\"session\", sessionShort, []),",
+          "                 renderMetaPill(\"method\", attr.method),",
+          "-                renderMetaPill(\"added\", `${lines.ai_added ?? 0} / ${lines.total_added ?? 0}`),",
+          "-                renderMetaPill(\"deleted\", String(lines.deleted ?? 0)),",
+          "+                renderLineAttributionPill(note),",
+          "+                hasLineLevelData(lines) && renderMetaPill(\"deleted\", String(lines.deleted ?? 0)),",
+          "               ].filter(Boolean)),",
+          "             ]),",
+          "             h(\"section\", { className: \"commit-context-card\" }, [",
+          "@@ -2701,7 +2750,7 @@ const dashboardIndex = buildDashboardIndex();",
+          "             h(\"span\", { className: \"stat outline\" }, summary.commits + \" commits\"),",
+          "             h(\"span\", { className: \"stat outline\" }, summary.turns + \" turns\"),",
+          "             h(\"span\", { className: \"stat outline\" }, summary.uniqueFiles + \" files\"),",
+          "-            h(\"span\", { className: \"stat warm\" }, `${summary.aiAdded}/${summary.totalAdded} AI-added lines`),",
+          "+            h(\"span\", { className: \"stat warm\" }, lineSummaryLabel(summary)),",
+          "           ]),",
+          "           h(\"div\", { className: \"collection-subtitle\", style: \"margin-top:0.85rem;\" }, [",
+          "             summary.firstDate && h(\"span\", {}, `${formatDate(summary.firstDate)} → ${formatDate(summary.lastDate)}`),"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/dashboard-source.test.mjs",
+        "lines": [
+          "index 0db084f..3dd3917 100644",
+          "--- a/packages/dashboard/workflow/dashboard-source.test.mjs",
+          "+++ b/packages/dashboard/workflow/dashboard-source.test.mjs",
+          "@@ -40,3 +40,15 @@ describe(\"dashboard markdown renderer source\", () => {",
+          "     assert.ok(!hrefSource.includes(\"javascript:\"));",
+          "   });",
+          " });",
+          "+",
+          "+describe(\"dashboard line attribution display source\", () => {",
+          "+  it(\"does not render missing line data as 0/0 AI-added lines\", () => {",
+          "+    assert.ok(dashboardSource.includes(\"function lineAttributionLabel\"));",
+          "+    assert.ok(dashboardSource.includes(\"function lineSummaryLabel\"));",
+          "+    assert.ok(dashboardSource.includes(\"File-level attribution\"));",
+          "+    assert.ok(dashboardSource.includes(\"No AI-added lines\"));",
+          "+    assert.ok(dashboardSource.includes(\"Line data unavailable\"));",
+          "+    assert.ok(!dashboardSource.includes(\"lines.ai_added ?? 0} / ${lines.total_added ?? 0}\"));",
+          "+    assert.ok(dashboardSource.includes('h(\"span\", { className: \"stat warm\" }, lineSummaryLabel(summary))'));",
+          "+  });",
+          "+});"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 45,
+    "title": "fix(dashboard): avoid zero line attribution labels",
+    "state": "open"
+  }
+}
