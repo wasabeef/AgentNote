@@ -408,6 +408,6 @@
   "pull_request": {
     "number": 45,
     "title": "fix(dashboard): avoid zero line attribution labels",
-    "state": "open"
+    "state": "merged"
   }
 }
