@@ -2,11 +2,14 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
+const ENV_CODEX_HOME = "CODEX_HOME";
 const HOOKS_REL_PATH = ".codex/hooks.json";
 const HOOK_COMMAND = "npx --yes agent-note hook --agent codex";
+const TRANSCRIPT_PREVIEW_CHARS = 4096;
 
 type CodexHookPayload = {
   session_id?: string;
@@ -111,7 +114,7 @@ function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[
 
 function readTranscriptSessionId(candidate: string): string | null {
   try {
-    const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
+    const preview = readFileSync(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS);
     for (const rawLine of preview.split("\n")) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -175,7 +178,7 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
 }
 
 function codexHome(): string {
-  return process.env.CODEX_HOME ?? join(homedir(), ".codex");
+  return process.env[ENV_CODEX_HOME] ?? join(homedir(), ".codex");
 }
 
 function isValidTranscriptPath(transcriptPath: string): boolean {
@@ -231,7 +234,7 @@ function stripAgentnoteHooks(config: CodexHooksFile): CodexHooksFile {
         const filteredGroups = groups
           .map((group) => ({
             ...group,
-            hooks: group.hooks.filter((hook) => !hook.command.includes("agent-note hook")),
+            hooks: group.hooks.filter((hook) => !hook.command.includes(AGENTNOTE_HOOK_COMMAND)),
           }))
           .filter((group) => group.hooks.length > 0);
         return [event, filteredGroups];
@@ -341,13 +344,13 @@ export const codex: AgentAdapter = {
     const hooksPath = join(repoRoot, HOOKS_REL_PATH);
     await mkdir(codexDir, { recursive: true });
 
-    const configContent = existsSync(configPath) ? await readFile(configPath, "utf-8") : "";
+    const configContent = existsSync(configPath) ? await readFile(configPath, TEXT_ENCODING) : "";
     await writeFile(configPath, normalizeConfigToml(configContent));
 
     let hooksConfig: CodexHooksFile = {};
     if (existsSync(hooksPath)) {
       try {
-        hooksConfig = JSON.parse(await readFile(hooksPath, "utf-8")) as CodexHooksFile;
+        hooksConfig = JSON.parse(await readFile(hooksPath, TEXT_ENCODING)) as CodexHooksFile;
       } catch {
         hooksConfig = {};
       }
@@ -361,7 +364,7 @@ export const codex: AgentAdapter = {
     if (!existsSync(hooksPath)) return;
 
     try {
-      const parsed = JSON.parse(await readFile(hooksPath, "utf-8")) as CodexHooksFile;
+      const parsed = JSON.parse(await readFile(hooksPath, TEXT_ENCODING)) as CodexHooksFile;
       await writeFile(hooksPath, `${JSON.stringify(stripAgentnoteHooks(parsed), null, 2)}\n`);
     } catch {
       // leave malformed config untouched
@@ -375,8 +378,8 @@ export const codex: AgentAdapter = {
 
     try {
       const [configContent, hooksContent] = await Promise.all([
-        readFile(configPath, "utf-8"),
-        readFile(hooksPath, "utf-8"),
+        readFile(configPath, TEXT_ENCODING),
+        readFile(hooksPath, TEXT_ENCODING),
       ]);
       const configOk =
         configContent.includes("features.codex_hooks = true") ||
@@ -453,7 +456,7 @@ export const codex: AgentAdapter = {
 
     let content: string;
     try {
-      content = await readFile(transcriptPath, "utf-8");
+      content = await readFile(transcriptPath, TEXT_ENCODING);
     } catch {
       throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
     }

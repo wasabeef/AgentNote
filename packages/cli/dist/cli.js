@@ -10,17 +10,20 @@ var __export = (target, all) => {
 };
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, EMPTY_BLOB, SCHEMA_VERSION, DEBUG;
+var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING, ENV_AGENTNOTE_DEBUG, DEBUG;
 var init_constants = __esm({
   "src/core/constants.ts"() {
     "use strict";
     TRAILER_KEY = "Agentnote-Session";
     AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+    AGENTNOTE_HOOK_COMMAND = "agent-note hook";
+    CLI_JS_HOOK_COMMAND = "cli.js hook";
     NOTES_REF = "agentnote";
     NOTES_REF_FULL = `refs/notes/${NOTES_REF}`;
     NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
     AGENTNOTE_DIR = "agentnote";
     SESSIONS_DIR = "sessions";
+    GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"];
     PROMPTS_FILE = "prompts.jsonl";
     CHANGES_FILE = "changes.jsonl";
     EVENTS_FILE = "events.jsonl";
@@ -31,6 +34,7 @@ var init_constants = __esm({
     SESSION_AGENT_FILE = "agent";
     PENDING_COMMIT_FILE = "pending_commit.json";
     MAX_COMMITS = 500;
+    RECENT_STATUS_COMMIT_LIMIT = 20;
     BAR_WIDTH_FULL = 20;
     TRUNCATE_PROMPT = 120;
     TRUNCATE_PROMPT_PR = 500;
@@ -38,11 +42,15 @@ var init_constants = __esm({
     TRUNCATE_RESPONSE_PR = 500;
     ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
     HEARTBEAT_FILE = "heartbeat";
+    HEARTBEAT_TTL_SECONDS = 60 * 60;
+    MILLISECONDS_PER_SECOND = 1e3;
     PRE_BLOBS_FILE = "pre_blobs.jsonl";
     COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
     EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
     SCHEMA_VERSION = 1;
-    DEBUG = !!process.env.AGENTNOTE_DEBUG;
+    TEXT_ENCODING = "utf-8";
+    ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
+    DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];
   }
 });
 
@@ -52,7 +60,7 @@ import { promisify } from "node:util";
 async function git(args2, options) {
   const { stdout } = await execFileAsync("git", args2, {
     cwd: options?.cwd,
-    encoding: "utf-8"
+    encoding: TEXT_ENCODING
   });
   return stdout.trim();
 }
@@ -237,6 +245,7 @@ var execFileAsync;
 var init_git = __esm({
   "src/git.ts"() {
     "use strict";
+    init_constants();
     execFileAsync = promisify(execFile);
   }
 });
@@ -247,7 +256,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 function claudeHome() {
-  return process.env.AGENTNOTE_CLAUDE_HOME ?? join(homedir(), ".claude");
+  return process.env[ENV_AGENTNOTE_CLAUDE_HOME] ?? join(homedir(), ".claude");
 }
 function isValidSessionId(id) {
   return UUID_PATTERN.test(id);
@@ -271,13 +280,15 @@ function isSystemInjectedPrompt(prompt) {
 function isGitCommit(cmd) {
   return findGitCommitCommand(cmd) !== null;
 }
-var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
+var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, ENV_AGENTNOTE_CLAUDE_HOME, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
 var init_claude = __esm({
   "src/agents/claude.ts"() {
     "use strict";
+    init_constants();
     init_git();
     HOOK_COMMAND = "npx --yes agent-note hook";
     CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
+    ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
     HOOKS_CONFIG = {
       SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
       Stop: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
@@ -314,7 +325,7 @@ var init_claude = __esm({
         let settings = {};
         if (existsSync(settingsPath)) {
           try {
-            settings = JSON.parse(await readFile(settingsPath, "utf-8"));
+            settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
           } catch {
             settings = {};
           }
@@ -323,7 +334,7 @@ var init_claude = __esm({
         for (const [event, entries] of Object.entries(hooks)) {
           hooks[event] = entries.filter((entry) => {
             const text = JSON.stringify(entry);
-            return !text.includes("agent-note hook") && !text.includes("cli.js hook");
+            return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
           });
           if (hooks[event].length === 0) delete hooks[event];
         }
@@ -338,12 +349,12 @@ var init_claude = __esm({
         const settingsPath = join(repoRoot3, this.settingsRelPath);
         if (!existsSync(settingsPath)) return;
         try {
-          const settings = JSON.parse(await readFile(settingsPath, "utf-8"));
+          const settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
           if (!settings.hooks) return;
           for (const [event, entries] of Object.entries(settings.hooks)) {
             settings.hooks[event] = entries.filter((e) => {
               const text = JSON.stringify(e);
-              return !text.includes("agent-note hook") && !text.includes("cli.js hook");
+              return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
             });
             if (settings.hooks[event].length === 0) delete settings.hooks[event];
           }
@@ -357,7 +368,7 @@ var init_claude = __esm({
         const settingsPath = join(repoRoot3, this.settingsRelPath);
         if (!existsSync(settingsPath)) return false;
         try {
-          const content = await readFile(settingsPath, "utf-8");
+          const content = await readFile(settingsPath, TEXT_ENCODING);
           return content.includes(CLAUDE_HOOK_COMMAND);
         } catch {
           return false;
@@ -449,7 +460,7 @@ var init_claude = __esm({
       async extractInteractions(transcriptPath) {
         if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
         try {
-          const content = await readFile(transcriptPath, "utf-8");
+          const content = await readFile(transcriptPath, TEXT_ENCODING);
           const lines = content.trim().split("\n");
           const interactions = [];
           let pendingPrompt = null;
@@ -577,7 +588,7 @@ function collectPatchStrings(value, seen = /* @__PURE__ */ new Set()) {
 }
 function readTranscriptSessionId(candidate) {
   try {
-    const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
+    const preview = readFileSync(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS);
     for (const rawLine of preview.split("\n")) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -630,7 +641,7 @@ function findTranscriptCandidate(rootDir, sessionId) {
   return null;
 }
 function codexHome() {
-  return process.env.CODEX_HOME ?? join2(homedir2(), ".codex");
+  return process.env[ENV_CODEX_HOME] ?? join2(homedir2(), ".codex");
 }
 function isValidTranscriptPath2(transcriptPath) {
   const base = resolve2(codexHome());
@@ -678,7 +689,7 @@ function stripAgentnoteHooks(config) {
     Object.entries(config.hooks).map(([event, groups]) => {
       const filteredGroups = groups.map((group) => ({
         ...group,
-        hooks: group.hooks.filter((hook2) => !hook2.command.includes("agent-note hook"))
+        hooks: group.hooks.filter((hook2) => !hook2.command.includes(AGENTNOTE_HOOK_COMMAND))
       })).filter((group) => group.hooks.length > 0);
       return [event, filteredGroups];
     }).filter(([, groups]) => groups.length > 0)
@@ -754,13 +765,16 @@ function appendInteractionTool(interaction, toolName) {
   if (tools.includes(toolName)) return;
   interaction.tools = [...tools, toolName];
 }
-var CONFIG_REL_PATH, HOOKS_REL_PATH, HOOK_COMMAND2, codex;
+var CONFIG_REL_PATH, ENV_CODEX_HOME, HOOKS_REL_PATH, HOOK_COMMAND2, TRANSCRIPT_PREVIEW_CHARS, codex;
 var init_codex = __esm({
   "src/agents/codex.ts"() {
     "use strict";
+    init_constants();
     CONFIG_REL_PATH = ".codex/config.toml";
+    ENV_CODEX_HOME = "CODEX_HOME";
     HOOKS_REL_PATH = ".codex/hooks.json";
     HOOK_COMMAND2 = "npx --yes agent-note hook --agent codex";
+    TRANSCRIPT_PREVIEW_CHARS = 4096;
     codex = {
       name: "codex",
       settingsRelPath: CONFIG_REL_PATH,
@@ -772,12 +786,12 @@ var init_codex = __esm({
         const configPath = join2(repoRoot3, CONFIG_REL_PATH);
         const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
         await mkdir2(codexDir, { recursive: true });
-        const configContent = existsSync2(configPath) ? await readFile2(configPath, "utf-8") : "";
+        const configContent = existsSync2(configPath) ? await readFile2(configPath, TEXT_ENCODING) : "";
         await writeFile2(configPath, normalizeConfigToml(configContent));
         let hooksConfig = {};
         if (existsSync2(hooksPath)) {
           try {
-            hooksConfig = JSON.parse(await readFile2(hooksPath, "utf-8"));
+            hooksConfig = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
           } catch {
             hooksConfig = {};
           }
@@ -789,7 +803,7 @@ var init_codex = __esm({
         const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
         if (!existsSync2(hooksPath)) return;
         try {
-          const parsed = JSON.parse(await readFile2(hooksPath, "utf-8"));
+          const parsed = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
           await writeFile2(hooksPath, `${JSON.stringify(stripAgentnoteHooks(parsed), null, 2)}
 `);
         } catch {
@@ -801,8 +815,8 @@ var init_codex = __esm({
         if (!existsSync2(configPath) || !existsSync2(hooksPath)) return false;
         try {
           const [configContent, hooksContent] = await Promise.all([
-            readFile2(configPath, "utf-8"),
-            readFile2(hooksPath, "utf-8")
+            readFile2(configPath, TEXT_ENCODING),
+            readFile2(hooksPath, TEXT_ENCODING)
           ]);
           const configOk = configContent.includes("features.codex_hooks = true") || configContent.includes("[features]") && configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null;
           const hasHook = hooksContent.includes(HOOK_COMMAND2);
@@ -867,7 +881,7 @@ var init_codex = __esm({
         }
         let content;
         try {
-          content = await readFile2(transcriptPath, "utf-8");
+          content = await readFile2(transcriptPath, TEXT_ENCODING);
         } catch {
           throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
         }
@@ -1037,7 +1051,7 @@ function repoRoot2() {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"], {
       cwd: process.cwd(),
-      encoding: "utf-8"
+      encoding: TEXT_ENCODING
     }).trim();
   } catch {
     return resolve3(process.cwd());
@@ -1190,7 +1204,7 @@ function stripAgentnoteHooks2(config) {
   const hooks = Object.fromEntries(
     Object.entries(config.hooks).map(([event, entries]) => [
       event,
-      entries.filter((entry) => !entry.command.includes("agent-note hook"))
+      entries.filter((entry) => !entry.command.includes(AGENTNOTE_HOOK_COMMAND))
     ]).filter(([, entries]) => entries.length > 0)
   );
   return { version: config.version ?? 1, hooks };
@@ -1211,6 +1225,7 @@ var HOOKS_REL_PATH2, HOOK_COMMAND3, CURSOR_PROJECTS_DIR, CURSOR_TRANSCRIPTS_DIR_
 var init_cursor = __esm({
   "src/agents/cursor.ts"() {
     "use strict";
+    init_constants();
     init_git();
     HOOKS_REL_PATH2 = ".cursor/hooks.json";
     HOOK_COMMAND3 = "npx --yes agent-note hook --agent cursor";
@@ -1231,7 +1246,7 @@ var init_cursor = __esm({
         let hooksConfig = {};
         if (existsSync3(hooksPath)) {
           try {
-            hooksConfig = JSON.parse(await readFile3(hooksPath, "utf-8"));
+            hooksConfig = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
           } catch {
             hooksConfig = {};
           }
@@ -1243,7 +1258,7 @@ var init_cursor = __esm({
         const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
         if (!existsSync3(hooksPath)) return;
         try {
-          const parsed = JSON.parse(await readFile3(hooksPath, "utf-8"));
+          const parsed = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
           await writeFile3(hooksPath, `${JSON.stringify(stripAgentnoteHooks2(parsed), null, 2)}
 `);
         } catch {
@@ -1253,7 +1268,7 @@ var init_cursor = __esm({
         const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
         if (!existsSync3(hooksPath)) return false;
         try {
-          const content = await readFile3(hooksPath, "utf-8");
+          const content = await readFile3(hooksPath, TEXT_ENCODING);
           return content.includes(HOOK_COMMAND3);
         } catch {
           return false;
@@ -1339,7 +1354,7 @@ var init_cursor = __esm({
         if (!ready) return [];
         let content = "";
         try {
-          content = await readFile3(transcriptPath, "utf-8");
+          content = await readFile3(transcriptPath, TEXT_ENCODING);
         } catch {
           return [];
         }
@@ -1357,7 +1372,7 @@ import { mkdir as mkdir4, readFile as readFile4, writeFile as writeFile4 } from 
 import { homedir as homedir4 } from "node:os";
 import { dirname, join as join4, resolve as resolve4, sep as sep4 } from "node:path";
 function geminiHome() {
-  return process.env.GEMINI_HOME ?? join4(homedir4(), ".gemini");
+  return process.env[ENV_GEMINI_HOME] ?? join4(homedir4(), ".gemini");
 }
 function isValidSessionId2(id) {
   return UUID_PATTERN2.test(id);
@@ -1387,12 +1402,12 @@ function extractPartText(content) {
 function stripAgentnoteGroups(groups) {
   return groups.map((group) => ({
     ...group,
-    hooks: group.hooks.filter((hook2) => !hook2.command.includes("agent-note hook"))
+    hooks: group.hooks.filter((hook2) => !hook2.command.includes(AGENTNOTE_HOOK_COMMAND))
   })).filter((group) => group.hooks.length > 0);
 }
 function readTranscriptSessionId2(candidate) {
   try {
-    const preview = readFileSync2(candidate, "utf-8").slice(0, 4096);
+    const preview = readFileSync2(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS2);
     const match = preview.match(/"sessionId"\s*:\s*"([^"]+)"/);
     return match?.[1] ?? null;
   } catch {
@@ -1428,13 +1443,17 @@ function findTranscriptCandidate2(rootDir, sessionId) {
   }
   return null;
 }
-var HOOK_COMMAND4, SETTINGS_REL_PATH, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
+var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
 var init_gemini = __esm({
   "src/agents/gemini.ts"() {
     "use strict";
+    init_constants();
     init_git();
     HOOK_COMMAND4 = "npx --yes agent-note hook --agent gemini";
+    ENV_GEMINI_HOME = "GEMINI_HOME";
+    HOOK_TIMEOUT_MS = 1e4;
     SETTINGS_REL_PATH = ".gemini/settings.json";
+    TRANSCRIPT_PREVIEW_CHARS2 = 4096;
     EDIT_TOOLS = /* @__PURE__ */ new Set(["write_file", "replace"]);
     SHELL_TOOLS = /* @__PURE__ */ new Set([
       "run_shell_command",
@@ -1453,7 +1472,7 @@ var init_gemini = __esm({
               name: "agentnote-session-start",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1466,7 +1485,7 @@ var init_gemini = __esm({
               name: "agentnote-session-end",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1479,7 +1498,7 @@ var init_gemini = __esm({
               name: "agentnote-before-agent",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1492,7 +1511,7 @@ var init_gemini = __esm({
               name: "agentnote-after-agent",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1505,7 +1524,7 @@ var init_gemini = __esm({
               name: "agentnote-before-edit",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         },
@@ -1516,7 +1535,7 @@ var init_gemini = __esm({
               name: "agentnote-before-shell",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1529,7 +1548,7 @@ var init_gemini = __esm({
               name: "agentnote-after-edit",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         },
@@ -1540,7 +1559,7 @@ var init_gemini = __esm({
               name: "agentnote-after-shell",
               type: "command",
               command: HOOK_COMMAND4,
-              timeout: 1e4
+              timeout: HOOK_TIMEOUT_MS
             }
           ]
         }
@@ -1558,7 +1577,7 @@ var init_gemini = __esm({
         let settings = {};
         if (existsSync4(settingsPath)) {
           try {
-            settings = JSON.parse(await readFile4(settingsPath, "utf-8"));
+            settings = JSON.parse(await readFile4(settingsPath, TEXT_ENCODING));
           } catch {
             settings = {};
           }
@@ -1579,7 +1598,9 @@ var init_gemini = __esm({
         const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
         if (!existsSync4(settingsPath)) return;
         try {
-          const settings = JSON.parse(await readFile4(settingsPath, "utf-8"));
+          const settings = JSON.parse(
+            await readFile4(settingsPath, TEXT_ENCODING)
+          );
           if (!settings.hooks) return;
           for (const [event, groups] of Object.entries(settings.hooks)) {
             settings.hooks[event] = stripAgentnoteGroups(groups);
@@ -1595,7 +1616,7 @@ var init_gemini = __esm({
         const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
         if (!existsSync4(settingsPath)) return false;
         try {
-          const content = await readFile4(settingsPath, "utf-8");
+          const content = await readFile4(settingsPath, TEXT_ENCODING);
           return content.includes(HOOK_COMMAND4);
         } catch {
           return false;
@@ -1677,7 +1698,7 @@ var init_gemini = __esm({
         if (!isValidTranscriptPath4(transcriptPath) || !existsSync4(transcriptPath)) return [];
         let content;
         try {
-          content = await readFile4(transcriptPath, "utf-8");
+          content = await readFile4(transcriptPath, TEXT_ENCODING);
         } catch {
           return [];
         }
@@ -2573,7 +2594,7 @@ import { existsSync as existsSync5 } from "node:fs";
 import { appendFile, readFile as readFile5 } from "node:fs/promises";
 async function readJsonlEntries(filePath) {
   if (!existsSync5(filePath)) return [];
-  const content = await readFile5(filePath, "utf-8");
+  const content = await readFile5(filePath, TEXT_ENCODING);
   const entries = [];
   for (const line of content.trim().split("\n")) {
     if (!line) continue;
@@ -2591,6 +2612,7 @@ async function appendJsonl(filePath, data) {
 var init_jsonl = __esm({
   "src/core/jsonl.ts"() {
     "use strict";
+    init_constants();
   }
 });
 
@@ -2605,7 +2627,7 @@ async function writeSessionAgent(sessionDir, agentName) {
 async function readSessionAgent(sessionDir) {
   const agentPath = join5(sessionDir, SESSION_AGENT_FILE);
   if (!existsSync6(agentPath)) return null;
-  const agent = (await readFile6(agentPath, "utf-8")).trim();
+  const agent = (await readFile6(agentPath, TEXT_ENCODING)).trim();
   return agent || null;
 }
 async function writeSessionTranscriptPath(sessionDir, transcriptPath) {
@@ -2615,7 +2637,7 @@ async function writeSessionTranscriptPath(sessionDir, transcriptPath) {
 async function readSessionTranscriptPath(sessionDir) {
   const saved = join5(sessionDir, TRANSCRIPT_PATH_FILE);
   if (!existsSync6(saved)) return null;
-  const transcriptPath = (await readFile6(saved, "utf-8")).trim();
+  const transcriptPath = (await readFile6(saved, TEXT_ENCODING)).trim();
   return transcriptPath || null;
 }
 var init_session = __esm({
@@ -3691,10 +3713,10 @@ function isStructurallyTinyPrompt(prompt) {
 }
 function isQuotedPromptHistory(prompt) {
   if (/🧑\s*Prompt/.test(prompt) && /🤖\s*Response/.test(prompt)) return true;
-  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > 300)
+  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > QUOTED_HISTORY_MIN_PROMPT_CHARS)
     return true;
   const indentedQuoteLines = prompt.match(/^\s{2,}\S/gm)?.length ?? 0;
-  return prompt.length > 500 && indentedQuoteLines >= 8;
+  return prompt.length > QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS && indentedQuoteLines >= QUOTED_HISTORY_MIN_INDENTED_LINES;
 }
 function scoreTextShape(text) {
   const trimmed = text.trim();
@@ -3854,7 +3876,7 @@ async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
         finish(null);
         return;
       }
-      finish(Buffer.concat(chunks).toString("utf-8"));
+      finish(Buffer.concat(chunks).toString(TEXT_ENCODING));
     });
   });
 }
@@ -4073,7 +4095,7 @@ async function readMaxConsumedTurn(sessionDir) {
 async function readCurrentTurn(sessionDir) {
   const file = join6(sessionDir, TURN_FILE);
   if (!existsSync7(file)) return 0;
-  return Number.parseInt((await readFile7(file, "utf-8")).trim(), 10) || 0;
+  return Number.parseInt((await readFile7(file, TEXT_ENCODING)).trim(), 10) || 0;
 }
 async function readConsumedPairs(sessionDir) {
   const file = join6(sessionDir, COMMITTED_PAIRS_FILE);
@@ -4256,7 +4278,7 @@ async function ensureEmptyBlobInStore() {
     }
   }
 }
-var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, PROMPT_SELECTION_SCHEMA;
+var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS;
 var init_record = __esm({
   "src/core/record.ts"() {
     "use strict";
@@ -4278,6 +4300,9 @@ var init_record = __esm({
     PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
     PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
     PROMPT_SELECTION_SCHEMA = 1;
+    QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
+    QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
+    QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
   }
 });
 
@@ -4342,17 +4367,17 @@ async function commit(args2) {
   const sf = await sessionFile();
   let sessionId = "";
   if (existsSync8(sf)) {
-    sessionId = (await readFile8(sf, "utf-8")).trim();
+    sessionId = (await readFile8(sf, TEXT_ENCODING)).trim();
     if (sessionId) {
       const dir = await agentnoteDir();
-      const hbPath = join8(dir, "sessions", sessionId, HEARTBEAT_FILE);
+      const hbPath = join8(dir, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
       try {
-        const hb = Number.parseInt((await readFile8(hbPath, "utf-8")).trim(), 10);
+        const hb = Number.parseInt((await readFile8(hbPath, TEXT_ENCODING)).trim(), 10);
         if (hb === 0 || Number.isNaN(hb)) {
           sessionId = "";
         } else {
-          const ageSeconds = Math.floor(Date.now() / 1e3) - Math.floor(hb / 1e3);
-          if (ageSeconds > 3600) sessionId = "";
+          const ageSeconds = Math.floor(Date.now() / MILLISECONDS_PER_SECOND) - Math.floor(hb / MILLISECONDS_PER_SECOND);
+          if (ageSeconds > HEARTBEAT_TTL_SECONDS) sessionId = "";
         }
       } catch {
         sessionId = "";
@@ -4404,6 +4429,7 @@ import { chmod, mkdir as mkdir5, readFile as readFile9, writeFile as writeFile7 
 import { isAbsolute as isAbsolute2, join as join9, resolve as resolve5 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
+var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -4507,7 +4533,7 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-if [ "$AGE" -gt 3600 ] 2>/dev/null; then exit 0; fi
+if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -4602,17 +4628,19 @@ async function init(args2) {
     await mkdir5(hookDir, { recursive: true });
     const installed = await installGitHook(
       hookDir,
-      "prepare-commit-msg",
+      PREPARE_COMMIT_MSG_HOOK,
       PREPARE_COMMIT_MSG_SCRIPT
     );
     results.push(
-      installed ? "  \u2713 git hook: prepare-commit-msg" : "  \xB7 git hook: prepare-commit-msg (exists)"
+      installed ? `  \u2713 git hook: ${PREPARE_COMMIT_MSG_HOOK}` : `  \xB7 git hook: ${PREPARE_COMMIT_MSG_HOOK} (exists)`
     );
-    const installed2 = await installGitHook(hookDir, "post-commit", POST_COMMIT_SCRIPT);
-    results.push(installed2 ? "  \u2713 git hook: post-commit" : "  \xB7 git hook: post-commit (exists)");
-    const installed3 = await installGitHook(hookDir, "pre-push", PRE_PUSH_SCRIPT);
+    const installed2 = await installGitHook(hookDir, POST_COMMIT_HOOK, POST_COMMIT_SCRIPT);
     results.push(
-      installed3 ? "  \u2713 git hook: pre-push (auto-push notes)" : "  \xB7 git hook: pre-push (exists)"
+      installed2 ? `  \u2713 git hook: ${POST_COMMIT_HOOK}` : `  \xB7 git hook: ${POST_COMMIT_HOOK} (exists)`
+    );
+    const installed3 = await installGitHook(hookDir, PRE_PUSH_HOOK, PRE_PUSH_SCRIPT);
+    results.push(
+      installed3 ? `  \u2713 git hook: ${PRE_PUSH_HOOK} (auto-push notes)` : `  \xB7 git hook: ${PRE_PUSH_HOOK} (exists)`
     );
   }
   if (!skipAction && !hooksOnly) {
@@ -4731,7 +4759,7 @@ exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 async function installGitHook(hookDir, name, script) {
   const hookPath = join9(hookDir, name);
   if (existsSync9(hookPath)) {
-    const existing = await readFile9(hookPath, "utf-8");
+    const existing = await readFile9(hookPath, TEXT_ENCODING);
     if (existing.includes(AGENTNOTE_HOOK_MARKER)) {
       const backupPath2 = `${hookPath}.agentnote-backup`;
       const target = existsSync9(backupPath2) ? script.replace(
@@ -4774,11 +4802,10 @@ async function hasOtherEnabledAgents(repoRoot3, removingAgents) {
   }
   return false;
 }
-var GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"];
 async function removeGitHook(hookDir, name) {
   const hookPath = join10(hookDir, name);
   if (!existsSync10(hookPath)) return false;
-  const content = await readFile10(hookPath, "utf-8");
+  const content = await readFile10(hookPath, TEXT_ENCODING);
   if (!content.includes(AGENTNOTE_HOOK_MARKER)) return false;
   const backupPath = `${hookPath}.agentnote-backup`;
   if (existsSync10(backupPath)) {
@@ -4932,18 +4959,18 @@ async function readStdin() {
   for await (const chunk of process.stdin) {
     chunks.push(chunk);
   }
-  return Buffer.concat(chunks).toString("utf-8");
+  return Buffer.concat(chunks).toString(TEXT_ENCODING);
 }
 async function readCurrentTurn2(sessionDir) {
   const turnPath = join12(sessionDir, TURN_FILE);
   if (!existsSync12(turnPath)) return 0;
-  const raw = (await readFile11(turnPath, "utf-8")).trim();
+  const raw = (await readFile11(turnPath, TEXT_ENCODING)).trim();
   return Number.parseInt(raw, 10) || 0;
 }
 async function readCurrentPromptId(sessionDir) {
   const p = join12(sessionDir, PROMPT_ID_FILE);
   if (!existsSync12(p)) return null;
-  const raw = (await readFile11(p, "utf-8")).trim();
+  const raw = (await readFile11(p, TEXT_ENCODING)).trim();
   return raw || null;
 }
 async function readCurrentHead() {
@@ -5193,7 +5220,7 @@ async function hook(args2 = []) {
         if (!existsSync12(pendingPath)) break;
         let headBefore = null;
         try {
-          const pending = JSON.parse(await readFile11(pendingPath, "utf-8"));
+          const pending = JSON.parse(await readFile11(pendingPath, TEXT_ENCODING));
           headBefore = pending.head_before?.trim() || null;
         } catch {
           headBefore = null;
@@ -5282,6 +5309,9 @@ import { promisify as promisify2 } from "node:util";
 var COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 var DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 var DESCRIPTION_END = "<!-- agentnote-end -->";
+var GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+var PR_QUERY_PARAM = "pr";
+var TEXT_ENCODING2 = "utf-8";
 var execFileAsync2 = promisify2(execFile2);
 function upsertDescription(existingBody, markdown) {
   const section = `${DESCRIPTION_BEGIN}
@@ -5306,7 +5336,7 @@ ${section}`;
 function inferDashboardUrl(repoUrl, prNumber) {
   if (!repoUrl) return null;
   const normalized = repoUrl.replace(/\.git$/, "");
-  const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+  const match = normalized.match(GITHUB_REPOSITORY_URL_PATTERN);
   if (!match) return null;
   const [, owner, repo] = match;
   const pagesRoot = `https://${owner}.github.io`;
@@ -5318,14 +5348,14 @@ function appendPrNumber(dashboardUrl, prNumber) {
   const normalized = Number(prNumber);
   if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;
   const url = new URL(dashboardUrl);
-  url.searchParams.set("pr", String(normalized));
+  url.searchParams.set(PR_QUERY_PARAM, String(normalized));
   return url.toString();
 }
 async function updatePrDescription(prNumber, markdown) {
   const currentBody = await readPrBody(prNumber);
   const newBody = upsertDescription(currentBody, markdown);
   await execFileAsync2("gh", ["pr", "edit", prNumber, "--body", newBody], {
-    encoding: "utf-8"
+    encoding: TEXT_ENCODING2
   });
 }
 async function postPrComment(prNumber, content) {
@@ -5343,7 +5373,7 @@ ${content}`;
         "--jq",
         `.comments[] | select(.body | contains("${COMMENT_MARKER}")) | .id`
       ],
-      { encoding: "utf-8" }
+      { encoding: TEXT_ENCODING2 }
     );
     const commentId = stdout.trim().split("\n")[0];
     if (commentId) {
@@ -5357,21 +5387,21 @@ ${content}`;
           "-f",
           `body=${body}`
         ],
-        { encoding: "utf-8" }
+        { encoding: TEXT_ENCODING2 }
       );
       return;
     }
   } catch {
   }
   await execFileAsync2("gh", ["pr", "comment", prNumber, "--body", body], {
-    encoding: "utf-8"
+    encoding: TEXT_ENCODING2
   });
 }
 async function readPrBody(prNumber) {
   const { stdout } = await execFileAsync2(
     "gh",
     ["pr", "view", prNumber, "--json", "body"],
-    { encoding: "utf-8" }
+    { encoding: TEXT_ENCODING2 }
   );
   return JSON.parse(stdout).body ?? "";
 }
@@ -6016,16 +6046,16 @@ async function status() {
   const sessionPath = await sessionFile();
   let sessionActive = false;
   if (existsSync14(sessionPath)) {
-    const sid = (await readFile12(sessionPath, "utf-8")).trim();
+    const sid = (await readFile12(sessionPath, TEXT_ENCODING)).trim();
     if (sid) {
       const dir = await agentnoteDir();
-      const sessionDir = join15(dir, "sessions", sid);
+      const sessionDir = join15(dir, SESSIONS_DIR, sid);
       const hbPath = join15(sessionDir, HEARTBEAT_FILE);
       if (existsSync14(hbPath)) {
         try {
-          const hb = Number.parseInt((await readFile12(hbPath, "utf-8")).trim(), 10);
-          const ageSeconds = Math.floor(Date.now() / 1e3) - Math.floor(hb / 1e3);
-          if (hb > 0 && ageSeconds <= 3600) {
+          const hb = Number.parseInt((await readFile12(hbPath, TEXT_ENCODING)).trim(), 10);
+          const ageSeconds = Math.floor(Date.now() / MILLISECONDS_PER_SECOND) - Math.floor(hb / MILLISECONDS_PER_SECOND);
+          if (hb > 0 && ageSeconds <= HEARTBEAT_TTL_SECONDS) {
             sessionActive = true;
             console.log(`session: ${sid.slice(0, 8)}\u2026`);
             const agent = await readSessionAgent(sessionDir);
@@ -6043,7 +6073,7 @@ async function status() {
   }
   const { stdout } = await gitSafe([
     "log",
-    "-20",
+    `-${RECENT_STATUS_COMMIT_LIMIT}`,
     `--format=%H	%(trailers:key=${TRAILER_KEY},valueonly)`
   ]);
   let linked = 0;
@@ -6060,7 +6090,7 @@ async function status() {
       linked += 1;
     }
   }
-  console.log(`linked:  ${linked}/20 recent commits`);
+  console.log(`linked:  ${linked}/${RECENT_STATUS_COMMIT_LIMIT} recent commits`);
 }
 async function readAgentCaptureDetails(repoRoot3, enabledAgents) {
   const details = [];
@@ -6088,11 +6118,11 @@ async function readCodexCaptureCapabilities(repoRoot3) {
   const hooksPath = join15(repoRoot3, ".codex", "hooks.json");
   if (!existsSync14(hooksPath)) return [];
   try {
-    const content = await readFile12(hooksPath, "utf-8");
+    const content = await readFile12(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
-      (group) => (group.hooks ?? []).some((hook2) => hook2.command?.includes("agent-note hook"))
+      (group) => (group.hooks ?? []).some((hook2) => hook2.command?.includes(AGENTNOTE_HOOK_COMMAND))
     );
     const capabilities = [];
     if (hasAgentnoteHook("UserPromptSubmit")) capabilities.push("prompt");
@@ -6107,10 +6137,10 @@ async function readCursorCaptureCapabilities(repoRoot3) {
   const hooksPath = join15(repoRoot3, ".cursor", "hooks.json");
   if (!existsSync14(hooksPath)) return [];
   try {
-    const content = await readFile12(hooksPath, "utf-8");
+    const content = await readFile12(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
-    const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some((entry) => entry.command?.includes("agent-note hook"));
+    const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
     const capabilities = [];
     if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
     if (hasAgentnoteHook("afterAgentResponse") || hasAgentnoteHook("stop")) {
@@ -6131,11 +6161,11 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
   const settingsPath = join15(repoRoot3, ".gemini", "settings.json");
   if (!existsSync14(settingsPath)) return [];
   try {
-    const content = await readFile12(settingsPath, "utf-8");
+    const content = await readFile12(settingsPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
-      (group) => (group.hooks ?? []).some((h) => h.command?.includes("agent-note hook"))
+      (group) => (group.hooks ?? []).some((h) => h.command?.includes(AGENTNOTE_HOOK_COMMAND))
     );
     const capabilities = [];
     if (hasAgentnoteHook("BeforeAgent")) capabilities.push("prompt");
@@ -6151,11 +6181,11 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
 async function readManagedGitHooks(repoRoot3) {
   const hookDir = await resolveHookDir2(repoRoot3);
   const active = [];
-  for (const name of ["prepare-commit-msg", "post-commit", "pre-push"]) {
+  for (const name of GIT_HOOK_NAMES) {
     const hookPath = join15(hookDir, name);
     if (!existsSync14(hookPath)) continue;
     try {
-      const content = await readFile12(hookPath, "utf-8");
+      const content = await readFile12(hookPath, TEXT_ENCODING);
       if (content.includes(AGENTNOTE_HOOK_MARKER)) {
         active.push(name);
       }

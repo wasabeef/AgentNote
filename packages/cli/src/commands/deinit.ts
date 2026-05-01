@@ -2,7 +2,12 @@ import { existsSync } from "node:fs";
 import { readFile, rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { getAgent, hasAgent, listAgents } from "../agents/index.js";
-import { AGENTNOTE_HOOK_MARKER, NOTES_FETCH_REFSPEC } from "../core/constants.js";
+import {
+  AGENTNOTE_HOOK_MARKER,
+  GIT_HOOK_NAMES,
+  NOTES_FETCH_REFSPEC,
+  TEXT_ENCODING,
+} from "../core/constants.js";
 import { gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
 import {
@@ -25,8 +30,6 @@ async function hasOtherEnabledAgents(repoRoot: string, removingAgents: string[])
   return false;
 }
 
-const GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"] as const;
-
 /**
  * Remove a single git hook installed by agentnote.
  * - If a backup exists, restore it.
@@ -38,7 +41,7 @@ async function removeGitHook(hookDir: string, name: string): Promise<boolean> {
   const hookPath = join(hookDir, name);
   if (!existsSync(hookPath)) return false;
 
-  const content = await readFile(hookPath, "utf-8");
+  const content = await readFile(hookPath, TEXT_ENCODING);
   if (!content.includes(AGENTNOTE_HOOK_MARKER)) return false;
 
   const backupPath = `${hookPath}.agentnote-backup`;

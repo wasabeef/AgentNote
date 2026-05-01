@@ -2,7 +2,18 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { getAgent, listAgents } from "../agents/index.js";
-import { AGENTNOTE_HOOK_MARKER, HEARTBEAT_FILE, TRAILER_KEY } from "../core/constants.js";
+import {
+  AGENTNOTE_HOOK_COMMAND,
+  AGENTNOTE_HOOK_MARKER,
+  GIT_HOOK_NAMES,
+  HEARTBEAT_FILE,
+  HEARTBEAT_TTL_SECONDS,
+  MILLISECONDS_PER_SECOND,
+  RECENT_STATUS_COMMIT_LIMIT,
+  SESSIONS_DIR,
+  TEXT_ENCODING,
+  TRAILER_KEY,
+} from "../core/constants.js";
 import { readSessionAgent } from "../core/session.js";
 import { readNote } from "../core/storage.js";
 import { gitSafe } from "../git.js";
@@ -55,17 +66,19 @@ export async function status(): Promise<void> {
   const sessionPath = await sessionFile();
   let sessionActive = false;
   if (existsSync(sessionPath)) {
-    const sid = (await readFile(sessionPath, "utf-8")).trim();
+    const sid = (await readFile(sessionPath, TEXT_ENCODING)).trim();
     if (sid) {
       const dir = await agentnoteDir();
-      const sessionDir = join(dir, "sessions", sid);
+      const sessionDir = join(dir, SESSIONS_DIR, sid);
       const hbPath = join(sessionDir, HEARTBEAT_FILE);
       // Check heartbeat freshness (< 1 hour, matching prepare-commit-msg).
       if (existsSync(hbPath)) {
         try {
-          const hb = Number.parseInt((await readFile(hbPath, "utf-8")).trim(), 10);
-          const ageSeconds = Math.floor(Date.now() / 1000) - Math.floor(hb / 1000);
-          if (hb > 0 && ageSeconds <= 3600) {
+          const hb = Number.parseInt((await readFile(hbPath, TEXT_ENCODING)).trim(), 10);
+          const ageSeconds =
+            Math.floor(Date.now() / MILLISECONDS_PER_SECOND) -
+            Math.floor(hb / MILLISECONDS_PER_SECOND);
+          if (hb > 0 && ageSeconds <= HEARTBEAT_TTL_SECONDS) {
             sessionActive = true;
             console.log(`session: ${sid.slice(0, 8)}…`);
             const agent = await readSessionAgent(sessionDir);
@@ -85,7 +98,7 @@ export async function status(): Promise<void> {
 
   const { stdout } = await gitSafe([
     "log",
-    "-20",
+    `-${RECENT_STATUS_COMMIT_LIMIT}`,
     `--format=%H\t%(trailers:key=${TRAILER_KEY},valueonly)`,
   ]);
 
@@ -103,7 +116,7 @@ export async function status(): Promise<void> {
       linked += 1;
     }
   }
-  console.log(`linked:  ${linked}/20 recent commits`);
+  console.log(`linked:  ${linked}/${RECENT_STATUS_COMMIT_LIMIT} recent commits`);
 }
 
 async function readAgentCaptureDetails(
@@ -145,12 +158,12 @@ async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]>
   if (!existsSync(hooksPath)) return [];
 
   try {
-    const content = await readFile(hooksPath, "utf-8");
+    const content = await readFile(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content) as CodexHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((hook) => hook.command?.includes("agent-note hook")),
+        (group.hooks ?? []).some((hook) => hook.command?.includes(AGENTNOTE_HOOK_COMMAND)),
       );
 
     const capabilities: string[] = [];
@@ -172,11 +185,11 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
   if (!existsSync(hooksPath)) return [];
 
   try {
-    const content = await readFile(hooksPath, "utf-8");
+    const content = await readFile(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content) as CursorHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
-      (hooks[eventName] ?? []).some((entry) => entry.command?.includes("agent-note hook"));
+      (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
 
     const capabilities: string[] = [];
     if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
@@ -204,12 +217,12 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
   if (!existsSync(settingsPath)) return [];
 
   try {
-    const content = await readFile(settingsPath, "utf-8");
+    const content = await readFile(settingsPath, TEXT_ENCODING);
     const parsed = JSON.parse(content) as GeminiHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((h) => h.command?.includes("agent-note hook")),
+        (group.hooks ?? []).some((h) => h.command?.includes(AGENTNOTE_HOOK_COMMAND)),
       );
 
     const capabilities: string[] = [];
@@ -228,11 +241,11 @@ async function readManagedGitHooks(repoRoot: string): Promise<string[]> {
   const hookDir = await resolveHookDir(repoRoot);
   const active: string[] = [];
 
-  for (const name of ["prepare-commit-msg", "post-commit", "pre-push"]) {
+  for (const name of GIT_HOOK_NAMES) {
     const hookPath = join(hookDir, name);
     if (!existsSync(hookPath)) continue;
     try {
-      const content = await readFile(hookPath, "utf-8");
+      const content = await readFile(hookPath, TEXT_ENCODING);
       if (content.includes(AGENTNOTE_HOOK_MARKER)) {
         active.push(name);
       }

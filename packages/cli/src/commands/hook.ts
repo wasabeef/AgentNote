@@ -15,6 +15,7 @@ import {
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
+  TEXT_ENCODING,
   TRAILER_KEY,
   TURN_FILE,
 } from "../core/constants.js";
@@ -76,20 +77,20 @@ async function readStdin(): Promise<string> {
   for await (const chunk of process.stdin) {
     chunks.push(chunk);
   }
-  return Buffer.concat(chunks).toString("utf-8");
+  return Buffer.concat(chunks).toString(TEXT_ENCODING);
 }
 
 async function readCurrentTurn(sessionDir: string): Promise<number> {
   const turnPath = join(sessionDir, TURN_FILE);
   if (!existsSync(turnPath)) return 0;
-  const raw = (await readFile(turnPath, "utf-8")).trim();
+  const raw = (await readFile(turnPath, TEXT_ENCODING)).trim();
   return Number.parseInt(raw, 10) || 0;
 }
 
 async function readCurrentPromptId(sessionDir: string): Promise<string | null> {
   const p = join(sessionDir, PROMPT_ID_FILE);
   if (!existsSync(p)) return null;
-  const raw = (await readFile(p, "utf-8")).trim();
+  const raw = (await readFile(p, TEXT_ENCODING)).trim();
   return raw || null;
 }
 
@@ -409,7 +410,7 @@ export async function hook(args: string[] = []): Promise<void> {
 
         let headBefore: string | null = null;
         try {
-          const pending = JSON.parse(await readFile(pendingPath, "utf-8")) as {
+          const pending = JSON.parse(await readFile(pendingPath, TEXT_ENCODING)) as {
             head_before?: string | null;
           };
           headBefore = pending.head_before?.trim() || null;

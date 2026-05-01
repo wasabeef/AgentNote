@@ -6,11 +6,28 @@ export const PUBLISH_MODE_BLOCKED = "blocked";
 export const PUBLISH_MODE_INTEGRATED = "integrated";
 export const PUBLISH_MODE_STANDALONE = "standalone";
 
-const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
-const repository = process.env.GITHUB_REPOSITORY || "";
-const workflowRef = process.env.GITHUB_WORKFLOW_REF || "";
-const githubOutput = process.env.GITHUB_OUTPUT || "";
-const githubJob = process.env.GITHUB_JOB || "";
+const ACTIONS_FALSE = "false";
+const ACTIONS_TRUE = "true";
+const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
+const DEFAULT_PAGES_ARTIFACT_PATH = "_site";
+const DEFAULT_STANDALONE_PAGES_DIR = ".agentnote-pages";
+const ENV_GITHUB_JOB = "GITHUB_JOB";
+const ENV_GITHUB_OUTPUT = "GITHUB_OUTPUT";
+const ENV_GITHUB_REPOSITORY = "GITHUB_REPOSITORY";
+const ENV_GITHUB_WORKFLOW_REF = "GITHUB_WORKFLOW_REF";
+const ENV_GITHUB_WORKSPACE = "GITHUB_WORKSPACE";
+const GITHUB_WORKFLOWS_DIR = ".github/workflows/";
+const REASON_DYNAMIC_PATH = "dynamic-path";
+const REASON_OTHER_JOB = "other-job";
+const REASON_OTHER_WORKFLOW = "other-workflow";
+const REASON_OUTSIDE_WORKSPACE = "outside-workspace";
+const TEXT_ENCODING = "utf-8";
+
+const workspace = process.env[ENV_GITHUB_WORKSPACE] || process.cwd();
+const repository = process.env[ENV_GITHUB_REPOSITORY] || "";
+const workflowRef = process.env[ENV_GITHUB_WORKFLOW_REF] || "";
+const githubOutput = process.env[ENV_GITHUB_OUTPUT] || "";
+const githubJob = process.env[ENV_GITHUB_JOB] || "";
 
 function setOutput(name, value) {
   if (!githubOutput) return;
@@ -42,7 +59,7 @@ export function resolveWorkflowPath({
   }
 
   const relativePath = workflowReference.slice(marker.length, refIndex);
-  if (!relativePath.startsWith(".github/workflows/")) return null;
+  if (!relativePath.startsWith(GITHUB_WORKFLOWS_DIR)) return null;
   return join(workspaceDir, relativePath);
 }
 
@@ -78,7 +95,7 @@ export function parseUploadPagesArtifactPath(workflowText) {
       if (match) return cleanScalar(match[1]);
     }
 
-    return "_site";
+    return DEFAULT_PAGES_ARTIFACT_PATH;
   }
 
   return null;
@@ -172,17 +189,17 @@ export function resolvePagesTarget({
     !artifactPath &&
     Boolean(parseUploadPagesArtifactPath(workflowText));
   const hasOtherPagesWorkflow = otherWorkflowTexts.some(hasPagesPublishStep);
-  const notesDir = join(workspaceDir, ".agentnote-dashboard-notes");
-  const standalonePagesDir = join(workspaceDir, ".agentnote-pages");
+  const notesDir = join(workspaceDir, DEFAULT_DASHBOARD_NOTES_DIR);
+  const standalonePagesDir = join(workspaceDir, DEFAULT_STANDALONE_PAGES_DIR);
 
   if (hasOtherPagesArtifact || (!artifactPath && hasOtherPagesWorkflow)) {
     return {
       notesDir,
       pagesDir: standalonePagesDir,
       publishMode: PUBLISH_MODE_BLOCKED,
-      internalUpload: "false",
-      canBuild: "false",
-      reason: hasOtherPagesArtifact ? "other-job" : "other-workflow",
+      internalUpload: ACTIONS_FALSE,
+      canBuild: ACTIONS_FALSE,
+      reason: hasOtherPagesArtifact ? REASON_OTHER_JOB : REASON_OTHER_WORKFLOW,
     };
   }
 
@@ -191,8 +208,8 @@ export function resolvePagesTarget({
       notesDir,
       pagesDir: standalonePagesDir,
       publishMode: PUBLISH_MODE_STANDALONE,
-      internalUpload: "true",
-      canBuild: "true",
+      internalUpload: ACTIONS_TRUE,
+      canBuild: ACTIONS_TRUE,
       reason: "",
     };
   }
@@ -202,9 +219,9 @@ export function resolvePagesTarget({
       notesDir,
       pagesDir: standalonePagesDir,
       publishMode: PUBLISH_MODE_BLOCKED,
-      internalUpload: "false",
-      canBuild: "false",
-      reason: "dynamic-path",
+      internalUpload: ACTIONS_FALSE,
+      canBuild: ACTIONS_FALSE,
+      reason: REASON_DYNAMIC_PATH,
     };
   }
 
@@ -217,9 +234,9 @@ export function resolvePagesTarget({
       notesDir,
       pagesDir: standalonePagesDir,
       publishMode: PUBLISH_MODE_BLOCKED,
-      internalUpload: "false",
-      canBuild: "false",
-      reason: "outside-workspace",
+      internalUpload: ACTIONS_FALSE,
+      canBuild: ACTIONS_FALSE,
+      reason: REASON_OUTSIDE_WORKSPACE,
     };
   }
 
@@ -227,8 +244,8 @@ export function resolvePagesTarget({
     notesDir,
     pagesDir: resolvedPagesDir,
     publishMode: PUBLISH_MODE_INTEGRATED,
-    internalUpload: "false",
-    canBuild: "true",
+    internalUpload: ACTIONS_FALSE,
+    canBuild: ACTIONS_TRUE,
     reason: "",
   };
 }
@@ -243,7 +260,7 @@ function readOtherWorkflowTexts(currentWorkflowPath) {
     .filter((path) => path !== currentWorkflowPath)
     .map((path) => {
       try {
-        return readFileSync(path, "utf-8");
+        return readFileSync(path, TEXT_ENCODING);
       } catch {
         return "";
       }
@@ -254,7 +271,7 @@ function readOtherWorkflowTexts(currentWorkflowPath) {
 function main() {
   const workflowPath = resolveWorkflowPath();
   const workflowText = workflowPath && existsSync(workflowPath)
-    ? readFileSync(workflowPath, "utf-8")
+    ? readFileSync(workflowPath, TEXT_ENCODING)
     : "";
   const target = resolvePagesTarget({
     workflowText,

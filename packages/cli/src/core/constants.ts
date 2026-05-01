@@ -1,6 +1,8 @@
 // ─── Trailer ───
 export const TRAILER_KEY = "Agentnote-Session";
 export const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+export const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
+export const CLI_JS_HOOK_COMMAND = "cli.js hook";
 
 // ─── Git notes ───
 export const NOTES_REF = "agentnote";
@@ -10,6 +12,7 @@ export const NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
 // ─── Directory names ───
 export const AGENTNOTE_DIR = "agentnote";
 export const SESSIONS_DIR = "sessions";
+export const GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"] as const;
 
 // ─── Session file names ───
 export const PROMPTS_FILE = "prompts.jsonl";
@@ -29,6 +32,7 @@ export const PENDING_COMMIT_FILE = "pending_commit.json";
 
 // ─── Display limits ───
 export const MAX_COMMITS = 500;
+export const RECENT_STATUS_COMMIT_LIMIT = 20;
 export const BAR_WIDTH_COMPACT = 5;
 export const BAR_WIDTH_FULL = 20;
 export const TRUNCATE_PROMPT = 120;
@@ -43,6 +47,8 @@ export const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
 
 // ─── Session infrastructure ───
 export const HEARTBEAT_FILE = "heartbeat";
+export const HEARTBEAT_TTL_SECONDS = 60 * 60;
+export const MILLISECONDS_PER_SECOND = 1000;
 export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 /** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
 export const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
@@ -54,5 +60,9 @@ export const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 // ─── Schema ───
 export const SCHEMA_VERSION = 1 as const;
 
+// ─── Encoding ───
+export const TEXT_ENCODING = "utf-8";
+
 // ─── Debug ───
-export const DEBUG = !!process.env.AGENTNOTE_DEBUG;
+export const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
+export const DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];

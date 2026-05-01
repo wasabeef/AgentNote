@@ -5,6 +5,10 @@ export const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
+const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+const PR_QUERY_PARAM = "pr";
+const TEXT_ENCODING = "utf-8";
+
 const execFileAsync = promisify(execFile);
 
 /**
@@ -68,7 +72,7 @@ export function inferDashboardUrl(
 	if (!repoUrl) return null;
 
 	const normalized = repoUrl.replace(/\.git$/, "");
-	const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+	const match = normalized.match(GITHUB_REPOSITORY_URL_PATTERN);
 	if (!match) return null;
 
 	const [, owner, repo] = match;
@@ -89,7 +93,7 @@ function appendPrNumber(
 	if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;
 
 	const url = new URL(dashboardUrl);
-	url.searchParams.set("pr", String(normalized));
+	url.searchParams.set(PR_QUERY_PARAM, String(normalized));
 	return url.toString();
 }
 
@@ -116,7 +120,7 @@ export async function updatePrDescription(
 	const currentBody = await readPrBody(prNumber);
 	const newBody = upsertDescription(currentBody, markdown);
 	await execFileAsync("gh", ["pr", "edit", prNumber, "--body", newBody], {
-		encoding: "utf-8",
+		encoding: TEXT_ENCODING,
 	});
 }
 
@@ -138,7 +142,7 @@ export async function postPrComment(
 				"--jq",
 				`.comments[] | select(.body | contains("${COMMENT_MARKER}")) | .id`,
 			],
-			{ encoding: "utf-8" },
+			{ encoding: TEXT_ENCODING },
 		);
 		const commentId = stdout.trim().split("\n")[0];
 		if (commentId) {
@@ -152,7 +156,7 @@ export async function postPrComment(
 					"-f",
 					`body=${body}`,
 				],
-				{ encoding: "utf-8" },
+				{ encoding: TEXT_ENCODING },
 			);
 			return;
 		}
@@ -161,7 +165,7 @@ export async function postPrComment(
 	}
 
 	await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], {
-		encoding: "utf-8",
+		encoding: TEXT_ENCODING,
 	});
 }
 
@@ -173,7 +177,7 @@ async function readPrBody(prNumber: string): Promise<string> {
 	const { stdout } = await execFileAsync(
 		"gh",
 		["pr", "view", prNumber, "--json", "body"],
-		{ encoding: "utf-8" },
+		{ encoding: TEXT_ENCODING },
 	);
 	return JSON.parse(stdout).body ?? "";
 }

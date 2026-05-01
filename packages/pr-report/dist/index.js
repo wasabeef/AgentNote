@@ -36265,6 +36265,9 @@ var external_node_util_ = __nccwpck_require__(7975);
 const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 const DESCRIPTION_END = "<!-- agentnote-end -->";
+const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+const PR_QUERY_PARAM = "pr";
+const TEXT_ENCODING = "utf-8";
 const execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
 /**
  * Resolve PR output mode from the action input.
@@ -36304,7 +36307,7 @@ function inferDashboardUrl(repoUrl, prNumber) {
     if (!repoUrl)
         return null;
     const normalized = repoUrl.replace(/\.git$/, "");
-    const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+    const match = normalized.match(GITHUB_REPOSITORY_URL_PATTERN);
     if (!match)
         return null;
     const [, owner, repo] = match;
@@ -36321,7 +36324,7 @@ function appendPrNumber(dashboardUrl, prNumber) {
     if (!Number.isInteger(normalized) || normalized <= 0)
         return dashboardUrl;
     const url = new URL(dashboardUrl);
-    url.searchParams.set("pr", String(normalized));
+    url.searchParams.set(PR_QUERY_PARAM, String(normalized));
     return url.toString();
 }
 function hasDeploymentBranchProtection(policy) {
@@ -36333,7 +36336,7 @@ async function updatePrDescription(prNumber, markdown) {
     const currentBody = await readPrBody(prNumber);
     const newBody = upsertDescription(currentBody, markdown);
     await execFileAsync("gh", ["pr", "edit", prNumber, "--body", newBody], {
-        encoding: "utf-8",
+        encoding: TEXT_ENCODING,
     });
 }
 async function postPrComment(prNumber, content) {
@@ -36347,7 +36350,7 @@ async function postPrComment(prNumber, content) {
             "comments",
             "--jq",
             `.comments[] | select(.body | contains("${COMMENT_MARKER}")) | .id`,
-        ], { encoding: "utf-8" });
+        ], { encoding: TEXT_ENCODING });
         const commentId = stdout.trim().split("\n")[0];
         if (commentId) {
             await execFileAsync("gh", [
@@ -36357,7 +36360,7 @@ async function postPrComment(prNumber, content) {
                 `/repos/{owner}/{repo}/issues/comments/${commentId}`,
                 "-f",
                 `body=${body}`,
-            ], { encoding: "utf-8" });
+            ], { encoding: TEXT_ENCODING });
             return;
         }
     }
@@ -36365,14 +36368,14 @@ async function postPrComment(prNumber, content) {
         // fall through to create
     }
     await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], {
-        encoding: "utf-8",
+        encoding: TEXT_ENCODING,
     });
 }
 function wrapWithMarkers(content) {
     return `${DESCRIPTION_BEGIN}\n${content}\n${DESCRIPTION_END}`;
 }
 async function readPrBody(prNumber) {
-    const { stdout } = await execFileAsync("gh", ["pr", "view", prNumber, "--json", "body"], { encoding: "utf-8" });
+    const { stdout } = await execFileAsync("gh", ["pr", "view", prNumber, "--json", "body"], { encoding: TEXT_ENCODING });
     return JSON.parse(stdout).body ?? "";
 }
 
@@ -36380,6 +36383,8 @@ async function readPrBody(prNumber) {
 // ─── Trailer ───
 const TRAILER_KEY = "Agentnote-Session";
 const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
+const CLI_JS_HOOK_COMMAND = "cli.js hook";
 // ─── Git notes ───
 const constants_NOTES_REF = "agentnote";
 const NOTES_REF_FULL = (/* unused pure expression or super */ null && (`refs/notes/${constants_NOTES_REF}`));
@@ -36387,6 +36392,7 @@ const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${
 // ─── Directory names ───
 const AGENTNOTE_DIR = "agentnote";
 const SESSIONS_DIR = "sessions";
+const GIT_HOOK_NAMES = (/* unused pure expression or super */ null && (["prepare-commit-msg", "post-commit", "pre-push"]));
 // ─── Session file names ───
 const PROMPTS_FILE = "prompts.jsonl";
 const CHANGES_FILE = "changes.jsonl";
@@ -36404,6 +36410,7 @@ const SESSION_AGENT_FILE = "agent";
 const PENDING_COMMIT_FILE = "pending_commit.json";
 // ─── Display limits ───
 const MAX_COMMITS = 500;
+const RECENT_STATUS_COMMIT_LIMIT = 20;
 const BAR_WIDTH_COMPACT = 5;
 const BAR_WIDTH_FULL = 20;
 const TRUNCATE_PROMPT = 120;
@@ -36416,6 +36423,8 @@ const TRUNCATE_RESPONSE_CHAT = 800;
 const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
 // ─── Session infrastructure ───
 const HEARTBEAT_FILE = "heartbeat";
+const HEARTBEAT_TTL_SECONDS = (/* unused pure expression or super */ null && (60 * 60));
+const MILLISECONDS_PER_SECOND = 1000;
 const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 /** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
 const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
@@ -36424,8 +36433,11 @@ const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 // ─── Schema ───
 const constants_SCHEMA_VERSION = 1;
+// ─── Encoding ───
+const constants_TEXT_ENCODING = "utf-8";
 // ─── Debug ───
-const DEBUG = !!process.env.AGENTNOTE_DEBUG;
+const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
+const DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];
 
 ;// CONCATENATED MODULE: ../cli/src/core/entry.ts
 
@@ -36820,12 +36832,13 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 ;// CONCATENATED MODULE: ../cli/src/git.ts
 
 
+
 const git_execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
 /** Run a git command and return its stdout. */
 async function git(args, options) {
     const { stdout } = await git_execFileAsync("git", args, {
         cwd: options?.cwd,
-        encoding: "utf-8",
+        encoding: constants_TEXT_ENCODING,
     });
     return stdout.trim();
 }
@@ -37382,12 +37395,19 @@ function basename(path) {
 
 
 
+const AGENTNOTE_NOTES_REFSPEC = "refs/notes/agentnote:refs/notes/agentnote";
+const DASHBOARD_PREVIEW_HELP_URL = "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+const EVENT_PULL_REQUEST = "pull_request";
+const GITHUB_PAGES_ENVIRONMENT = "github-pages";
+const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const MAX_NOTES_FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_BASE_MS = 1000;
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function fetchAgentnoteNotes() {
     try {
-        (0,external_child_process_namespaceObject.execSync)("git fetch origin refs/notes/agentnote:refs/notes/agentnote", {
+        (0,external_child_process_namespaceObject.execSync)(`git fetch origin ${AGENTNOTE_NOTES_REFSPEC}`, {
             stdio: "pipe",
         });
     }
@@ -37400,7 +37420,7 @@ async function postPrReport(outputMode, markdown) {
         return;
     if (!markdown || !github_context.payload.pull_request)
         return;
-    const token = process.env.GITHUB_TOKEN || "";
+    const token = process.env[GITHUB_TOKEN_ENV] || "";
     if (!token) {
         warning("No GitHub token available. Skipping PR report.");
         return;
@@ -37453,7 +37473,7 @@ async function postPrReport(outputMode, markdown) {
 async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
     if (!dashboardUrl)
         return null;
-    if (github_context.eventName !== "pull_request")
+    if (github_context.eventName !== EVENT_PULL_REQUEST)
         return null;
     if (!token)
         return null;
@@ -37463,11 +37483,11 @@ async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
         const { data } = await octokit.request("GET /repos/{owner}/{repo}/environments/{environment_name}", {
             owner,
             repo,
-            environment_name: "github-pages",
+            environment_name: GITHUB_PAGES_ENVIRONMENT,
         });
         const policy = data.deployment_branch_policy;
         if (hasDeploymentBranchProtection(policy)) {
-            return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+            return DASHBOARD_PREVIEW_HELP_URL;
         }
     }
     catch {
@@ -37484,10 +37504,9 @@ async function run() {
         const prNumber = github_context.payload.pull_request?.number ?? null;
         const prOutputMode = resolvePrOutputMode(getInput("pr_output"));
         const promptDetail = parsePromptDetail(getInput("prompt_detail"));
-        const token = process.env.GITHUB_TOKEN || "";
+        const token = process.env[GITHUB_TOKEN_ENV] || "";
         let report = null;
-        const maxAttempts = 3;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        for (let attempt = 1; attempt <= MAX_NOTES_FETCH_ATTEMPTS; attempt++) {
             fetchAgentnoteNotes();
             report = await collectReport(base, headSha, {
                 dashboardPrNumber: prNumber,
@@ -37496,11 +37515,11 @@ async function run() {
                 info("No agent-note data found for this PR.");
                 return;
             }
-            if (!shouldRetryNotesFetch(report) || attempt === maxAttempts) {
+            if (!shouldRetryNotesFetch(report) || attempt === MAX_NOTES_FETCH_ATTEMPTS) {
                 break;
             }
-            info(`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`);
-            await sleep(attempt * 1000);
+            info(`Agent Note data is not available yet (attempt ${attempt}/${MAX_NOTES_FETCH_ATTEMPTS}). Retrying...`);
+            await sleep(attempt * RETRY_DELAY_BASE_MS);
         }
         if (!report) {
             info("No agent-note data found for this PR.");

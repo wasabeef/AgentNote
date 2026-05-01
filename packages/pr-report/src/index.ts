@@ -13,13 +13,21 @@ import { collectReport, renderMarkdown } from "./report.js";
 
 type PrOutputMode = ReturnType<typeof resolvePrOutputMode>;
 
+const AGENTNOTE_NOTES_REFSPEC = "refs/notes/agentnote:refs/notes/agentnote";
+const DASHBOARD_PREVIEW_HELP_URL = "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+const EVENT_PULL_REQUEST = "pull_request";
+const GITHUB_PAGES_ENVIRONMENT = "github-pages";
+const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const MAX_NOTES_FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_BASE_MS = 1000;
+
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function fetchAgentnoteNotes(): void {
 	try {
-		execSync("git fetch origin refs/notes/agentnote:refs/notes/agentnote", {
+		execSync(`git fetch origin ${AGENTNOTE_NOTES_REFSPEC}`, {
 			stdio: "pipe",
 		});
 	} catch {
@@ -34,7 +42,7 @@ async function postPrReport(
 	if (outputMode === "none") return;
 	if (!markdown || !github.context.payload.pull_request) return;
 
-	const token = process.env.GITHUB_TOKEN || "";
+	const token = process.env[GITHUB_TOKEN_ENV] || "";
 	if (!token) {
 		core.warning("No GitHub token available. Skipping PR report.");
 		return;
@@ -97,7 +105,7 @@ async function inferDashboardPreviewHelpUrl(
 	dashboardUrl: string | null,
 ): Promise<string | null> {
 	if (!dashboardUrl) return null;
-	if (github.context.eventName !== "pull_request") return null;
+	if (github.context.eventName !== EVENT_PULL_REQUEST) return null;
 	if (!token) return null;
 
 	try {
@@ -108,7 +116,7 @@ async function inferDashboardPreviewHelpUrl(
 			{
 				owner,
 				repo,
-				environment_name: "github-pages",
+				environment_name: GITHUB_PAGES_ENVIRONMENT,
 			},
 		);
 		const policy = (data as { deployment_branch_policy?: {
@@ -116,7 +124,7 @@ async function inferDashboardPreviewHelpUrl(
 			custom_branch_policies?: boolean;
 		} | null }).deployment_branch_policy;
 		if (hasDeploymentBranchProtection(policy)) {
-			return "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+			return DASHBOARD_PREVIEW_HELP_URL;
 		}
 	} catch {
 		// Best-effort only. If the environment is unavailable or unreadable,
@@ -135,12 +143,11 @@ async function run(): Promise<void> {
 		const prNumber = github.context.payload.pull_request?.number ?? null;
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
 		const promptDetail = parsePromptDetail(core.getInput("prompt_detail"));
-		const token = process.env.GITHUB_TOKEN || "";
+		const token = process.env[GITHUB_TOKEN_ENV] || "";
 
 		let report: Awaited<ReturnType<typeof collectReport>> = null;
-		const maxAttempts = 3;
 
-		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		for (let attempt = 1; attempt <= MAX_NOTES_FETCH_ATTEMPTS; attempt++) {
 			fetchAgentnoteNotes();
 
 			report = await collectReport(base, headSha, {
@@ -151,14 +158,14 @@ async function run(): Promise<void> {
 				return;
 			}
 
-			if (!shouldRetryNotesFetch(report) || attempt === maxAttempts) {
+			if (!shouldRetryNotesFetch(report) || attempt === MAX_NOTES_FETCH_ATTEMPTS) {
 				break;
 			}
 
 			core.info(
-				`Agent Note data is not available yet (attempt ${attempt}/${maxAttempts}). Retrying...`,
+				`Agent Note data is not available yet (attempt ${attempt}/${MAX_NOTES_FETCH_ATTEMPTS}). Retrying...`,
 			);
-			await sleep(attempt * 1000);
+			await sleep(attempt * RETRY_DELAY_BASE_MS);
 		}
 
 		if (!report) {

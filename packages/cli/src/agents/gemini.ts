@@ -2,11 +2,15 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
+import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes agent-note hook --agent gemini";
+const ENV_GEMINI_HOME = "GEMINI_HOME";
+const HOOK_TIMEOUT_MS = 10_000;
 const SETTINGS_REL_PATH = ".gemini/settings.json";
+const TRANSCRIPT_PREVIEW_CHARS = 4096;
 
 const EDIT_TOOLS = new Set(["write_file", "replace"]);
 const SHELL_TOOLS = new Set([
@@ -66,7 +70,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-session-start",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -79,7 +83,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-session-end",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -92,7 +96,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-before-agent",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -105,7 +109,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-after-agent",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -118,7 +122,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-before-edit",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -129,7 +133,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-before-shell",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -142,7 +146,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-after-edit",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -153,7 +157,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
           name: "agentnote-after-shell",
           type: "command",
           command: HOOK_COMMAND,
-          timeout: 10000,
+          timeout: HOOK_TIMEOUT_MS,
         },
       ],
     },
@@ -161,7 +165,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
 };
 
 function geminiHome(): string {
-  return process.env.GEMINI_HOME ?? join(homedir(), ".gemini");
+  return process.env[ENV_GEMINI_HOME] ?? join(homedir(), ".gemini");
 }
 
 function isValidSessionId(id: string): boolean {
@@ -202,14 +206,14 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      hooks: group.hooks.filter((hook) => !hook.command.includes("agent-note hook")),
+      hooks: group.hooks.filter((hook) => !hook.command.includes(AGENTNOTE_HOOK_COMMAND)),
     }))
     .filter((group) => group.hooks.length > 0);
 }
 
 function readTranscriptSessionId(candidate: string): string | null {
   try {
-    const preview = readFileSync(candidate, "utf-8").slice(0, 4096);
+    const preview = readFileSync(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS);
     // Gemini uses camelCase "sessionId" in ConversationRecord metadata.
     const match = preview.match(/"sessionId"\s*:\s*"([^"]+)"/);
     return match?.[1] ?? null;
@@ -270,7 +274,7 @@ export const gemini: AgentAdapter = {
     let settings: GeminiSettingsConfig = {};
     if (existsSync(settingsPath)) {
       try {
-        settings = JSON.parse(await readFile(settingsPath, "utf-8")) as GeminiSettingsConfig;
+        settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING)) as GeminiSettingsConfig;
       } catch {
         settings = {};
       }
@@ -298,7 +302,9 @@ export const gemini: AgentAdapter = {
     if (!existsSync(settingsPath)) return;
 
     try {
-      const settings = JSON.parse(await readFile(settingsPath, "utf-8")) as GeminiSettingsConfig;
+      const settings = JSON.parse(
+        await readFile(settingsPath, TEXT_ENCODING),
+      ) as GeminiSettingsConfig;
       if (!settings.hooks) return;
 
       for (const [event, groups] of Object.entries(settings.hooks)) {
@@ -316,7 +322,7 @@ export const gemini: AgentAdapter = {
     const settingsPath = join(repoRoot, SETTINGS_REL_PATH);
     if (!existsSync(settingsPath)) return false;
     try {
-      const content = await readFile(settingsPath, "utf-8");
+      const content = await readFile(settingsPath, TEXT_ENCODING);
       return content.includes(HOOK_COMMAND);
     } catch {
       return false;
@@ -419,7 +425,7 @@ export const gemini: AgentAdapter = {
 
     let content: string;
     try {
-      content = await readFile(transcriptPath, "utf-8");
+      content = await readFile(transcriptPath, TEXT_ENCODING);
     } catch {
       return [];
     }

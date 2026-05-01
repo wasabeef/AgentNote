@@ -4,8 +4,11 @@ import { isAbsolute, join, resolve } from "node:path";
 import { getAgent, hasAgent, listAgents } from "../agents/index.js";
 import {
   AGENTNOTE_HOOK_MARKER,
+  GIT_HOOK_NAMES,
+  HEARTBEAT_TTL_SECONDS,
   NOTES_FETCH_REFSPEC,
   NOTES_REF_FULL,
+  TEXT_ENCODING,
   TRAILER_KEY,
 } from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
@@ -13,6 +16,8 @@ import { agentnoteDir, root } from "../paths.js";
 
 export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
+
+const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 
 const PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
@@ -125,7 +130,7 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-if [ "$AGE" -gt 3600 ] 2>/dev/null; then exit 0; fi
+if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -234,19 +239,27 @@ export async function init(args: string[]): Promise<void> {
 
     const installed = await installGitHook(
       hookDir,
-      "prepare-commit-msg",
+      PREPARE_COMMIT_MSG_HOOK,
       PREPARE_COMMIT_MSG_SCRIPT,
     );
     results.push(
-      installed ? "  ✓ git hook: prepare-commit-msg" : "  · git hook: prepare-commit-msg (exists)",
+      installed
+        ? `  ✓ git hook: ${PREPARE_COMMIT_MSG_HOOK}`
+        : `  · git hook: ${PREPARE_COMMIT_MSG_HOOK} (exists)`,
     );
 
-    const installed2 = await installGitHook(hookDir, "post-commit", POST_COMMIT_SCRIPT);
-    results.push(installed2 ? "  ✓ git hook: post-commit" : "  · git hook: post-commit (exists)");
-
-    const installed3 = await installGitHook(hookDir, "pre-push", PRE_PUSH_SCRIPT);
+    const installed2 = await installGitHook(hookDir, POST_COMMIT_HOOK, POST_COMMIT_SCRIPT);
     results.push(
-      installed3 ? "  ✓ git hook: pre-push (auto-push notes)" : "  · git hook: pre-push (exists)",
+      installed2
+        ? `  ✓ git hook: ${POST_COMMIT_HOOK}`
+        : `  · git hook: ${POST_COMMIT_HOOK} (exists)`,
+    );
+
+    const installed3 = await installGitHook(hookDir, PRE_PUSH_HOOK, PRE_PUSH_SCRIPT);
+    results.push(
+      installed3
+        ? `  ✓ git hook: ${PRE_PUSH_HOOK} (auto-push notes)`
+        : `  · git hook: ${PRE_PUSH_HOOK} (exists)`,
     );
   }
 
@@ -394,7 +407,7 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
   const hookPath = join(hookDir, name);
 
   if (existsSync(hookPath)) {
-    const existing = await readFile(hookPath, "utf-8");
+    const existing = await readFile(hookPath, TEXT_ENCODING);
     // Already managed by agentnote — upgrade if content differs.
     if (existing.includes(AGENTNOTE_HOOK_MARKER)) {
       const backupPath = `${hookPath}.agentnote-backup`;

@@ -4,9 +4,25 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
-const eventName = process.env.EVENT_NAME || "";
-const prNumber = Number(process.env.PR_NUMBER || "");
+const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
+const DASHBOARD_DIR_NAME = "dashboard";
+const ENV_EVENT_NAME = "EVENT_NAME";
+const ENV_NOTES_DIR = "NOTES_DIR";
+const ENV_PR_NUMBER = "PR_NUMBER";
+const EVENT_PULL_REQUEST = "pull_request";
+const FETCH_HEAD_REF = "FETCH_HEAD";
+const GITHUB_ACTIONS_BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
+const GITHUB_ACTIONS_BOT_NAME = "github-actions[bot]";
+const GITHUB_PAGES_BRANCH = "gh-pages";
+const JSON_EXTENSION = ".json";
+const NOTES_DIR_NAME = "notes";
+const PERSIST_COMMIT_MESSAGE = "chore: update Dashboard notes";
+const PERSIST_TEMP_DIR_PREFIX = "agentnote-dashboard-persist-";
+const TEXT_ENCODING = "utf-8";
+const notesDir = process.env[ENV_NOTES_DIR] || DEFAULT_DASHBOARD_NOTES_DIR;
+const eventName = process.env[ENV_EVENT_NAME] || "";
+const prNumber = Number(process.env[ENV_PR_NUMBER] || "");
+
 export const MAX_PERSISTED_DASHBOARD_NOTES = 1000;
 
 function copyDirectoryContents(sourceDir, targetDir) {
@@ -20,7 +36,7 @@ function copyDirectoryContents(sourceDir, targetDir) {
 
 function readNote(path) {
   try {
-    return JSON.parse(readFileSync(path, "utf-8"));
+    return JSON.parse(readFileSync(path, TEXT_ENCODING));
   } catch {
     return null;
   }
@@ -47,7 +63,7 @@ function noteSortTime(path) {
 function listNoteFiles(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((entry) => entry.endsWith(".json"))
+    .filter((entry) => entry.endsWith(JSON_EXTENSION))
     .map((entry) => join(dir, entry));
 }
 
@@ -94,7 +110,7 @@ export function pruneDashboardNotes(
 export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}) {
   mkdirSync(dashboardNotesDir, { recursive: true });
 
-  if (options.eventName === "pull_request" && Number.isInteger(options.prNumber)) {
+  if (options.eventName === EVENT_PULL_REQUEST && Number.isInteger(options.prNumber)) {
     removeNotesForPr(dashboardNotesDir, options.prNumber);
   }
   for (const number of prNumbersInSnapshot(snapshotDir)) {
@@ -114,14 +130,14 @@ function git(args, options = {}) {
   return execFileSync("git", args, {
     cwd: options.cwd,
     stdio: options.stdio || "pipe",
-    encoding: "utf-8",
+    encoding: TEXT_ENCODING,
   });
 }
 
 export function main() {
-  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-persist-"));
-  const snapshotDir = join(tempDir, "notes");
-  const worktreeDir = join(tempDir, "gh-pages");
+  const tempDir = mkdtempSync(join(tmpdir(), PERSIST_TEMP_DIR_PREFIX));
+  const snapshotDir = join(tempDir, NOTES_DIR_NAME);
+  const worktreeDir = join(tempDir, GITHUB_PAGES_BRANCH);
 
   if (existsSync(notesDir)) {
     mkdirSync(snapshotDir, { recursive: true });
@@ -133,41 +149,44 @@ export function main() {
   try {
     let hasGhPages = true;
     try {
-      git(["fetch", "origin", "gh-pages", "--depth=1"]);
+      git(["fetch", "origin", GITHUB_PAGES_BRANCH, "--depth=1"]);
     } catch {
       hasGhPages = false;
     }
 
     if (hasGhPages) {
-      git(["worktree", "add", "--detach", worktreeDir, "FETCH_HEAD"]);
-      git(["checkout", "-B", "gh-pages"], { cwd: worktreeDir });
+      git(["worktree", "add", "--detach", worktreeDir, FETCH_HEAD_REF]);
+      git(["checkout", "-B", GITHUB_PAGES_BRANCH], { cwd: worktreeDir });
     } else {
       git(["worktree", "add", "--detach", worktreeDir, "HEAD"]);
-      git(["checkout", "--orphan", "gh-pages"], { cwd: worktreeDir });
+      git(["checkout", "--orphan", GITHUB_PAGES_BRANCH], { cwd: worktreeDir });
       try {
         git(["rm", "-rf", "."], { cwd: worktreeDir });
       } catch {
-        // noop
+        // A new orphan branch can be empty, so there may be nothing to remove.
       }
     }
 
-    const dashboardNotesDir = join(worktreeDir, "dashboard", "notes");
+    const dashboardNotesDir = join(worktreeDir, DASHBOARD_DIR_NAME, NOTES_DIR_NAME);
     mergeDashboardNotes(snapshotDir, dashboardNotesDir, { eventName, prNumber });
 
-    git(["add", "-A", "dashboard/notes"], { cwd: worktreeDir });
+    const dashboardNotesPathspec = `${DASHBOARD_DIR_NAME}/${NOTES_DIR_NAME}`;
+    git(["add", "-A", dashboardNotesPathspec], { cwd: worktreeDir });
     try {
-      git(["diff", "--cached", "--quiet", "--", "dashboard/notes"], { cwd: worktreeDir });
+      git(["diff", "--cached", "--quiet", "--", dashboardNotesPathspec], {
+        cwd: worktreeDir,
+      });
     } catch {
       hasChanges = true;
     }
 
     if (hasChanges) {
-      git(["config", "user.name", "github-actions[bot]"], { cwd: worktreeDir });
-      git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], {
+      git(["config", "user.name", GITHUB_ACTIONS_BOT_NAME], { cwd: worktreeDir });
+      git(["config", "user.email", GITHUB_ACTIONS_BOT_EMAIL], {
         cwd: worktreeDir,
       });
-      git(["commit", "-m", "chore: update Dashboard notes"], { cwd: worktreeDir });
-      git(["push", "origin", "gh-pages"], { cwd: worktreeDir, stdio: "inherit" });
+      git(["commit", "-m", PERSIST_COMMIT_MESSAGE], { cwd: worktreeDir });
+      git(["push", "origin", GITHUB_PAGES_BRANCH], { cwd: worktreeDir, stdio: "inherit" });
     } else {
       console.log("No Dashboard note changes to persist.");
     }
@@ -175,7 +194,7 @@ export function main() {
     try {
       git(["worktree", "remove", "--force", worktreeDir]);
     } catch {
-      // noop
+      // Cleanup is best-effort because the CI job should report the original failure.
     }
     rmSync(tempDir, { recursive: true, force: true });
   }

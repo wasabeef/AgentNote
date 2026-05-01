@@ -35,6 +35,9 @@ interface DashboardIndexData {
 }
 
 const baseUrl = import.meta.env.BASE_URL;
+const JSON_EXTENSION = ".json";
+const NOTES_PUBLIC_DIR = "public/notes";
+const TEXT_ENCODING = "utf-8";
 const homePath = `${baseUrl}`;
 const configuredRepo =
   typeof import.meta.env.PUBLIC_REPO === "string" ? import.meta.env.PUBLIC_REPO.trim() : "";
@@ -46,7 +49,7 @@ const repoUrl = configuredRepoUrl || (configuredRepo ? `https://github.com/${con
 // Resolve from the package root because Astro/Vite rewrites import.meta.url to
 // the compiled module location during build, which can make source-relative
 // traversal miss public/notes even when the files are present.
-const notesDir = resolve(process.cwd(), "public/notes");
+const notesDir = resolve(process.cwd(), NOTES_PUBLIC_DIR);
 const commitMetadataCache = new Map<string, {
   sha: string;
   short_sha: string;
@@ -78,7 +81,7 @@ function readCommitMetadata(sha: string) {
       "git",
       ["show", "-s", "--format=%H%x00%h%x00%s%x00%aI%x00%an", sha],
       {
-        encoding: "utf-8",
+        encoding: TEXT_ENCODING,
         stdio: ["pipe", "pipe", "pipe"],
         env: process.env,
       },
@@ -101,13 +104,13 @@ function readCommitMetadata(sha: string) {
 
 function buildDashboardIndex(): DashboardIndexData {
   const noteFiles = existsSync(notesDir)
-    ? readdirSync(notesDir).filter((file) => file.endsWith(".json")).sort()
+    ? readdirSync(notesDir).filter((file) => file.endsWith(JSON_EXTENSION)).sort()
     : [];
 
   const noteRecords = noteFiles
     .map((file) => {
       try {
-        const raw = readFileSync(resolve(notesDir, file), "utf-8");
+        const raw = readFileSync(resolve(notesDir, file), TEXT_ENCODING);
         return {
           file,
           note: JSON.parse(raw) as Record<string, unknown>,
