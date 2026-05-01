@@ -5535,27 +5535,36 @@ function renderMarkdown(report, opts = {}) {
   const withPrompts = report.commits.filter(
     (commit2) => (visibleInteractionsBySha.get(commit2.sha)?.length ?? 0) > 0
   );
-  if (withPrompts.length > 0) {
+  if (report.total_prompts > 0) {
     lines.push("<details>");
-    lines.push(`<summary>\u{1F4AC} Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`);
+    lines.push(
+      `<summary>\u{1F4AC} Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`
+    );
     lines.push("");
-    for (const commit2 of withPrompts) {
-      lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
+    if (withPrompts.length === 0) {
+      lines.push(
+        `_No prompts are shown at the current \`prompt_detail\` setting. Use \`full\` to show every stored prompt._`
+      );
       lines.push("");
-      for (const interaction of visibleInteractionsBySha.get(commit2.sha) ?? []) {
-        const context = renderInteractionContext(interaction);
-        if (context) {
-          pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanContext(context));
-          lines.push(">");
-        }
-        const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
-        pushBlockquoteSection(lines, "\u{1F9D1} Prompt", cleaned);
-        if (interaction.response) {
-          const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : interaction.response;
-          lines.push(">");
-          pushBlockquoteSection(lines, "\u{1F916} Response", truncated);
-        }
+    } else {
+      for (const commit2 of withPrompts) {
+        lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
         lines.push("");
+        for (const interaction of visibleInteractionsBySha.get(commit2.sha) ?? []) {
+          const context = renderInteractionContext(interaction);
+          if (context) {
+            pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanContext(context));
+            lines.push(">");
+          }
+          const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
+          pushBlockquoteSection(lines, "\u{1F9D1} Prompt", cleaned);
+          if (interaction.response) {
+            const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}\u2026` : interaction.response;
+            lines.push(">");
+            pushBlockquoteSection(lines, "\u{1F916} Response", truncated);
+          }
+          lines.push("");
+        }
       }
     }
     lines.push("</details>");
