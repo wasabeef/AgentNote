@@ -23,6 +23,6 @@ jobs:
       - run: npm ci && npm -w packages/pr-report run build
       - uses: ./
         with:
-          prompt_detail: standard
+          prompt_detail: compact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

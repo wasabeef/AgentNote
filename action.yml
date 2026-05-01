@@ -16,9 +16,9 @@ inputs:
     required: false
     default: ""
   prompt_detail:
-    description: "PR Report prompt detail: compact, standard, or full (default: standard)"
+    description: "PR Report prompt detail: compact or full (default: compact)"
     required: false
-    default: "standard"
+    default: "compact"
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"

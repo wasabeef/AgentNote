@@ -1903,16 +1903,16 @@ function normalizeInteractionContexts(interaction) {
 function parsePromptDetail(value) {
   const normalized = (value ?? "").trim().toLowerCase();
   if (!normalized) return DEFAULT_PROMPT_DETAIL;
-  if (normalized === "compact" || normalized === "standard" || normalized === "full") {
+  if (normalized === "standard") return "compact";
+  if (normalized === "compact" || normalized === "full") {
     return normalized;
   }
-  throw new Error("prompt_detail must be one of: compact, standard, full");
+  throw new Error("prompt_detail must be one of: compact, full");
 }
 function shouldRenderInteractionByPromptDetail(interaction, detail) {
   const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
   if (detail === "full") return true;
-  if (detail === "standard") return runtime.level !== "low";
-  return runtime.level === "high";
+  return runtime.level !== "low";
 }
 function resolvePromptRuntimeSelection(selection, interaction) {
   if (!selection) return { score: 100, role: "primary", level: "high" };
@@ -2124,7 +2124,7 @@ var init_entry = __esm({
   "src/core/entry.ts"() {
     "use strict";
     init_constants();
-    DEFAULT_PROMPT_DETAIL = "standard";
+    DEFAULT_PROMPT_DETAIL = "compact";
     GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([
       // Web / JS / TS build outputs
       ".next",
@@ -5688,7 +5688,7 @@ async function pr(args2) {
   const prNumber = updateIdx !== -1 ? args2[updateIdx + 1] : null;
   const headRef = headIdx !== -1 ? args2[headIdx + 1] : "HEAD";
   if (promptDetailIdx !== -1 && !args2[promptDetailIdx + 1]) {
-    console.error("error: --prompt-detail requires compact, standard, or full");
+    console.error("error: --prompt-detail requires compact or full");
     process.exit(1);
   }
   const promptDetail = promptDetailIdx !== -1 ? parsePromptDetail(args2[promptDetailIdx + 1]) : parsePromptDetail(null);
@@ -6180,7 +6180,7 @@ usage:
                                     remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
   agent-note log [n]                list recent commits with session info
-  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|standard|full]
+  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]
                                     generate PR report or update PR description/comment
   agent-note session <id>           show commits for a session
   agent-note commit [args]          git commit with session tracking

@@ -103,7 +103,7 @@ describe("prompt selection analysis", () => {
     assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
   });
 
-  it("keeps short Japanese direction changes in standard prompt detail", () => {
+  it("keeps short Japanese direction changes in compact prompt detail", () => {
     const analysis = analyzePromptSelection({
       prompt: "できれば出したいだけど。。",
       response: null,
@@ -125,7 +125,7 @@ describe("prompt selection analysis", () => {
     assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
   });
 
-  it("does not promote short operational bridge prompts to standard", () => {
+  it("does not promote short operational bridge prompts to compact", () => {
     const analysis = analyzePromptSelection({
       prompt: "please commit and push now",
       response: null,
