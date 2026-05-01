@@ -1,0 +1,142 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T14:59:51.176Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "docs/TODO.md を確認して、解決済みのものがデグレしていないかだけチェック",
+      "response": "TODO の解決済み項目を、現在の実装とテストに照らしてデグレしていないか確認します。特に prompt context / prompt selection / missing notes 周りは過去に何度も揺れた場所なので、該当実装と regression test を見ます。\nTODO の解決済み項目は、実装箇所と regression test がちゃんと残っていることは確認できました。念のため、該当する focused tests だけ再実行して「今の branch でデグレしていない」ことを実測します。\n確認しました。`docs/TODO.md` の解決済み項目について、現状デグレは見つかっていません。\n\n確認結果:\n- `Prompt detail filter`: `substantive_prompt_shape` / operation-only prompt / response evidence only tail の regression test が残っていて pass。\n- `PR #34 Context`: `interaction-context` と `pr-report` の Context 表示テストが pass。\n- `PR #32 regression`: Codex stale revival、split commit、Cursor / Gemini record-level regression が pass。\n- `Prompt selection / Missing commit notes`: prompt-only fallback、consumed state、human-only skip、commit-to-commit window のテストが pass。\n\n実行結果: `127 tests pass / 0 fail`\n\n未解決 TODO は Dashboard の `0/0 AI-added lines` だけで、今回の「解決済み項目のデグレ確認」対象外です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "inline_code_or_path_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "コードも変えてない？",
+      "response": "変えていません。今回は確認だけです。\n\n実行したのは `docs/TODO.md` の読み取り、`rg` で実装・テストの対応確認、focused test の実行だけです。`apply_patch` も `git add` もしていません。\n\n現状の `git status` も clean でした。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "TODO解決済みのところのコードもバグってないか確認して",
+      "response": "解決済み TODO の「テストがある」だけではなく、実コードが本当に仕様どおりかをレビュー観点で見直します。今回は変更せず、バグ候補があるかをコードパスごとに確認します。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "また、Codex, Claude, cursor, gemini それぞれに今回のPRでバグを生んでいないかも確認して",
+      "response": "Agent 別の影響範囲も追加で見ます。今回の PR は core の prompt selection / rendering に触っているので、adapter そのものより `recordCommitEntry()` 経由で Claude / Codex / Cursor / Gemini の note 作成が壊れていないかを確認します。\n解決済み TODO と Agent 別影響の両方を、実装パスとテストで二重に確認します。まず Agent ごとの adapter / command テストを明示的に走らせて、今回の prompt selection 変更が `recordCommitEntry()` 経由で壊していないかを見ます。\n作業ツリーは clean で、対象ブランチは `fix/prompt-selection-post-edit-context` です。Agent 別テストファイルが揃っているので、Claude / Codex / Cursor / Gemini を個別にまとめて確認します。\nAgent 別テストがまだ実行中です。待っている間に、解決済み TODO に対応する実装箇所が今回の scoring / filtering 変更で逆戻りしていないか、コード側の条件を再確認します。\nさっきの Agent 別 focused test は repo root から直接起動したため、`commands/*` 側が `dist/cli.js` を root 直下で探して失敗しました。これはコードの失敗ではなく実行ディレクトリの問題なので、正しい `packages/cli` 直下から同じ対象を再実行します。\nAdapter 単体はここまで全て pass しています。残りは Codex / Cursor の command integration で、実際に hook → commit → note 作成まで通すところなので、このまま完走を待ちます。\nAgent 別の明示テストは `151 tests` 全 pass です。最後に、解決済み TODO の実装を含む CLI 全体と PR Report 側を通して、prompt filtering / rendering の組み合わせまで再確認します。\nPR Report 側は `33 tests` 全 pass です。CLI 全体は hook/commit integration を含むので少し長いですが、ここまで failure は出ていません。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "minor も直せるなら今の段階出直しといたほうがいいのでは",
+      "response": "Minor は今の段階で直せるものは直したほうがいいです。挙動を変えずに清書できるものと、意図どおり medium 化できていない可能性があるものを切り分けて、最小修正とテストで固めます。\n確認すると、`bridge` の substantive prompt を medium に上げる意図はあるのに、先に role clamp で最大 `45` になっていて `55` が意味を持っていませんでした。ここは minor というより「読みづらい dead code + 将来誤解」なので、挙動を明確にする方向で直します。\n方針は 2 点です。`short prompt` 判定は 1 つに統一し、`bridge` の score cap は「通常 low、substantive だけ medium まで」をコード上も読める形にします。旧ノートの prompt-only merge は意図どおりなので触りません。\n修正を入れました。`short prompt` 判定は `entry.ts` の 1 か所に寄せ、`bridge` の substantive cap は実際に 55 まで届く設計に合わせました。これから focused test と lint/typecheck を通します。\nFocused test は `86 tests` 全 pass です。次に build で `dist` も更新し、その後に full CLI / PR Report のテストを再実行します。今回の修正は core に触っているので、ここは少し重くても通しておきます。\ntypecheck / lint / PR Report test は全て pass しました。最後に build 後の CLI 全体テストを走らせ、Agent 経由の integration もこの修正後の `dist/cli.js` で再確認します。\nCLI full test はまだ実行中です。Adapter 単体部分は今回も pass していて、いまは Codex / Cursor などの実 commit integration に進んでいます。\nCLI full test も `379 tests` 全 pass しました。`dist` を更新したので、最後に diff check と変更一覧を確認します。\n`ncc` の生成物にいつもの trailing whitespace が戻っていました。これは生成 bundle 側だけなので、内容は変えず空白だけ落としてから再チェックします。\n`git diff --check` も clean になりました。変更は 7 ファイルで、実装 2 点 + テスト + dist 更新 + 設計 doc の clamp 表記だけです。 final? User didn't ask commit. We need report. But maybe ask commit? Since commit confirmation required. We need not commit. Mention if commitするなら言って. However final not include May? Task complete? There are uncommitted changes, so not \"all tasks complete\"? But user asked fix minor; done but uncommitted. Could still final with no May. Need include tests. Need mention commit not done due to instruction? \"コミットは未実行です\" because AGENTS says confirmation required. Use concise.\nMinor も今の段階で直しました。コミットはまだしていません。\n\n直した内容は 2 点です。`short prompt` 判定を `entry.ts` に一本化して、record 時の signal 判定と runtime role 判定がズレないようにしました。あわせて `bridge` の score cap を設計どおり `20-55` に整理し、`substantive_prompt_shape` がある場合だけ medium まで上がれることをコード上も明確にしました。\n\n確認済みです。\n\n- `npx tsx --test packages/cli/src/core/entry.test.ts packages/cli/src/core/record.test.ts`: `86 pass`\n- `npm run build --prefix packages/cli`: pass\n- `npm run build --prefix packages/pr-report`: pass\n- `npm run typecheck --prefix packages/cli`: pass\n- `npm run lint --prefix packages/cli`: pass\n- `npm test --prefix packages/pr-report`: `33 pass`\n- `npm test --prefix packages/cli`: `379 pass`\n- `git diff --check`: pass\n\n変更ファイルは `entry.ts` / `record.ts` / tests / 設計 doc / build 済み dist です。",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/cli/src/core/record.test.ts",
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  }
+}
