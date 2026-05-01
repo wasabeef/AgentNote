@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { mergeDashboardNotes } from "./persist-notes.mjs";
+import { mergeDashboardNotes, pruneDashboardNotes } from "./persist-notes.mjs";
 import { restoreDashboardNotes } from "./restore-notes.mjs";
 import {
   MAX_DIFF_TOTAL_LINES,
@@ -119,6 +119,25 @@ test("mergeDashboardNotes removes stale notes for the current PR when no replace
   }
 });
 
+test("pruneDashboardNotes keeps the newest persisted note files", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-prune-test-"));
+  const notesDir = join(tempDir, "notes");
+
+  try {
+    mkdirSync(notesDir, { recursive: true });
+    writeNote(join(notesDir, "old.json"), 41, "old", "2026-01-01T00:00:00Z");
+    writeNote(join(notesDir, "middle.json"), 42, "middle", "2026-02-01T00:00:00Z");
+    writeNote(join(notesDir, "new.json"), 43, "new", "2026-03-01T00:00:00Z");
+
+    const pruned = pruneDashboardNotes(notesDir, 2);
+
+    assert.equal(pruned, 1);
+    assert.deepEqual(readdirSync(notesDir).sort(), ["middle.json", "new.json"]);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("restoreDashboardNotes replaces local notes with the persisted gh-pages notes", () => {
   const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-restore-test-"));
   const persistedNotesDir = join(tempDir, "persisted-notes");
@@ -142,12 +161,12 @@ test("restoreDashboardNotes replaces local notes with the persisted gh-pages not
   }
 });
 
-function writeNote(path, prNumber, shortSha) {
+function writeNote(path, prNumber, shortSha, date = "2026-04-01T00:00:00Z") {
   writeFileSync(
     path,
     JSON.stringify({
       pull_request: { number: prNumber },
-      commit: { short_sha: shortSha },
+      commit: { short_sha: shortSha, date },
     }),
   );
 }

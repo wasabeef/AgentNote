@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
 const eventName = process.env.EVENT_NAME || "";
 const prNumber = Number(process.env.PR_NUMBER || "");
+export const MAX_PERSISTED_DASHBOARD_NOTES = 1000;
 
 function copyDirectoryContents(sourceDir, targetDir) {
   for (const entry of readdirSync(sourceDir)) {
@@ -28,6 +29,19 @@ function readNote(path) {
 function notePrNumber(path) {
   const number = readNote(path)?.pull_request?.number;
   return typeof number === "number" ? number : null;
+}
+
+function noteSortTime(path) {
+  const note = readNote(path);
+  const commit = note?.commit && typeof note.commit === "object" ? note.commit : {};
+  const rawDate =
+    typeof commit.date === "string" && commit.date
+      ? commit.date
+      : typeof note?.timestamp === "string"
+        ? note.timestamp
+        : "";
+  const parsed = rawDate ? Date.parse(rawDate) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function listNoteFiles(dir) {
@@ -55,6 +69,28 @@ function prNumbersInSnapshot(snapshotDir) {
   return numbers;
 }
 
+export function pruneDashboardNotes(
+  dashboardNotesDir,
+  maxNotes = MAX_PERSISTED_DASHBOARD_NOTES,
+) {
+  if (!Number.isInteger(maxNotes) || maxNotes <= 0) return 0;
+  const noteFiles = listNoteFiles(dashboardNotesDir);
+  if (noteFiles.length <= maxNotes) return 0;
+
+  const staleFiles = noteFiles
+    .map((path) => ({ path, time: noteSortTime(path) }))
+    .sort((left, right) => {
+      const dateCompare = right.time - left.time;
+      if (dateCompare !== 0) return dateCompare;
+      return left.path.localeCompare(right.path);
+    })
+    .slice(maxNotes);
+  for (const { path } of staleFiles) {
+    rmSync(path, { force: true });
+  }
+  return staleFiles.length;
+}
+
 export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}) {
   mkdirSync(dashboardNotesDir, { recursive: true });
 
@@ -67,6 +103,10 @@ export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}
 
   if (existsSync(snapshotDir)) {
     copyDirectoryContents(snapshotDir, dashboardNotesDir);
+  }
+  const pruned = pruneDashboardNotes(dashboardNotesDir);
+  if (pruned > 0) {
+    console.log(`Pruned ${pruned} stale Dashboard note file(s).`);
   }
 }
 

@@ -2972,8 +2972,19 @@ const dashboardIndex = buildDashboardIndex();
           if (match?.commits?.length) return selectPR(match.number);
           return showMissingSelection(`PR #${pr}`);
         }
-        if (state.index?.prs?.length) return selectPR(state.index.prs[0].number);
-        if (state.index?.commits?.length) return selectCommit(state.index.commits[0].short_sha);
+        showDashboardHome();
+      }
+
+      function showDashboardHome() {
+        state.loading = false;
+        state.current = null;
+        state.currentNote = null;
+        state.currentGroupNotes = [];
+        state.missingSelection = null;
+        renderSidebar();
+        renderMain();
+        renderRail();
+        updateNavButtons();
       }
 
       function showMissingSelection(label) {

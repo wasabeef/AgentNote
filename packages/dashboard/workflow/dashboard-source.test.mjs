@@ -54,13 +54,11 @@ describe("dashboard line attribution display source", () => {
 });
 
 describe("dashboard URL restore source", () => {
-  it("does not rewrite an explicit missing PR URL to the latest PR", () => {
-    const restoreSource = sourceBetween("function restoreFromUrl", "function showMissingSelection");
+  it("does not rewrite dashboard root or an explicit missing PR URL to the latest PR", () => {
+    const restoreSource = sourceBetween("function restoreFromUrl", "function showDashboardHome");
     assert.ok(restoreSource.includes('return showMissingSelection(`PR #${pr}`);'));
-    assert.ok(restoreSource.includes("if (state.index?.prs?.length) return selectPR"));
-    assert.ok(
-      restoreSource.indexOf('return showMissingSelection(`PR #${pr}`);') <
-        restoreSource.indexOf("if (state.index?.prs?.length) return selectPR"),
-    );
+    assert.ok(restoreSource.includes("showDashboardHome();"));
+    assert.ok(!restoreSource.includes("state.index?.prs?.length"));
+    assert.ok(!restoreSource.includes("state.index?.commits?.length"));
   });
 });
