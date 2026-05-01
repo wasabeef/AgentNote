@@ -52,3 +52,15 @@ describe("dashboard line attribution display source", () => {
     assert.ok(dashboardSource.includes('h("span", { className: "stat warm" }, lineSummaryLabel(summary))'));
   });
 });
+
+describe("dashboard URL restore source", () => {
+  it("does not rewrite an explicit missing PR URL to the latest PR", () => {
+    const restoreSource = sourceBetween("function restoreFromUrl", "function showMissingSelection");
+    assert.ok(restoreSource.includes('return showMissingSelection(`PR #${pr}`);'));
+    assert.ok(restoreSource.includes("if (state.index?.prs?.length) return selectPR"));
+    assert.ok(
+      restoreSource.indexOf('return showMissingSelection(`PR #${pr}`);') <
+        restoreSource.indexOf("if (state.index?.prs?.length) return selectPR"),
+    );
+  });
+});
