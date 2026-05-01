@@ -1,0 +1,743 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T17:24:13.140Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "それと「Open Dashboard ↗」が別タブで開かないのなんで",
+      "response": "`Open Dashboard ↗` の件も同時に確認します。まず PR body に実際どんな HTML/Markdown が入っているか、そして GitHub 側で属性が落ちているのかを切り分けます。\nPR body 自体には `target=\"_blank\"` が入っています。次は GitHub の Markdown renderer がそれを残すかを API で確認します。ここが落ちていれば、Agent Note 側ではなく GitHub の sanitizer/renderer 仕様です。\n原因は GitHub 側です。PR body には実際にこう入っています。\n\n```html\n<a href=\"https://wasabeef.github.io/AgentNote/dashboard/\" target=\"_blank\" rel=\"noopener noreferrer\">Open Dashboard ↗</a>\n```\n\nただし GitHub の Markdown renderer に通すと、`target=\"_blank\"` が削除されます。\n\n```html\n<a href=\"https://wasabeef.github.io/AgentNote/dashboard/\" rel=\"nofollow\">Open Dashboard ↗</a>\n```\n\nつまり GitHub PR description 内の link は、こちらから強制的に別タブで開かせることができません。`↗` は外部リンクっぽい見た目にはできますが、挙動は GitHub/browser 側に握られます。ユーザー操作としては Cmd/Ctrl click や middle click なら別タブです。\n\nなので実装としては `target=\"_blank\"` を入れても効かないです。むしろ misleading なので、必要なら別 PR で `target` / `rel` を戻して plain link にした方がきれいです。  \nなお、Dashboard restore の追加修正はまだ未 commit です。更新するなら `y` で commit/push します。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "まあいいや、いったんこのまま。",
+      "response": "了解です。`Open Dashboard ↗` の別タブ問題は GitHub 側で `target` が落ちる仕様なので、今回はこのままにします。\n\nDashboard restore の追加修正は未 commit のまま残っています。必要なら次に commit / push します。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "やっぱり理想は\nhttps://wasabeef.github.io/AgentNote/dashboard で ?pr= のリダイレクトしない。なぜならチーム開発で PR 複数ある可能性があるため。\npr-report で Open Dashboard ↗ はしっかり該当の ?pr=48 などをつける。",
+      "response": "理想形、かなり納得です。`/dashboard` は一覧入口として URL を汚さず、PR body の `Open Dashboard ↗` だけが該当 PR に deep link する形に直します。まず生成元の `dashboard_url` と Dashboard 初期選択を確認します。\n実装方針は 2 つです。`collectReport()` に PR 番号を渡せるようにして Dashboard URL に `?pr=N` を付ける、そして Dashboard の URL 指定なし表示は自動選択せず「選んでね」状態で止めます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "No dashboard data found for PR #47. のままなのも一応確認して",
+      "response": "`No dashboard data found for PR #47` は live も確認しつつ進めます。いまやる修正は「root `/dashboard` は選択なしの一覧入口」「PR Report のリンクだけ `?pr=48` 付き deep link」に分けて入れます。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`No dashboard data found for PR #47` は live も確認しつつ進めます。 いまやる修正は「root `/dashboard` は選択なしの一覧入口」「PR Report のリンクだけ `?pr=48` 付き deep link」に分けて入れます。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "キャッシュかも",
+      "response": "キャッシュの可能性は高いです。今は `dashboard/notes/656a7f0.json` が 200 になっているので、少なくとも note file 自体は配信側に戻っています。続けて `/dashboard` の自動選択をやめ、PR Report の link だけ `?pr=N` 付きに直します。\n実装を入れました。次は `pr-report` / `dashboard` の unit test と、CLI / Action bundle 再生成まで通して、PR #48 に積める状態にします。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "今は `dashboard/notes/656a7f0.json` が 200 になっているので、少なくとも note file 自体は配信側に戻っています。 続けて `/dashboard` の自動選択をやめ、PR Report の link だけ `?pr=N` 付きに直します。"
+        }
+      ],
+      "files_touched": [
+        "packages/pr-report/src/github.ts",
+        "packages/pr-report/src/report.ts",
+        "packages/pr-report/src/index.ts",
+        "packages/cli/src/commands/pr.ts",
+        "packages/dashboard/src/pages/index.astro",
+        "packages/dashboard/workflow/dashboard-source.test.mjs",
+        "packages/pr-report/src/index.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "それと ?pr=47 って指定したら それ以降のものしか出ないのはなぜ？",
+      "response": "`?pr=47` で「それ以降しか出ない」件も切り分けます。これは URL filter の仕様ではなく、Dashboard に埋め込まれている `notes/*.json` 自体が今どこまで存在するか、もしくは sidebar の表示が現在選択 PR に引っ張られているかのどちらかです。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`?pr=47` で「それ以降しか出ない」件も切り分けます。 これは URL filter の仕様ではなく、Dashboard に埋め込まれている `notes/*.json` 自体が今どこまで存在するか、もしくは sidebar の表示が現在選択 PR に引っ張られているかのどちらかです。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "最大何件や最大何日分など上限を決める必要はあるが過去も見れるべき",
+      "response": "その方針でいきましょう。`?pr=47` が「それ以降だけ」に見えるのは URL filter ではなく、現状 `dashboard/notes` が過去分を十分に保持できていなかった副作用です。今回の PR では「root は一覧入口」「PR link は deep link」「persist は過去 note を保持」を揃え、上限は内部定数で持つ方向にします。\n上限は「日数」よりまず「note 件数」で持つほうが安全です。日数で切ると低頻度 repo の古い重要 PR が消えやすいので、今回は内部定数で「最新 1000 note files まで保持」にします。設定値は増やさず、古いものから pruning する形にします。\n`?pr=47` で過去が消える設計にはしていません。実装上は `?pr=47` は main pane の選択だけで、sidebar/index は全 `notes/*.json` から作ります。過去が見えない場合は、配信されている note がまだ 47/48 しかないのが原因です。上限は最新 1000 note files にして、今後は過去分も蓄積します。\n`pr-report` bundle 再生成で ncc 由来の trailing whitespace が出て `git diff --check` が落ちました。実装ではなく生成物の整形問題なので、dist の末尾空白だけ落としてから再チェックします。\n実装と検証はほぼ通っています。最後に「上限 1000 件」はユーザーが知っておくべき挙動なので、Dashboard docs に 1 行だけ追記するか確認します。設定項目ではないので README までは増やさず、website/docs 側に寄せるのがよさそうです。\n`?pr=47` は本来「PR #47 だけを開く deep link」で、履歴全体を `47 以降` に filter する設計ではありません。過去が見えないように見える原因は、以前の Dashboard note 上書きバグで `dashboard/notes` に残っているデータ自体が PR #47 / #48 付近だけになっていたためです。\n\n今回の追加修正で理想形に寄せました。\n\n- `/dashboard/` は自動で `?pr=latest` に書き換えない\n- PR Report の `Open Dashboard ↗` は `https://.../dashboard/?pr=48` のように該当 PR deep link にする\n- Dashboard notes は過去分を保持し続ける\n- ただし無制限増加は避けるため、内部上限として最新 `1000` note files を保持\n- `?pr=47` が存在しない場合だけ missing 表示。存在するなら PR #47 を開く\n\n`No dashboard data found for PR #47` は、今 `dashboard/notes/656a7f0.json` が `200` で返っているので、手元表示が残っているなら GitHub Pages / browser cache の可能性が高いです。\n\n検証済みです。\n\n- `npm test --prefix packages/pr-report`\n- `npm test --prefix packages/dashboard`\n- `npm run build --prefix packages/pr-report`\n- `npm run build --prefix packages/cli`\n- `npm run build --prefix packages/dashboard`\n- `npm test --prefix packages/cli`\n- `npm run typecheck --prefix packages/cli`\n- `npm run lint --prefix packages/cli`\n- `git diff --check`\n\nこの追加分はまだ未 commit です。commit / push して PR #48 を更新していいですか？\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`?pr=47` が「それ以降だけ」に見えるのは URL filter ではなく、現状 `dashboard/notes` が過去分を十分に保持できていなかった副作用です。 今回の PR では「root は一覧入口」「PR link は deep link」「persist は過去 note を保持」を揃え、上限は内部定数で持つ方向にします。"
+        }
+      ],
+      "files_touched": [
+        "packages/dashboard/workflow/persist-notes.mjs",
+        "packages/dashboard/workflow/sync-notes.test.mjs"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/pr.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/dashboard-source.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/persist-notes.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/sync-notes.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/github.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 82,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "7b6a58f27838f38daa0d20dc21aa64fe4619925a",
+    "short_sha": "7b6a58f",
+    "message": "fix(dashboard): deep link PR reports without root redirect",
+    "date": "2026-05-02T02:24:11+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 99f44ab..b86a357 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -5303,17 +5303,23 @@ ${section}${after}`;",
+          " ",
+          " ${section}`;",
+          " }",
+          "-function inferDashboardUrl(repoUrl) {",
+          "+function inferDashboardUrl(repoUrl, prNumber) {",
+          "   if (!repoUrl) return null;",
+          "   const normalized = repoUrl.replace(/\\.git$/, \"\");",
+          "   const match = normalized.match(/^https:\\/\\/github\\.com\\/([^/]+)\\/([^/]+)$/);",
+          "   if (!match) return null;",
+          "   const [, owner, repo] = match;",
+          "   const pagesRoot = `https://${owner}.github.io`;",
+          "-  if (repo === `${owner}.github.io`) {",
+          "-    return `${pagesRoot}/dashboard/`;",
+          "-  }",
+          "-  return `${pagesRoot}/${repo}/dashboard/`;",
+          "+  const dashboardUrl = repo === `${owner}.github.io` ? `${pagesRoot}/dashboard/` : `${pagesRoot}/${repo}/dashboard/`;",
+          "+  return appendPrNumber(dashboardUrl, prNumber);",
+          "+}",
+          "+function appendPrNumber(dashboardUrl, prNumber) {",
+          "+  if (prNumber == null || prNumber === \"\") return dashboardUrl;",
+          "+  const normalized = Number(prNumber);",
+          "+  if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;",
+          "+  const url = new URL(dashboardUrl);",
+          "+  url.searchParams.set(\"pr\", String(normalized));",
+          "+  return url.toString();",
+          " }",
+          " async function updatePrDescription(prNumber, markdown) {",
+          "   const currentBody = await readPrBody(prNumber);",
+          "@@ -5377,7 +5383,7 @@ init_storage();",
+          " init_git();",
+          " import { existsSync as existsSync13 } from \"node:fs\";",
+          " import { join as join13 } from \"node:path\";",
+          "-async function collectReport(base, headRef = \"HEAD\") {",
+          "+async function collectReport(base, headRef = \"HEAD\", opts = {}) {",
+          "   const head = await git([\"rev-parse\", \"--short\", headRef]);",
+          "   const raw = await git([\"log\", \"--reverse\", \"--format=%H\t%h\t%s\", `${base}..${headRef}`]);",
+          "   if (!raw.trim()) return null;",
+          "@@ -5479,7 +5485,7 @@ async function collectReport(base, headRef = \"HEAD\") {",
+          "   const hasDashboardWorkflow = existsSync13(",
+          "     join13(repoRoot3, \".github\", \"workflows\", \"agentnote-dashboard.yml\")",
+          "   );",
+          "-  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;",
+          "+  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber) : null;",
+          "   return {",
+          "     base,",
+          "     head,",
+          "@@ -5701,7 +5707,7 @@ async function pr(args2) {",
+          "     process.exit(1);",
+          "   }",
+          "   const outputMode = outputIdx !== -1 ? args2[outputIdx + 1] : \"description\";",
+          "-  const report = await collectReport(base, headRef);",
+          "+  const report = await collectReport(base, headRef, { dashboardPrNumber: prNumber });",
+          "   if (!report) {",
+          "     if (isJson) {",
+          "       console.log(JSON.stringify({ error: \"no commits found\" }));"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/pr.ts",
+        "lines": [
+          "index 7ca4046..a50d173 100644",
+          "--- a/packages/cli/src/commands/pr.ts",
+          "+++ b/packages/cli/src/commands/pr.ts",
+          "@@ -32,7 +32,7 @@ export async function pr(args: string[]): Promise<void> {",
+          "   }",
+          " ",
+          "   const outputMode = outputIdx !== -1 ? args[outputIdx + 1] : \"description\";",
+          "-  const report = await collectReport(base, headRef);",
+          "+  const report = await collectReport(base, headRef, { dashboardPrNumber: prNumber });",
+          " ",
+          "   if (!report) {",
+          "     if (isJson) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/src/pages/index.astro",
+        "lines": [
+          "index d414021..8d6ea61 100644",
+          "--- a/packages/dashboard/src/pages/index.astro",
+          "+++ b/packages/dashboard/src/pages/index.astro",
+          "@@ -2972,8 +2972,19 @@ const dashboardIndex = buildDashboardIndex();",
+          "           if (match?.commits?.length) return selectPR(match.number);",
+          "           return showMissingSelection(`PR #${pr}`);",
+          "         }",
+          "-        if (state.index?.prs?.length) return selectPR(state.index.prs[0].number);",
+          "-        if (state.index?.commits?.length) return selectCommit(state.index.commits[0].short_sha);",
+          "+        showDashboardHome();",
+          "+      }",
+          "+",
+          "+      function showDashboardHome() {",
+          "+        state.loading = false;",
+          "+        state.current = null;",
+          "+        state.currentNote = null;",
+          "+        state.currentGroupNotes = [];",
+          "+        state.missingSelection = null;",
+          "+        renderSidebar();",
+          "+        renderMain();",
+          "+        renderRail();",
+          "+        updateNavButtons();",
+          "       }",
+          " ",
+          "       function showMissingSelection(label) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/dashboard-source.test.mjs",
+        "lines": [
+          "index 9471e20..3f3c8da 100644",
+          "--- a/packages/dashboard/workflow/dashboard-source.test.mjs",
+          "+++ b/packages/dashboard/workflow/dashboard-source.test.mjs",
+          "@@ -54,13 +54,11 @@ describe(\"dashboard line attribution display source\", () => {",
+          " });",
+          " ",
+          " describe(\"dashboard URL restore source\", () => {",
+          "-  it(\"does not rewrite an explicit missing PR URL to the latest PR\", () => {",
+          "-    const restoreSource = sourceBetween(\"function restoreFromUrl\", \"function showMissingSelection\");",
+          "+  it(\"does not rewrite dashboard root or an explicit missing PR URL to the latest PR\", () => {",
+          "+    const restoreSource = sourceBetween(\"function restoreFromUrl\", \"function showDashboardHome\");",
+          "     assert.ok(restoreSource.includes('return showMissingSelection(`PR #${pr}`);'));",
+          "-    assert.ok(restoreSource.includes(\"if (state.index?.prs?.length) return selectPR\"));",
+          "-    assert.ok(",
+          "-      restoreSource.indexOf('return showMissingSelection(`PR #${pr}`);') <",
+          "-        restoreSource.indexOf(\"if (state.index?.prs?.length) return selectPR\"),",
+          "-    );",
+          "+    assert.ok(restoreSource.includes(\"showDashboardHome();\"));",
+          "+    assert.ok(!restoreSource.includes(\"state.index?.prs?.length\"));",
+          "+    assert.ok(!restoreSource.includes(\"state.index?.commits?.length\"));",
+          "   });",
+          " });"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/persist-notes.mjs",
+        "lines": [
+          "index 2bf46ed..106e36e 100644",
+          "--- a/packages/dashboard/workflow/persist-notes.mjs",
+          "+++ b/packages/dashboard/workflow/persist-notes.mjs",
+          "@@ -7,6 +7,7 @@ import { pathToFileURL } from \"node:url\";",
+          " const notesDir = process.env.NOTES_DIR || \".agentnote-dashboard-notes\";",
+          " const eventName = process.env.EVENT_NAME || \"\";",
+          " const prNumber = Number(process.env.PR_NUMBER || \"\");",
+          "+export const MAX_PERSISTED_DASHBOARD_NOTES = 1000;",
+          " ",
+          " function copyDirectoryContents(sourceDir, targetDir) {",
+          "   for (const entry of readdirSync(sourceDir)) {",
+          "@@ -30,6 +31,19 @@ function notePrNumber(path) {",
+          "   return typeof number === \"number\" ? number : null;",
+          " }",
+          " ",
+          "+function noteSortTime(path) {",
+          "+  const note = readNote(path);",
+          "+  const commit = note?.commit && typeof note.commit === \"object\" ? note.commit : {};",
+          "+  const rawDate =",
+          "+    typeof commit.date === \"string\" && commit.date",
+          "+      ? commit.date",
+          "+      : typeof note?.timestamp === \"string\"",
+          "+        ? note.timestamp",
+          "+        : \"\";",
+          "+  const parsed = rawDate ? Date.parse(rawDate) : Number.NaN;",
+          "+  return Number.isFinite(parsed) ? parsed : 0;",
+          "+}",
+          "+",
+          " function listNoteFiles(dir) {",
+          "   if (!existsSync(dir)) return [];",
+          "   return readdirSync(dir)",
+          "@@ -55,6 +69,28 @@ function prNumbersInSnapshot(snapshotDir) {",
+          "   return numbers;",
+          " }",
+          " ",
+          "+export function pruneDashboardNotes(",
+          "+  dashboardNotesDir,",
+          "+  maxNotes = MAX_PERSISTED_DASHBOARD_NOTES,",
+          "+) {",
+          "+  if (!Number.isInteger(maxNotes) || maxNotes <= 0) return 0;",
+          "+  const noteFiles = listNoteFiles(dashboardNotesDir);",
+          "+  if (noteFiles.length <= maxNotes) return 0;",
+          "+",
+          "+  const staleFiles = noteFiles",
+          "+    .map((path) => ({ path, time: noteSortTime(path) }))",
+          "+    .sort((left, right) => {",
+          "+      const dateCompare = right.time - left.time;",
+          "+      if (dateCompare !== 0) return dateCompare;",
+          "+      return left.path.localeCompare(right.path);",
+          "+    })",
+          "+    .slice(maxNotes);",
+          "+  for (const { path } of staleFiles) {",
+          "+    rmSync(path, { force: true });",
+          "+  }",
+          "+  return staleFiles.length;",
+          "+}",
+          "+",
+          " export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}) {",
+          "   mkdirSync(dashboardNotesDir, { recursive: true });",
+          " ",
+          "@@ -68,6 +104,10 @@ export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}",
+          "   if (existsSync(snapshotDir)) {",
+          "     copyDirectoryContents(snapshotDir, dashboardNotesDir);",
+          "   }",
+          "+  const pruned = pruneDashboardNotes(dashboardNotesDir);",
+          "+  if (pruned > 0) {",
+          "+    console.log(`Pruned ${pruned} stale Dashboard note file(s).`);",
+          "+  }",
+          " }",
+          " ",
+          " function git(args, options = {}) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/sync-notes.test.mjs",
+        "lines": [
+          "index a4d1257..d2ffb8f 100644",
+          "--- a/packages/dashboard/workflow/sync-notes.test.mjs",
+          "+++ b/packages/dashboard/workflow/sync-notes.test.mjs",
+          "@@ -11,7 +11,7 @@ import {",
+          " import { tmpdir } from \"node:os\";",
+          " import { join } from \"node:path\";",
+          " import test from \"node:test\";",
+          "-import { mergeDashboardNotes } from \"./persist-notes.mjs\";",
+          "+import { mergeDashboardNotes, pruneDashboardNotes } from \"./persist-notes.mjs\";",
+          " import { restoreDashboardNotes } from \"./restore-notes.mjs\";",
+          " import {",
+          "   MAX_DIFF_TOTAL_LINES,",
+          "@@ -119,6 +119,25 @@ test(\"mergeDashboardNotes removes stale notes for the current PR when no replace",
+          "   }",
+          " });",
+          " ",
+          "+test(\"pruneDashboardNotes keeps the newest persisted note files\", () => {",
+          "+  const tempDir = mkdtempSync(join(tmpdir(), \"agentnote-dashboard-prune-test-\"));",
+          "+  const notesDir = join(tempDir, \"notes\");",
+          "+",
+          "+  try {",
+          "+    mkdirSync(notesDir, { recursive: true });",
+          "+    writeNote(join(notesDir, \"old.json\"), 41, \"old\", \"2026-01-01T00:00:00Z\");",
+          "+    writeNote(join(notesDir, \"middle.json\"), 42, \"middle\", \"2026-02-01T00:00:00Z\");",
+          "+    writeNote(join(notesDir, \"new.json\"), 43, \"new\", \"2026-03-01T00:00:00Z\");",
+          "+",
+          "+    const pruned = pruneDashboardNotes(notesDir, 2);",
+          "+",
+          "+    assert.equal(pruned, 1);",
+          "+    assert.deepEqual(readdirSync(notesDir).sort(), [\"middle.json\", \"new.json\"]);",
+          "+  } finally {",
+          "+    rmSync(tempDir, { recursive: true, force: true });",
+          "+  }",
+          "+});",
+          "+",
+          " test(\"restoreDashboardNotes replaces local notes with the persisted gh-pages notes\", () => {",
+          "   const tempDir = mkdtempSync(join(tmpdir(), \"agentnote-dashboard-restore-test-\"));",
+          "   const persistedNotesDir = join(tempDir, \"persisted-notes\");",
+          "@@ -142,12 +161,12 @@ test(\"restoreDashboardNotes replaces local notes with the persisted gh-pages not",
+          "   }",
+          " });",
+          " ",
+          "-function writeNote(path, prNumber, shortSha) {",
+          "+function writeNote(path, prNumber, shortSha, date = \"2026-04-01T00:00:00Z\") {",
+          "   writeFileSync(",
+          "     path,",
+          "     JSON.stringify({",
+          "       pull_request: { number: prNumber },",
+          "-      commit: { short_sha: shortSha },",
+          "+      commit: { short_sha: shortSha, date },",
+          "     }),",
+          "   );",
+          " }"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/dist/index.js",
+        "lines": [
+          "index cc36973..3f41227 100644",
+          "--- a/packages/pr-report/dist/index.js",
+          "+++ b/packages/pr-report/dist/index.js",
+          "@@ -36300,7 +36300,7 @@ function upsertDescription(existingBody, markdown) {",
+          " function shouldRetryNotesFetch(report) {",
+          "     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;",
+          " }",
+          "-function inferDashboardUrl(repoUrl) {",
+          "+function inferDashboardUrl(repoUrl, prNumber) {",
+          "     if (!repoUrl)",
+          "         return null;",
+          "     const normalized = repoUrl.replace(/\\.git$/, \"\");",
+          "@@ -36309,10 +36309,20 @@ function inferDashboardUrl(repoUrl) {",
+          "         return null;",
+          "     const [, owner, repo] = match;",
+          "     const pagesRoot = `https://${owner}.github.io`;",
+          "-    if (repo === `${owner}.github.io`) {",
+          "-        return `${pagesRoot}/dashboard/`;",
+          "-    }",
+          "-    return `${pagesRoot}/${repo}/dashboard/`;",
+          "+    const dashboardUrl = repo === `${owner}.github.io`",
+          "+        ? `${pagesRoot}/dashboard/`",
+          "+        : `${pagesRoot}/${repo}/dashboard/`;",
+          "+    return appendPrNumber(dashboardUrl, prNumber);",
+          "+}",
+          "+function appendPrNumber(dashboardUrl, prNumber) {",
+          "+    if (prNumber == null || prNumber === \"\")",
+          "+        return dashboardUrl;",
+          "+    const normalized = Number(prNumber);",
+          "+    if (!Number.isInteger(normalized) || normalized <= 0)",
+          "+        return dashboardUrl;",
+          "+    const url = new URL(dashboardUrl);",
+          "+    url.searchParams.set(\"pr\", String(normalized));",
+          "+    return url.toString();",
+          " }",
+          " function hasDeploymentBranchProtection(policy) {",
+          "     return Boolean(policy &&",
+          "@@ -37062,7 +37072,7 @@ function normalizeEntry(raw) {",
+          " ",
+          " ",
+          " ",
+          "-async function collectReport(base, headRef = \"HEAD\") {",
+          "+async function collectReport(base, headRef = \"HEAD\", opts = {}) {",
+          "     const head = await git([\"rev-parse\", \"--short\", headRef]);",
+          "     const raw = await git([\"log\", \"--reverse\", \"--format=%H\\t%h\\t%s\", `${base}..${headRef}`]);",
+          "     if (!raw.trim())",
+          "@@ -37166,7 +37176,9 @@ async function collectReport(base, headRef = \"HEAD\") {",
+          "     }",
+          "     const repoRoot = await git([\"rev-parse\", \"--show-toplevel\"]);",
+          "     const hasDashboardWorkflow = (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(repoRoot, \".github\", \"workflows\", \"agentnote-dashboard.yml\"));",
+          "-    const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;",
+          "+    const dashboardUrl = hasDashboardWorkflow",
+          "+        ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)",
+          "+        : null;",
+          "     return {",
+          "         base,",
+          "         head,",
+          "@@ -37469,6 +37481,7 @@ async function run() {",
+          "         const base = getInput(\"base\") ||",
+          "             `origin/${github_context.payload.pull_request?.base?.ref ?? \"main\"}`;",
+          "         const headSha = github_context.payload.pull_request?.head?.sha;",
+          "+        const prNumber = github_context.payload.pull_request?.number ?? null;",
+          "         const prOutputMode = resolvePrOutputMode(getInput(\"pr_output\"));",
+          "         const promptDetail = parsePromptDetail(getInput(\"prompt_detail\"));",
+          "         const token = process.env.GITHUB_TOKEN || \"\";",
+          "@@ -37476,7 +37489,9 @@ async function run() {",
+          "         const maxAttempts = 3;",
+          "         for (let attempt = 1; attempt <= maxAttempts; attempt++) {",
+          "             fetchAgentnoteNotes();",
+          "-            report = await collectReport(base, headSha);",
+          "+            report = await collectReport(base, headSha, {",
+          "+                dashboardPrNumber: prNumber,",
+          "+            });",
+          "             if (!report) {",
+          "                 info(\"No agent-note data found for this PR.\");",
+          "                 return;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/github.ts",
+        "lines": [
+          "index 6956e43..431b35c 100644",
+          "--- a/packages/pr-report/src/github.ts",
+          "+++ b/packages/pr-report/src/github.ts",
+          "@@ -61,7 +61,10 @@ export function shouldRetryNotesFetch(report: {",
+          " \treturn (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;",
+          " }",
+          " ",
+          "-export function inferDashboardUrl(repoUrl: string | null): string | null {",
+          "+export function inferDashboardUrl(",
+          "+\trepoUrl: string | null,",
+          "+\tprNumber?: number | string | null,",
+          "+): string | null {",
+          " \tif (!repoUrl) return null;",
+          " ",
+          " \tconst normalized = repoUrl.replace(/\\.git$/, \"\");",
+          "@@ -70,10 +73,24 @@ export function inferDashboardUrl(repoUrl: string | null): string | null {",
+          " ",
+          " \tconst [, owner, repo] = match;",
+          " \tconst pagesRoot = `https://${owner}.github.io`;",
+          "-\tif (repo === `${owner}.github.io`) {",
+          "-\t\treturn `${pagesRoot}/dashboard/`;",
+          "-\t}",
+          "-\treturn `${pagesRoot}/${repo}/dashboard/`;",
+          "+\tconst dashboardUrl =",
+          "+\t\trepo === `${owner}.github.io`",
+          "+\t\t\t? `${pagesRoot}/dashboard/`",
+          "+\t\t\t: `${pagesRoot}/${repo}/dashboard/`;",
+          "+\treturn appendPrNumber(dashboardUrl, prNumber);",
+          "+}",
+          "+",
+          "+function appendPrNumber(",
+          "+\tdashboardUrl: string,",
+          "+\tprNumber?: number | string | null,",
+          "+): string {",
+          "+\tif (prNumber == null || prNumber === \"\") return dashboardUrl;",
+          "+\tconst normalized = Number(prNumber);",
+          "+\tif (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;",
+          "+",
+          "+\tconst url = new URL(dashboardUrl);",
+          "+\turl.searchParams.set(\"pr\", String(normalized));",
+          "+\treturn url.toString();",
+          " }",
+          " ",
+          " export function hasDeploymentBranchProtection("
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.test.ts",
+        "lines": [
+          "index bf8fc1e..da1358b 100644",
+          "--- a/packages/pr-report/src/index.test.ts",
+          "+++ b/packages/pr-report/src/index.test.ts",
+          "@@ -115,6 +115,20 @@ describe(\"inferDashboardUrl\", () => {",
+          " \t\t);",
+          " \t});",
+          " ",
+          "+\tit(\"adds a pull request query parameter when a PR number is provided\", () => {",
+          "+\t\tassert.equal(",
+          "+\t\t\tinferDashboardUrl(\"https://github.com/wasabeef/AgentNote\", 48),",
+          "+\t\t\t\"https://wasabeef.github.io/AgentNote/dashboard/?pr=48\",",
+          "+\t\t);",
+          "+\t});",
+          "+",
+          "+\tit(\"does not add a pull request query parameter for invalid PR numbers\", () => {",
+          "+\t\tassert.equal(",
+          "+\t\t\tinferDashboardUrl(\"https://github.com/wasabeef/AgentNote\", \"not-a-number\"),",
+          "+\t\t\t\"https://wasabeef.github.io/AgentNote/dashboard/\",",
+          "+\t\t);",
+          "+\t});",
+          "+",
+          " \tit(\"strips a trailing .git suffix from GitHub remotes\", () => {",
+          " \t\tassert.equal(",
+          " \t\t\tinferDashboardUrl(\"https://github.com/wasabeef/AgentNote.git\"),"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.ts",
+        "lines": [
+          "index 4020077..3eb9429 100644",
+          "--- a/packages/pr-report/src/index.ts",
+          "+++ b/packages/pr-report/src/index.ts",
+          "@@ -132,6 +132,7 @@ async function run(): Promise<void> {",
+          " \t\t\tcore.getInput(\"base\") ||",
+          " \t\t\t`origin/${github.context.payload.pull_request?.base?.ref ?? \"main\"}`;",
+          " \t\tconst headSha = github.context.payload.pull_request?.head?.sha;",
+          "+\t\tconst prNumber = github.context.payload.pull_request?.number ?? null;",
+          " \t\tconst prOutputMode = resolvePrOutputMode(core.getInput(\"pr_output\"));",
+          " \t\tconst promptDetail = parsePromptDetail(core.getInput(\"prompt_detail\"));",
+          " \t\tconst token = process.env.GITHUB_TOKEN || \"\";",
+          "@@ -142,7 +143,9 @@ async function run(): Promise<void> {",
+          " \t\tfor (let attempt = 1; attempt <= maxAttempts; attempt++) {",
+          " \t\t\tfetchAgentnoteNotes();",
+          " ",
+          "-\t\t\treport = await collectReport(base, headSha);",
+          "+\t\t\treport = await collectReport(base, headSha, {",
+          "+\t\t\t\tdashboardPrNumber: prNumber,",
+          "+\t\t\t});",
+          " \t\t\tif (!report) {",
+          " \t\t\t\tcore.info(\"No agent-note data found for this PR.\");",
+          " \t\t\t\treturn;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/report.ts",
+        "lines": [
+          "index 9d77796..3f39496 100644",
+          "--- a/packages/pr-report/src/report.ts",
+          "+++ b/packages/pr-report/src/report.ts",
+          "@@ -65,9 +65,14 @@ export interface RenderMarkdownOptions {",
+          "   promptDetail?: PromptDetail;",
+          " }",
+          " ",
+          "+export interface CollectReportOptions {",
+          "+  dashboardPrNumber?: number | string | null;",
+          "+}",
+          "+",
+          " export async function collectReport(",
+          "   base: string,",
+          "   headRef = \"HEAD\",",
+          "+  opts: CollectReportOptions = {},",
+          " ): Promise<PrReport | null> {",
+          "   const head = await git([\"rev-parse\", \"--short\", headRef]);",
+          "   const raw = await git([\"log\", \"--reverse\", \"--format=%H\\t%h\\t%s\", `${base}..${headRef}`]);",
+          "@@ -189,7 +194,9 @@ export async function collectReport(",
+          "   const hasDashboardWorkflow = existsSync(",
+          "     join(repoRoot, \".github\", \"workflows\", \"agentnote-dashboard.yml\"),",
+          "   );",
+          "-  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl) : null;",
+          "+  const dashboardUrl = hasDashboardWorkflow",
+          "+    ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)",
+          "+    : null;",
+          " ",
+          "   return {",
+          "     base,"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 48,
+    "title": "fix(dashboard): preserve persisted PR notes",
+    "state": "open"
+  }
+}
