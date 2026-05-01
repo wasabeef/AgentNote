@@ -1943,7 +1943,7 @@
   },
   "pull_request": {
     "number": 44,
-    "title": "Persist prompt selection evidence",
+    "title": "refactor: persist prompt selection evidence",
     "state": "open"
   }
 }
