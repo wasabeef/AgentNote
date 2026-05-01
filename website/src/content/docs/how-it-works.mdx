@@ -71,6 +71,11 @@ With the generated git hooks installed, most repos can keep using plain `git com
       "contexts": [
         { "kind": "reference", "source": "previous_response", "text": "The previous response explains why this middleware needs to change." }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

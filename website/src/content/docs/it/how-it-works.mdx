@@ -71,6 +71,11 @@ Quando i git hook generati sono installati, nella maggior parte dei repository b
       "contexts": [
         { "kind": "reference", "source": "previous_response", "text": "La response precedente spiega perché questo middleware deve cambiare." }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "Creerò il middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

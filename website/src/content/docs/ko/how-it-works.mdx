@@ -71,6 +71,11 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
       "contexts": [
         { "kind": "reference", "source": "previous_response", "text": "이전 response 가 이 middleware 를 바꿔야 하는 이유를 설명합니다." }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "middleware 를 만들겠습니다...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
