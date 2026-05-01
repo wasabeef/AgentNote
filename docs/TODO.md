@@ -2,7 +2,23 @@
 
 ## 未解決の調査
 
-現時点ではなし。
+### Dashboard の `0/0 AI-added lines` 表示
+
+- 対象: Dashboard の PR / commit summary に出る `AI-added lines` 表示
+- 観測結果: file-level attribution の commit では git note の `attribution.lines` が存在しないため、Dashboard 側で `ai_added ?? 0` / `total_added ?? 0` として `0/0 AI-added lines` が表示されます。
+- 例: Codex の transcript 行数と最終 commit diff が一致しない commit は安全側で `method: "file"` になり、`attribution` は `{ "ai_ratio": 75, "method": "file" }` のように `lines` を持ちません。
+- 問題: `0/0` は「AI-added lines が本当に 0」という意味に見えますが、実際には「line-level data unavailable」です。利用者に誤解を与える可能性があります。
+- 対応案: `attribution.lines` がない、または `total_added` が 0 の場合は `AI-added lines` pill を非表示にするか、`file-level attribution` / `line data unavailable` のような method-aware な表記に変えます。
+- 確認範囲: PR summary、commit summary、commit list の lines 表示をすべて見直し、line-level attribution の commit では従来通り `x/y AI-added lines` が表示されることを確認します。
+- テスト方針: Dashboard fixture か source-level test で、`method: "file"` かつ `lines` なしの note が `0/0 AI-added lines` を出さないことを検証します。
+
+### Prompt detail filter の過剰 filter 確認
+
+- 対象: `prompt_detail: standard` / `compact` の runtime scoring
+- 観測結果: PR #44 では `commit push` や commit 許可だけの tail prompt を `low` に落とす方向で精度を上げました。一方で、filter を厳しくしすぎると、変更理由の確認、最終方針の修正、PR narrative に必要な tail prompt まで `standard` から消える可能性があります。
+- 確認したいこと: 過去 PR と新規 PR の実出力で、`standard` が「運用ノイズは隠すが、commit を理解する文脈は残す」状態を保てているか確認します。
+- 確認範囲: 特に `tail` / `anchored_bridge` / `scope` の境界、`response_exact_commit_path` だけで残す case、basename-only evidence を落としたことによる false negative を見ます。
+- テスト方針: PR #43 / #44 型の fixture に、過剰 filter で落としてはいけない final decision prompt と、落としてよい commit-only prompt の両方を入れて regression test を追加します。
 
 ## 解決済みの調査
 
