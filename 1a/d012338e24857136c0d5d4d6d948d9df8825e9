@@ -1,0 +1,83 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T13:39:12.958Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "満足いくまで50回でも繰り返して改善ループ回してほしい。",
+      "response": "ここは腰を据えて見ます。過去 30 PR を「現行の PR body から取れる Agent Note」と「新実装の `selection` が入った PR #44」で分けて、まず現状の low / medium / high 境界がどの種類の prompt を出しすぎる/落としすぎるかをシミュレーションします。\n過去 PR は旧フォーマットも多く、すべてに `selection` metadata があるわけではありません。なので今回は 2 レイヤーで見ます: `git notes` に残っている JSON は runtime resolver で実判定、古い PR body しかないものは prompt 形状ベースの近似判定にします。\n`git notes` は十分残っています。ここからは「直近 30 PR に含まれる commit の note JSON」を優先して拾い、`selection` があるものは実際の resolver で level を出します。旧 note は `selection` が無いため、legacy high として扱いつつ、形状だけで「今の設計なら何が起きそうか」を別枠で見ます。\nGitHub API が一度切れたので、さっきと同じく外側のネットワーク権限で再取得します。データを `/tmp` に置いて、repo にはまだ変更を入れません。\n取得できました。次は実際の `resolvePromptRuntimeSelection()` を使って、直近 30 PR の commit notes を分類します。ここで見る指標は `high/medium/low` の分布、`standard` で出る件数、短い運用 prompt が出すぎていないかです。\n`tsx` が sandbox 内で IPC pipe を張れずに落ちました。これは解析スクリプト実行の制約なので、同じコマンドを権限付きで流します。\n初回の実判定でかなり良い材料が出ました。`selection` 付きの実データは PR #44 の 74 件で、`standard` は 43 件表示。違和感があるのは、`commit push` が `tail` の `before_commit_boundary + between_non_excluded_prompts` だけで `medium` に上がっている点です。これは言語 keyword ではなく、構造 signal の重みの問題として直せそうです。\n次に 50 個以上の scoring variant を流します。特に「tail の `before_commit_boundary` だけで medium に上げるべきか」を中心に、standard 表示件数と “短い構造弱 prompt が standard に出る率” を比較します。\n50 variant の比較では、最良系は共通して `standard=41/74` になりました。差分はほぼ 2 件で、`commit push` と「tail だけど構造 anchor がない確認 prompt」を `low` に落とせるかどうかです。次は旧 PR body も含めた prompt 形状の擬似分類で、この判断が過去パターンにも合うか確認します。\n旧 PR body だけの擬似分類は、やはり精度が低いです。`selection.source` がないので primary prompt まで low に落ちる誤判定が出ます。信用できる結論は `selection` 付き実データの 74 件から取るべきで、そこでは「unanchored tail を low に cap する」だけが一番安全な改善でした。これを実装・テスト・docs 反映します。\n実装と docs を照合すると、docs はすでに「tail は structural anchor がなければ low」と書いている一方、コードは `tail` base 45 + boundary signals だけで medium に上がっています。これは docs 側ではなく実装側のズレなので、コードを doc に寄せます。\n`tail` の structural anchor なし cap を入れました。次に test で `commit push` 型が `low`、response/file anchor 付き tail は `medium` のまま、という境界を固定します。\ndocs 側も境界をもう少し明確にします。`before_commit_boundary` は保存理由にはなるけれど、それ単体で `standard` に出す理由にはしない、という線引きを追記します。\n変更は小さいですが、ここは prompt filtering の核なので focused test から回します。その後、PR body がどう変わるかを local generation で確認します。\nfocused test は通りました。次に同じ 30 PR / 74 selection 付き interaction の実判定を、修正後の resolver で再実行して、表示件数と落ちる prompt を確認します。\n修正後は `standard=41/74` になり、`commit push` は `low` に落ちました。重要な primary / scope / file anchor は残っています。次は build して bundle を同期し、full test と PR Report 生成の見え方まで確認します。\nbuild / typecheck / lint は通りました。bundle が変わっているはずなので、次に full test と PR body の local 生成差分を確認します。\nfull CLI test は 376 件 pass しました。最後に実際の `agent-note pr` 出力を dist 版で生成して、`commit push` が standard から消えているかだけ確認します。\nlocal PR 生成では `41 shown / 74 total` になり、`commit push` は standard から消えました。狙い通り、保存はされるけど default PR body には出ない状態です。最後に差分全体を整理して、余計な file が混ざっていないか確認します。\n差分は意図した 5 files だけです。`docs/TODO.md` は前の「別でやる」指示の追記が残っていて、今回の scoring 修正とは別件ですが、ユーザー指示どおり未解決 TODO として残しています。最後に whitespace check を通します。\n過去 30 PR でシミュレーションしました。対象は `115 notes / 1612 interactions` で、実際に `selection` metadata があるものは PR #44 の `74 interactions` でした。旧 note は `selection` が無いので runtime 再分類はできず、legacy として high 扱いになります。\n\n改善ループでは 50 以上の scoring variant を比較し、最も安全だった修正を入れました。\n\n変更内容:\n- `tail` prompt は `before_commit_boundary` だけでは `medium` に上げない\n- current commit への structural anchor がない tail は `score <= 44` に cap して `low`\n- response / file / identifier anchor がある tail は引き続き `medium` 可\n\n結果:\n- 修正前: `43 shown / 74 total`\n- 修正後: `41 shown / 74 total`\n- `commit push` は standard 出力から消える\n- primary / scope / file anchor 付き prompt は残る\n\n確認済み:\n- `npm run build --workspace packages/cli`\n- `npm run typecheck --workspace packages/cli`\n- `npm run lint --workspace packages/cli`\n- `npm test --workspace packages/cli` 376 tests pass\n- local PR 生成で `commit push` が出ないことを確認\n\n変更は未 commit です。May the Force be with you.",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "絶対誰にも文句が言われない精度を目指してほしい。\n\nentire に負けないように",
+      "response": "`common:ultrathink` を使って、いまの scoring を「文句が出にくい精度」に寄せる前提条件から見直します。今回は単に表示件数を減らすのではなく、Entire に見劣りしないように「読めば納得できる」「落ちても説明できる」「将来調整できる」の 3 点で詰めます。\nまず厳しめに見ると、いまの改善でもまだ 1 つ文句が出そうです。`commit push` は消えましたが、`一旦コミットしていいよ` のような短い tail が response anchor だけで `medium` に残るケースがあり、これは PR body では「作業指示というより運用許可」に見える可能性があります。\n次の改善方針は keyword ではなく structural でいけます。`tail` を `medium` に上げる条件から「response の basename/identifier だけ」を外し、prompt 自体の anchor か response の exact path がある場合だけ `medium` にします。これなら多言語でも、短い運用許可が default に出にくくなります。まずシミュレーションします。\n強めの structural anchor に切り替えると `standard=40/74` になり、落ちるのは実質 `一旦コミットしていいよ` だけでした。これは precision 優先なら正しい落ち方です。実装をこの方向に寄せ、test も「weak response basename だけでは low」「exact response path なら medium」に分けます。\nこれで `tail` の medium 昇格がかなり厳密になりました。focused test と 30 PR simulation を再実行して、落ちすぎていないか確認します。\nさらに厳しくすると `standard=40/74` で、運用許可だけの tail は消えました。残っている短いものは primary edit に直結しているものなので、ここを落とすと「なぜその変更をしたか」が逆に欠けます。次に build / full test / local PR 生成をもう一度回して、dist と出力を最終確認します。\n精度優先でさらに締めました。\n\n今回の追加改善:\n- `tail` prompt は `before_commit_boundary` だけでは `medium` に上げないように変更\n- response の basename/identifier だけでも `medium` に上げないように変更\n- prompt 側の path / identifier、または response の exact commit path がある場合だけ `tail` を `medium` に昇格\n- これで `commit push` だけでなく `一旦コミットしていいよ` も `standard` から消えます\n- `cli.js は何を変更した？` のように file anchor があるものは残ります\n\nシミュレーション結果:\n- 変更前: `43 shown / 74 total`\n- 1 回目改善後: `41 shown / 74 total`\n- 最終改善後: `40 shown / 74 total`\n\n検証:\n- 過去 30 PR / `115 notes` / `1612 interactions` を確認\n- `selection` 付き 74 件で runtime scoring を再評価\n- `npm run build --workspace packages/cli`\n- `npm run typecheck --workspace packages/cli`\n- `npm run lint --workspace packages/cli`\n- `npm test --workspace packages/cli` 376 tests pass\n- local PR 生成で `commit push` / `一旦コミットしていいよ` が出ないことを確認\n\n未 commit です。May the Force be with you.",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 50,
+    "method": "file"
+  }
+}
