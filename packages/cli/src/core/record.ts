@@ -1336,6 +1336,7 @@ function collectPromptSelectionSignals(
   if (hasListOrChecklistShape(prompt)) signals.push("list_or_checklist_shape");
   if (hasMultiLineInstruction(prompt)) signals.push("multi_line_instruction");
   if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
+  if (hasSubstantivePromptShape(prompt)) signals.push("substantive_prompt_shape");
   if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
   if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
     signals.push("between_non_excluded_prompts");
@@ -1398,6 +1399,20 @@ function hasInlineCodeOrPathShape(text: string): boolean {
     /`[^`]+`/.test(text) ||
     /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) ||
     /--[a-z0-9-]+/i.test(text)
+  );
+}
+
+function hasSubstantivePromptShape(text: string): boolean {
+  const trimmed = text.trim();
+  const compact = trimmed.replace(/\s+/g, "");
+  if (!compact) return false;
+  const wordTokens = text.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  if (wordTokens.length >= 7) return true;
+  if (wordTokens.length >= 4 && /[?？]/.test(trimmed)) return true;
+  return (
+    wordTokens.length <= 2 &&
+    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed) &&
+    [...compact].length >= 14
   );
 }
 

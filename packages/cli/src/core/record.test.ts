@@ -49,6 +49,7 @@ describe("prompt selection analysis", () => {
         "diff_identifier",
         "commit_subject_overlap",
         "inline_code_or_path_shape",
+        "substantive_prompt_shape",
         "between_non_excluded_prompts",
       ],
     });
@@ -78,6 +79,49 @@ describe("prompt selection analysis", () => {
       "before_commit_boundary",
       "between_non_excluded_prompts",
     ]);
+  });
+
+  it("uses language-neutral substantive shape to keep useful bridge context", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "今後の汎用性、調整も考えてプロンプトのスコアリングは必要かもね",
+      response: null,
+      turn: 5,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "bridge");
+    assert.equal(analysis.runtime.level, "medium");
+    assert.ok(analysis.signals.includes("substantive_prompt_shape"));
+    assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
+  });
+
+  it("does not promote short operational bridge prompts to standard", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "please commit and push now",
+      response: null,
+      turn: 6,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "bridge");
+    assert.equal(analysis.runtime.level, "low");
+    assert.equal(analysis.signals.includes("substantive_prompt_shape"), false);
   });
 });
 

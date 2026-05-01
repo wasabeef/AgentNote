@@ -36595,8 +36595,11 @@ function scorePromptRuntime(opts) {
     score = Math.max(min, Math.min(score, max));
     if (opts.role === "primary")
         return Math.max(score, 80);
-    if (opts.role === "bridge")
-        return Math.min(score, 44);
+    if (opts.role === "bridge") {
+        return opts.signals.includes("substantive_prompt_shape")
+            ? Math.min(score, 55)
+            : Math.min(score, 44);
+    }
     if (opts.role === "anchored_bridge")
         return Math.min(score, 65);
     if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
@@ -36608,7 +36611,7 @@ function resolvePromptRuntimeLevel(runtime) {
     if (runtime.role === "primary")
         return "high";
     if (runtime.role === "bridge")
-        return "low";
+        return runtime.score >= 45 ? "medium" : "low";
     if (runtime.role === "anchored_bridge")
         return runtime.score >= 45 ? "medium" : "low";
     if (runtime.score >= 75)
@@ -36674,6 +36677,8 @@ function signalScore(signal) {
             return 6;
         case "inline_code_or_path_shape":
             return 6;
+        case "substantive_prompt_shape":
+            return 12;
         case "before_commit_boundary":
             return 5;
         case "between_non_excluded_prompts":
@@ -36689,9 +36694,8 @@ function hasTailStructuralAnchorSignal(signals) {
     return (signals.includes("exact_commit_path") ||
         signals.includes("diff_identifier") ||
         signals.includes("commit_file_basename") ||
-        signals.includes("response_exact_commit_path") ||
-        signals.includes("commit_subject_overlap") ||
-        signals.includes("inline_code_or_path_shape"));
+        signals.includes("inline_code_or_path_shape") ||
+        signals.includes("substantive_prompt_shape"));
 }
 function hasScopeSignal(signals) {
     return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
@@ -37487,4 +37491,3 @@ async function run() {
     }
 }
 run();
-

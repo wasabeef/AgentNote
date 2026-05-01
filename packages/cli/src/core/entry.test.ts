@@ -209,6 +209,62 @@ describe("prompt detail rendering", () => {
         },
         { prompt: "explain the generated CLI bundle" },
       ),
+      { score: 44, role: "tail", level: "low" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: ["substantive_prompt_shape", "between_non_excluded_prompts"],
+        },
+        { prompt: "what about basename-only evidence?" },
+      ),
+      { score: 45, role: "bridge", level: "medium" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: ["substantive_prompt_shape", "between_non_excluded_prompts"],
+        },
+        { prompt: "could you explain the tradeoff here?" },
+      ),
+      { score: 45, role: "bridge", level: "medium" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "tail",
+          signals: [
+            "commit_subject_overlap",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "commit and push" },
+      ),
+      { score: 44, role: "tail", level: "low" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "tail",
+          signals: [
+            "substantive_prompt_shape",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "今後の汎用性、調整も考えてプロンプトのスコアリングは必要かもね" },
+      ),
       { score: 70, role: "tail", level: "medium" },
     );
   });

@@ -12,15 +12,18 @@
 - 確認範囲: PR summary、commit summary、commit list の lines 表示をすべて見直し、line-level attribution の commit では従来通り `x/y AI-added lines` が表示されることを確認します。
 - テスト方針: Dashboard fixture か source-level test で、`method: "file"` かつ `lines` なしの note が `0/0 AI-added lines` を出さないことを検証します。
 
+## 解決済みの調査
+
 ### Prompt detail filter の過剰 filter 確認
 
 - 対象: `prompt_detail: standard` / `compact` の runtime scoring
-- 観測結果: PR #44 では `commit push` や commit 許可だけの tail prompt を `low` に落とす方向で精度を上げました。一方で、filter を厳しくしすぎると、変更理由の確認、最終方針の修正、PR narrative に必要な tail prompt まで `standard` から消える可能性があります。
-- 確認したいこと: 過去 PR と新規 PR の実出力で、`standard` が「運用ノイズは隠すが、commit を理解する文脈は残す」状態を保てているか確認します。
-- 確認範囲: 特に `tail` / `anchored_bridge` / `scope` の境界、`response_exact_commit_path` だけで残す case、basename-only evidence を落としたことによる false negative を見ます。
-- テスト方針: PR #43 / #44 型の fixture に、過剰 filter で落としてはいけない final decision prompt と、落としてよい commit-only prompt の両方を入れて regression test を追加します。
-
-## 解決済みの調査
+- 対象 PR: `#44`
+- 観測結果: local Agent Note notes、PR #29 / #33 / #43 / BUGS PR 群、英語 OSS PR snippet、synthetic multilingual cases を混ぜて 20,000 cases の simulation を実施しました。
+- 対象言語: English, 日本語, Español, Deutsch, Français, Italiano, Português, Bahasa Indonesia, Русский, العربية, 简体中文, 한국어
+- 結果: `standard` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `standard` に出すべきではないと判断しました。
+- 修正: `substantive_prompt_shape` を追加し、長めの質問・相談は keyword なしで `medium` に上げます。一方で `commit push`, `PR 作成`, `please create the pull request` のような操作指示は、response 側に path があっても `low` に留めます。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `standard` に残る case、operation-only prompt が `standard` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
+- 設計メモ: 詳細は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
 
 ### PR #34 go-ahead prompt の前段 context 表示
 
