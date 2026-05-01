@@ -1,0 +1,241 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T17:07:45.450Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "https://wasabeef.github.io/AgentNote/dashboard/?pr=47\n\nNo dashboard data found for PR #47. てでる",
+      "response": "PR #48 の Dashboard run 後に PR #47 が消えた可能性が高いです。まず `gh-pages` の現在の `dashboard/notes` と PR #48 の workflow 結果を見て、修正が「未来の PR を守る」だけでなく「restore snapshot 側でも過去 PR を保持できているか」を確認します。\n`gh-pages` の保存 branch には今 `656a7f0.json`（PR #47）と `76fee17.json`（PR #48）が両方あります。つまり保存データは復活していますが、公開中の Pages artifact 側の Dashboard が古い/別 snapshot のままの可能性が出てきました。実際に配信されている `dashboard/index` と `notes` を確認します。\n配信 artifact が `76fee17.json` は持っていて `656a7f0.json` は 404 なので、保存 branch ではなく Pages artifact build 時点の restore が怪しいです。workflow log で restore/persist の実際の挙動を追います。\nログで見えました。PR #48 の artifact upload には `dashboard/notes/76fee17.json` しか含まれていませんでした。一方で直後の `gh-pages` には `656a7f0.json` も残っているので、`Persist` は直ったものの、`Restore` が Pages build 前に既存 note を拾えていないのが残りの問題です。ここを shell pipeline 依存から worktree copy に変えて、次の PR run で artifact 側にも #47 を含めます。\nRestore 側を worktree copy に変更し、ログに復元件数も出すようにしました。これで次回 log に `Restored 2 Dashboard note file(s).` のように見えるはずです。テストを回します。\n原因もう一段ありました。`Persist` は直っていて `gh-pages` には PR #47 / #48 の両方が残っていますが、Pages artifact を作る前の `Restore Dashboard notes` が既存 note を拾えておらず、artifact には `76fee17.json` だけ入っていました。なので live の `?pr=47` が missing になっています。\n\n追加修正済みです。`restore-notes.mjs` を `git archive | tar` の shell pipeline から `git worktree` 経由の copy に変えて、復元件数を log に出すようにしました。検証も通っています。\n\n- `npm test --prefix packages/dashboard`\n- `npm run build --prefix packages/dashboard`\n- `git diff --check`\n\nコミットと push して PR #48 を更新していいですか？  \nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "PR #48 の Dashboard run 後に PR #47 が消えた可能性が高いです。 まず `gh-pages` の現在の `dashboard/notes` と PR #48 の workflow 結果を見て、修正が「未来の PR を守る」だけでなく「restore snapshot 側でも過去 PR を保持できているか」を確認します。"
+        }
+      ],
+      "files_touched": [
+        "packages/dashboard/workflow/restore-notes.mjs",
+        "packages/dashboard/workflow/sync-notes.test.mjs"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "それと「Open Dashboard ↗」が別タブで開かないのなんで",
+      "response": "`Open Dashboard ↗` の件も同時に確認します。まず PR body に実際どんな HTML/Markdown が入っているか、そして GitHub 側で属性が落ちているのかを切り分けます。\nPR body 自体には `target=\"_blank\"` が入っています。次は GitHub の Markdown renderer がそれを残すかを API で確認します。ここが落ちていれば、Agent Note 側ではなく GitHub の sanitizer/renderer 仕様です。\n原因は GitHub 側です。PR body には実際にこう入っています。\n\n```html\n<a href=\"https://wasabeef.github.io/AgentNote/dashboard/\" target=\"_blank\" rel=\"noopener noreferrer\">Open Dashboard ↗</a>\n```\n\nただし GitHub の Markdown renderer に通すと、`target=\"_blank\"` が削除されます。\n\n```html\n<a href=\"https://wasabeef.github.io/AgentNote/dashboard/\" rel=\"nofollow\">Open Dashboard ↗</a>\n```\n\nつまり GitHub PR description 内の link は、こちらから強制的に別タブで開かせることができません。`↗` は外部リンクっぽい見た目にはできますが、挙動は GitHub/browser 側に握られます。ユーザー操作としては Cmd/Ctrl click や middle click なら別タブです。\n\nなので実装としては `target=\"_blank\"` を入れても効かないです。むしろ misleading なので、必要なら別 PR で `target` / `rel` を戻して plain link にした方がきれいです。  \nなお、Dashboard restore の追加修正はまだ未 commit です。更新するなら `y` で commit/push します。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/dashboard/workflow/restore-notes.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/sync-notes.test.mjs",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "b5a95aa97fe2877b62a17b509ea63db5b93b50fe",
+    "short_sha": "b5a95aa",
+    "message": "fix(dashboard): restore persisted notes before build",
+    "date": "2026-05-02T02:07:44+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/dashboard/workflow/restore-notes.mjs",
+        "lines": [
+          "index c13723b..73c7a55 100644",
+          "--- a/packages/dashboard/workflow/restore-notes.mjs",
+          "+++ b/packages/dashboard/workflow/restore-notes.mjs",
+          "@@ -2,56 +2,63 @@ import { execFileSync } from \"node:child_process\";",
+          " import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from \"node:fs\";",
+          " import { tmpdir } from \"node:os\";",
+          " import { join } from \"node:path\";",
+          "+import { pathToFileURL } from \"node:url\";",
+          " ",
+          " const notesDir = process.env.NOTES_DIR || \".agentnote-dashboard-notes\";",
+          " ",
+          " function copyDirectoryContents(sourceDir, targetDir) {",
+          "+  let count = 0;",
+          "   for (const entry of readdirSync(sourceDir)) {",
+          "     cpSync(join(sourceDir, entry), join(targetDir, entry), {",
+          "       recursive: true,",
+          "       force: true,",
+          "     });",
+          "+    count += 1;",
+          "   }",
+          "+  return count;",
+          " }",
+          " ",
+          "-rmSync(notesDir, { recursive: true, force: true });",
+          "-mkdirSync(notesDir, { recursive: true });",
+          "+export function restoreDashboardNotes(sourceNotesDir, targetNotesDir) {",
+          "+  rmSync(targetNotesDir, { recursive: true, force: true });",
+          "+  mkdirSync(targetNotesDir, { recursive: true });",
+          "+  if (!existsSync(sourceNotesDir)) return 0;",
+          "+  return copyDirectoryContents(sourceNotesDir, targetNotesDir);",
+          "+}",
+          " ",
+          "-try {",
+          "-  execFileSync(\"git\", [\"fetch\", \"origin\", \"gh-pages\", \"--depth=1\"], {",
+          "-    stdio: \"pipe\",",
+          "+function git(args, options = {}) {",
+          "+  return execFileSync(\"git\", args, {",
+          "+    cwd: options.cwd,",
+          "+    stdio: options.stdio || \"pipe\",",
+          "     encoding: \"utf-8\",",
+          "   });",
+          "-} catch {",
+          "-  process.exit(0);",
+          " }",
+          " ",
+          "-const extractDir = mkdtempSync(join(tmpdir(), \"agentnote-dashboard-restore-\"));",
+          "-let archiveExtracted = false;",
+          "-try {",
+          "-  execFileSync(",
+          "-    \"/bin/sh\",",
+          "-    [",
+          "-      \"-lc\",",
+          "-      `git archive --format=tar FETCH_HEAD dashboard/notes 2>/dev/null | tar -xf - -C \"${extractDir}\"`,",
+          "-    ],",
+          "-    {",
+          "-      stdio: \"pipe\",",
+          "-      encoding: \"utf-8\",",
+          "-    },",
+          "-  );",
+          "-  archiveExtracted = true;",
+          "-} catch {",
+          "-  // No Dashboard notes have been published yet.",
+          "-}",
+          "+export function main() {",
+          "+  rmSync(notesDir, { recursive: true, force: true });",
+          "+  mkdirSync(notesDir, { recursive: true });",
+          "+",
+          "+  try {",
+          "+    git([\"fetch\", \"origin\", \"gh-pages\", \"--depth=1\"]);",
+          "+  } catch {",
+          "+    console.log(\"No gh-pages branch found for Dashboard note restore.\");",
+          "+    return;",
+          "+  }",
+          " ",
+          "-try {",
+          "-  if (archiveExtracted) {",
+          "-    const archivedNotesDir = join(extractDir, \"dashboard\", \"notes\");",
+          "-    if (existsSync(archivedNotesDir)) {",
+          "-      copyDirectoryContents(archivedNotesDir, notesDir);",
+          "+  const worktreeDir = mkdtempSync(join(tmpdir(), \"agentnote-dashboard-restore-\"));",
+          "+  try {",
+          "+    git([\"worktree\", \"add\", \"--detach\", worktreeDir, \"FETCH_HEAD\"]);",
+          "+    const restored = restoreDashboardNotes(join(worktreeDir, \"dashboard\", \"notes\"), notesDir);",
+          "+    console.log(`Restored ${restored} Dashboard note file(s).`);",
+          "+  } finally {",
+          "+    try {",
+          "+      git([\"worktree\", \"remove\", \"--force\", worktreeDir]);",
+          "+    } catch {",
+          "+      // noop",
+          "     }",
+          "+    rmSync(worktreeDir, { recursive: true, force: true });",
+          "   }",
+          "-} finally {",
+          "-  rmSync(extractDir, { recursive: true, force: true });",
+          "+}",
+          "+",
+          "+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {",
+          "+  main();",
+          " }"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/sync-notes.test.mjs",
+        "lines": [
+          "index 6456945..a4d1257 100644",
+          "--- a/packages/dashboard/workflow/sync-notes.test.mjs",
+          "+++ b/packages/dashboard/workflow/sync-notes.test.mjs",
+          "@@ -12,6 +12,7 @@ import { tmpdir } from \"node:os\";",
+          " import { join } from \"node:path\";",
+          " import test from \"node:test\";",
+          " import { mergeDashboardNotes } from \"./persist-notes.mjs\";",
+          "+import { restoreDashboardNotes } from \"./restore-notes.mjs\";",
+          " import {",
+          "   MAX_DIFF_TOTAL_LINES,",
+          "   parseDiffFiles,",
+          "@@ -118,6 +119,29 @@ test(\"mergeDashboardNotes removes stale notes for the current PR when no replace",
+          "   }",
+          " });",
+          " ",
+          "+test(\"restoreDashboardNotes replaces local notes with the persisted gh-pages notes\", () => {",
+          "+  const tempDir = mkdtempSync(join(tmpdir(), \"agentnote-dashboard-restore-test-\"));",
+          "+  const persistedNotesDir = join(tempDir, \"persisted-notes\");",
+          "+  const localNotesDir = join(tempDir, \"local-notes\");",
+          "+",
+          "+  try {",
+          "+    mkdirSync(persistedNotesDir, { recursive: true });",
+          "+    mkdirSync(localNotesDir, { recursive: true });",
+          "+    writeNote(join(persistedNotesDir, \"pr47.json\"), 47, \"pr47\");",
+          "+    writeNote(join(persistedNotesDir, \"pr48.json\"), 48, \"pr48\");",
+          "+    writeNote(join(localNotesDir, \"stale-pr46.json\"), 46, \"stale-pr46\");",
+          "+",
+          "+    const restored = restoreDashboardNotes(persistedNotesDir, localNotesDir);",
+          "+",
+          "+    assert.equal(restored, 2);",
+          "+    assert.deepEqual(readdirSync(localNotesDir).sort(), [\"pr47.json\", \"pr48.json\"]);",
+          "+    assert.equal(readNoteShortSha(join(localNotesDir, \"pr47.json\")), \"pr47\");",
+          "+    assert.equal(readNoteShortSha(join(localNotesDir, \"pr48.json\")), \"pr48\");",
+          "+  } finally {",
+          "+    rmSync(tempDir, { recursive: true, force: true });",
+          "+  }",
+          "+});",
+          "+",
+          " function writeNote(path, prNumber, shortSha) {",
+          "   writeFileSync(",
+          "     path,"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 48,
+    "title": "fix(dashboard): preserve persisted PR notes",
+    "state": "open"
+  }
+}
