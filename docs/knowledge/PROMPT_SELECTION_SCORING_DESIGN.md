@@ -289,15 +289,9 @@ Ordering details:
 | `role` | 保存しない | classifier priority 変更で stale になる |
 | `level` | 保存しない | threshold 変更で stale になる |
 
-Renderer は保存済み evidence から `PromptRuntimeSelection` を作ります。
+Renderer は保存済み evidence から `PromptRuntimeSelection` を作ります。runtime resolver は、git note に保存された `selection.source` / `selection.signals` と interaction text だけを入力にします。record 時点で commit files / diff identifiers 由来の evidence は `signals` に畳み込まれているため、renderer が commit metadata を再構築する必要はありません。
 
 ```ts
-type PromptRuntimeContext = {
-  commitFiles: string[];
-  commitSubject: string;
-  diffIdentifiers: Set<string>;
-};
-
 type PromptRuntimeSelection = {
   score: number;
   role:
@@ -312,38 +306,36 @@ type PromptRuntimeSelection = {
 };
 ```
 
-`PromptRuntimeContext` は renderer 側で commit metadata から作ります。PR Report は git / GitHub API から commit subject と files を持っており、Dashboard は note bundle の commit metadata / diff data から作ります。diff identifiers は record-time の extraction と同じ logic を共有し、record / render 間のズレを避けます。diff identifiers がない legacy / minimal data では empty set にし、resolver は signals と prompt text だけで best-effort に倒します。
-
 Runtime resolver は保存済み `source` / `signals` と interaction text から role / score / level を再計算します。
 
 ```ts
 function resolvePromptRuntimeSelection(
-  selection: InteractionSelection,
+  selection: InteractionSelection | undefined,
   interaction: Interaction,
-  context: PromptRuntimeContext,
 ): PromptRuntimeSelection {
-  const role = resolvePromptRuntimeRole(selection, interaction, context);
-  const score = scorePromptRuntime({ role, signals: selection.signals, interaction, context });
+  if (!selection) return { score: 100, role: "primary", level: "high" };
+  const role = resolvePromptRuntimeRole(selection.source, selection.signals, interaction.prompt);
+  const score = scorePromptRuntime({ role, signals: selection.signals });
   return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
 }
 
 function resolvePromptRuntimeRole(
-  selection: InteractionSelection,
-  interaction: Interaction,
-  context: PromptRuntimeContext,
+  source: InteractionSelection["source"],
+  signals: PromptSelectionSignal[],
+  prompt: string,
 ): PromptRuntimeSelection["role"] {
-  if (selection.source === "primary" || hasSignal(selection, "primary_edit_turn")) {
+  if (source === "primary" || signals.includes("primary_edit_turn")) {
     return "primary";
   }
-  if (hasSignal(selection, "exact_commit_path") || hasSignal(selection, "diff_identifier")) {
+  if (signals.includes("exact_commit_path") || signals.includes("diff_identifier")) {
     return "direct_anchor";
   }
-  if (isShortPrompt(interaction.prompt) && hasBridgeAnchorSignal(selection.signals)) {
+  if (isShortPrompt(prompt) && hasBridgeAnchorSignal(signals)) {
     return "anchored_bridge";
   }
-  if (hasScopeSignal(selection)) return "scope";
-  if (selection.source === "tail") return "tail";
-  if (isShortPrompt(interaction.prompt) && hasSignal(selection, "between_non_excluded_prompts")) {
+  if (hasScopeSignal(signals)) return "scope";
+  if (source === "tail") return "tail";
+  if (isShortPrompt(prompt) && signals.includes("between_non_excluded_prompts")) {
     return "bridge";
   }
   return "background";
@@ -611,10 +603,9 @@ type PromptDetail = "compact" | "standard" | "full";
 function shouldRenderInteraction(
   interaction: Interaction,
   detail: PromptDetail,
-  runtimeContext: PromptRuntimeContext,
 ) {
   const runtime = interaction.selection
-    ? resolvePromptRuntimeSelection(interaction.selection, interaction, runtimeContext)
+    ? resolvePromptRuntimeSelection(interaction.selection, interaction)
     : { score: 100, role: "primary", level: "high" };
   const level = runtime.level;
   if (detail === "full") return true;

@@ -315,6 +315,35 @@ describe("renderMarkdown", () => {
     assert.ok(full.includes("continue"));
   });
 
+  it("keeps a prompt detail summary when the current preset hides every prompt", () => {
+    const report = baseReport({
+      total_prompts: 1,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 1,
+          interactions: [
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report, { promptDetail: "compact" });
+
+    assert.ok(markdown.includes("💬 Prompts & Responses (0 shown / 1 total)"));
+    assert.ok(markdown.includes("No prompts are shown"));
+    assert.ok(!markdown.includes("Continuing."));
+  });
+
   it("does not truncate long context text in the middle", () => {
     const reference = "Reference context " + "alpha ".repeat(55);
     const scope = "Scope context " + "beta ".repeat(55);
