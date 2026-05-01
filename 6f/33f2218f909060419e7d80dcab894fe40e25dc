@@ -1,0 +1,94 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T15:30:33.465Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "PR まで作成して",
+      "response": "PR 作成まで進めます。まず差分を最終確認して、Dashboard 表示修正として 1 commit にまとめ、push 後に PR を作成します。\n`common:pr-create` の手順に沿って進めています。差分は Dashboard 表示修正と TODO 更新だけなので、`fix(dashboard)` の 1 commit にします。\nコミットと push が完了しました。続けて PR body を作って Draft PR を作成します。\nPR #45 を作成しました。最後に PR 状態と CI を確認します。\nPR 作成まで完了しました。\n\nhttps://github.com/wasabeef/AgentNote/pull/45\n\nコミット:\n`a5b4020 fix(dashboard): avoid zero line attribution labels`\n\nローカル確認:\n- `npm test --prefix packages/dashboard`\n- `npm run build --prefix packages/dashboard`\n- `git diff --check`\n\nPR は Draft で作成済みです。CI は起動直後で pending が残っています。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/45\n\nで出力されたPRみると全く、意図がわからないプロンプトしか残ってない",
+      "response": "PR #45 の Agent Note 出力を実データで確認します。まず PR body と git note 側の prompts / contexts を見て、「なぜ意図が落ちたか」が今回の PR 固有なのか、prompt selection の一般問題なのか切り分けます。\n原因が見えました。PR #45 の note 自体には 5 prompts 全部保存されていますが、`prompt_detail: standard` の表示フィルターで「マージした、ブランチ変えて TODO の確認、実装」と「できれば出したいだけど。。」が low 扱いになって隠れています。これは今回の出力としてかなり筋が悪いので、PR #45 内で直します。\n具体的には、`standard` は 1 件だけ表示、残り 4 件は `low` で非表示です。特に「マージした、ブランチ変えて TODO の確認、実装」と「できれば出したいだけど。。」が意図そのものなのに、今の `substantive_prompt_shape` が日本語の短い方針変更を拾えていません。キーワードではなく文字構造で拾うよう調整します。\n修正のポイントは「過去 note に `substantive_prompt_shape` が保存されていなくても、runtime で prompt text から再評価する」ことです。これなら PR #45 の既存 commit も、PR Report 再生成時に `standard` で意図のある短い日本語 prompt を出せます。\nFocused tests は pass しました。次に実際の PR #45 相当の markdown をローカルで再生成して、`standard` でどの prompts が出るかを確認します。\nsource 実行は `__VERSION__` が build 時置換前で落ちました。CLI を build してから built CLI で同じ出力を確認します。\nローカル再生成では `3 shown / 5 total` になり、意図のある 2 件が復活しました。これなら PR #45 の流れが読めます。続けて typecheck / lint / dashboard test / diff check を通して、bundle の空白も整えます。\n`diff --check` も通りました。core の表示ロジックなので、最後に CLI 全体テストも通してから PR #45 に追加 commit を push します。\nCLI full test はまだ実行中です。Adapter 部分は pass 済みで、いま実 commit を伴う integration に進んでいます。\nCLI full test も `380 tests` 全 pass です。修正は PR #45 の既存 note を migration なしで読みやすくする runtime 側なので、追加 commit として push します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "PR #45 の Agent Note 出力を実データで確認します。 まず PR body と git note 側の prompts / contexts を見て、「なぜ意図が落ちたか」が今回の PR 固有なのか、prompt selection の一般問題なのか切り分けます。"
+        }
+      ],
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/cli/src/core/record.test.ts",
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  }
+}
