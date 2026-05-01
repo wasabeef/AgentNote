@@ -293,9 +293,8 @@ export function scorePromptRuntime(opts: {
   score = Math.max(min, Math.min(score, max));
   if (opts.role === "primary") return Math.max(score, 80);
   if (opts.role === "bridge") {
-    return opts.signals.includes("substantive_prompt_shape")
-      ? Math.min(score, 55)
-      : Math.min(score, 44);
+    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+    return Math.min(score, maxBridgeScore);
   }
   if (opts.role === "anchored_bridge") return Math.min(score, 65);
   if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
@@ -347,7 +346,7 @@ function roleScoreClamp(role: PromptSelectionRole): [number, number] {
     case "anchored_bridge":
       return [40, 65];
     case "bridge":
-      return [20, 45];
+      return [20, 55];
     case "background":
       return [0, 30];
   }
@@ -406,7 +405,7 @@ function hasScopeSignal(signals: PromptSelectionSignal[]): boolean {
   return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
 }
 
-function isShortSelectionPrompt(prompt: string): boolean {
+export function isShortSelectionPrompt(prompt: string): boolean {
   const trimmed = prompt.trim();
   if (!trimmed) return true;
   return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;

@@ -123,6 +123,27 @@ describe("prompt selection analysis", () => {
     assert.equal(analysis.runtime.level, "low");
     assert.equal(analysis.signals.includes("substantive_prompt_shape"), false);
   });
+
+  it("uses the same short-prompt boundary for bridge signals and runtime role", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "one two three four five six seven eight nine ten eleven twelve thirteen",
+      response: null,
+      turn: 7,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "background");
+    assert.equal(analysis.runtime.level, "low");
+    assert.equal(analysis.signals.includes("between_non_excluded_prompts"), false);
+  });
 });
 
 function setupGitRepo(): { repoDir: string; agentnoteDirPath: string; sessionDir: string } {

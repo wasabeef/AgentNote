@@ -199,7 +199,7 @@ Base / clamp / threshold は初期値です。直感だけで確定せず、PR #
 | `scope` | 60 | 50-80 | `medium` 寄り | checklist、作業範囲、複数 file の整理など commit の目的を表す prompt |
 | `tail` | 45 | 35-70 | `medium` または `low` | latest primary turn 後の説明、確認、PR 作成指示 |
 | `anchored_bridge` | 45 | 40-65 | `medium` 寄り | 短い bridge だが file / identifier anchor を持つ prompt |
-| `bridge` | 25 | 20-45 | `low` または `medium` | `はい`、`ここで` など、前後がないと意味が弱い prompt。短すぎない実質的な質問や相談は `medium` まで上げられる |
+| `bridge` | 25 | 20-55 | `low` または `medium` | `はい`、`ここで` など、前後がないと意味が弱い prompt。短すぎない実質的な質問や相談は `medium` まで上げられる |
 | `background` | 15 | 0-30 | `low` | short window 内にはあるが commit との構造 anchor が弱い prompt |
 
 この band は「保存するかどうか」ではなく「表示密度でどう扱うか」の runtime 基準です。short commit window 内の `low` prompt は git note に保存し、`prompt_detail: full` で表示できるようにします。

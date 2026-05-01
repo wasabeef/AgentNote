@@ -36596,9 +36596,8 @@ function scorePromptRuntime(opts) {
     if (opts.role === "primary")
         return Math.max(score, 80);
     if (opts.role === "bridge") {
-        return opts.signals.includes("substantive_prompt_shape")
-            ? Math.min(score, 55)
-            : Math.min(score, 44);
+        const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+        return Math.min(score, maxBridgeScore);
     }
     if (opts.role === "anchored_bridge")
         return Math.min(score, 65);
@@ -36650,7 +36649,7 @@ function roleScoreClamp(role) {
         case "anchored_bridge":
             return [40, 65];
         case "bridge":
-            return [20, 45];
+            return [20, 55];
         case "background":
             return [0, 30];
     }

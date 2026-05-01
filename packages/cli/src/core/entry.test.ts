@@ -240,6 +240,39 @@ describe("prompt detail rendering", () => {
       resolvePromptRuntimeSelection(
         {
           schema: 1,
+          source: "window",
+          signals: [
+            "substantive_prompt_shape",
+            "commit_subject_overlap",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "could you explain the tradeoff here?" },
+      ),
+      { score: 54, role: "bridge", level: "medium" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: [
+            "response_basename_or_identifier",
+            "before_commit_boundary",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "continue" },
+      ),
+      { score: 44, role: "bridge", level: "low" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
           source: "tail",
           signals: [
             "commit_subject_overlap",

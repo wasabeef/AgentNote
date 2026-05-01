@@ -1942,7 +1942,8 @@ function scorePromptRuntime(opts) {
   score = Math.max(min, Math.min(score, max));
   if (opts.role === "primary") return Math.max(score, 80);
   if (opts.role === "bridge") {
-    return opts.signals.includes("substantive_prompt_shape") ? Math.min(score, 55) : Math.min(score, 44);
+    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+    return Math.min(score, maxBridgeScore);
   }
   if (opts.role === "anchored_bridge") return Math.min(score, 65);
   if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
@@ -1988,7 +1989,7 @@ function roleScoreClamp(role) {
     case "anchored_bridge":
       return [40, 65];
     case "bridge":
-      return [20, 45];
+      return [20, 55];
     case "background":
       return [0, 30];
   }
@@ -3473,7 +3474,7 @@ function collectPromptSelectionSignals(candidate) {
   if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
   if (hasSubstantivePromptShape(prompt)) signals.push("substantive_prompt_shape");
   if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
-  if (isShortSelectionPrompt2(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
+  if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
     signals.push("between_non_excluded_prompts");
   }
   return [...new Set(signals)];
@@ -3525,11 +3526,6 @@ function hasSubstantivePromptShape(text) {
   if (wordTokens.length >= 7) return true;
   if (wordTokens.length >= 4 && /[?？]/.test(trimmed)) return true;
   return wordTokens.length <= 2 && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed) && [...compact].length >= 14;
-}
-function isShortSelectionPrompt2(prompt) {
-  const trimmed = prompt.trim();
-  const lines = trimmed.split("\n").filter((line) => line.trim().length > 0);
-  return trimmed.length <= 120 && lines.length <= 3;
 }
 function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, defaultSource) {
   if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();

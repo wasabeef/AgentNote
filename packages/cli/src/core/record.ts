@@ -28,6 +28,7 @@ import {
   buildEntry,
   hasGeneratedArtifactMarkers,
   isGeneratedArtifactPath,
+  isShortSelectionPrompt,
   resolvePromptRuntimeLevel,
   resolvePromptRuntimeRole,
   scorePromptRuntime,
@@ -1414,12 +1415,6 @@ function hasSubstantivePromptShape(text: string): boolean {
     /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed) &&
     [...compact].length >= 14
   );
-}
-
-function isShortSelectionPrompt(prompt: string): boolean {
-  const trimmed = prompt.trim();
-  const lines = trimmed.split("\n").filter((line) => line.trim().length > 0);
-  return trimmed.length <= 120 && lines.length <= 3;
 }
 
 function selectCommitPromptWindow(
