@@ -1,0 +1,79 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T12:45:07.213Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "action に prompt_detail: standard っていれといて",
+      "response": "この repo の workflow 側で明示的に `prompt_detail: standard` を入れます。Action 自体の default は既に `standard` ですが、PR 出力の意図が workflow 上でも見えるようにします。\n`.github/workflows/agentnote-pr-report.yml` の root action 呼び出しに `with: prompt_detail: standard` を追加します。dashboard workflow は PR Report ではないので触りません。\n`.github/workflows/agentnote-pr-report.yml` に明示的に追加しました。\n\n```yaml\n- uses: ./\n  with:\n    prompt_detail: standard\n```\n\n`git diff --check` も pass しています。",
+      "files_touched": [
+        ".github/workflows/agentnote-pr-report.yml"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "full は全て\nstandard は score 75 以上\ncompact は score 50 以上\n\nみたいなことじゃなくて？",
+      "response": "近いです。ただ、今の実装はユーザー設定を直接 `score >= N` にはしていません。\n\n現在はこうです。\n\n1. `score` から runtime `level` を決める\n2. `prompt_detail` がどの `level` を表示するか決める\n\nざっくり数値にすると今はこうです。\n\n| preset | 実質的な表示条件 |\n| --- | --- |\n| `compact` | `high` のみ、おおむね `score >= 75` |\n| `standard` | `high + medium`、おおむね `score >= 45` |\n| `full` | `high + medium + low`、つまり保存済み prompt 全部 |\n\nなので、もし score 閾値で表現するなら **compact の方が閾値は高く、standard の方が低い** です。\n\nユーザー案の:\n\n```text\nfull: all\nstandard: score 75 以上\ncompact: score 50 以上\n```\n\nだと、`compact` の方が `standard` より多く出るので名前と逆になります。\n\n自然なのはこうです。\n\n```text\ncompact: score 75 以上\nstandard: score 45 以上\nfull: all\n```\n\nただし実装上は role override があります。例えば `primary` は必ず `high`、`bridge` は score が上がっても `low` 上限、みたいに単純な score だけでは決めていません。ここは「score threshold + role safety rules」という設計です。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "1. **prompt ごとに score / role から `low` / `medium` / `high` を決める**\n2. **`prompt_detail` preset が、どの level まで表示するかを決める**"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_basename_or_identifier",
+          "multi_line_instruction"
+        ]
+      }
+    },
+    {
+      "prompt": "compact  = high のみ\n  standard = high + medium\n  full     = high + medium + low\n\n\nこれはわかりやすい。いまこうなってるってこと？",
+      "response": "はい、今の実装はその通りです。\n\n```text\ncompact  = high のみ\nstandard = high + medium\nfull     = high + medium + low\n```\n\n実装箇所は [entry.ts](/Users/a12622/git/context-history/packages/cli/src/core/entry.ts:247) です。\n\n```ts\nif (detail === \"full\") return true;\nif (detail === \"standard\") return runtime.level !== \"low\";\nreturn runtime.level === \"high\";\n```\n\nつまり:\n\n- `full` は全部表示\n- `standard` は `low` 以外、つまり `high + medium`\n- `compact` は `high` だけ\n\nです。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "```text\nprompt_detail: compact   必要最小限だけ\nprompt_detail: standard  読みやすい標準量\nprompt_detail: full      保存された prompt をすべて表示\n```\n\n```text\n`prompt_detail` controls how much prompt history appears in the PR Report.\nUse `compact` for the shortest summary, `standard` for the default readable history, and `full` to show every stored prompt.\n```"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "multi_line_instruction"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/agentnote-pr-report.yml",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
