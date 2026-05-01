@@ -6,6 +6,17 @@
 
 ## 解決済みの調査
 
+### `prompt_detail` preset の整理
+
+- 対象: PR Report / GitHub Action の `prompt_detail` preset
+- 対象 PR: `#45` の follow-up
+- 観測結果: 旧 `compact` は `high` のみを表示し、PR #45 では `2/7`、直近 80 commit の note 集計では約 8% しか表示されませんでした。一方、旧 `standard` は `high + medium` を表示し、PR #45 では `4/7`、直近集計では約 13% で、実質的に「PR body に載せたい compact view」として機能していました。
+- 問題: `standard` という名前は基準が曖昧で、旧 `compact` は削りすぎて意図が落ちやすいです。利用者にとっては `compact` と `full` の 2 択の方が分かりやすい可能性があります。
+- 修正: `prompt_detail` の公開 preset を `compact` / `full` の 2 つに整理しました。`compact` は `high + medium`、`full` は保存済み prompt すべてを表示します。
+- 互換: 既存 workflow への安全弁として、`standard` は parser で `compact` の legacy alias として受けます。ただし README / website / Action docs には出しません。
+- 確認範囲: PR Report、CLI `agent-note pr --prompt-detail`、GitHub Action `prompt_detail` input、README / website / docs の説明を更新しました。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/pr-report/src/report.test.ts` で、`compact = high + medium`、`full = all`、`standard` alias を検証します。
+
 ### Dashboard の `0/0 AI-added lines` 表示
 
 - 対象: Dashboard の PR / commit summary に出る `AI-added lines` 表示
@@ -20,13 +31,13 @@
 
 ### Prompt detail filter の過剰 filter 確認
 
-- 対象: `prompt_detail: standard` / `compact` の runtime scoring
+- 対象: `prompt_detail` の runtime scoring
 - 対象 PR: `#44`
 - 観測結果: local Agent Note notes、PR #29 / #33 / #43 / BUGS PR 群、英語 OSS PR snippet、synthetic multilingual cases を混ぜて 20,000 cases の simulation を実施しました。
 - 対象言語: English, 日本語, Español, Deutsch, Français, Italiano, Português, Bahasa Indonesia, Русский, العربية, 简体中文, 한국어
-- 結果: `standard` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `standard` に出すべきではないと判断しました。
+- 結果: 旧 `standard` 相当、つまり現 `compact` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `compact` に出すべきではないと判断しました。
 - 修正: `substantive_prompt_shape` を追加し、長めの質問・相談は keyword なしで `medium` に上げます。一方で `commit push`, `PR 作成`, `please create the pull request` のような操作指示は、response 側に path があっても `low` に留めます。
-- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `standard` に残る case、operation-only prompt が `standard` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `compact` に残る case、operation-only prompt が `compact` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
 - 設計メモ: 詳細は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
 
 ### PR #34 go-ahead prompt の前段 context 表示
