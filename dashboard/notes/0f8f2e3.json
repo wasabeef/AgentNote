@@ -1,0 +1,458 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T16:00:46.205Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "もしかしたら\n\nいまの standard を compact として\n\ncompact (旧standard) と full だけでもいいかもしれない。\nどう思う？",
+      "response": "その案はかなり筋がいいです。いまの `compact` は少し削りすぎで、`standard` が実質「PR body に載せたい既定値」になっているので、preset を 2 段階に整理した方が利用者にも説明しやすいです。念のため、今走らせている集計結果を見てから判断を固めます。\n賛成です。むしろ今の実データを見ると、その方が自然です。\n\n今の挙動はこうです。\n\n- 現 `compact`: high のみ。PR #45 だと `2/7`、直近 note 全体でも約 `8%` しか出ない。かなり削りすぎ。\n- 現 `standard`: high + medium。PR #45 だと `4/7`、直近 note 全体で約 `13%`。実質これが「PR body に載せる compact view」。\n- 現 `full`: 全部。`commit push` や `PR まで作成して` も全部出るので調査用。\n\nなので整理するなら:\n\n- `compact` = 現 `standard`\n- `full` = 全部\n- `standard` は廃止、または `compact` の alias\n\nが一番わかりやすいです。\n\n個人的には、公開前なら `standard` は消して `compact` / `full` の 2 択でいいと思います。`standard` という名前は「標準なのに何を基準に？」となりやすいし、今の `compact` は使い道が薄いです。PR Report の default は `compact`、深掘りしたい人だけ `full` がきれいです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "マージしたので、新しくブランチ切って `prompt_detail` preset の整理 の作業をしてほしい",
+      "response": "`prompt_detail` preset の整理に入ります。まず `main` に戻して最新化し、TODO の内容を確認してから専用ブランチを切ります。今回は preset 変更なので、実装・tests・README / docs / website の更新漏れまで一緒に確認します。\nいま `docs/TODO.md` の追記が未コミットで残っています。これは今回の作業の起点そのものなので、破棄せず新ブランチに引き継いで進めます。\n`prompt_detail` preset を「普段使いで迷わない 2 段階」に寄せる作業として進めます。まず最新 `main` に戻して新しいブランチを切り、未コミットの `docs/TODO.md` は今回の設計メモとして引き継ぎます。\n`TODO.md` の差分は今回の作業内容そのものなので、そのまま持った状態で `main` に移動します。もし `main` 側の更新と衝突したら、その時点で止めて差分を守る方に寄せます。\n`main` への切り替えが `docs/TODO.md` の差分でブロックされました。差分を一時退避してから `main` を最新化し、新ブランチ上で戻します。\n新ブランチ `refactor/prompt-detail-presets` を最新 `main` から切り、`TODO.md` の作業メモも戻しました。次に `prompt_detail` の定義・CLI・Action・docs の参照箇所を洗って、2 preset 化の影響範囲を固めます。\n現状は `compact / standard / full` が実装・docs・website に広く散っています。今回の中身は、ユーザーに見せる preset を `compact = high + medium` と `full = 全件` に整理し、`standard` は表に出さない互換 alias として扱うのが安全そうです。\n実装方針は固めました。`compact` は今までの `standard` と同じ「high + medium」、`full` は全件表示にし、`standard` は docs から消しつつ parser では `compact` alias として受ける形にします。\nまず runtime の真ん中を変えます。ここを 2 preset にしないと、docs だけ直しても実際の PR Report が旧 `compact` のまま削りすぎになります。\n次に設計ドキュメントを実装に合わせます。ここは将来また判断が揺れやすい場所なので、「score/level はそのまま、preset だけ 2 択」という意図が残るように書き換えます。\n公開向けの説明は `compact` と `full` の 2 択に揃えます。`standard` は互換 alias としてコードには残しますが、README / website には出さないようにします。\nコードと docs の表記を一通り `compact / full` に寄せました。ここから build で `dist` を再生成し、型・テストで実際に旧 `standard` alias と新 `compact` 挙動が崩れていないか確認します。\nCLI / PR Report の主要テストは進行中で、ここまで `pr-report` と lint/typecheck は通っています。CLI の統合テストは agent ごとの git fixture を回しているので少し時間がかかっていますが、今のところ失敗は出ていません。\nCLI / PR Report のテストは全通過しました。website は build を確認中です。なお `website` に `lint` script、`packages/pr-report` に `typecheck` script は定義されていないので、その 2 つは実行対象外として扱います。\n生成された `packages/pr-report/dist/index.js` に ncc 由来の trailing whitespace が入っていたので、生成物の整形だけ行います。ソース側の意味は変えません。\n`prompt_detail` preset の整理を実装しました。公開上は `compact` / `full` の 2 択に統一し、`compact` は旧 `standard` 相当の `high + medium`、`full` は全件表示です。既存 workflow の安全弁として `standard` は parser では `compact` alias として受けますが、README / website / Action docs には出さない形にしました。\n\n確認済みです。\n\n- `npm run build --prefix packages/cli`\n- `npm run build --prefix packages/pr-report`\n- `npm run typecheck --prefix packages/cli`\n- `npm run lint --prefix packages/cli`\n- `npm test --prefix packages/cli`\n- `npm test --prefix packages/pr-report`\n- `npm run build --prefix website`\n- `git diff --check`\n\n`website` に `lint` script、`packages/pr-report` に `typecheck` script は未定義でした。変更はまだ未コミットです。",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/cli/src/commands/pr.ts",
+        "packages/cli/src/cli.ts",
+        "action.yml",
+        ".github/workflows/agentnote-pr-report.yml",
+        "packages/pr-report/src/report.test.ts",
+        "packages/cli/src/core/record.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "update_plan",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "PR まで作成して",
+      "response": "`common:commit` と `common:pr-create` を使って、変更内容を意味のある単位で commit し、そのまま push と PR 作成まで進めます。まず差分とブランチ状態を最終確認します。\n差分は動作変更とドキュメント更新に分けるのがきれいです。先に `prompt_detail` の実装・Action default・テスト・bundle を commit し、その後 README / website / docs を別 commit にします。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_basename_or_identifier",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/agentnote-pr-report.yml",
+      "by_ai": true
+    },
+    {
+      "path": "action.yml",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/cli.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/pr.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 78,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "0f8f2e36541043ef1e516986f7880b7495bdb98e",
+    "short_sha": "0f8f2e3",
+    "message": "fix(report): simplify prompt detail presets",
+    "date": "2026-05-02T01:00:44+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": ".github/workflows/agentnote-pr-report.yml",
+        "lines": [
+          "index c98897d..a692268 100644",
+          "--- a/.github/workflows/agentnote-pr-report.yml",
+          "+++ b/.github/workflows/agentnote-pr-report.yml",
+          "@@ -23,6 +23,6 @@ jobs:",
+          "       - run: npm ci && npm -w packages/pr-report run build",
+          "       - uses: ./",
+          "         with:",
+          "-          prompt_detail: standard",
+          "+          prompt_detail: compact",
+          "         env:",
+          "           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "action.yml",
+        "lines": [
+          "index 74e649e..188534f 100644",
+          "--- a/action.yml",
+          "+++ b/action.yml",
+          "@@ -16,9 +16,9 @@ inputs:",
+          "     required: false",
+          "     default: \"\"",
+          "   prompt_detail:",
+          "-    description: \"PR Report prompt detail: compact, standard, or full (default: standard)\"",
+          "+    description: \"PR Report prompt detail: compact or full (default: compact)\"",
+          "     required: false",
+          "-    default: \"standard\"",
+          "+    default: \"compact\"",
+          " outputs:",
+          "   overall_ai_ratio:",
+          "     description: \"PR-wide AI ratio (0-100)\""
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 3ab1c2a..085fa32 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -1903,16 +1903,16 @@ function normalizeInteractionContexts(interaction) {",
+          " function parsePromptDetail(value) {",
+          "   const normalized = (value ?? \"\").trim().toLowerCase();",
+          "   if (!normalized) return DEFAULT_PROMPT_DETAIL;",
+          "-  if (normalized === \"compact\" || normalized === \"standard\" || normalized === \"full\") {",
+          "+  if (normalized === \"standard\") return \"compact\";",
+          "+  if (normalized === \"compact\" || normalized === \"full\") {",
+          "     return normalized;",
+          "   }",
+          "-  throw new Error(\"prompt_detail must be one of: compact, standard, full\");",
+          "+  throw new Error(\"prompt_detail must be one of: compact, full\");",
+          " }",
+          " function shouldRenderInteractionByPromptDetail(interaction, detail) {",
+          "   const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);",
+          "   if (detail === \"full\") return true;",
+          "-  if (detail === \"standard\") return runtime.level !== \"low\";",
+          "-  return runtime.level === \"high\";",
+          "+  return runtime.level !== \"low\";",
+          " }",
+          " function resolvePromptRuntimeSelection(selection, interaction) {",
+          "   if (!selection) return { score: 100, role: \"primary\", level: \"high\" };",
+          "@@ -2124,7 +2124,7 @@ var init_entry = __esm({",
+          "   \"src/core/entry.ts\"() {",
+          "     \"use strict\";",
+          "     init_constants();",
+          "-    DEFAULT_PROMPT_DETAIL = \"standard\";",
+          "+    DEFAULT_PROMPT_DETAIL = \"compact\";",
+          "     GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([",
+          "       // Web / JS / TS build outputs",
+          "       \".next\",",
+          "@@ -5688,7 +5688,7 @@ async function pr(args2) {",
+          "   const prNumber = updateIdx !== -1 ? args2[updateIdx + 1] : null;",
+          "   const headRef = headIdx !== -1 ? args2[headIdx + 1] : \"HEAD\";",
+          "   if (promptDetailIdx !== -1 && !args2[promptDetailIdx + 1]) {",
+          "-    console.error(\"error: --prompt-detail requires compact, standard, or full\");",
+          "+    console.error(\"error: --prompt-detail requires compact or full\");",
+          "     process.exit(1);",
+          "   }",
+          "   const promptDetail = promptDetailIdx !== -1 ? parsePromptDetail(args2[promptDetailIdx + 1]) : parsePromptDetail(null);",
+          "@@ -6180,7 +6180,7 @@ usage:",
+          "                                     remove hooks and config [--remove-workflow] [--keep-notes]",
+          "   agent-note show [commit]          show session details for a commit",
+          "   agent-note log [n]                list recent commits with session info",
+          "-  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|standard|full]",
+          "+  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]",
+          "                                     generate PR report or update PR description/comment",
+          "   agent-note session <id>           show commits for a session",
+          "   agent-note commit [args]          git commit with session tracking"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/cli.ts",
+        "lines": [
+          "index dd15db9..e0cfebe 100644",
+          "--- a/packages/cli/src/cli.ts",
+          "+++ b/packages/cli/src/cli.ts",
+          "@@ -22,7 +22,7 @@ usage:",
+          "                                     remove hooks and config [--remove-workflow] [--keep-notes]",
+          "   agent-note show [commit]          show session details for a commit",
+          "   agent-note log [n]                list recent commits with session info",
+          "-  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|standard|full]",
+          "+  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]",
+          "                                     generate PR report or update PR description/comment",
+          "   agent-note session <id>           show commits for a session",
+          "   agent-note commit [args]          git commit with session tracking"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/pr.ts",
+        "lines": [
+          "index c3e112f..7ca4046 100644",
+          "--- a/packages/cli/src/commands/pr.ts",
+          "+++ b/packages/cli/src/commands/pr.ts",
+          "@@ -11,7 +11,7 @@ export async function pr(args: string[]): Promise<void> {",
+          "   const prNumber = updateIdx !== -1 ? args[updateIdx + 1] : null;",
+          "   const headRef = headIdx !== -1 ? args[headIdx + 1] : \"HEAD\";",
+          "   if (promptDetailIdx !== -1 && !args[promptDetailIdx + 1]) {",
+          "-    console.error(\"error: --prompt-detail requires compact, standard, or full\");",
+          "+    console.error(\"error: --prompt-detail requires compact or full\");",
+          "     process.exit(1);",
+          "   }",
+          "   const promptDetail ="
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/entry.test.ts",
+        "lines": [
+          "index 556faeb..9797e59 100644",
+          "--- a/packages/cli/src/core/entry.test.ts",
+          "+++ b/packages/cli/src/core/entry.test.ts",
+          "@@ -134,10 +134,10 @@ describe(\"countAiRatioEligibleFiles\", () => {",
+          " ",
+          " describe(\"prompt detail rendering\", () => {",
+          "   it(\"parses prompt detail presets\", () => {",
+          "-    assert.equal(parsePromptDetail(\"\"), \"standard\");",
+          "-    assert.equal(parsePromptDetail(undefined), \"standard\");",
+          "+    assert.equal(parsePromptDetail(\"\"), \"compact\");",
+          "+    assert.equal(parsePromptDetail(undefined), \"compact\");",
+          "     assert.equal(parsePromptDetail(\"compact\"), \"compact\");",
+          "-    assert.equal(parsePromptDetail(\"STANDARD\"), \"standard\");",
+          "+    assert.equal(parsePromptDetail(\"STANDARD\"), \"compact\");",
+          "     assert.equal(parsePromptDetail(\" full \"), \"full\");",
+          "     assert.throws(() => parsePromptDetail(\"high\"), /prompt_detail/);",
+          "   });",
+          "@@ -357,9 +357,8 @@ describe(\"prompt detail rendering\", () => {",
+          "     };",
+          " ",
+          "     assert.equal(shouldRenderInteractionByPromptDetail(high, \"compact\"), true);",
+          "-    assert.equal(shouldRenderInteractionByPromptDetail(medium, \"compact\"), false);",
+          "-    assert.equal(shouldRenderInteractionByPromptDetail(medium, \"standard\"), true);",
+          "-    assert.equal(shouldRenderInteractionByPromptDetail(low, \"standard\"), false);",
+          "+    assert.equal(shouldRenderInteractionByPromptDetail(medium, \"compact\"), true);",
+          "+    assert.equal(shouldRenderInteractionByPromptDetail(low, \"compact\"), false);",
+          "     assert.equal(shouldRenderInteractionByPromptDetail(low, \"full\"), true);",
+          "   });",
+          " });"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/entry.ts",
+        "lines": [
+          "index ea355c1..e864e67 100644",
+          "--- a/packages/cli/src/core/entry.ts",
+          "+++ b/packages/cli/src/core/entry.ts",
+          "@@ -75,9 +75,9 @@ export type PromptRuntimeSelection = {",
+          "   level: PromptRuntimeLevel;",
+          " };",
+          " ",
+          "-export type PromptDetail = \"compact\" | \"standard\" | \"full\";",
+          "+export type PromptDetail = \"compact\" | \"full\";",
+          " ",
+          "-export const DEFAULT_PROMPT_DETAIL: PromptDetail = \"standard\";",
+          "+export const DEFAULT_PROMPT_DETAIL: PromptDetail = \"compact\";",
+          " ",
+          " export interface AgentnoteEntry {",
+          "   v: number;",
+          "@@ -237,10 +237,11 @@ export function normalizeInteractionContexts(interaction: {",
+          " export function parsePromptDetail(value: string | null | undefined): PromptDetail {",
+          "   const normalized = (value ?? \"\").trim().toLowerCase();",
+          "   if (!normalized) return DEFAULT_PROMPT_DETAIL;",
+          "-  if (normalized === \"compact\" || normalized === \"standard\" || normalized === \"full\") {",
+          "+  if (normalized === \"standard\") return \"compact\";",
+          "+  if (normalized === \"compact\" || normalized === \"full\") {",
+          "     return normalized;",
+          "   }",
+          "-  throw new Error(\"prompt_detail must be one of: compact, standard, full\");",
+          "+  throw new Error(\"prompt_detail must be one of: compact, full\");",
+          " }",
+          " ",
+          " export function shouldRenderInteractionByPromptDetail(",
+          "@@ -249,8 +250,7 @@ export function shouldRenderInteractionByPromptDetail(",
+          " ): boolean {",
+          "   const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);",
+          "   if (detail === \"full\") return true;",
+          "-  if (detail === \"standard\") return runtime.level !== \"low\";",
+          "-  return runtime.level === \"high\";",
+          "+  return runtime.level !== \"low\";",
+          " }",
+          " ",
+          " export function resolvePromptRuntimeSelection("
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.test.ts",
+        "lines": [
+          "index dca3e52..0bfb927 100644",
+          "--- a/packages/cli/src/core/record.test.ts",
+          "+++ b/packages/cli/src/core/record.test.ts",
+          "@@ -103,7 +103,7 @@ describe(\"prompt selection analysis\", () => {",
+          "     assert.ok(analysis.signals.includes(\"between_non_excluded_prompts\"));",
+          "   });",
+          " ",
+          "-  it(\"keeps short Japanese direction changes in standard prompt detail\", () => {",
+          "+  it(\"keeps short Japanese direction changes in compact prompt detail\", () => {",
+          "     const analysis = analyzePromptSelection({",
+          "       prompt: \"できれば出したいだけど。。\",",
+          "       response: null,",
+          "@@ -125,7 +125,7 @@ describe(\"prompt selection analysis\", () => {",
+          "     assert.ok(analysis.signals.includes(\"between_non_excluded_prompts\"));",
+          "   });",
+          " ",
+          "-  it(\"does not promote short operational bridge prompts to standard\", () => {",
+          "+  it(\"does not promote short operational bridge prompts to compact\", () => {",
+          "     const analysis = analyzePromptSelection({",
+          "       prompt: \"please commit and push now\",",
+          "       response: null,"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/dist/index.js",
+        "lines": [
+          "index 08ffb03..6589cdc 100644",
+          "--- a/packages/pr-report/dist/index.js",
+          "+++ b/packages/pr-report/dist/index.js",
+          "@@ -36419,7 +36419,7 @@ const DEBUG = !!process.env.AGENTNOTE_DEBUG;",
+          " ",
+          " ;// CONCATENATED MODULE: ../cli/src/core/entry.ts",
+          " ",
+          "-const DEFAULT_PROMPT_DETAIL = \"standard\";",
+          "+const DEFAULT_PROMPT_DETAIL = \"compact\";",
+          " // Best-effort generated-artifact heuristics grouped by ecosystem so each rule",
+          " // stays explainable when we broaden support across languages and frameworks.",
+          " const GENERATED_DIR_SEGMENTS = new Set([",
+          "@@ -36549,18 +36549,18 @@ function parsePromptDetail(value) {",
+          "     const normalized = (value ?? \"\").trim().toLowerCase();",
+          "     if (!normalized)",
+          "         return DEFAULT_PROMPT_DETAIL;",
+          "-    if (normalized === \"compact\" || normalized === \"standard\" || normalized === \"full\") {",
+          "+    if (normalized === \"standard\")",
+          "+        return \"compact\";",
+          "+    if (normalized === \"compact\" || normalized === \"full\") {",
+          "         return normalized;",
+          "     }",
+          "-    throw new Error(\"prompt_detail must be one of: compact, standard, full\");",
+          "+    throw new Error(\"prompt_detail must be one of: compact, full\");",
+          " }",
+          " function shouldRenderInteractionByPromptDetail(interaction, detail) {",
+          "     const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);",
+          "     if (detail === \"full\")",
+          "         return true;",
+          "-    if (detail === \"standard\")",
+          "-        return runtime.level !== \"low\";",
+          "-    return runtime.level === \"high\";",
+          "+    return runtime.level !== \"low\";",
+          " }",
+          " function resolvePromptRuntimeSelection(selection, interaction) {",
+          "     if (!selection)"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/report.test.ts",
+        "lines": [
+          "index c488033..d77762a 100644",
+          "--- a/packages/pr-report/src/report.test.ts",
+          "+++ b/packages/pr-report/src/report.test.ts",
+          "@@ -214,7 +214,7 @@ describe(\"renderMarkdown\", () => {",
+          "     assert.ok(markdown.includes(\"This also applies to PROMPT_CONTEXT_DESIGN.md.\"));",
+          "   });",
+          " ",
+          "-  it(\"uses standard prompt detail by default\", () => {",
+          "+  it(\"uses compact prompt detail by default\", () => {",
+          "     const report = baseReport({",
+          "       total_prompts: 3,",
+          "       commits: [",
+          "@@ -305,9 +305,9 @@ describe(\"renderMarkdown\", () => {",
+          "     const compact = renderMarkdown(report, { promptDetail: \"compact\" });",
+          "     const full = renderMarkdown(report, { promptDetail: \"full\" });",
+          " ",
+          "-    assert.ok(compact.includes(\"💬 Prompts & Responses (1 shown / 3 total)\"));",
+          "+    assert.ok(compact.includes(\"💬 Prompts & Responses (2 shown / 3 total)\"));",
+          "     assert.ok(compact.includes(\"Update packages/cli/src/core/record.ts\"));",
+          "-    assert.ok(!compact.includes(\"README.md\"));",
+          "+    assert.ok(compact.includes(\"README.md\"));",
+          "     assert.ok(!compact.includes(\"continue\"));",
+          "     assert.ok(full.includes(\"💬 Prompts & Responses (3 total)\"));",
+          "     assert.ok(full.includes(\"Update packages/cli/src/core/record.ts\"));"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 46,
+    "title": "fix(report): simplify prompt detail presets",
+    "state": "open"
+  }
+}
