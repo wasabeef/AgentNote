@@ -5547,7 +5547,7 @@ function renderMarkdown(report, opts = {}) {
   lines.push("");
   if (report.dashboard_url) {
     lines.push(
-      `<div align="right"><a href="${report.dashboard_url}">Open Dashboard \u2197</a></div>`
+      `<div align="right"><a href="${report.dashboard_url}" target="_blank" rel="noopener noreferrer">Open Dashboard \u2197</a></div>`
     );
     if (report.dashboard_preview_help_url) {
       lines.push(
