@@ -1,0 +1,617 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T08:28:32.244Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "PR #42 レビュー結果\n\n  CI: 全 pass ✅\n\n  変更パッケージ一覧\n\n  ┌─────────────────┬─────────┬───────────┬─────────────┐\n  │   パッケージ    │ 変更前  │  変更後   │    種別     │\n  ├─────────────────┼─────────┼───────────┼─────────────┤\n  │ Node engines    │ >=20    │ >=22.12.0 │ ⚠️  Breaking │\n  ├─────────────────┼─────────┼───────────┼─────────────┤\n  │ npm             │ 10.9.0  │ 11.13.0   │ ⚠️  Major    │\n  ├─────────────────┼─────────┼───────────┼─────────────┤\n  │ @actions/core   │ ^1.11.0 │ ^3.0.1    │ ⚠️  Major    │\n  ├─────────────────┼─────────┼───────────┼─────────────┤\n  │ @actions/github │ ^6.0.0  │ ^9.1.1    │ ⚠️  Major    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ @biomejs/biome     │ 2.4.10  │ 2.4.13    │ ✅ Patch    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ esbuild            │ ^0.27.5 │ ^0.28.0   │ ✅ Minor    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ typescript         │ ^6.0.2  │ ^6.0.3    │ ✅ Patch    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ tsx                │ ^4.20.0 │ ^4.21.0   │ ✅ Minor    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ astro              │ ^6.1.5  │ ^6.1.10   │ ✅ Minor    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ @astrojs/starlight │ ^0.38.3 │ ^0.38.4   │ ✅ Minor    │\n  ├────────────────────┼─────────┼───────────┼─────────────┤\n  │ knip               │ ^6.3.0  │ ^6.9.0    │ ✅ Minor    │\n  └────────────────────┴─────────┴───────────┴─────────────┘\n\n  ---\n  ⚠️  要確認: Node.js engines の変更\n\n  >=20 → >=22.12.0 はユーザーへの破壊的変更です。\n\n  - Node 20 は Active LTS (2026/4 まで) — まだ多くのユーザーが使用中\n  - 22.12.0 は Node 22 の LTS 開始バージョン (2024/10 リリース)\n\n  ユーザーが Node 20 で npx agent-note を実行するとエラーになります。CLAUDE.md にも node: \">=20\" と書かれていました。この変更を\n  README / CHANGELOG に明記する必要があります。\n\n  ⚠️  @actions/core 1.x → 3.x / @actions/github 6.x → 9.x\n\n  major jump ですが pr-report/dist/index.js が再 bundle されており (+26k/-21k) CI pass を確認。@actions/core 3.x の主な変更 (Node 22\n   LTS 対応、deprecation 整理) は github-actions 用途で実害ない可能性が高いですが、bundle\n  - Biome / esbuild / TypeScript / Astro の minor/patch アップデートはリスク低\n  - lock file 更新が全パッケージで揃っており整合性あり\n\n  ---\n  総合判定: ⚠️  条件付き承認\n\n  マージ前に対応推奨:\n  1. README.md または CHANGELOG.md に「Node.js 22.12.0 以上が必要になった」旨を明記\n  2. CLAUDE.md の engines 記述も合わせて更新 (既に更新済みであれば ✅)\n\n  上記が対応済みであればマージして問題なし。CI 通過・bundle 再生成も確認済みです。",
+      "response": "レビュー指摘は妥当です。`Node >=22.12.0` は CLI ユーザーにも影響するので、まず README / docs / AGENTS 系に古い `Node.js 20` 記述が残っていないか確認して、必要な文言だけ最小修正します。\n`common:pr-fix` を使って、レビュー指摘を must として扱います。対象は「Node 要件の docs 反映」と「CLAUDE/AGENTS など開発ガイドの整合性」です。\n検索結果を見ると、公開 CLI package の `packages/cli/package.json` はまだ `node >=20` のままで、実は `npx agent-note` のユーザー要件はまだ Node 20 です。一方、root / website / dashboard の開発・frontend build 要件は `>=22.12.0` なので、README の「利用要件」を変えるより、開発要件を別途明記するのが安全そうです。\n古い `Node.js >=20` は README の利用要件と CONTRIBUTING の開発要件が混ざっていました。CLI はまだ `>=20`、repo 開発は `>=22.12.0` なので、README 各言語には「CLI 利用は Node 20、repo 開発 / docs / dashboard build は Node 22.12」の注記を足し、CONTRIBUTING / AGENTS / CLAUDE は開発要件として更新します。\nREADME は「使う人」と「repo を開発する人」を分けて追記します。これで CLI の Node 20 support を不必要に breaking と見せず、Astro 6 由来の Node 22.12 要件も明確にします。\n開発ガイドにも追記しました。次に古い/曖昧な記述が残っていないか確認し、README 多言語の整合性も軽く見ます。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "README にそんな詳細は必要か？",
+      "response": "たしかに README には不要です。README は利用者向けなので `Node.js 20 or later` だけ残し、repo 開発要件の `Node.js 22.12.0` は `CONTRIBUTING.md` と agent 向けガイドだけに閉じます。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "apply_patch",
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "この repository の開発、Dashboard / website build には Node.js 22.12 以上\n\nこの明記は不要",
+      "response": "README はユーザー向けの入口なので、ここはシンプルな `Node.js 20+` に戻します。開発環境の Node 22.12+ は `package.json` / CI が担保しているので、README では前面に出さない方が確かに読みやすいです。",
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "もう次の作業はないので、プロンプト選択の改善をもう一度やってみよう",
+      "response": "次は prompt selection の再調整に入ります。今回の PR #43 のように「最終 diff を作った後の確認・方針修正」が落ちる一方で、`commit/push/PR 作成` みたいな運用会話は混ぜたくないので、まず現在の selection 境界と記録データを見直してから branch を切って実装方針を固めます。\n現在の挙動は、最後に commit 対象 file を触った turn で prompt window を閉じるため、後続の「README からは消す」「CONTRIBUTING に書く」みたいな最終状態を決める会話も落ちます。改善は、後続を全部入れるのではなく、**primary edit 後の bounded review / scope refinement prompt** だけを構造 signal で救う方向がよさそうです。\nbranch は `fix/prompt-selection-post-edit-context` で切りました。方針としては、既存の commit-to-commit window は維持しつつ、最後の primary edit の後に出た「実際に追加の file edit を起こした scope refinement」だけを短い tail として拾う設計にします。これなら後続の `commit push` や PR 作成の運用 prompt は拾いにくく、PR #43 の README 取り消し系のやり取りは救えます。\n少し実データも見ました。PR #43 は Codex transcript-driven なので `changes.jsonl` ではなく transcript の edit signal から primary turn が決まり、後続 turn は「commit files に直接触っていない edit / 確認 / PR 作成」として落ちています。実装は、post-primary tail を **表示用 selected prompt にだけ追加し、消費 marker は進めない** 形にします。これなら未 commit の別 file を将来 commit する可能性を潰しません。\n最小実装を入れました。ポイントは、post-primary tail は note の表示には足すけれど、`committed_pairs` の prompt-window marker は進めないところです。次に PR #43 型の fixture と、operational prompt が増えない negative test を追加します。\nPR #43 型の回帰 test を追加しました。1 回目の release commit には post-primary の README 方針修正を表示として含めつつ、その README turn を消費済みにしないので、後で README を commit した場合にも同じ prompt が正しく残ることを確認する test です。\nプロンプト選択の改善は「後続の意味ある修正 prompt を拾うが、次 commit の因果を食い潰さない」方向で実装を入れたところです。まず focused test で挙動を固めて、そこから型・lint・関連 docs の整合まで順に見ます。\n実装箇所と関連 docs の当たりは取れました。focused test がまだ走っているので、まず失敗があればそこを直してから docs の文言を最新の選択ルールに合わせます。\nfocused test で狙いの新規ケースは通りましたが、既存の “次 commit の prompt を漏らさない” 系が 3 件落ちました。これは尻尾を拾う条件が少し広すぎた合図なので、ここは良いブレーキです。次 commit の edit を current commit に混ぜないよう条件を締めます。\n方針を少し修正します。`currentTurn` まで広げるのではなく、実際の `git commit` 時点を commit boundary として保存し、その境界までの短い tail だけ拾います。これなら「commit 前の説明・最終指示」は拾えて、「次 commit 用の edit」は消費しません。\nこれで tail は `currentTurn` ではなく `commit_boundary.json` を見るように変えました。既存 hook では `prepare-commit-msg` が commit 直前の turn を保存し、record 後に掃除します。次は focused test をもう一度回します。\nfocused test は 46/46 pass です。いまの形だと、commit 境界があるときだけ最終 edit 後の短い会話を拾い、別ファイル edit は次 commit 用に残せています。次に設計 docs と website の説明をこの仕様に合わせます。\ndocs も全 locale の `how-it-works` に合わせました。ここからは型・lint・CLI test・website build の順に、実装と文書のズレやフォーマット崩れがないか潰します。\nCLI の typecheck・lint・全 test は通りました（367 tests）。最後に CLI bundle と website build を確認して、生成物や docs 表示側の破綻がないか見ます。\n追加で、実際の `prepare-commit-msg` hook が commit boundary を作り、record 後に掃除されるところまで command-level test に入れました。これで “unit だけ通る” 状態を避けます。\n全体 test で 1 件だけ落ちました。機能ではなく、hook script 全体に double quote が入っていないことを期待する既存テストに、新しい shell 変数代入の `\"` が引っかかっています。既存の shell quoting 方針に合わせて、追加した prepare hook 部分も single quote ベースに直します。\n落ちた init test は shell 書式を直して focused で pass しました。仕上げに全 test をもう一度流して、先ほどの 1 件が消えていることを確認します。\n全 test も 367/367 pass に戻りました。型・lint・diff whitespace も通っています。ここから自己レビューで、Agent 別影響・prompt ownership・docs/README ずれをもう一度見ます。\n自己レビューで 1 つ見つけました。tail を「消費しない」だけだと、さらに後の commit で prompt-only tail が再表示される余地があります。edit ownership は消費しないまま、tail として一度表示した prompt だけは再表示しない marker を追加します。ここ、ちょっと地味ですが大事な安全弁です。\ntail の再表示防止 marker も入れて、focused record / commit tests は通りました。もう一度 build・lint・全 test・website build まで通して最終確認します。\ntail marker 追加後の lint・build も通りました。最後にもう一度だけ全 test を流して、今回の変更が他の Agent 経路に波及していないことを確認します。\nプロンプト選択をもう一段改善しました。`prepare-commit-msg` が実際の commit 時点の turn を `commit_boundary.json` に残し、record 側は最後に残った edit 以降から commit までの短い non-edit tail を拾います。これで「説明して」「PR まで作成して」のような commit 直前の文脈は出せます。一方で、別ファイルを編集した turn は current commit に混ぜず、後続 commit 用に残します。\n\n安全策として、tail prompt は `prompt_scope: \"tail\"` で記録して再表示は防ぎますが、`maxConsumedTurn` は進めないので、後で commit される edit ownership は消費しません。docs と website 全 locale の説明、CLI bundle も更新済みです。\n\n確認済み:\n- `npm run typecheck --prefix packages/cli`\n- `npm run lint --prefix packages/cli`\n- `npm run build --prefix packages/cli`\n- `npm test --prefix packages/cli`（367/367 pass）\n- `npm run build --prefix website`\n- `git diff --check`\n\nまだ commit はしていません。May the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "- `この repository の開発... は不要` / `書くなら CONTRIBUTING`\n  一度 README を触ったけど、最終 commit には README 差分が残っていないので、final diff に因果接続しない turn として除外。"
+        },
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "今回の PR #43 のように「最終 diff を作った後の確認・方針修正」が落ちる一方で、`commit/push/PR 作成` みたいな運用会話は混ぜたくないので、まず現在の selection 境界と記録データを見直してから branch を切って実装方針を固めます。 現在の挙動は、最後に commit 対象 file を触った turn で prompt window を閉じるため、後続の「README からは消す」「CONTRIBUTING に書く」みたいな最終状態を決める会話も落ちます。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/DESIGN.md",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "その設計は実装大変かどうか調査してほしい。\n\ndocs/ に設計を残して",
+      "response": "実装難易度を先に現実寄りに見ます。既存の prompt window / PR Report / Dashboard の境界を確認して、保存 schema を変える必要があるか、表示側だけで済むかを切り分けます。\n設計としては「record で全て絞る」から「record で scoring metadata を保存し、表示側で密度を選ぶ」へ分けます。これなら `low / medium / high` を後から変えても、git note に残した文脈を復元できます。まず設計メモを `docs/knowledge/` に追加し、既存の Design map から辿れるようにします。\n設計メモを書きました。結論としては「中程度の実装量」ですが、Agent adapter はほぼ触らずに済み、schema は additive で進められます。次に内容の矛盾や Markdown の基本崩れがないか確認します。\n確認したところ、既存の `DESIGN.md` 側に「non-edit tail」と書いてあり、新しい scoring 設計と少しズレます。ここは将来の実装判断を誤らせるので、short commit boundary では hard noise 以外を display-only tail として残せる、という表現に揃えます。\nこれで Design の現行説明と scoring 設計の方向性が揃いました。最後に差分と whitespace をもう一度確認して、実装難易度の判断を短くまとめます。\n調査して、設計を [PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) に残しました。あわせて [DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/DESIGN.md) の knowledge map と prompt selection 説明も更新しています。\n\n結論は「実装難易度は中程度」です。Agent adapter は大きく触らず、`record.ts` で prompt に `selection` metadata を付け、PR Report / Dashboard 側で `low / medium / high` の表示密度を切り替える設計が良さそうです。重要なのは、record 時点で捨てすぎず、git note には短い commit window を残しておくことです。\n\n確認: `git diff --check -- docs/knowledge/DESIGN.md docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` は通っています。コミットはしていません。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "スコアリング案はかなり筋が良いです。固定の yes/no filter だと今回みたいに「前段が抜ける」問題が出るので、まず各 prompt に言語非依存の evidence score を付けて、表示 preset で `low / medium / high` を切り替えられる設計に寄せます。\nここで大事なのは「record 時に捨てる」と、あとから設定で復元できないことです。なので設計としては、まず note には短い commit window をなるべく残し、PR Report / Dashboard 側で score に応じて `low / medium / high` 表示を切り替えるのが一番安全です。\nスコア自体はもう内部的にはかなり近い形があります。`fileRefScore / textScore / shapeScore / primaryTurn / tail` のような構造 signal で評価しているので、ここを「保存時の不可逆 filter」ではなく「表示密度を決める metadata」に昇格させるのが自然です。まずは今回の違和感を消すため、短い commit window は連続して残すテストに直します。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+        "docs/knowledge/DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "その設計も md 二全て残して",
+      "response": "`low / medium / high` は内部重要度、`compact / standard / full` は表示密度、という整理を設計 doc に反映します。既存の `prompt_detail` 表記が少し混ざっているので、そこも一貫するように直します。\n`prompt_detail: low/medium/high` と書いていた部分は、今回の整理だと誤解を生むので直します。内部は `selection.level`、外部設定は `prompt_detail: compact | standard | full` にします。\n設計 doc に反映しました。今の状態だと internal level と preset の関係は明確ですが、古い表現が残っていないか念入りに確認します。\n[PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) に反映しました。\n\n整理はこの形です。\n\n- `selection.level`: `low / medium / high` = prompt の重要度\n- `prompt_detail`: `compact / standard / full` = 表示の細かさ\n- `compact`: `high` のみ\n- `standard`: `high + medium`\n- `full`: `high + medium + low`\n\n`prompt_detail: standard` の YAML 例、renderer filter の TypeScript 例、テスト観点も合わせて更新済みです。`git diff --check` も通っています。コミットはしていません。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`prompt_detail: low/medium/high` と書いていた部分は、今回の整理だと誤解を生むので直します。 内部は `selection.level`、外部設定は `prompt_detail: compact | standard | full` にします。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "score の low, medium, hight をどこの境界に設定するかがすごい大事だと思う。\nこの部分を深堀ってほしい",
+      "response": "境界値はまさに設計の肝です。今の修正は途中ですが、ここで一度止めて、`score` をどう正規化し、どの signal が `high / medium / low` を決めるべきかを深掘りして設計 doc に落とします。\n境界を決める時の落とし穴は、単純に `score >= 70 high` みたいにすると、primary edit と bridge prompt が同じ土俵で誤判定されることです。なので「絶対 score」だけでなく、まず role を決めてから level を決める二段階にする案を doc に追記します。\n境界値は最初から固定の魔法数字にしない方が安全です。`primary / anchor / bridge / noise` のような role ごとに score range を持たせると、`はい` が high になったり、逆に重要な修正先指定が消える事故を避けやすくなります。\nScore の境界を doc に具体化しました。ここでは `>=75 high / 45..74 medium / 1..44 low` を初期候補にしつつ、primary や bridge には override を持たせる設計にしています。次に #43 の具体例へ落として、直感とズレないか確認します。\n#43 への当てはめも追記しました。`はい` は `low` で full にだけ出る、`書くなら CONTRIBUTING` は file anchor 付き bridge なので `medium`、直接修正指示は `high` という境界です。最後に文書の整合性をチェックします。\nスコア境界を深掘りして、[PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) に追記しました。\n\nポイントは **単純な `score >= 75` だけで決めない** ことです。まず `role` を決めて、その role の中で score を付けます。\n\n```ts\nprimary       -> high 固定寄り\ndirect_anchor -> high / medium\nscope         -> medium\ntail          -> medium / low\nbridge        -> low 上限\nbackground    -> low\n```\n\n初期 threshold 案はこれです。\n\n```text\n75..100 = high\n45..74  = medium\n1..44   = low\n0       = 保存しない / hard excluded\n```\n\nただし override があります。\n\n- `primary` は最低でも `high`\n- `bridge` は最高でも `low`\n- full path match は `high` 寄り\n- response / transcript に commit file anchor がある tail は `medium`\n- quoted history / detached `c` は score 以前に除外\n\n#43 の例も具体的に分類しました。たとえば `はい` は `bridge + low`、`書くなら CONTRIBUTING` は `bridge with file anchor + medium`、直接修正指示は `direct_anchor + high` です。\n\n`git diff --check` は通っています。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "レビュー内容はかなり鋭いですが、`non-primary edit turn は常に除外` まで行くと #43 で欲しかった前段もまた落ちる可能性があります。ここは「別 commit の edit turn を混ぜない」と「短い bridge は残す」を両立する条件にするのがよさそうです。まず該当ロジックを最小修正で整えます。\n修正方針は「別 commit の edit turn は混ぜない。ただし、その後の tail prompt でも current commit への構造 evidence があるものは残す」です。これなら `README.md` edit 自体は落としつつ、`release.yml/package.json を確認した` や `PR 作成` のような current commit 側の final prompt は残せます。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "いろいろな観点でスコアリング方法をレビューしてほしい。最低５回",
+      "response": "スコアリング設計を「壊れ方」から見ます。最低 5 観点で、境界値・role 分類・多言語性・split commit・表示 UX の順に、設計上の穴がないかレビューします。\nレビューを始めると、いくつか設計内の自己矛盾が見えています。特に `bridge は low 上限` と書きつつ `書くなら CONTRIBUTING` を medium にしている点、role enum と本文で使う role 名がズレている点は、このまま実装するとバグになります。\n設計 doc はレビュー結果を反映しておきます。これは単なる文章の好みではなく、実装時の分岐条件に直結するので、role 名・境界・例を揃えます。\n矛盾点を 2 つ修正しました。`bridge` のまま medium に上げるのではなく `anchored_bridge` を追加し、split commit では `full` でも別 commit の primary edit は混ぜない、と明記しています。続けてもう少し別観点で見ます。\nスコアリング方法を 6 観点でレビューし、設計 doc も修正しました。\n\n**Findings**\n1. **Role 名の不整合を修正**: schema は `context / fragment / summary` なのに本文は `direct_anchor / scope / bridge` を使っていました。実装時に型とロジックが割れるので、[role enum](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md:75) を本文に合わせました。\n\n2. **`bridge` の境界矛盾を修正**: `bridge は low 上限` としつつ `書くなら CONTRIBUTING` を medium にしていたので、`anchored_bridge` を追加しました。短いが file / identifier anchor を持つ prompt は medium まで上がれます。\n\n3. **threshold 単独判定を避ける設計に修正**: `>=75 high` だけだと壊れるので、[role-first score bands](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md:129) と [resolution order](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md:163) を明記しました。\n\n4. **generic basename の false positive を抑制**: `README.md`, `package.json`, `index.ts` などは強すぎるので、generic basename 単体では high にしない方針を追加しました。\n\n5. **response evidence の過信を抑制**: AI response は「予定」を含むので、response evidence だけでは high にしない cap を追加しました。\n\n6. **split commit の混入を明確に禁止**: `full` でも別 commit の primary edit は混ぜない方針にしました。`full` は完全な session dump ではなく、hard noise と別 commit primary edit を除いた full trace です。\n\n現時点の設計としてはかなり良くなっています。特に `high / medium / low` を「重要度」、`compact / standard / full` を「表示密度」と分けたのは正しいです。\n\n残る注意点は、`75 / 45` の境界値はまだ初期値なので、実装前に #29 / #33 / #43 / BUGS PR 群の実データで calibration するべきです。`git diff --check` は通っています。",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "レビューしてもらいました\n\n  設計評価: PROMPT_SELECTION_SCORING_DESIGN.md\n\n  ---\n  ✅ 良い点\n\n  1. Role-first 設計への転換は正しい\n\n  Score の足し算だけで はい と packages/cli/package.json を含む prompt を同列に扱うと壊れる。Role を先に決めてから加点する pipeline\n  は、bridge と primary が混在しても破綻しにくい。\n\n  2. Hard exclusion の明示\n\n  quoted history・1 文字 prompt・stale consumed prompt を score 以前で落とす設計は正しい。「score 0 = 保存しない」と「hard exclude =\n   保存しない」を区別しているのも好ましい。\n\n  3. Split commit policy の明文化\n\n  ▎ latest primary turn 後に non-primary edit turn が現れた場合、その turn は current commit から除外する。その後の tail prompt\n  ▎ は、current commit file / diff identifier / response structural anchor を持つ場合だけ current commit に残す。\n\n  現在のテスト失敗の原因である問題を正確に記述できている。実装はここに追いついていない状態。\n\n  4. Response evidence cap\n\n  ▎ response evidence だけでは high にしない。\n\n  AI の「やる予定」と「実際に commit した」を分けて扱う設計は堅実。\n\n  5. 後方互換\n\n  selection が additive field で、ない note は従来通り表示するという設計は正しい。\n\n  ---\n  ⚠️  曖昧・要補足\n\n  1. Role 判定の順序と境界が実装しにくい\n\n  Level resolution order (p.165-176) で「5. latest primary turn 後なら tail、6. checklist なら scope」と並んでいるが、primary turn\n  より前にある multi-line checklist は scope なのか background なのかが不明。順序が確定していても、turn 相対位置 vs\n  テキスト形状のどちらが先に判定されるか曖昧な組み合わせがある。\n\n  具体的には:\n  - primary turn より前の multi-line scope prompt → scope か background か?\n  - latest primary turn 後の file path ref 付き短い prompt → tail か anchored_bridge か?\n\n  → 推奨: role 判定フロー図 or 優先順に条件を列挙したコード相当の疑似コードを追加。\n\n  2. bridge role の保存条件が不明確\n\n  ▎ bridge は low。前後に selected prompt があれば残す。\n\n  「前後に selected prompt がある」という条件は record time に判断できるが、「selected」の定義が循環する可能性がある(bridge\n  を残すかどうかが、adjacent prompt の selection に依存し、そちらも bridge かもしれない)。\n\n  → 推奨: 最初の pass で bridge 以外の role を決め、second pass で bridge を評価する 2-pass\n  方式を明記するか、あるいは「隣接する任意の non-hard-excluded prompt が存在すれば残す」という緩い定義に落とす。\n\n  3. base score の根拠が示されていない\n\n  ┌───────────────┬──────┐\n  │     Role      │ Base │\n  ├───────────────┼──────┤\n  │ primary       │   90 │\n  ├───────────────┼──────┤\n  │ direct_anchor │   75 │\n  ├───────────────┼──────┤\n  │ tail          │   45 │\n  ├───────────────┼──────┤\n  │ bridge        │   25 │\n  └───────────────┴──────┘\n\n  これらの数値がどこから来たか不明。simulation data (/tmp/agentnote-task-simulation/)\n  との対応があるなら明記してほしい。直感だけで決めた場合、実装後にすぐ調整が必要になるリスクがある。\n\n  → 推奨: 数値は「初期値として使い、実際の PR #43 simulation で検証後に確定する」と明記。あるいは PR #43 simulation\n  の結果をそのまま根拠として示す。\n\n  4. generic basename の判定が実装難\n\n  ▎ README.md, package.json, index.ts などは generic\n\n  何が generic かのリストを持つのか、それとも heuristic (頻出 basename) で動的に判定するのか不明。static list は repository\n  によって異なり、dynamic は複雑になる。\n\n  → 推奨: Phase 1 では list approach で良いので、初期リストを設計書に付記する。または \"generic basename = commit file との exact\n  path match がないもの\" に単純化して +5 とする。\n\n  5. tail の consumed state が maxConsumedTurn を進めない設計の副作用\n\n  ▎ tail は prompt_scope: \"tail\" で consumed state に記録し、maxConsumedTurn には使わない。\n\n  これは正しいが、次の commit で tail prompt がどう扱われるかが書かれていない。tail prompt の turn が次の commit の maxConsumedTurn\n  を下回っていた場合、Option B filter (turn > maxConsumedTurn) は次 commit でもその tail prompt を候補に含めてしまう。tail prompt が\n\n  2. Scoring は Phase 1 だが現状の実装には scoring がない\n\n  現在の実装には InteractionSelection・score・level・role・signals の保存がなく、従来の boolean filter の延長上にある。設計書の\n  Phase 1 (scoring pure function) が未実装のまま Phase 2 的な window policy 変更だけが入っている。\n\n  テストが失敗している原因も「scoring による level-based 保存」ではなく、従来型の filter logic のバグ(non-primary edit turn\n  の混入)なので、根本的な設計転換はまだ始まっていない。\n\n  ---\n  総合評価\n\n  ┌────────────────────┬───────────────────────────────────────────────────────────┐\n  │        項目        │                           評価                            │\n  ├────────────────────┼───────────────────────────────────────────────────────────┤\n  │ 設計の方向性       │ ✅ 正しい (role-first, split commit policy, response cap) │\n  ├────────────────────┼───────────────────────────────────────────────────────────┤\n  │ 実装可能性         │ ⚠️  Phase 境界と role 判定フローの具体化が必要             │\n  ├────────────────────┼───────────────────────────────────────────────────────────┤\n  │ テスト計画         │ ✅ 十分                                                   │\n  ├────────────────────┼───────────────────────────────────────────────────────────┤\n  │ 数値の根拠         │ ⚠️  simulation との紐付けが欲しい                          │\n  ├────────────────────┼───────────────────────────────────────────────────────────┤\n  │ 現在の実装との整合 │ ❌ Phase 1 未着手のまま部分的 Phase 2 が進んでいる        │\n  └────────────────────┴───────────────────────────────────────────────────────────┘\n\n  推奨: 設計書は「良い思想」を持っているので、Phase 1 (scoring pure function) から始め直す ことを推奨。現在のブランチの\n  COMMIT_BOUNDARY_FILE・tailPromptIds・selectCompleteCommitBoundaryWindow は Phase 2 の先走りで、scoring schema なしでは「Level\n  で表示密度を変える」という核心機能が実装できない。先に scoring pure function と unit test を揃えることで、テスト失敗 (split commit\n   の non-primary edit 混入) も自然に解決できる。",
+      "response": "レビュー内容は妥当です。特に「2-pass bridge」「role 判定の疑似コード」「数値は simulation 前の初期値」という 3 点は、実装前に doc へ入れた方が後戻りが減ります。今は設計 doc だけ残っている clean な状態なので、そこへ追記します。\n追記する内容は 4 つです: role 判定の疑似コード、bridge の 2-pass、generic basename の初期リスト、tailPromptIds の次 commit での扱い。これでレビュー指摘の曖昧さをかなり潰せます。\nレビュー指摘を設計に反映しました。特に bridge の循環は 2-pass で解消、数値は simulation 前の初期値と明記、tail marker は dedupe と ownership を分離しました。最後に doc 全体の整合を確認します。\n1 箇所だけ旧表現が残っています。`selected prompt があるなら bridge` という表現は、2-pass の説明とぶつかるので、前後の non-excluded prompt に直します。ついでに signal 名も `anchored_bridge` に合わせます。\nもう 1 つだけ `between two selected prompts` が残っていました。これも non-excluded に直して、用語を完全に揃えます。\nレビュー内容を反映して、[PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) を更新しました。\n\n主な補足は以下です。\n\n- `role` enum を本文と一致させました。\n- `bridge` の循環問題を避けるため、1-pass で bridge 以外、2-pass で bridge を判定する方式を明記しました。\n- primary 前の checklist、primary 後の path ref など、曖昧だった role 判定ケースを疑似コードと ordering details に落としました。\n- score 数値は確定値ではなく、PR #29 / #33 / #43 / BUGS PR 群の simulation で calibration する初期値だと明記しました。\n- generic basename は Phase 1 では static list にする方針と初期リストを追加しました。\n- tail prompt は `maxConsumedTurn` を進めず、`tailPromptIds` は display-only tail の重複防止だけに使うと明確化しました。\n\n`git diff --check` は通っています。現在の未コミット変更はこの新規 doc だけです。",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "ちなみに\n\n@docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md#L77-L78\n\nscore があるだけで level は持たないほうがいいのでは？\nなぜなら score のレベル基準変えたらマイグレーションしなきゃいけないでしょ",
+      "response": "その指摘はかなり正しいです。`level` を保存すると threshold を変えた瞬間に古い note の意味が固定化されるので、保存 schema は raw score / role / signals に寄せて、`level` は renderer が runtime で算出する方がクリーンです。doc をその方針に修正します。\n`level` を保存しない形に直します。言い換えると、git note は「事実に近い metadata」を保存し、表示時に `score -> level` を変換します。これなら threshold を変えても migration が不要です。",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "そういう観点で他にないかレビューして",
+      "response": "同じ観点、つまり「保存すると将来の基準変更で stale になる派生値がないか」を見ます。`level` 以外にも、`role` や `signals` が保存してよい事実か、runtime で再計算すべき派生かを切り分けます。\n同じ観点で見ると、`score` 自体もかなり怪しいです。重みや calibration を変えたら古い `score` も stale になるので、保存するのは score ではなく「record 時点の安定した evidence」に寄せるのがより良さそうです。doc をその方向に修正します。\n`score / role / level` を全部 runtime 派生に寄せました。まだ文中に「score を保存」「metadata を失わない」など古い前提が残っていないか、同じ観点で確認します。\n2 点だけ、まだ保存 schema の言い方として危ない表現が残っています。`role: \"tail\" として保存` は保存しない方針と矛盾するので `source: \"tail\"` に直します。`score metadata` も `selection metadata` に直します。\n検索結果の `selection.score` は保存 schema ではなく runtime object の変数名でしたが、紛らわしいので `runtime` に変えておきます。こういう小さな名前の曖昧さが後で実装ミスになります。\n同じ観点でレビューして、設計を修正しました。結論としては **`level` だけでなく `score` と `role` も git note に保存しない方がいい** です。\n\n理由はこうです。\n\n- `level`: threshold を変えたら stale になる\n- `score`: weight / calibration を変えたら stale になる\n- `role`: classifier の優先順位を変えたら stale になる\n\nなので保存するのは安定寄りの evidence だけにしました。\n\n```ts\ntype InteractionSelection = {\n  schema: 1;\n  source: \"primary\" | \"window\" | \"tail\" | \"fallback\";\n  signals: PromptSelectionSignal[];\n};\n```\n\n`score / role / level` は PR Report / Dashboard / CLI preview 側で runtime に計算します。これなら将来しきい値や重みを変えても git note migration が不要です。\n\n他に見た観点では、`prompt_detail` は表示設定なので保存しない、generic basename の判定リストも runtime/scorer 側の実装 detail として扱う、`tailPromptIds` は local consumed state の dedupe 目的なので note schema には入れない、という整理がよさそうです。\n\n`docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` はその方針に更新済みで、`git diff --check` も通っています。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "再レビュー結果\n\n⏺ 大幅な改訂が入っています。前回指摘との差分を中心に評価します。\n\n  ---\n  再レビュー結果\n\n  ---\n  ✅ 前回指摘が解消された点\n\n  1. score / role / level を git note に保存しない設計 (最重要改善)\n\n  ▎ git note に保存するのは、record 時点で観測した比較的安定した evidence だけです。\n\n  weights / threshold / classifier priority 変更で stale になる値を保存しない判断は正しい。source + signals + schema\n  だけを記録し、runtime に再計算する設計は migration 不要で、将来の調整コストが大幅に下がる。\n\n  2. 2-pass bridge classifier で循環を解消\n\n  // 1-pass: bridge 以外を決める\n  // 2-pass: 隣接 non-excluded prompt があれば bridge にする\n\n  「selected prompt が隣接するなら bridge」→ 循環。「hard-excluded でない prompt が隣接するなら bridge」→ 循環なし。正しい。\n\n  3. generic basename static list の明示\n\n  初期リストを具体的に列挙したことで実装可能な状態になった。「dynamic frequency detection は初期実装に入れない」という判断も適切。\n\n  4. tail consumed-state policy の明記\n\n  ▎ tail marker は「同じ prompt を補足 tail として重複表示しない」ための dedupe であり、「その prompt を将来の commit\n  ▎ から完全に除外する」ための consumed marker ではありません。\n\n  この distinction が欠けていた前回より大幅に明確化された。\n\n  5. role 判定の ordering details 追記\n\n  - primary turn より前の multi-line checklist → scope\n  - latest primary turn 後の exact path prompt → direct_anchor (tail 優先ではない)\n  - latest primary turn 後の generic basename only → tail\n\n  前回指摘した「組み合わせの ambiguity」がほぼ解消された。\n\n  ---\n  ⚠️  残る軽微な課題\n\n  1. source の意味が implicit\n\n  スキーマ:\n  source: \"primary\" | \"window\" | \"tail\" | \"fallback\"\n\n  7-way role (primary, direct_anchor, scope, tail, anchored_bridge, bridge, background) とどう対応するかが書かれていない。\n\n  window は direct_anchor / scope / anchored_bridge / bridge / background すべてを含む、という理解で合っているか?\n  resolvePromptRuntimeSelection() がこの対応を知っている必要があるが、実装者が迷う可能性がある。\n\n  → 1 行の対応表を追記するか、source の定義文を補足するだけで解消。\n\n  2. bridge の \"前後\" の定義が曖昧\n\n  ▎ short prompt で前後に hard-excluded されていない prompt があるなら bridge にする。\n\n  Window の最後の prompt は \"後\" がない。前にしか non-excluded prompt がない場合も bridge になるか? 「前 OR 後」か「前 AND\n  後」かが不明。\n\n  → hasAdjacentNonExcludedPrompt = \"前後どちらかに存在すれば OK\" と 1 行追記で解消。\n\n  3. PromptSelectionCandidate.isTail の設定主体が不明\n\n  候補型に isTail: boolean があるが、「誰が、どのタイミングで」設定するか書かれていない。classifier 実行前に caller\n  が設定するのか、classifier 内部で turn > latestPrimaryTurn から導出するのか。\n\n  → minor。「caller が turn > candidate.latestPrimaryTurn から pre-compute する」と 1 行注記。\n\n  4. Calibration のタイミングが未定\n\n  ▎ PR #29 / #33 / #43 / BUGS PR 群の実データ simulation で calibration してから実装値として固定します。\n\n  Simulation が完了する前に Phase 1 実装に入ると、初期値のまま固定されるリスクがある。\n\n  → 「Phase 1 の PR を出す前に simulation を 1 回通す」と推奨方針に追記するか、simulation 結果の summary を設計書に掲載する。\n\n  ---\n  総合評価\n\n  ┌────────────────────────────────┬───────────────────────────────┐\n  │              項目              │             評価              │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ 設計の方向性                   │ ✅ 正しい                     │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ stable evidence only の schema │ ✅ 大幅改善                   │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ 2-pass bridge classifier       │ ✅ 解消                       │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ role 判定の ordering           │ ✅ 十分                       │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ source semantics               │ ⚠️  implicit                   │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ Calibration timing             │ ⚠️  未定                       │\n  ├────────────────────────────────┼───────────────────────────────┤\n  │ 実装可能性                     │ ✅ Phase 1 から着手できる状態 │\n  └────────────────────────────────┴───────────────────────────────┘\n\n  判定: 実装に進んで良い。 残る ⚠️  は実装開始を止める性質ではなく、実装中に自然に詰まる程度の小さなもの。推奨は前回と同じく Phase 1\n  (scoring pure function + unit test) から着手 すること。テスト失敗の原因 (split commit での non-primary edit 混入) は Phase 2 の\n  split commit policy で自然に解決される。",
+      "response": "再レビューの軽微な 4 点は、今のうちに doc に入れておくと実装時の迷いが減ります。`source` 対応表、bridge の前後定義、`isTail` の算出主体、calibration timing を追記します。\nパッチの文脈が少しズレていたので、小さく分けて入れます。まず該当箇所を行番号付きで確認して、確実に差し込みます。\nまだ一部の文脈が合わないので、今度は 3 箇所に分けます。まず source 対応表と bridge 定義を入れます。\nsource と bridge 定義は入りました。次は `isTail` の設定主体と、calibration を推奨順序に入れます。\n4 点とも反映しました。最後にレビュー指摘のキーワードと Markdown の崩れを確認します。\n再レビューの指摘 4 点を [PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) に反映しました。\n\n入れた内容は以下です。\n\n- `selection.source` と runtime role の対応表を追加。\n- `hasAdjacentNonExcludedPrompt()` は「前後どちらかに non-excluded prompt があれば OK」と明記。\n- `isTail` は caller が `turn > latestPrimaryTurn` で pre-compute すると明記。\n- 実装順を、まず過去 PR の simulation fixture 作成と calibration から始める形に変更。\n\nあわせて、保存 schema は `schema / source / signals` の stable evidence のみにし、`score / role / level` は保存しない方針のまま整えています。`git diff --check` は通っています。現在の未コミット変更はこの新規 doc だけです。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "---\n  再レビュー (第3回) — 未指摘の論点に絞る\n\n  ---\n  ❌ resolvePromptRuntimeSelection() が未定義\n\n  Phase 3 のコードに:\n\n  const runtime = interaction.selection\n    ? resolvePromptRuntimeSelection(interaction.selection, interaction)\n    : { score: 100, role: \"primary\", level: \"high\" };\n\n  とあるが、この関数の仕様が設計書に存在しない。resolvePromptRuntimeLevel (signals → level) は定義されているが、その前段の\n  (InteractionSelection, Interaction) → PromptRuntimeSelection (role, score を求める処理) が書かれていない。\n\n  これが Phase 3 の実装で最も迷う箇所になる。特に:\n\n  - source: \"window\" + signals: [\"exact_commit_path\"] → role = direct_anchor\n  - source: \"tail\" + signals: [\"response_exact_commit_path\"] → role = tail? それとも direct_anchor?\n  - source: \"window\" + signals: [\"between_non_excluded_prompts\"] + short prompt → role = bridge\n\n  この変換ルールは「ordering details」に書いてある内容から導出できるが、その導出を resolver の疑似コードとして示すか、source ×\n  signals の対応表を追記しないと実装者が迷う。\n\n  ---\n  ⚠️  source: \"fallback\" の定義がない\n\n  スキーマに:\n\n  source: \"primary\" | \"window\" | \"tail\" | \"fallback\"\n\n  とあるが、fallback の意味が設計書のどこにも書かれていない。\n\n  Codex の transcript-driven path (session-driven でない場合) を指すと推測できるが、fallback の prompt がどの role / level になるか\n  runtime で判断できない。fallback prompt は git note に含めてよいのか、含める場合 shouldKeepPostPrimaryTailRow\n  相当のどのフィルタを通すのかも不明。\n\n  ---\n  ⚠️  non-primary edit turn の扱いが「除外」として明示されていない\n\n  Split commit policy (p.336-340) は:\n\n  ▎ latest primary turn 後に non-primary edit turn が現れた場合、その turn は current commit から除外する。\n\n  これは record 時点で「その turn を git note に含めない」という意味のはずだが、「除外したことを signals に記録しない」「その turn\n  の InteractionSelection を保存しない」という事実が明示されていない。\n\n  実装者が「除外 = selection.signals: [] で score=0 として保存する」と誤解すると挙動が変わる。\n\n  「non-primary edit turn は git note に保存しない」と 1 行明記することを推奨。\n\n  ---\n  ⚠️  PromptSelectionCandidate.isTail の設定主体\n\n  type PromptSelectionCandidate = {\n    ...\n    isTail: boolean;\n    ...\n  };\n\n  classifier の pseudocode は内部で candidate.turn > candidate.latestPrimaryTurn を使って tail を判定しているのに、candidate 型に\n  isTail も持っている。どちらが正か、あるいは pre-compute と internal check の両方を保持する理由があるか、不明。\n\n  ---\n  ✅ 問題なし (前回指摘が完全に解消)\n\n  ┌───────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐\n  │                   前回指摘                    │                           状態                           │\n  ├───────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤\n  │ score/role/level を git note に保存しない設計 │ ✅ signals + source のみ保存で確定                       │\n  ├───────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤\n  │ 2-pass bridge classifier の循環               │ ✅ 解消済み                                              │\n  ├───────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤\n  │ generic basename の static list 未定義        │ ✅ 初期リスト付き                                        │\n  ├───────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤\n  │ tail consumed-state の semantics              │ ✅ \"dedupe, not exclusion\" と明記                        │\n  ├───────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤\n  │ source semantics の implicit な対応           │ ⚠️  今回指摘の resolvePromptRuntimeSelection 未定義と関連 │\n  └───────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘\n\n  ---\n  総合判定\n\n  実装開始は可能。ただし Phase 3 前に resolvePromptRuntimeSelection() の仕様を追記することを推奨。\n\n  Phase 1 (scoring pure function) と Phase 2 (window policy) は現在の設計書で十分実装可能。Phase 3 (renderer filter)\n  に入る前に、resolvePromptRuntimeSelection() の疑似コードを追記しておくと、PR Report / Dashboard の実装でブレが出ない。",
+      "response": "第 3 回レビューも良い指摘です。特に `resolvePromptRuntimeSelection()` は Phase 3 の芯なので、ここを疑似コード化します。ついでに `fallback`、non-primary edit の「保存しない」、`isTail` の二重表現も整理します。\n`fallback` の説明は入りましたが、`resolvePromptRuntimeSelection()` の疑似コードそのものがまだ足りません。ここを `Persisted vs derived fields` の直後に追加して、non-primary edit は保存しないことも明記します。\n`resolvePromptRuntimeSelection()` と non-primary edit の「保存しない」定義を追加しました。最後に検索で未解消の曖昧語が残っていないか確認します。\n第 3 回レビューの指摘も反映しました。\n\n更新内容は以下です。\n\n- `resolvePromptRuntimeSelection()` と `resolvePromptRuntimeRole()` の疑似コードを追加。\n- `source: \"fallback\"` は prompt-only fallback entry 用で、primary signal がない限り runtime `primary` にはしないと明記。\n- non-primary edit turn の「除外」は current commit の git note に保存しない意味だと明記。\n- `selection.signals: []` や score 0 の interaction として保存しない方針を追記。\n- `isTail` は caller が `turn > latestPrimaryTurn` で pre-compute すると明記済み。\n- bridge の adjacent は前後どちらかで OK と明記済み。\n\n`git diff --check` は通っています。現在の未コミット変更は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` のみです。",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "あと５かい",
+      "response": "追加で 5 回、観点を変えてレビューします。今回は「設計が実装時にブレないか」「将来変更で migration が出ないか」「テストで固定できるか」を中心に、見つけた曖昧さはその場で doc に反映します。\n5 回レビューの途中で、重要な論点が見えました。`level` だけでなく、`signals` も「どこまで保存していい evidence か」を分けないと、将来 signal 判定基準を変えた時に同じ問題が起きます。ここを重点的に整えます。\n5 回の観点を具体化すると、(1) 保存 schema の安定性、(2) runtime resolver の決定性、(3) split commit safety、(4) legacy / fallback UX、(5) simulation の合格基準です。まず schema と resolver の矛盾から修正します。\n保存 schema 側を直しました。次に runtime resolver の疑似コードで `source: primary` と role 候補表が矛盾しないようにし、`isTail` は型にある値を使う形へ揃えます。\n3 回目の観点では fallback / legacy の扱いです。`selection` がない過去 note を全部 high 扱いするのは互換性のためには正しい一方、noisy になる可能性もあります。ここは明示して、後続で UI 側に legacy badge/filter を足せるようにしておきます。\n4 回目は calibration の合格基準です。「simulation を 1 回やる」だけだと曖昧なので、どんな出力なら OK かを固定します。PR #43 だけに過適合しないよう、複数 PR パターンで compact / standard / full を確認する基準を追加します。\n5 回目の観点で、かなり実装に直結する不足がありました。runtime resolver が `interaction` だけ受け取っても、commit files / commit subject / diff identifiers を参照できません。将来再計算する設計なら、resolver に runtime context を渡す必要があります。\n追加 5 回レビューの続きとして、設計 doc の整合性だけ最後まで見ます。特に「保存する evidence」と「runtime で再計算する score/level」が混線していないかを潰します。\n今見た限り、設計の大筋はかなり締まっています。追加で気になったのは「Score resolution order で `tail` が `scope` より先にあるため、tail 位置の checklist が scope として評価されにくい」点と、signal 名の古い候補が下の表に残っている点です。ここは doc の矛盾になりやすいので直します。\n5 回レビューとして見ると、ここは “score 設計” というより “後から実装者が迷わない仕様書” になっているかが肝でした。次のパッチでは、古い signal 名の残骸、runtime resolver の入力不足、Phase 1 の関数設計の曖昧さをまとめて整理します。\n1 回目の追加レビューで、実装者がそのままコードに落とすとズレる箇所を修正しました。続けて 2 回目は「保存 schema と runtime resolver が本当に循環していないか」を中心に見ます。\n2 回目で見つけたのは、`source: \"tail\"` の候補 role が少し広すぎる点です。`tail` は provenance なので direct anchor にはなれてよいですが、`bridge` まで入れると「commit 直前の PR 作成指示」まで低く扱う余地が出ます。ここは tail と bridge を役割として分けます。\n3 回目は「Signal union と下の説明表が完全に一致しているか」を見ました。古い signal 名は消えたので、次は schema 進化と実装順の一貫性を確認します。\n3 回目で、record 時の classifier と renderer 時の resolver の順序が微妙にズレているのを見つけました。これは将来 PR Report と Dashboard で表示差が出るタイプの小さな地雷なので合わせます。\n4 回目は Phase 1 の API を見直しました。`PromptSelectionAnalysis` は良いですが、`toPersistedSelection()` が runtime を捨てる責務を明記しないと、実装時にまた score を保存したくなるので、その境界を書き足します。\n5 回目は、矛盾・古い表現・実装に移ったときに test が割れそうな疑似コードを横断チェックします。ここで問題がなければ、設計 doc としてはいったんかなり良い状態です。\n最後のレビューで、runtime resolver の疑似コードが「role base を足すのか、signal 加点だけなのか」曖昧に見えることに気づきました。score 境界の設計ではかなり重要なので、関数名を変えて意図を固定します。\n5 回分の修正は入れ切りました。最後に整合性チェックと working tree を確認して、残っている不自然な表現や whitespace がないか見ます。\n追加で 5 回レビューして、[PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) を更新しました。\n\n主な修正は以下です。\n\n- `score / role / level` は git note に保存せず、`source / signals / schema` だけ保存する方針をさらに明確化\n- `source: tail` と `bridge` の役割混線を整理\n- record 時の classifier と renderer 時の resolver の順序を一致\n- 古い signal 名の残りを削除し、`PromptSelectionSignal` と説明表を一致\n- `scorePromptRuntime()` が role base / evidence / clamp / override まで含むことを明記\n- `toPersistedSelection()` は `schema / source / signals` だけ残し、hard excluded は保存しないことを明記\n\n確認済みです。\n\n- `git status --short`: untracked は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` のみ\n- 古い signal 名や `selection.score` 系の残骸なし\n- whitespace warning なし\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "レビュー結果\n\n⏺ 設計書は大幅に更新されています。改めて全体を評価します。\n\n  ---\n  再レビュー (第4回) — 更新版への評価\n\n  ---\n  ✅ 前回指摘が解消された点\n\n  ┌─────────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────┐\n  │                        前回指摘                         │                               今回                                │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ resolvePromptRuntimeSelection() が未定義                │ ✅ フル定義済み (lines 306-338)                                   │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ source: \"fallback\" の意味不明                           │ ✅ \"prompt-only fallback entry\" と明記 (line 346)                 │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ non-primary edit turn の \"除外\"                         │ ✅ \"git note に保存しない\" と明記 (line 435)                      │\n  │ が保存なのか非保存なのか不明                            │                                                                   │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ isTail の設定主体が不明                                 │ ✅ \"caller が turn > latestPrimaryTurn から pre-compute\" と明記   │\n  │                                                         │ (line 596)                                                        │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ Signal stability policy 不明確                          │ ✅ 保存してよい/しない signal の原則が追記 (lines 138-154)        │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ PromptRuntimeContext の定義なし                         │ ✅ フル定義済み (lines 281-286)                                   │\n  ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────┤\n  │ Simulation acceptance criteria なし                     │ ✅ 明示的な合格基準が追記 (lines 648-658)                         │\n  └─────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────┘\n\n  ---\n  ⚠️  残る軽微な課題\n\n  1. source: \"tail\" → runtime role candidates から scope が抜けている\n\n  lines 129-134 の対応表:\n\n  | `tail` | ... | `tail`, `direct_anchor`, `anchored_bridge` |\n\n  しかし resolvePromptRuntimeRole (lines 317-337) は:\n\n  if (hasScopeSignal(selection)) return \"scope\";\n  if (selection.source === \"tail\") return \"tail\";\n\n  source: \"tail\" で list_or_checklist_shape を持つ prompt は scope に解決される。Ordering details (line 261) にも「latest primary\n  turn 後でも checklist は scope」と書かれており、これは意図通りの動作。\n\n  → 対応表に scope を追記するだけで解消。1 行修正。\n\n  2. hasScopeSignal() の定義が implicit\n\n  resolvePromptRuntimeRole で使われているが、どの signal の組み合わせを \"scope signal\"\n  と呼ぶかが書かれていない。list_or_checklist_shape 単体? multi_line_instruction との組み合わせ?\n\n  → hasScopeSignal = has(\"list_or_checklist_shape\") || has(\"multi_line_instruction\") のような 1 行の説明を追記。\n\n  3. render-time diffIdentifiers と record-time の一貫性\n\n  PromptRuntimeContext.diffIdentifiers は renderer が commit diff から作るが、diff_identifier signal は record 時点の diff\n  から抽出済み。実装が異なる場合、同じ identifier が片方にしかない状況が生まれうる。\n\n  → \"best-effort で一致させる。extract 処理は buildCommitContextSignature() と同じ logic を使う\" と 1 行明記。現在は \"empty set\n  にする\" とだけ書かれており (line 302)、record-time との一致を推奨していない。\n\n  ---\n  ✅ 新たに追加されてよかった点\n\n  PromptSelectionAnalysis + analyzePromptSelection() の役割分離\n\n  function analyzePromptSelection(candidate): PromptSelectionAnalysis;\n  function toPersistedSelection(analysis): InteractionSelection | null;\n\n  test/simulation は PromptRuntimeSelection を受け取り、git note には InteractionSelection だけが保存される。hardExcluded: true →\n  null を返して保存しない、という explicit な設計は clean。\n\n  Simulation acceptance criteria の追加\n\n  ▎ Phase 1 PR を出す前に ... 少なくとも次を満たすまで weights を調整します。\n\n  具体的な acceptance bar が数値よりも「ユーザーが読んで自然か」で表現されているのは正しい。threshold が先に決まっていると\n  calibration が難しくなる。\n\n  PromptRuntimeContext を renderer が構築する設計\n\n  PR Report / Dashboard が各自 commitFiles, diffIdentifiers を用意する責任を持つことが明確になった。diff データがない場合の\n  empty-set fallback も明記。\n\n  ---\n  総合評価\n\n  判定: 実装に進んでよい。設計書として十分な完成度。\n\n  ┌────────────────────────────────┬─────────────────────┐\n  │              項目              │        評価         │\n  ├────────────────────────────────┼─────────────────────┤\n  │ 設計の方向性                   │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ source/signals のみ保存設計    │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ runtime resolver の仕様        │ ✅ (解消)           │\n  ├────────────────────────────────┼─────────────────────┤\n  │ 2-pass bridge classifier       │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ split commit policy            │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ tail consumed-state            │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ signal stability policy        │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ source → runtime role 対応表   │ ⚠️  scope 追記が必要 │\n  ├────────────────────────────────┼─────────────────────┤\n  │ hasScopeSignal の定義          │ ⚠️  1 行追記推奨     │\n  ├────────────────────────────────┼─────────────────────┤\n  │ simulation acceptance criteria │ ✅                  │\n  ├────────────────────────────────┼─────────────────────┤\n  │ 実装可能性                     │ ✅                  │\n  └────────────────────────────────┴─────────────────────┘\n\n  3 回のレビューを経て設計書は成熟しました。残る ⚠️  2 件は実装中に詰まる程度の小さなものです。Phase 1 (scoring pure function)\n  から始めて問題ありません。",
+      "response": "レビュー内容は妥当です。特に `source: \"tail\"` の対応表と resolver の疑似コードが少しズレているので、設計 doc 側をそのまま直して実装時の迷いを消します。\n指摘 3 点は反映しました。最後に grep と whitespace check だけ通して、更新で別の矛盾が出ていないか確認します。\n指摘はそのまま妥当だったので、[PROMPT_SELECTION_SCORING_DESIGN.md](/Users/a12622/git/context-history/docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md) に反映しました。\n\n更新内容:\n\n- `source: \"tail\"` の runtime role 候補に `scope` を追加\n- `hasScopeSignal()` を `list_or_checklist_shape` または `multi_line_instruction` と定義\n- `diffIdentifiers` は record-time / render-time で同じ extraction logic を共有する方針を明記\n\n確認も済みです。古い `selection.score` 系や旧 signal 名の残骸はなし、working tree はこの untracked design doc のみです。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "apply_patch",
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "1243 +const GENERIC_PROMPT_BASENAMES = new Set([\n    1244 +  \"README.md\",\n    1245 +  \"CHANGELOG.md\",\n    1246 +  \"LICENSE\",\n    1247 +  \"package.json\",\n    1248 +  \"package-lock.json\",\n    1249 +  \"pnpm-lock.yaml\",\n    1250 +  \"yarn.lock\",\n    1251 +  \"bun.lock\",\n    1252 +  \"index.ts\",\n    1253 +  \"index.tsx\",\n    1254 +  \"index.js\",\n    1255 +  \"main.ts\",\n    1256 +  \"main.js\",\n    1257 +  \"config.ts\",\n    1258 +  \"config.js\",\n    1259 +  \"action.yml\",\n    1260 +  \"action.yaml\",\n    1261 +]);\n    1262\n\nこの specific な定義ってなに",
+      "response": "ここは良いツッコミです。設計 doc には「Phase 1 は static list」と書いていましたが、実装に出てくると確かに arbitrary に見えるので、いまのうちに整理します。\nこの list の目的は「`README.md` や `package.json` みたいにどの repo にもある basename だけで強い anchor 扱いしない」ための降格リストでした。  \nただ、いま見ると static list は保守対象になってしまうので、実装としては筋が悪いです。`exact path は強い / basename-only は常に弱い` という structural rule に変えます。\nいまの実装に出ていた static basename list は削ります。`README.md` などを特別扱いするのではなく、basename-only match は常に full path より弱い evidence として扱う形に寄せます。\nついでに、この変更で見えた実装上の抜けも直します。`tail` は dedupe 用に記録するけど `maxConsumedTurn` は進めない、という設計なので、consumed state 側も `prompt_scope: \"tail\"` を分けます。\nいまの差分では static list は完全に消してあります。残した考え方は `exact_commit_path` は強い、`commit_file_basename` は弱い、という structural な差だけです。次に typecheck で実装ミスを拾います。\ntypecheck は通りました。次にテストを足します。まず pure function の signal 保存と、record note に `selection` が乗ること、tail が `maxConsumedTurn` を進めないことを小さく検証します。\nselection の unit/record テストを追加して、typecheck は通っています。次は record test だけ先に回して、既存 prompt window への副作用を見ます。\nrecord test で落ちた 5 件は、意図した `tail` 追加による期待値差分と、`selection` が note に入るようになったことによる deepEqual 差分でした。attribution / files_touched の壊れではないので、期待値を新仕様に合わせます。\nrecord 側の focused test は通りました。次に PR Report 側で `selection` を型として受けられるようにし、prompt-only merge が selection metadata を壊さないか確認します。\nPR Report / Dashboard の prompt-only merge は、selection が付いた新 note では merge しない方が安全です。legacy note は今まで通り merge、新 schema は metadata を失わないように分けます。\nPR Report 側の test も通りました。次に Biome lint で style/format を確認し、必要なら整えます。\nlint は format 差分だけでした。Biome で CLI 側を整えます。\nここまでで「保存する evidence」と「tail を note に残す」実装は動いています。次は docs/website/README の schema 記述が古くならないかを横断検索します。\n実装をこのまま進めます。さっきの `GENERIC_PROMPT_BASENAMES` は「README.md みたいな汎用ファイル名だけで強い根拠にしない」ための静的リストでしたが、repository や言語圏に依存するので、いまは削って “basename-only は常に弱い evidence” という構造ルールに寄せています。まず docs / README / website の schema 例を実装に合わせて揃えます。\nREADME / website / knowledge docs に同じ JSON schema 例が複数ありました。`selection` は今回の永続 schema なので、ここを入れないと「実装は保存するのに docs の schema 例には出ない」状態になります。\nこれから schema 例に `selection` を追加します。保存するのは `source / signals / schema` だけで、score や level は保存しない方針にしているので、docs 側もその形だけを示します。\n自己レビューで 1 件見つけました。`tail` prompt のうち「commit 直前」だけに付けるべき `before_commit_boundary` が、表示用 `selection` 付与時に tail 全部へ広がる可能性がありました。これは score evidence の意味が薄まるので、prompt entry に boundary flag も一緒に持たせる形で修正します。\nもう一段レビューしたら、split commit の境界でもう 1 つ危ない余地がありました。latest primary の後に別 commit 用の edit turn がある場合、その後の tail prompt は「commit 直前だから」だけでは残さず、current commit に紐づく structural anchor がある場合だけ残すようにします。\n実装と docs の同期が入りました。ここからはテストを回して、落ちたところを修正します。まず CLI の focused record test と typecheck / lint を見ます。\nfocused test は通りました。boundary flag の修正も効いています。次に PR Report 側と build を含めた広めの確認に移ります。\nCLI full test 371 件、PR Report 30 件、Dashboard build、Website build まで通りました。ここからは 5 観点で自己レビューして、必要なら細かく直します。\nもう 1 件、内部フラグの名前が混ざっていました。`consumed tail prompt` を「non-primary edit turn」と同じフラグで扱うと、実際には edit していない tail が split commit barrier になり得ます。ここは別フラグに分けます。こういう小骨、放っておくとあとで変な刺さり方をします。\n最後のフラグ分離後に source は通っているので、dist を再生成して full test をもう一度通します。CLI のテストは dist を叩くものがあるので、ここは省略しません。\n`git diff --check` で ncc 生成物の trailing whitespace が引っかかりました。source ではなく bundle 由来なので、dist だけ末尾空白を落としてから再確認します。\n`GENERIC_PROMPT_BASENAMES` は「README.md や package.json みたいな汎用ファイル名だけで強判定しない」ための static list でしたが、specific すぎるので削除しました。代わりに `basename-only` は常に弱い structural evidence として扱う実装にしています。\n\n実装内容:\n- `interactions[].selection` を追加し、`schema / source / signals` だけを git note に保存\n- score / role / level は保存せず、将来 renderer 側で再計算できる設計に整理\n- tail prompt は `prompt_scope: \"tail\"` で dedupe し、`maxConsumedTurn` は進めない\n- split commit で別 commit の edit turn 後に unanchored tail が混ざらないよう修正\n- PR Report / Dashboard で `selection` 付き prompt-only interaction を merge して metadata を失わないよう修正\n- README 全言語、website 全言語、docs/knowledge を schema に合わせて更新\n\n確認済み:\n- `packages/cli`: build / typecheck / lint / full test 372 pass\n- `packages/pr-report`: build / test 30 pass\n- `packages/dashboard`: build pass\n- `website`: build pass\n- `git diff --check` pass\n\nコミットは確認必須なので未実行です。  \nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx",
+        "docs/knowledge/DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction"
+        ]
+      },
+      "tools": [
+        "apply_patch",
+        "exec_command",
+        "update_plan",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "⏺ 調査完了。\n\n  ---\n  設計書 vs 実装 照合結果\n\n  ✅ 一致している部分\n\n  ┌─────────────────────────────────────────────────────────────────────────┬──────┬───────────────────────┐\n  │                                  項目                                   │ 状態 │       実装箇所        │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ InteractionSelection schema (schema/source/signals のみ保存)            │ ✅   │ entry.ts:43-47        │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ PromptSelectionSignal 13 値 enum                                        │ ✅   │ entry.ts:29-41        │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ selection が attribution/ai_ratio に混入しない                          │ ✅   │ buildEntry() 確認済み │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ Hard exclusion (quoted history / 1文字)                                 │ ✅   │ record.ts:1289        │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ Tail consumed-state (prompt_scope: \"tail\" で記録、maxConsumedTurn 不進) │ ✅   │ record.ts:2431, 2296  │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ Runtime resolver の role/level 優先順序                                 │ ✅   │ record.ts:1330-1374   │\n  ├─────────────────────────────────────────────────────────────────────────┼──────┼───────────────────────┤\n  │ source: \"tail\" でも hasScopeSignal が先に評価される                     │ ✅   │ record.ts:1342-1343   │\n  └─────────────────────────────────────────────────────────────────────────┴──────┴───────────────────────┘\n\n  ---\n  ❌ 未実装 / 不整合\n\n  1. 2-pass bridge classifier が未実装 (設計書 lines 243-267)\n\n  classifyBridgeCandidates() に相当する 2-pass 処理がない。attachInteractionSelections の hasAdjacentInteraction が index > 0 || index <\n  length - 1 で常時 true に近い実装になっており、設計書の「hard-excluded されていない prompt が隣接」判定になっていない。\n\n  2. PR Report の prompt_detail filter が未実装 (設計書 Phase 3)\n\n  report.ts:267-289 の interaction loop が compact/standard/full も runtime level も参照せず全件 render\n  している。shouldRenderInteraction() 自体が存在しない。設計書 lines 507-525 の Phase 3 が手付かず。\n\n  3. PR Report が PromptRuntimeContext を構築していない\n\n  commitFiles / diffIdentifiers を renderer に渡すパスが欠落。Persisted signals を読んで runtime level に変換するパスが機能しない。\n\n  ---\n  整理\n\n  ┌───────────────────────────────────────────────────────────────────────────────┬────────────────────────────────────────┐\n  │                                  設計 Phase                                   │                  状態                  │\n  ├───────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┤\n  │ Phase 1: scoring pure function (analyzePromptSelection, toPersistedSelection) │ ✅ 実装済み                            │\n  ├───────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┤\n  │ Phase 2: short commit window policy (tail, hard-exclude, split commit)        │ ✅ 概ね実装済み (bridge 2-pass のみ未) │\n  ├───────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┤\n  │ Phase 3: renderer filter (prompt_detail, runtime level)                       │ ❌ 未実装                              │\n  ├───────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┤\n  │ Phase 4: Action input                                                         │ ❌ 未実装 (予定通り)                   │\n  └───────────────────────────────────────────────────────────────────────────────┴────────────────────────────────────────┘\n\n  Bridge 2-pass は Phase 2 の機能で現在の PR に含まれる想定があるが未着手。Phase 3 (renderer filter) は次の PR\n  範囲という設計書の推奨通りであれば問題なし — ただし現状では scoring の恩恵がゼロ (全件表示)。\n\n\nレビューしてもらいました",
+      "response": "レビュー内容を受けて、まず Phase 2 の未実装扱いになっている bridge 2-pass をこちらで再確認します。Phase 3 / Phase 4 はいまの設計書では future phase に切り直しているので、今回の必須修正かどうかは分けて判断します。\n確認した結果、Phase 3 / Phase 4 は設計書上も `Future` にしてあるので今回未実装で OK です。一方で bridge 2-pass は Phase 2 の中なので、レビュー指摘どおり現在の実装をもう少し設計書に寄せます。具体的には、まず hard-excluded を判定してから、非 excluded の隣接だけで `between_non_excluded_prompts` を付けるようにします。\nbridge 2-pass を実装しました。次に、この挙動が本当に効くテストを足してから focused test / lint を回します。\nテストで良い発見がありました。先頭に `c` のような hard-excluded prompt があると、その直後の `continue` まで落ちていました。これは「hard noise は落とすが、会話の bridge は残す」という今回の目的と逆なので、tiny prompt の後の短い bridge は保持できるように調整します。quoted history の後だけは引き続き保守的に切ります。\nPhase 2 の bridge 2-pass と、その副作用で見つかった tiny prompt 後の bridge 保持を入れました。設計書の実装 status にも「2-pass bridge」を明記してから、dist 再生成と full test を回します。\nfull CLI test は 373 件 pass、PR Report test も pass です。最後に差分と設計書の不整合が残っていないかだけ確認します。\nレビュー指摘を反映しました。\n\n- Phase 2 の不足だった bridge 2-pass を実装しました。\n- `between_non_excluded_prompts` は、hard-excluded ではない隣接 prompt がある場合だけ付くように変更しました。\n- 先頭の `c` など tiny prompt は落としつつ、その直後の `continue` のような bridge は残せるように修正しました。\n- Phase 3 / Phase 4 は設計書どおり Future 扱いなので、今回の未実装は問題なしとして整理しています。\n- `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` に 2-pass bridge の実装 status も追記しました。\n\n確認済みです。\n\n- `packages/cli`: `npm run typecheck`, `npm run lint`, `npm run build`, `npm test` 373 pass\n- `packages/pr-report`: `npm run build`, `npm test` 30 pass\n- `git diff --check` pass\n\nコミットはまだしていません。",
+      "files_touched": [
+        "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
