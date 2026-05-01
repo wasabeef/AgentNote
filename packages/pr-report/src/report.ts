@@ -269,7 +269,7 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   lines.push("");
   if (report.dashboard_url) {
     lines.push(
-      `<div align="right"><a href="${report.dashboard_url}">Open Dashboard ↗</a></div>`,
+      `<div align="right"><a href="${report.dashboard_url}" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>`,
     );
     if (report.dashboard_preview_help_url) {
       lines.push(

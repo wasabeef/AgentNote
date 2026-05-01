@@ -134,7 +134,7 @@ describe("agentnote pr", () => {
 
       assert.ok(
         output.includes(
-          '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/">Open Dashboard ↗</a></div>',
+          '<div align="right"><a href="https://wasabeef.github.io/AgentNote/dashboard/" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>',
         ),
       );
       assert.ok(output.includes("**📝 Context**"));
