@@ -161,6 +161,6 @@
   "pull_request": {
     "number": 43,
     "title": "fix(release): harden package metadata",
-    "state": "open"
+    "state": "merged"
   }
 }
