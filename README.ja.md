@@ -245,7 +245,7 @@ PR Report Mode が既定です。
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-prompt 履歴を短くする、または全件表示する場合は `prompt_detail` に `compact` / `standard` / `full` を指定できます。既定は `standard` です。
+prompt 履歴を短くする、または全件表示する場合は `prompt_detail` に `compact` / `standard` / `full` を指定できます。既定は `standard` です。`compact` は high のみ、`standard` は high + medium、`full` は保存された prompt をすべて表示します。
 
 Dashboard Mode は同じ action に `dashboard: true` を渡します。
 

@@ -245,7 +245,7 @@ PR Report Mode adalah default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Atur `prompt_detail` ke `compact`, `standard`, atau `full` jika ingin riwayat prompt yang lebih pendek atau lengkap. Default-nya adalah `standard`.
+Atur `prompt_detail` ke `compact`, `standard`, atau `full` jika ingin riwayat prompt yang lebih pendek atau lengkap. Default-nya adalah `standard`: `compact` hanya menampilkan prompt high, `standard` menampilkan high + medium, dan `full` menampilkan semua prompt yang tersimpan.
 
 Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
