@@ -1916,8 +1916,9 @@ function shouldRenderInteractionByPromptDetail(interaction, detail) {
 }
 function resolvePromptRuntimeSelection(selection, interaction) {
   if (!selection) return { score: 100, role: "primary", level: "high" };
-  const role = resolvePromptRuntimeRole(selection.source, selection.signals, interaction.prompt);
-  const score = scorePromptRuntime({ role, signals: selection.signals });
+  const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
+  const role = resolvePromptRuntimeRole(selection.source, signals, interaction.prompt);
+  const score = scorePromptRuntime({ role, signals });
   return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
 }
 function resolvePromptRuntimeRole(source, signals, prompt) {
@@ -2037,6 +2038,22 @@ function isShortSelectionPrompt(prompt) {
   const trimmed = prompt.trim();
   if (!trimmed) return true;
   return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+}
+function hasSubstantivePromptShape(text) {
+  const trimmed = text.trim();
+  const compact = trimmed.replace(/\s+/g, "");
+  if (!compact) return false;
+  const wordTokens = text.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const hasCjkOrHangul = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed);
+  if (wordTokens.length >= 7) return true;
+  if (wordTokens.length >= 4 && (/[?？]/.test(trimmed) || hasCjkOrHangul)) return true;
+  return hasCjkOrHangul && [...compact].length >= 12;
+}
+function runtimePromptSelectionSignals(signals, prompt) {
+  if (signals.includes("substantive_prompt_shape") || !hasSubstantivePromptShape(prompt)) {
+    return signals;
+  }
+  return [...signals, "substantive_prompt_shape"];
 }
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
@@ -3517,15 +3534,6 @@ function hasMultiLineInstruction(text) {
 }
 function hasInlineCodeOrPathShape(text) {
   return /`[^`]+`/.test(text) || /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) || /--[a-z0-9-]+/i.test(text);
-}
-function hasSubstantivePromptShape(text) {
-  const trimmed = text.trim();
-  const compact = trimmed.replace(/\s+/g, "");
-  if (!compact) return false;
-  const wordTokens = text.match(/[\p{L}\p{N}_-]+/gu) ?? [];
-  if (wordTokens.length >= 7) return true;
-  if (wordTokens.length >= 4 && /[?？]/.test(trimmed)) return true;
-  return wordTokens.length <= 2 && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed) && [...compact].length >= 14;
 }
 function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, defaultSource) {
   if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();

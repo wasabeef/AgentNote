@@ -258,8 +258,9 @@ export function resolvePromptRuntimeSelection(
   interaction: Pick<Interaction, "prompt">,
 ): PromptRuntimeSelection {
   if (!selection) return { score: 100, role: "primary", level: "high" };
-  const role = resolvePromptRuntimeRole(selection.source, selection.signals, interaction.prompt);
-  const score = scorePromptRuntime({ role, signals: selection.signals });
+  const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
+  const role = resolvePromptRuntimeRole(selection.source, signals, interaction.prompt);
+  const score = scorePromptRuntime({ role, signals });
   return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
 }
 
@@ -409,6 +410,28 @@ export function isShortSelectionPrompt(prompt: string): boolean {
   const trimmed = prompt.trim();
   if (!trimmed) return true;
   return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+}
+
+export function hasSubstantivePromptShape(text: string): boolean {
+  const trimmed = text.trim();
+  const compact = trimmed.replace(/\s+/g, "");
+  if (!compact) return false;
+  const wordTokens = text.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const hasCjkOrHangul =
+    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed);
+  if (wordTokens.length >= 7) return true;
+  if (wordTokens.length >= 4 && (/[?？]/.test(trimmed) || hasCjkOrHangul)) return true;
+  return hasCjkOrHangul && [...compact].length >= 12;
+}
+
+function runtimePromptSelectionSignals(
+  signals: PromptSelectionSignal[],
+  prompt: string,
+): PromptSelectionSignal[] {
+  if (signals.includes("substantive_prompt_shape") || !hasSubstantivePromptShape(prompt)) {
+    return signals;
+  }
+  return [...signals, "substantive_prompt_shape"];
 }
 
 // ─── Functions ───

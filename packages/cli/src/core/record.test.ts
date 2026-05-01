@@ -103,6 +103,28 @@ describe("prompt selection analysis", () => {
     assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
   });
 
+  it("keeps short Japanese direction changes in standard prompt detail", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "できれば出したいだけど。。",
+      response: null,
+      turn: 6,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/dashboard/src/pages/index.astro"],
+      commitSubject: "fix(dashboard): avoid zero line attribution labels",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "bridge");
+    assert.equal(analysis.runtime.level, "medium");
+    assert.ok(analysis.signals.includes("substantive_prompt_shape"));
+    assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
+  });
+
   it("does not promote short operational bridge prompts to standard", () => {
     const analysis = analyzePromptSelection({
       prompt: "please commit and push now",

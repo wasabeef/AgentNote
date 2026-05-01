@@ -259,6 +259,34 @@ describe("prompt detail rendering", () => {
           schema: 1,
           source: "window",
           signals: [
+            "response_exact_commit_path",
+            "response_basename_or_identifier",
+            "between_non_excluded_prompts",
+          ],
+        },
+        { prompt: "マージした、ブランチ変えて TODO の確認、実装" },
+      ),
+      { score: 55, role: "bridge", level: "medium" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: ["between_non_excluded_prompts"],
+        },
+        { prompt: "できれば出したいだけど。。" },
+      ),
+      { score: 45, role: "bridge", level: "medium" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: [
             "response_basename_or_identifier",
             "before_commit_boundary",
             "between_non_excluded_prompts",
