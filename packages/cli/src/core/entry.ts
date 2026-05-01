@@ -26,6 +26,26 @@ export interface InteractionContext {
   text: string;
 }
 
+export type PromptSelectionSignal =
+  | "primary_edit_turn"
+  | "exact_commit_path"
+  | "commit_file_basename"
+  | "diff_identifier"
+  | "response_exact_commit_path"
+  | "response_basename_or_identifier"
+  | "commit_subject_overlap"
+  | "list_or_checklist_shape"
+  | "multi_line_instruction"
+  | "inline_code_or_path_shape"
+  | "before_commit_boundary"
+  | "between_non_excluded_prompts";
+
+export interface InteractionSelection {
+  schema: 1;
+  source: "primary" | "window" | "tail" | "fallback";
+  signals: PromptSelectionSignal[];
+}
+
 export interface Interaction {
   prompt: string;
   response: string | null;
@@ -34,6 +54,7 @@ export interface Interaction {
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
+  selection?: InteractionSelection;
 }
 
 export interface AgentnoteEntry {
@@ -254,6 +275,13 @@ export function buildEntry(opts: {
     }
     if (i.files_touched && i.files_touched.length > 0) {
       base.files_touched = i.files_touched;
+    }
+    if (i.selection) {
+      base.selection = {
+        schema: i.selection.schema,
+        source: i.selection.source,
+        signals: [...i.selection.signals],
+      };
     }
     // Attach tools from interactionTools map (preserving null), or inherit from interaction.
     if (opts.interactionTools?.has(idx)) {

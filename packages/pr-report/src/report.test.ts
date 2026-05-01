@@ -176,6 +176,44 @@ describe("renderMarkdown", () => {
     assert.ok(markdown.includes("I will use structural anchors only."));
   });
 
+  it("does not merge prompt-only interactions that carry selection metadata", () => {
+    const report = baseReport({
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 2,
+          interactions: [
+            {
+              prompt: "Please avoid keyword heuristics.",
+              response: null,
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+            {
+              prompt: "This also applies to PROMPT_CONTEXT_DESIGN.md.",
+              response: "I will use structural anchors only.",
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+
+    assert.equal(markdown.match(/\*\*🧑 Prompt\*\*/g)?.length, 2);
+    assert.ok(markdown.includes("Please avoid keyword heuristics."));
+    assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
+  });
+
   it("does not truncate long context text in the middle", () => {
     const reference = "Reference context " + "alpha ".repeat(55);
     const scope = "Scope context " + "beta ".repeat(55);

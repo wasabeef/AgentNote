@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../../cli/src/core/constants.js";
-import type { Attribution, InteractionContext } from "../../cli/src/core/entry.js";
+import type {
+  Attribution,
+  InteractionContext,
+  InteractionSelection,
+} from "../../cli/src/core/entry.js";
 import { countAiRatioEligibleFiles, normalizeInteractionContexts } from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
@@ -15,6 +19,7 @@ export interface Interaction {
   contexts?: InteractionContext[];
   files_touched?: string[];
   tools?: string[] | null;
+  selection?: InteractionSelection;
 }
 
 export interface CommitEntry {
@@ -344,6 +349,7 @@ function isPromptOnlyDisplayPrefix(interaction: Interaction): boolean {
     !interaction.context &&
     (!interaction.contexts || interaction.contexts.length === 0) &&
     (!interaction.files_touched || interaction.files_touched.length === 0) &&
+    !interaction.selection &&
     interaction.tools === undefined
   );
 }

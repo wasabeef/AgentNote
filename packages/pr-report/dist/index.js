@@ -36598,6 +36598,13 @@ function buildEntry(opts) {
         if (i.files_touched && i.files_touched.length > 0) {
             base.files_touched = i.files_touched;
         }
+        if (i.selection) {
+            base.selection = {
+                schema: i.selection.schema,
+                source: i.selection.source,
+                signals: [...i.selection.signals],
+            };
+        }
         // Attach tools from interactionTools map (preserving null), or inherit from interaction.
         if (opts.interactionTools?.has(idx)) {
             base.tools = opts.interactionTools.get(idx) ?? null;
@@ -37112,6 +37119,7 @@ function isPromptOnlyDisplayPrefix(interaction) {
         !interaction.context &&
         (!interaction.contexts || interaction.contexts.length === 0) &&
         (!interaction.files_touched || interaction.files_touched.length === 0) &&
+        !interaction.selection &&
         interaction.tools === undefined);
 }
 function cleanContext(context) {
