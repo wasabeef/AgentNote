@@ -71,6 +71,11 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus
       "contexts": [
         { "kind": "reference", "source": "previous_response", "text": "Response sebelumnya menjelaskan mengapa middleware ini perlu berubah." }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "Saya akan membuat middleware-nya...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

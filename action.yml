@@ -15,6 +15,10 @@ inputs:
     description: "PR Report destination: description, comment, or none (default: description)"
     required: false
     default: ""
+  prompt_detail:
+    description: "PR Report prompt detail: compact, standard, or full (default: standard)"
+    required: false
+    default: "standard"
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
@@ -57,6 +61,7 @@ runs:
         AGENT_NOTE_ACTION_PATH: ${{ github.action_path }}
         INPUT_BASE: ${{ inputs.base }}
         INPUT_PR_OUTPUT: ${{ inputs.pr_output }}
+        INPUT_PROMPT_DETAIL: ${{ inputs.prompt_detail }}
       run: node "$AGENT_NOTE_ACTION_PATH/packages/pr-report/dist/index.js"
 
     - name: Detect Dashboard checkout

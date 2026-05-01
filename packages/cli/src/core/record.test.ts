@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
@@ -15,10 +15,136 @@ import {
   SESSIONS_DIR,
   TURN_FILE,
 } from "./constants.js";
-import { recordCommitEntry } from "./record.js";
+import { analyzePromptSelection, recordCommitEntry, toPersistedSelection } from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";
+
+describe("prompt selection analysis", () => {
+  it("keeps only stable source and signals in persisted metadata", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "Update packages/cli/src/core/record.ts and analyzePromptSelection",
+      response: null,
+      turn: 12,
+      promptId: "prompt-12",
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix(record): score prompt selection",
+      diffIdentifiers: new Set(["analyzePromptSelection"]),
+    });
+
+    assert.equal(analysis.runtime.role, "direct_anchor");
+    assert.equal(analysis.runtime.level, "high");
+    assert.deepEqual(toPersistedSelection(analysis), {
+      schema: 1,
+      source: "window",
+      signals: [
+        "exact_commit_path",
+        "commit_file_basename",
+        "diff_identifier",
+        "commit_subject_overlap",
+        "inline_code_or_path_shape",
+        "substantive_prompt_shape",
+        "between_non_excluded_prompts",
+      ],
+    });
+  });
+
+  it("treats basename-only matches as weak structural evidence without a static list", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "README.md",
+      response: null,
+      turn: 4,
+      source: "tail",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: true,
+      isBeforeCommitBoundary: true,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["docs/README.md"],
+      commitSubject: "docs: update readme",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "anchored_bridge");
+    assert.equal(analysis.runtime.level, "medium");
+    assert.deepEqual(analysis.signals, [
+      "commit_file_basename",
+      "commit_subject_overlap",
+      "before_commit_boundary",
+      "between_non_excluded_prompts",
+    ]);
+  });
+
+  it("uses language-neutral substantive shape to keep useful bridge context", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "今後の汎用性、調整も考えてプロンプトのスコアリングは必要かもね",
+      response: null,
+      turn: 5,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "bridge");
+    assert.equal(analysis.runtime.level, "medium");
+    assert.ok(analysis.signals.includes("substantive_prompt_shape"));
+    assert.ok(analysis.signals.includes("between_non_excluded_prompts"));
+  });
+
+  it("does not promote short operational bridge prompts to standard", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "please commit and push now",
+      response: null,
+      turn: 6,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "bridge");
+    assert.equal(analysis.runtime.level, "low");
+    assert.equal(analysis.signals.includes("substantive_prompt_shape"), false);
+  });
+
+  it("uses the same short-prompt boundary for bridge signals and runtime role", () => {
+    const analysis = analyzePromptSelection({
+      prompt: "one two three four five six seven eight nine ten eleven twelve thirteen",
+      response: null,
+      turn: 7,
+      source: "window",
+      isPrimaryTurn: false,
+      isEditTurn: false,
+      isTail: false,
+      isBeforeCommitBoundary: false,
+      hasAdjacentNonExcludedPrompt: true,
+      commitFiles: ["packages/cli/src/core/record.ts"],
+      commitSubject: "fix: tune prompt selection",
+      diffIdentifiers: new Set(),
+    });
+
+    assert.equal(analysis.runtime.role, "background");
+    assert.equal(analysis.runtime.level, "low");
+    assert.equal(analysis.signals.includes("between_non_excluded_prompts"), false);
+  });
+});
 
 function setupGitRepo(): { repoDir: string; agentnoteDirPath: string; sessionDir: string } {
   const repoDir = mkdtempSync(join(tmpdir(), "agentnote-record-"));
@@ -96,6 +222,186 @@ describe("recordCommitEntry", () => {
     assert.equal(note.v, 1);
     assert.equal(note.session_id, SESSION_ID);
     assert.ok(Array.isArray(note.interactions));
+  });
+
+  it("records prompt selection source and signals without persisted score fields", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"plan docs update","prompt_id":"id-plan","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"update docs/guide.md","prompt_id":"id-edit","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"docs/guide.md","turn":2,"prompt_id":"id-edit"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    mkdirSync(join(repoDir, "docs"), { recursive: true });
+    writeFileSync(join(repoDir, "docs", "guide.md"), "# Guide\n");
+    execSync("git add docs/guide.md", { cwd: repoDir });
+    execSync('git commit -m "docs: update guide"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      selection?: {
+        schema: 1;
+        source: string;
+        signals: string[];
+        score?: number;
+        role?: string;
+        level?: string;
+      };
+    }>;
+    assert.equal(interactions[0].selection?.source, "window");
+    assert.equal(interactions[1].selection?.source, "primary");
+    assert.ok(interactions[1].selection?.signals.includes("primary_edit_turn"));
+    assert.equal(interactions[1].selection?.score, undefined);
+    assert.equal(interactions[1].selection?.role, undefined);
+    assert.equal(interactions[1].selection?.level, undefined);
+  });
+
+  it("marks bridge prompts only when an adjacent prompt is not hard-excluded", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"c","prompt_id":"id-tiny","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"continue","prompt_id":"id-bridge","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"update target.ts","prompt_id":"id-edit","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"target.ts","turn":3,"prompt_id":"id-edit"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: update target"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      selection?: { signals: string[] };
+    }>;
+    assert.deepEqual(
+      interactions.map((interaction) => interaction.prompt),
+      ["continue", "update target.ts"],
+    );
+    assert.ok(interactions[0].selection?.signals.includes("between_non_excluded_prompts"));
+  });
+
+  it("records tail prompt markers without advancing the consumed turn window", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update target.ts","prompt_id":"id-edit","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"explain target.ts change","prompt_id":"id-tail-file","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"create the PR","prompt_id":"id-tail-boundary","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"target.ts","turn":1,"prompt_id":"id-edit"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: target tail context"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      selection?: { source: string; signals: string[] };
+    }>;
+    assert.deepEqual(
+      interactions.map((interaction) => interaction.selection?.source),
+      ["primary", "tail", "tail"],
+    );
+    assert.equal(interactions[1].selection?.signals.includes("before_commit_boundary"), false);
+    assert.ok(interactions[2].selection?.signals.includes("before_commit_boundary"));
+
+    const consumedLines = readFileSync(join(sessionDir, COMMITTED_PAIRS_FILE), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { prompt_id?: string; prompt_scope?: string });
+    assert.ok(
+      consumedLines.some(
+        (line) => line.prompt_id === "id-tail-boundary" && line.prompt_scope === "tail",
+      ),
+    );
+  });
+
+  it("does not keep unanchored tail prompts after a non-primary edit turn", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update target.ts","prompt_id":"id-target","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"update future.ts","prompt_id":"id-future","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"create the PR","prompt_id":"id-pr","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"target.ts","turn":1,"prompt_id":"id-target"}\n' +
+        '{"event":"file_change","tool":"Write","file":"future.ts","turn":2,"prompt_id":"id-future"}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    writeFileSync(join(repoDir, "future.ts"), "export const future = true;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: target only"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["update target.ts"]);
+  });
+
+  it("does not treat consumed tail prompts as edit barriers", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update target.ts","prompt_id":"id-target","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"previous tail","prompt_id":"id-old-tail","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"create the PR","prompt_id":"id-pr","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"target.ts","turn":1,"prompt_id":"id-target"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":2,"prompt_id":"id-old-tail","file":null,"prompt_scope":"tail","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    writeFileSync(join(repoDir, "target.ts"), "export const target = true;\n");
+    execSync("git add target.ts", { cwd: repoDir });
+    execSync('git commit -m "fix: target with boundary prompt"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["update target.ts", "create the PR"]);
   });
 
   it("idempotent: calling twice returns promptCount=0 on second call", async () => {
@@ -658,10 +964,11 @@ describe("recordCommitEntry", () => {
         prompt: string;
         response: string | null;
         files_touched?: string[];
+        selection?: unknown;
         tools?: string[] | null;
       }>;
       assert.deepEqual(
-        interactions,
+        interactions.map(({ selection: _selection, ...interaction }) => interaction),
         [
           {
             prompt: "ship the final version",
@@ -757,7 +1064,11 @@ describe("recordCommitEntry", () => {
     const prompts = (note.interactions as Array<{ prompt: string }>).map(
       (interaction) => interaction.prompt,
     );
-    assert.deepEqual(prompts, ["clarify env defaults", "ship final README change"]);
+    assert.deepEqual(prompts, [
+      "clarify env defaults",
+      "ship final README change",
+      "explain the fix",
+    ]);
   });
 
   it("file-level fallback can keep multiple latest clusters without leaking unrelated edits", async () => {
@@ -829,7 +1140,12 @@ describe("recordCommitEntry", () => {
     const prompts = (note.interactions as Array<{ prompt: string }>).map(
       (interaction) => interaction.prompt,
     );
-    assert.deepEqual(prompts, ["touch a.ts", "bridge the follow-up change", "touch b.ts"]);
+    assert.deepEqual(prompts, [
+      "touch a.ts",
+      "bridge the follow-up change",
+      "touch b.ts",
+      "summarize the commit",
+    ]);
   });
 
   it("file-level fallback keeps context before a short primary prompt without keyword filtering", async () => {
@@ -1643,7 +1959,11 @@ describe("recordCommitEntry", () => {
     assert.ok(note !== null);
     assert.equal(note.agent, "cursor");
     const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
-    assert.deepEqual(prompts, ["plan current cursor fix", "apply current cursor fix"]);
+    assert.deepEqual(prompts, [
+      "plan current cursor fix",
+      "apply current cursor fix",
+      "review current cursor fix",
+    ]);
     assert.deepEqual((note.interactions as Array<{ files_touched?: string[] }>)[1]?.files_touched, [
       "src/cursor.ts",
     ]);
@@ -1686,7 +2006,11 @@ describe("recordCommitEntry", () => {
     assert.ok(note !== null);
     assert.equal(note.agent, "gemini");
     const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
-    assert.deepEqual(prompts, ["plan current Gemini write", "write current Gemini file"]);
+    assert.deepEqual(prompts, [
+      "plan current Gemini write",
+      "write current Gemini file",
+      "review current Gemini file",
+    ]);
     assert.deepEqual((note.interactions as Array<{ files_touched?: string[] }>)[1]?.files_touched, [
       "src/gemini.ts",
     ]);

@@ -2600,6 +2600,7 @@ const dashboardIndex = buildDashboardIndex();
           !interaction?.context &&
           !(interaction?.contexts || []).length &&
           !(interaction?.files_touched || []).length &&
+          !interaction?.selection &&
           interaction?.tools === undefined
         );
       }

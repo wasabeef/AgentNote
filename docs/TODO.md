@@ -2,9 +2,28 @@
 
 ## 未解決の調査
 
-現時点ではなし。
+### Dashboard の `0/0 AI-added lines` 表示
+
+- 対象: Dashboard の PR / commit summary に出る `AI-added lines` 表示
+- 観測結果: file-level attribution の commit では git note の `attribution.lines` が存在しないため、Dashboard 側で `ai_added ?? 0` / `total_added ?? 0` として `0/0 AI-added lines` が表示されます。
+- 例: Codex の transcript 行数と最終 commit diff が一致しない commit は安全側で `method: "file"` になり、`attribution` は `{ "ai_ratio": 75, "method": "file" }` のように `lines` を持ちません。
+- 問題: `0/0` は「AI-added lines が本当に 0」という意味に見えますが、実際には「line-level data unavailable」です。利用者に誤解を与える可能性があります。
+- 対応案: `attribution.lines` がない、または `total_added` が 0 の場合は `AI-added lines` pill を非表示にするか、`file-level attribution` / `line data unavailable` のような method-aware な表記に変えます。
+- 確認範囲: PR summary、commit summary、commit list の lines 表示をすべて見直し、line-level attribution の commit では従来通り `x/y AI-added lines` が表示されることを確認します。
+- テスト方針: Dashboard fixture か source-level test で、`method: "file"` かつ `lines` なしの note が `0/0 AI-added lines` を出さないことを検証します。
 
 ## 解決済みの調査
+
+### Prompt detail filter の過剰 filter 確認
+
+- 対象: `prompt_detail: standard` / `compact` の runtime scoring
+- 対象 PR: `#44`
+- 観測結果: local Agent Note notes、PR #29 / #33 / #43 / BUGS PR 群、英語 OSS PR snippet、synthetic multilingual cases を混ぜて 20,000 cases の simulation を実施しました。
+- 対象言語: English, 日本語, Español, Deutsch, Français, Italiano, Português, Bahasa Indonesia, Русский, العربية, 简体中文, 한국어
+- 結果: `standard` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `standard` に出すべきではないと判断しました。
+- 修正: `substantive_prompt_shape` を追加し、長めの質問・相談は keyword なしで `medium` に上げます。一方で `commit push`, `PR 作成`, `please create the pull request` のような操作指示は、response 側に path があっても `low` に留めます。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `standard` に残る case、operation-only prompt が `standard` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
+- 設計メモ: 詳細は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
 
 ### PR #34 go-ahead prompt の前段 context 表示
 

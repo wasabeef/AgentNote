@@ -245,6 +245,8 @@ PR Report Mode è il default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+Imposta `prompt_detail` su `compact`, `standard` o `full` quando vuoi una cronologia dei prompt più breve o completa. Il default è `standard`: `compact` mostra solo i prompt high, `standard` mostra high + medium e `full` mostra tutti i prompt salvati.
+
 Dashboard Mode usa la stessa action con `dashboard: true`:
 
 ```yaml
@@ -304,6 +306,11 @@ $ git notes --ref=agentnote show ce941f7
           "text": "I will create the JWT auth middleware and wire it into the request pipeline."
         }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

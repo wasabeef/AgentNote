@@ -85,6 +85,11 @@ Generate a PR Report.
   npx agent-note pr origin/main
   ```
   </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
   <TabItem label="JSON">
   ```bash
   npx agent-note pr origin/main --json
@@ -102,7 +107,7 @@ Generate a PR Report.
 </Tabs>
 
 <Aside>
-  The default output destination is `description` (upserts between HTML markers in the PR body).
+  The default prompt detail is `standard`: `compact` shows high-importance prompts only, `standard` shows high + medium, and `full` shows every stored prompt.
 </Aside>
 
 ## agent-note session

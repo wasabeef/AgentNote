@@ -1,8 +1,18 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_PR } from "../../cli/src/core/constants.js";
-import type { Attribution, InteractionContext } from "../../cli/src/core/entry.js";
-import { countAiRatioEligibleFiles, normalizeInteractionContexts } from "../../cli/src/core/entry.js";
+import type {
+  Attribution,
+  InteractionContext,
+  InteractionSelection,
+  PromptDetail,
+} from "../../cli/src/core/entry.js";
+import {
+  DEFAULT_PROMPT_DETAIL,
+  countAiRatioEligibleFiles,
+  normalizeInteractionContexts,
+  shouldRenderInteractionByPromptDetail,
+} from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
@@ -15,6 +25,7 @@ export interface Interaction {
   contexts?: InteractionContext[];
   files_touched?: string[];
   tools?: string[] | null;
+  selection?: InteractionSelection;
 }
 
 export interface CommitEntry {
@@ -48,6 +59,10 @@ export interface PrReport {
   overall_method: "line" | "file" | "mixed" | "none";
   model: string | null;
   commits: CommitEntry[];
+}
+
+export interface RenderMarkdownOptions {
+  promptDetail?: PromptDetail;
 }
 
 export async function collectReport(
@@ -211,8 +226,19 @@ export function renderHeader(report: PrReport): string[] {
   return lines;
 }
 
-export function renderMarkdown(report: PrReport): string {
+export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {}): string {
+  const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
   const lines: string[] = [];
+  const visibleInteractionsBySha = new Map<string, Interaction[]>();
+  let visiblePromptCount = 0;
+
+  for (const commit of report.commits) {
+    const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter(
+      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail),
+    );
+    visibleInteractionsBySha.set(commit.sha, interactions);
+    visiblePromptCount += interactions.length;
+  }
 
   lines.push("## 🧑💬🤖 Agent Note");
   lines.push("");
@@ -253,34 +279,45 @@ export function renderMarkdown(report: PrReport): string {
     lines.push("");
   }
 
-  const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
-  if (withPrompts.length > 0) {
+  const withPrompts = report.commits.filter(
+    (commit) => (visibleInteractionsBySha.get(commit.sha)?.length ?? 0) > 0,
+  );
+  if (report.total_prompts > 0) {
     lines.push("<details>");
-    lines.push(`<summary>💬 Prompts & Responses (${report.total_prompts} total)</summary>`);
+    lines.push(
+      `<summary>💬 Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`,
+    );
     lines.push("");
 
-    for (const commit of withPrompts) {
-      lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
+    if (withPrompts.length === 0) {
+      lines.push(
+        `_No prompts are shown at the current \`prompt_detail\` setting. Use \`full\` to show every stored prompt._`,
+      );
       lines.push("");
-
-      for (const interaction of mergePromptOnlyDisplayInteractions(commit.interactions)) {
-        const context = renderInteractionContext(interaction);
-        if (context) {
-          pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
-          lines.push(">");
-        }
-
-        const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
-        pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
-        if (interaction.response) {
-          const truncated =
-            interaction.response.length > TRUNCATE_RESPONSE_PR
-              ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
-              : interaction.response;
-          lines.push(">");
-          pushBlockquoteSection(lines, "🤖 Response", truncated);
-        }
+    } else {
+      for (const commit of withPrompts) {
+        lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
         lines.push("");
+
+        for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
+          const context = renderInteractionContext(interaction);
+          if (context) {
+            pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
+            lines.push(">");
+          }
+
+          const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
+          pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
+          if (interaction.response) {
+            const truncated =
+              interaction.response.length > TRUNCATE_RESPONSE_PR
+                ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+                : interaction.response;
+            lines.push(">");
+            pushBlockquoteSection(lines, "🤖 Response", truncated);
+          }
+          lines.push("");
+        }
       }
     }
 
@@ -288,6 +325,11 @@ export function renderMarkdown(report: PrReport): string {
   }
 
   return lines.join("\n");
+}
+
+function renderPromptSummary(visible: number, total: number, detail: PromptDetail): string {
+  if (detail === "full" || visible === total) return `${total} total`;
+  return `${visible} shown / ${total} total`;
 }
 
 export async function detectBaseBranch(): Promise<string | null> {
@@ -344,6 +386,7 @@ function isPromptOnlyDisplayPrefix(interaction: Interaction): boolean {
     !interaction.context &&
     (!interaction.contexts || interaction.contexts.length === 0) &&
     (!interaction.files_touched || interaction.files_touched.length === 0) &&
+    !interaction.selection &&
     interaction.tools === undefined
   );
 }

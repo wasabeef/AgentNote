@@ -8,6 +8,7 @@ import {
 	shouldRetryNotesFetch,
 	upsertDescription,
 } from "./github.js";
+import { parsePromptDetail } from "../../cli/src/core/entry.js";
 import { collectReport, renderMarkdown } from "./report.js";
 
 type PrOutputMode = ReturnType<typeof resolvePrOutputMode>;
@@ -132,6 +133,7 @@ async function run(): Promise<void> {
 			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
 		const headSha = github.context.payload.pull_request?.head?.sha;
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
+		const promptDetail = parsePromptDetail(core.getInput("prompt_detail"));
 		const token = process.env.GITHUB_TOKEN || "";
 
 		let report: Awaited<ReturnType<typeof collectReport>> = null;
@@ -175,7 +177,7 @@ async function run(): Promise<void> {
 		core.setOutput("total_prompts", String(report.total_prompts ?? 0));
 		core.setOutput("json", json);
 
-		const markdown = renderMarkdown(report);
+		const markdown = renderMarkdown(report, { promptDetail });
 		core.setOutput("markdown", markdown);
 
 		await postPrReport(prOutputMode, markdown);

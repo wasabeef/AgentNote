@@ -17,8 +17,22 @@ import {
   PROMPTS_FILE,
   TURN_FILE,
 } from "./constants.js";
-import type { Interaction, LineCounts } from "./entry.js";
-import { buildEntry, hasGeneratedArtifactMarkers, isGeneratedArtifactPath } from "./entry.js";
+import type {
+  Interaction,
+  InteractionSelection,
+  LineCounts,
+  PromptRuntimeSelection,
+  PromptSelectionSignal,
+} from "./entry.js";
+import {
+  buildEntry,
+  hasGeneratedArtifactMarkers,
+  isGeneratedArtifactPath,
+  isShortSelectionPrompt,
+  resolvePromptRuntimeLevel,
+  resolvePromptRuntimeRole,
+  scorePromptRuntime,
+} from "./entry.js";
 import {
   buildCommitContextSignature,
   type CommitContextSignature,
@@ -34,12 +48,23 @@ import { readNote, writeNote } from "./storage.js";
 type ConsumedPromptState = {
   legacyPromptIds: Set<string>;
   promptFilePairs: Set<string>;
+  tailPromptIds: Set<string>;
 };
 
 type ConsumedTranscriptPromptFile = {
   turn: number;
   promptId: string;
   file: string;
+};
+
+const PROMPT_SELECTION_SOURCE = Symbol("agentnotePromptSelectionSource");
+const PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY = Symbol(
+  "agentnotePromptSelectionBeforeCommitBoundary",
+);
+
+type PromptEntryWithSelectionMetadata = Record<string, unknown> & {
+  [PROMPT_SELECTION_SOURCE]?: InteractionSelection["source"];
+  [PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY]?: boolean;
 };
 
 /** Record an agentnote entry as a git note after a successful commit. */
@@ -197,8 +222,11 @@ export async function recordCommitEntry(opts: {
       primaryTurns,
       unconsumedEditTurns,
       maxConsumedTurn,
+      currentTurn,
       commitFiles,
       commitSubject,
+      contextSignature,
+      consumedPromptState,
     );
     relevantPromptEntries = promptWindow.selected;
     promptWindowConsumedEntries = promptWindow.consumed;
@@ -286,6 +314,8 @@ export async function recordCommitEntry(opts: {
           maxConsumedTurn,
           commitFiles,
           commitSubject,
+          contextSignature,
+          consumedPromptState,
           currentTurn,
         )
       : { selected: [], consumed: [] };
@@ -380,8 +410,11 @@ export async function recordCommitEntry(opts: {
         transcriptPrimaryTurns,
         transcriptEditTurns,
         maxConsumedTurn,
+        currentTurn,
         commitFiles,
         commitSubject,
+        contextSignature,
+        consumedPromptState,
       );
     } else if (
       hasUnlinkedCurrentTranscriptEdit(
@@ -397,6 +430,8 @@ export async function recordCommitEntry(opts: {
         maxConsumedTurn,
         commitFiles,
         commitSubject,
+        contextSignature,
+        consumedPromptState,
         currentTurn,
       );
     }
@@ -467,6 +502,7 @@ export async function recordCommitEntry(opts: {
     contextSignature,
     interactionsById,
   );
+  attachInteractionSelections(relevantPromptEntries, interactions, contextSignature, commitSubject);
 
   // Attach per-turn file attribution when turn data is available.
   if (hasTurnData) {
@@ -770,6 +806,75 @@ async function attachInteractionContexts(
   }
 }
 
+function attachInteractionSelections(
+  promptEntries: Record<string, unknown>[],
+  interactions: Interaction[],
+  signature: CommitContextSignature,
+  commitSubject: string,
+): void {
+  const candidates = interactions.map((interaction, index) => {
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) return null;
+    return buildPromptSelectionCandidate(interaction, promptEntry, false, signature, commitSubject);
+  });
+  const nonExcludedIndexes = new Set<number>();
+  candidates.forEach((candidate, index) => {
+    if (candidate && !analyzePromptSelection(candidate).hardExcluded) {
+      nonExcludedIndexes.add(index);
+    }
+  });
+
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) continue;
+    const candidate = buildPromptSelectionCandidate(
+      interaction,
+      promptEntry,
+      hasAdjacentNonExcludedInteraction(index, nonExcludedIndexes),
+      signature,
+      commitSubject,
+    );
+    const analysis = analyzePromptSelection(candidate);
+    const selection = toPersistedSelection(analysis);
+    if (selection) interaction.selection = selection;
+  }
+}
+
+function buildPromptSelectionCandidate(
+  interaction: Interaction,
+  promptEntry: Record<string, unknown>,
+  hasAdjacentNonExcludedPrompt: boolean,
+  signature: CommitContextSignature,
+  commitSubject: string,
+): PromptSelectionCandidate {
+  const source = readPromptSelectionSource(promptEntry);
+  const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+  const promptId = typeof promptEntry.prompt_id === "string" ? promptEntry.prompt_id : undefined;
+  return {
+    prompt: interaction.prompt,
+    response: interaction.response,
+    turn,
+    promptId,
+    source,
+    isPrimaryTurn: source === "primary",
+    isEditTurn: (interaction.files_touched?.length ?? 0) > 0,
+    isTail: source === "tail",
+    isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),
+    hasAdjacentNonExcludedPrompt,
+    commitFiles: signature.changedFiles,
+    commitSubject,
+    diffIdentifiers: signature.codeIdentifiers,
+  };
+}
+
+function hasAdjacentNonExcludedInteraction(
+  index: number,
+  nonExcludedIndexes: Set<number>,
+): boolean {
+  return nonExcludedIndexes.has(index - 1) || nonExcludedIndexes.has(index + 1);
+}
+
 async function resolveTranscriptLineCounts(
   commitFileSet: Set<string>,
   interactions: TranscriptInteraction[],
@@ -1052,8 +1157,11 @@ function selectPromptWindowEntries(
   primaryTurns: Set<number>,
   editTurns: Set<number>,
   maxConsumedTurn: number,
+  currentTurn: number,
   commitFiles: string[],
   commitSubject: string,
+  contextSignature: CommitContextSignature,
+  consumedPromptState: ConsumedPromptState,
 ): PromptWindowSelection {
   if (primaryTurns.size === 0) return emptyPromptWindowSelection();
 
@@ -1064,10 +1172,14 @@ function selectPromptWindowEntries(
     promptEntries,
     maxConsumedTurn,
     orderedPrimaryTurns[orderedPrimaryTurns.length - 1] ?? 0,
+    currentTurn,
     primaryTurns,
     editTurns,
     commitFiles,
     commitSubject,
+    contextSignature,
+    consumedPromptState,
+    "window",
   );
 }
 
@@ -1076,6 +1188,8 @@ function selectPromptOnlyFallbackEntries(
   maxConsumedTurn: number,
   commitFiles: string[],
   commitSubject: string,
+  contextSignature: CommitContextSignature,
+  consumedPromptState: ConsumedPromptState,
   currentTurn = Number.POSITIVE_INFINITY,
 ): PromptWindowSelection {
   const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
@@ -1090,10 +1204,14 @@ function selectPromptOnlyFallbackEntries(
     promptEntries,
     maxConsumedTurn,
     latestPromptTurn,
+    latestPromptTurn,
     new Set<number>(),
     new Set<number>(),
     commitFiles,
     commitSubject,
+    contextSignature,
+    consumedPromptState,
+    "fallback",
   );
 }
 
@@ -1102,34 +1220,215 @@ type PromptWindowSelection = {
   consumed: Record<string, unknown>[];
 };
 
+export type PromptSelectionCandidate = {
+  prompt: string;
+  response: string | null;
+  turn: number;
+  promptId?: string;
+  source: InteractionSelection["source"];
+  isPrimaryTurn: boolean;
+  isEditTurn: boolean;
+  isTail: boolean;
+  isBeforeCommitBoundary: boolean;
+  hasAdjacentNonExcludedPrompt: boolean;
+  commitFiles: string[];
+  commitSubject: string;
+  diffIdentifiers: Set<string>;
+};
+
+export type PromptSelectionAnalysis = {
+  runtime: PromptRuntimeSelection;
+  source: InteractionSelection["source"];
+  signals: PromptSelectionSignal[];
+  hardExcluded: boolean;
+};
+
 type PromptWindowRow = {
   entry: Record<string, unknown>;
+  source: InteractionSelection["source"];
   fileRefScore: number;
   shapeScore: number;
   textScore: number;
   isQuotedHistory: boolean;
   isTinyPrompt: boolean;
   isPrimaryTurn: boolean;
+  isTail: boolean;
+  isBeforeCommitBoundary: boolean;
   isNonPrimaryEditTurn: boolean;
+  isConsumedTailPrompt: boolean;
+  hasPostPrimaryEditBarrier: boolean;
 };
 
 const PROMPT_WINDOW_MAX_ENTRIES = 24;
 const PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
 const PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
 const PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
+const PROMPT_SELECTION_SCHEMA = 1;
 
 function emptyPromptWindowSelection(): PromptWindowSelection {
   return { selected: [], consumed: [] };
 }
 
+export function analyzePromptSelection(
+  candidate: PromptSelectionCandidate,
+): PromptSelectionAnalysis {
+  const hardExcluded = isHardExcludedPromptSelection(candidate);
+  if (hardExcluded) {
+    return {
+      runtime: { score: 0, role: "background", level: "low" },
+      source: candidate.source,
+      signals: [],
+      hardExcluded: true,
+    };
+  }
+
+  const signals = collectPromptSelectionSignals(candidate);
+  const role = resolvePromptRuntimeRole(candidate.source, signals, candidate.prompt);
+  const score = scorePromptRuntime({ role, signals });
+  return {
+    runtime: { score, role, level: resolvePromptRuntimeLevel({ score, role }) },
+    source: candidate.source,
+    signals,
+    hardExcluded: false,
+  };
+}
+
+export function toPersistedSelection(
+  analysis: PromptSelectionAnalysis,
+): InteractionSelection | null {
+  if (analysis.hardExcluded) return null;
+  return {
+    schema: PROMPT_SELECTION_SCHEMA,
+    source: analysis.source,
+    signals: analysis.signals,
+  };
+}
+
+function isHardExcludedPromptSelection(candidate: PromptSelectionCandidate): boolean {
+  if (candidate.isPrimaryTurn) return false;
+  return isQuotedPromptHistory(candidate.prompt) || isStructurallyTinyPrompt(candidate.prompt);
+}
+
+function collectPromptSelectionSignals(
+  candidate: PromptSelectionCandidate,
+): PromptSelectionSignal[] {
+  const signals: PromptSelectionSignal[] = [];
+  const prompt = candidate.prompt;
+  const response = candidate.response ?? "";
+  const basenames = candidate.commitFiles.map((file) => fileBasename(file)).filter(Boolean);
+
+  if (candidate.isPrimaryTurn) signals.push("primary_edit_turn");
+  if (hasExactCommitPath(prompt, candidate.commitFiles)) signals.push("exact_commit_path");
+  if (hasCommitFileBasename(prompt, basenames)) signals.push("commit_file_basename");
+  if (hasDiffIdentifier(prompt, candidate.diffIdentifiers)) signals.push("diff_identifier");
+  if (response && hasExactCommitPath(response, candidate.commitFiles)) {
+    signals.push("response_exact_commit_path");
+  }
+  if (
+    response &&
+    (hasCommitFileBasename(response, basenames) ||
+      hasDiffIdentifier(response, candidate.diffIdentifiers))
+  ) {
+    signals.push("response_basename_or_identifier");
+  }
+  if (hasCommitSubjectOverlap(prompt, candidate.commitSubject)) {
+    signals.push("commit_subject_overlap");
+  }
+  if (hasListOrChecklistShape(prompt)) signals.push("list_or_checklist_shape");
+  if (hasMultiLineInstruction(prompt)) signals.push("multi_line_instruction");
+  if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
+  if (hasSubstantivePromptShape(prompt)) signals.push("substantive_prompt_shape");
+  if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
+  if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
+    signals.push("between_non_excluded_prompts");
+  }
+
+  return [...new Set(signals)];
+}
+
+function hasExactCommitPath(text: string, commitFiles: string[]): boolean {
+  const lower = text.toLowerCase();
+  return commitFiles.some((file) => lower.includes(file.toLowerCase()));
+}
+
+function hasCommitFileBasename(text: string, basenames: string[]): boolean {
+  const lower = text.toLowerCase();
+  return basenames.some(
+    (basename) => basename.length > 0 && lower.includes(basename.toLowerCase()),
+  );
+}
+
+function fileBasename(path: string): string {
+  return path.split("/").pop() ?? path;
+}
+
+function hasDiffIdentifier(text: string, identifiers: Set<string>): boolean {
+  for (const identifier of identifiers) {
+    if (new RegExp(`\\b${escapeRegExp(identifier)}\\b`).test(text)) return true;
+  }
+  return false;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasCommitSubjectOverlap(prompt: string, commitSubject: string): boolean {
+  const promptTokens = tokenizePromptSelectionText(prompt);
+  const subjectTokens = tokenizePromptSelectionText(commitSubject);
+  for (const token of promptTokens) {
+    if (subjectTokens.has(token)) return true;
+  }
+  return false;
+}
+
+function hasListOrChecklistShape(text: string): boolean {
+  return /^\s*(?:[-*]|\d+\.)\s/m.test(text);
+}
+
+function hasMultiLineInstruction(text: string): boolean {
+  return (
+    text
+      .trim()
+      .split("\n")
+      .filter((line) => line.trim().length > 0).length >= 2
+  );
+}
+
+function hasInlineCodeOrPathShape(text: string): boolean {
+  return (
+    /`[^`]+`/.test(text) ||
+    /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) ||
+    /--[a-z0-9-]+/i.test(text)
+  );
+}
+
+function hasSubstantivePromptShape(text: string): boolean {
+  const trimmed = text.trim();
+  const compact = trimmed.replace(/\s+/g, "");
+  if (!compact) return false;
+  const wordTokens = text.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  if (wordTokens.length >= 7) return true;
+  if (wordTokens.length >= 4 && /[?？]/.test(trimmed)) return true;
+  return (
+    wordTokens.length <= 2 &&
+    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmed) &&
+    [...compact].length >= 14
+  );
+}
+
 function selectCommitPromptWindow(
   promptEntries: Record<string, unknown>[],
   lowerTurn: number,
+  latestPrimaryTurn: number,
   upperTurn: number,
   primaryTurns: Set<number>,
   editTurns: Set<number>,
   commitFiles: string[],
   commitSubject: string,
+  contextSignature: CommitContextSignature,
+  consumedPromptState: ConsumedPromptState,
+  defaultSource: InteractionSelection["source"],
 ): PromptWindowSelection {
   if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
 
@@ -1144,8 +1443,20 @@ function selectCommitPromptWindow(
       return leftTurn - rightTurn;
     })
     .map((entry) =>
-      buildPromptWindowRow(entry, primaryTurns, editTurns, commitFiles, commitSubject),
+      buildPromptWindowRow(
+        entry,
+        primaryTurns,
+        editTurns,
+        latestPrimaryTurn,
+        upperTurn,
+        commitFiles,
+        commitSubject,
+        contextSignature,
+        consumedPromptState,
+        defaultSource,
+      ),
     );
+  markPostPrimaryEditBarriers(rows);
 
   if (rows.length === 0) return emptyPromptWindowSelection();
 
@@ -1154,9 +1465,7 @@ function selectCommitPromptWindow(
     hardStartIndex += 1;
   }
   const hardTrimmedRows = rows.slice(0, hardStartIndex);
-  const hasQuotedOrTinyHardTrim = hardTrimmedRows.some(
-    (row) => row.isQuotedHistory || row.isTinyPrompt,
-  );
+  const hasQuotedHardTrim = hardTrimmedRows.some((row) => row.isQuotedHistory);
   const firstAnchorIndex = rows.findIndex(
     (row, index) => index >= hardStartIndex && isPromptWindowAnchor(row),
   );
@@ -1164,19 +1473,19 @@ function selectCommitPromptWindow(
   const softLeadingRows = firstAnchorIndex >= 0 ? rows.slice(hardStartIndex, firstAnchorIndex) : [];
   const preserveShortLeadingContext =
     firstAnchorIndex >= 0 &&
-    !hasQuotedOrTinyHardTrim &&
+    !hasQuotedHardTrim &&
     firstAnchorIndex - hardStartIndex <= 2 &&
     softLeadingRows.every(isLowShapePromptRow);
   if (preserveShortLeadingContext) {
     startIndex = hardStartIndex;
   }
 
-  const consumed = rows.map((row) => row.entry);
+  const consumed = rows.map((row) => attachPromptSelectionMetadata(row));
   const selectedRows = rows.slice(startIndex).filter(shouldKeepPromptWindowRow);
   const selected =
     selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES
-      ? trimLongPromptWindow(selectedRows).map((row) => row.entry)
-      : selectedRows.map((row) => row.entry);
+      ? trimLongPromptWindow(selectedRows).map(attachPromptSelectionMetadata)
+      : selectedRows.map(attachPromptSelectionMetadata);
 
   return { selected, consumed };
 }
@@ -1185,29 +1494,84 @@ function buildPromptWindowRow(
   entry: Record<string, unknown>,
   primaryTurns: Set<number>,
   editTurns: Set<number>,
+  latestPrimaryTurn: number,
+  upperTurn: number,
   commitFiles: string[],
   commitSubject: string,
+  contextSignature: CommitContextSignature,
+  consumedPromptState: ConsumedPromptState,
+  defaultSource: InteractionSelection["source"],
 ): PromptWindowRow {
   const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
   const turn = typeof entry.turn === "number" ? entry.turn : 0;
   const isQuotedHistory = isQuotedPromptHistory(prompt);
   const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
   const isPrimaryTurn = primaryTurns.has(turn);
+  const isTail = defaultSource !== "fallback" && !isPrimaryTurn && turn > latestPrimaryTurn;
+  const source = resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail);
+  const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+  const hasConsumedTailPrompt = !!promptId && consumedPromptState.tailPromptIds.has(promptId);
+  const analysis = analyzePromptSelection({
+    prompt,
+    response: null,
+    turn,
+    promptId,
+    source,
+    isPrimaryTurn,
+    isEditTurn: editTurns.has(turn),
+    isTail,
+    isBeforeCommitBoundary: turn === upperTurn,
+    hasAdjacentNonExcludedPrompt: false,
+    commitFiles,
+    commitSubject,
+    diffIdentifiers: contextSignature.codeIdentifiers,
+  });
   return {
     entry,
+    source,
     fileRefScore: scorePromptFileRefs(prompt, commitFiles),
     shapeScore: scoreTextShape(prompt),
     textScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
     isQuotedHistory,
-    isTinyPrompt: !isPrimaryTurn && isStructurallyTinyPrompt(prompt),
+    isTinyPrompt: analysis.hardExcluded,
     isPrimaryTurn,
+    isTail,
+    isBeforeCommitBoundary: turn === upperTurn,
     isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
+    isConsumedTailPrompt: isTail && hasConsumedTailPrompt,
+    hasPostPrimaryEditBarrier: false,
   };
+}
+
+function markPostPrimaryEditBarriers(rows: PromptWindowRow[]): void {
+  let seenNonPrimaryTailEdit = false;
+  for (const row of rows) {
+    if (row.isTail) row.hasPostPrimaryEditBarrier = seenNonPrimaryTailEdit;
+    if (row.isTail && row.isNonPrimaryEditTurn) seenNonPrimaryTailEdit = true;
+  }
 }
 
 function shouldKeepPromptWindowRow(row: PromptWindowRow): boolean {
   if (row.isPrimaryTurn) return true;
-  return !row.isQuotedHistory && !row.isTinyPrompt && !row.isNonPrimaryEditTurn;
+  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
+  if (row.isConsumedTailPrompt) return false;
+  if (row.isTail) return shouldKeepTailPromptWindowRow(row);
+  return true;
+}
+
+function shouldKeepTailPromptWindowRow(row: PromptWindowRow): boolean {
+  if (row.hasPostPrimaryEditBarrier) {
+    return (
+      row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE ||
+      row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE
+    );
+  }
+  return (
+    row.isBeforeCommitBoundary ||
+    row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE ||
+    row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE ||
+    row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE
+  );
 }
 
 function isPromptWindowAnchor(row: PromptWindowRow): boolean {
@@ -1220,9 +1584,45 @@ function isPromptWindowAnchor(row: PromptWindowRow): boolean {
   );
 }
 
+function resolvePromptSelectionSource(
+  defaultSource: InteractionSelection["source"],
+  isPrimaryTurn: boolean,
+  isTail: boolean,
+): InteractionSelection["source"] {
+  if (defaultSource === "fallback") return "fallback";
+  if (isPrimaryTurn) return "primary";
+  if (isTail) return "tail";
+  return "window";
+}
+
+function attachPromptSelectionMetadata(row: PromptWindowRow): Record<string, unknown> {
+  const entry = row.entry as PromptEntryWithSelectionMetadata;
+  entry[PROMPT_SELECTION_SOURCE] = row.source;
+  entry[PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY] = row.isBeforeCommitBoundary;
+  return row.entry;
+}
+
+function readPromptSelectionSource(
+  entry: Record<string, unknown> | undefined,
+): InteractionSelection["source"] {
+  return (
+    (entry as PromptEntryWithSelectionMetadata | undefined)?.[PROMPT_SELECTION_SOURCE] ?? "window"
+  );
+}
+
+function readPromptSelectionBeforeCommitBoundary(
+  entry: Record<string, unknown> | undefined,
+): boolean {
+  return !!(entry as PromptEntryWithSelectionMetadata | undefined)?.[
+    PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY
+  ];
+}
+
 function isHardTrimPromptRow(row: PromptWindowRow): boolean {
   if (row.isPrimaryTurn) return false;
-  return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn;
+  return (
+    row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn || row.isConsumedTailPrompt
+  );
 }
 
 function isLowShapePromptRow(row: PromptWindowRow): boolean {
@@ -1794,6 +2194,7 @@ async function readMaxConsumedTurn(sessionDir: string): Promise<number> {
   const entries = await readJsonlEntries(file);
   let max = 0;
   for (const e of entries) {
+    if (e.prompt_scope === "tail") continue;
     const turn = typeof e.turn === "number" ? e.turn : 0;
     if (turn > max) max = turn;
   }
@@ -1830,6 +2231,7 @@ async function readConsumedPromptState(sessionDir: string): Promise<ConsumedProm
   const state: ConsumedPromptState = {
     legacyPromptIds: new Set(),
     promptFilePairs: new Set(),
+    tailPromptIds: new Set(),
   };
   if (!existsSync(file)) return state;
 
@@ -1837,6 +2239,11 @@ async function readConsumedPromptState(sessionDir: string): Promise<ConsumedProm
   for (const entry of entries) {
     const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
     if (!promptId) continue;
+
+    if (entry.prompt_scope === "tail") {
+      state.tailPromptIds.add(promptId);
+      continue;
+    }
 
     const filePath = typeof entry.file === "string" ? entry.file : undefined;
     if (filePath) {
@@ -1922,7 +2329,7 @@ async function recordConsumedPairs(
       turn,
       prompt_id: promptId,
       file: null,
-      prompt_scope: "window",
+      prompt_scope: readPromptSelectionSource(entry) === "tail" ? "tail" : "window",
       change_id: null,
       tool_use_id: null,
     });

@@ -71,6 +71,11 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
       "contexts": [
         { "kind": "reference", "source": "previous_response", "text": "La réponse précédente explique pourquoi ce middleware doit changer." }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "Je vais créer le middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

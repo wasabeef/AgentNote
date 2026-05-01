@@ -245,6 +245,8 @@ PR Report Mode 是默认值：
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+如果想让 prompt 历史更短或完整显示，可以把 `prompt_detail` 设为 `compact`、`standard` 或 `full`。默认值是 `standard`：`compact` 只显示 high prompt，`standard` 显示 high + medium，`full` 显示所有已保存的 prompt。
+
 Dashboard Mode 使用同一个 action，并传入 `dashboard: true`：
 
 ```yaml
@@ -304,6 +306,11 @@ $ git notes --ref=agentnote show ce941f7
           "text": "I will create the JWT auth middleware and wire it into the request pipeline."
         }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

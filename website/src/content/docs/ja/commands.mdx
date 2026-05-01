@@ -74,6 +74,11 @@ PR レポートを生成します。
   npx agent-note pr origin/main
   ```
   </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
   <TabItem label="JSON">
   ```bash
   npx agent-note pr origin/main --json
@@ -85,6 +90,10 @@ PR レポートを生成します。
   ```
   </TabItem>
 </Tabs>
+
+<Aside>
+  prompt detail の既定値は `standard` です。`compact` は high のみ、`standard` は high + medium、`full` は保存された prompt をすべて表示します。
+</Aside>
 
 ## agent-note status
 

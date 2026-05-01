@@ -176,6 +176,174 @@ describe("renderMarkdown", () => {
     assert.ok(markdown.includes("I will use structural anchors only."));
   });
 
+  it("does not merge prompt-only interactions that carry selection metadata", () => {
+    const report = baseReport({
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 2,
+          interactions: [
+            {
+              prompt: "Please avoid keyword heuristics.",
+              response: null,
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+            {
+              prompt: "This also applies to PROMPT_CONTEXT_DESIGN.md.",
+              response: "I will use structural anchors only.",
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report, { promptDetail: "full" });
+
+    assert.equal(markdown.match(/\*\*🧑 Prompt\*\*/g)?.length, 2);
+    assert.ok(markdown.includes("Please avoid keyword heuristics."));
+    assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
+  });
+
+  it("uses standard prompt detail by default", () => {
+    const report = baseReport({
+      total_prompts: 3,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 3,
+          interactions: [
+            {
+              prompt: "Update packages/cli/src/core/record.ts",
+              response: "I will update the scorer.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["exact_commit_path"],
+              },
+            },
+            {
+              prompt: "README.md",
+              response: "I will keep this as a context bridge.",
+              selection: {
+                schema: 1,
+                source: "tail",
+                signals: ["commit_file_basename"],
+              },
+            },
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+
+    assert.ok(markdown.includes("💬 Prompts & Responses (2 shown / 3 total)"));
+    assert.ok(markdown.includes("Update packages/cli/src/core/record.ts"));
+    assert.ok(markdown.includes("README.md"));
+    assert.ok(!markdown.includes("Continuing."));
+  });
+
+  it("supports compact and full prompt detail presets", () => {
+    const report = baseReport({
+      total_prompts: 3,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 3,
+          interactions: [
+            {
+              prompt: "Update packages/cli/src/core/record.ts",
+              response: "I will update the scorer.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["exact_commit_path"],
+              },
+            },
+            {
+              prompt: "README.md",
+              response: "I will keep this as a context bridge.",
+              selection: {
+                schema: 1,
+                source: "tail",
+                signals: ["commit_file_basename"],
+              },
+            },
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const compact = renderMarkdown(report, { promptDetail: "compact" });
+    const full = renderMarkdown(report, { promptDetail: "full" });
+
+    assert.ok(compact.includes("💬 Prompts & Responses (1 shown / 3 total)"));
+    assert.ok(compact.includes("Update packages/cli/src/core/record.ts"));
+    assert.ok(!compact.includes("README.md"));
+    assert.ok(!compact.includes("continue"));
+    assert.ok(full.includes("💬 Prompts & Responses (3 total)"));
+    assert.ok(full.includes("Update packages/cli/src/core/record.ts"));
+    assert.ok(full.includes("README.md"));
+    assert.ok(full.includes("continue"));
+  });
+
+  it("keeps a prompt detail summary when the current preset hides every prompt", () => {
+    const report = baseReport({
+      total_prompts: 1,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 1,
+          interactions: [
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report, { promptDetail: "compact" });
+
+    assert.ok(markdown.includes("💬 Prompts & Responses (0 shown / 1 total)"));
+    assert.ok(markdown.includes("No prompts are shown"));
+    assert.ok(!markdown.includes("Continuing."));
+  });
+
   it("does not truncate long context text in the middle", () => {
     const reference = "Reference context " + "alpha ".repeat(55);
     const scope = "Scope context " + "beta ".repeat(55);

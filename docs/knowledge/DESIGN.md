@@ -88,6 +88,7 @@ wasabeef/AgentNote/
 Other knowledge files are narrower design or research records:
 
 - `PROMPT_CONTEXT_DESIGN.md` — deterministic `interactions[].contexts[]` selection and display rules.
+- `PROMPT_SELECTION_SCORING_DESIGN.md` — prompt selection evidence, scoring, tail handling, and display-density design.
 - `AGENT_SUPPORT_PROMOTION_PLAN.md` — support-tier gates for promoting agent adapters.
 - `CODEX_SUPPORT_PLAN.md`, `CURSOR_SUPPORT_PLAN.md`, `GEMINI_SUPPORT_PLAN.md` — agent-specific research and implementation history. Treat them as historical context unless they explicitly say otherwise.
 - `AGENTNOTE_VS_ENTIRE.md`, `PROBLEMS.md`, `RESEARCH.md` — competitive / architecture research that motivated the current design.
@@ -205,6 +206,11 @@ Note content per commit:
           "text": "The previous response explains why this middleware needs to change."
         }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "I'll create the middleware with... ",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]
@@ -236,6 +242,7 @@ Note content per commit:
   - **`lines`**: Present when blob data available. `ai_added`, `total_added`, `deleted`.
 - **`interactions[].tools`**: File-edit tools used in this interaction. Optional field — omitted when no tool data is available, `null` when adapter doesn't support tool tracking, `string[]` when tools were observed.
 - **`interactions[].contexts[]`**: Optional display-only excerpts for short prompts. `reference` points to the immediately previous response; `scope` captures the current response's work scope. These contexts are never used for attribution, prompt counts, or file ownership. Older notes may still contain legacy `interactions[].context`, which readers treat as a `reference` context.
+- **`interactions[].selection`**: Optional display-only prompt selection evidence. Stores only `schema`, `source`, and stable `signals`; runtime score, role, and display level are derived later and are never stored in the git note.
 - **`interactions[].response`**: Full AI response text. No truncation.
 
 ### Causal turn ID
@@ -258,7 +265,7 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 A commit note records a list of `interactions` (prompt + optional display-only `contexts[]` + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
-**Current: commit-to-commit window.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
+**Current: commit-to-commit window with selection evidence.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. Each stored interaction may also get `selection` metadata (`schema`, `source`, `signals`) so renderers can later tune display density without changing git notes. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
 
 **Step 1 — derive primary turns.**
 
@@ -270,6 +277,7 @@ A commit note records a list of `interactions` (prompt + optional display-only `
 - Build the base window from turns `> maxConsumedTurn` through the latest primary turn for this commit.
 - Keep nearby prompt-only planning, clarification, review, and follow-up turns inside that window.
 - Drop edit turns that are not primary for this commit, even if they touched the same file earlier in the session.
+- Keep post-primary tail prompts only when they are immediately before the commit boundary or have structural anchors to the current commit.
 - Trim leading quoted prompt-history blocks, one-character continuation prompts, and overwritten edit bursts before the current work begins.
 - Use structural signals only: path / file references, Unicode token overlap with the commit subject and paths, list-like prompt shape, quote markers, and edit-turn ownership. Do not use language-specific keyword lists.
 - For transcript-driven agents such as Codex, apply the same window rule after transcript `files_touched` / `line_stats` identify the primary turns.
@@ -292,6 +300,7 @@ If a selected prompt is short and needs nearby context, Agent Note may attach `i
 
 - Each commit records consumed `(turn, file)` pairs and prompt ids in `committed_pairs.jsonl`.
 - `maxConsumedTurn` trims spent context from later commits in the same session.
+- Tail prompt markers use `prompt_scope: "tail"` and do not advance `maxConsumedTurn`; they only prevent the same prompt from being shown repeatedly as display-only tail context.
 - A turn that is primary for the current commit is still allowed through even if an earlier split commit already consumed the same turn.
 
 **Trade-off:** the commit window is intentionally broader than edit-only attribution, but much narrower than the full session. This is deliberate: the goal is "the conversation between commits", not "only the prompt that touched the final line".
@@ -396,7 +405,7 @@ agent-note init              add hooks to agent config (commit to share with tea
 agent-note commit [args]       git commit with session context (convenience wrapper)
 agent-note show [commit]       show session details for HEAD or a commit SHA
 agent-note log [n]             list recent commits with session info
-agent-note pr [base] [--json] [--output description|comment] [--update <PR#>]
+agent-note pr [base] [--json] [--output description|comment] [--update <PR#>] [--prompt-detail compact|standard|full]
 agent-note status              show current tracking state
 agent-note hook                handle agent hook events (internal, via stdin, agent-specific)
 agent-note record <session-id> record git note for HEAD (internal, used by post-commit hook)
@@ -419,6 +428,7 @@ Flags: `--agent <name...>`, `--dashboard`, `--no-hooks`, `--no-git-hooks`, `--no
 
 ```bash
 agent-note pr                              # markdown report (table format)
+agent-note pr --prompt-detail compact      # shorter prompt/response details
 agent-note pr --json                       # structured JSON (for scripts/actions)
 agent-note pr --output description --update 42  # upsert into PR description
 agent-note pr --output comment --update 42      # post as PR comment
@@ -456,7 +466,7 @@ JSON output structure:
       "ai_ratio": 100,
       "attribution": { "ai_ratio": 100, "method": "line", "lines": { "ai_added": 32, "total_added": 32, "deleted": 0 } },
       "files": [{"path": "button.tsx", "by_ai": true}],
-      "interactions": [{"prompt": "...", "contexts": [{"kind": "scope", "source": "current_response", "text": "..."}], "response": "...", "tools": ["Write"]}]
+      "interactions": [{"prompt": "...", "contexts": [{"kind": "scope", "source": "current_response", "text": "..."}], "selection": {"schema": 1, "source": "primary", "signals": ["primary_edit_turn"]}, "response": "...", "tools": ["Write"]}]
     }
   ]
 }
@@ -482,6 +492,7 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
+| `prompt_detail` | `standard` | Prompt history detail in PR Report: `compact` = high only, `standard` = high + medium, `full` = every stored prompt |
 | `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report Mode |
 
 ### Action outputs

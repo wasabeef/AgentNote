@@ -245,6 +245,8 @@ PR Report Mode is the default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+Set `prompt_detail` to `compact`, `standard`, or `full` when you want a shorter or complete prompt history. The default is `standard`: `compact` shows high-importance prompts only, `standard` shows high + medium, and `full` shows every stored prompt.
+
 Dashboard Mode uses the same action with `dashboard: true`:
 
 ```yaml
@@ -304,6 +306,11 @@ $ git notes --ref=agentnote show ce941f7
           "text": "I will create the JWT auth middleware and wire it into the request pipeline."
         }
       ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": ["primary_edit_turn"]
+      },
       "response": "I'll create the middleware...",
       "files_touched": ["src/auth.ts"],
       "tools": ["Edit"]

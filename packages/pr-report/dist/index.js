@@ -36366,10 +36366,6 @@ async function readPrBody(prNumber) {
     return JSON.parse(stdout).body ?? "";
 }
 
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
-;// CONCATENATED MODULE: external "node:path"
-const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: ../cli/src/core/constants.ts
 // ─── Trailer ───
 const TRAILER_KEY = "Agentnote-Session";
@@ -36423,6 +36419,7 @@ const DEBUG = !!process.env.AGENTNOTE_DEBUG;
 
 ;// CONCATENATED MODULE: ../cli/src/core/entry.ts
 
+const DEFAULT_PROMPT_DETAIL = "standard";
 // Best-effort generated-artifact heuristics grouped by ecosystem so each rule
 // stays explainable when we broaden support across languages and frameworks.
 const GENERATED_DIR_SEGMENTS = new Set([
@@ -36548,6 +36545,166 @@ function normalizeInteractionContexts(interaction) {
     }
     return normalized;
 }
+function parsePromptDetail(value) {
+    const normalized = (value ?? "").trim().toLowerCase();
+    if (!normalized)
+        return DEFAULT_PROMPT_DETAIL;
+    if (normalized === "compact" || normalized === "standard" || normalized === "full") {
+        return normalized;
+    }
+    throw new Error("prompt_detail must be one of: compact, standard, full");
+}
+function shouldRenderInteractionByPromptDetail(interaction, detail) {
+    const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
+    if (detail === "full")
+        return true;
+    if (detail === "standard")
+        return runtime.level !== "low";
+    return runtime.level === "high";
+}
+function resolvePromptRuntimeSelection(selection, interaction) {
+    if (!selection)
+        return { score: 100, role: "primary", level: "high" };
+    const role = resolvePromptRuntimeRole(selection.source, selection.signals, interaction.prompt);
+    const score = scorePromptRuntime({ role, signals: selection.signals });
+    return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
+}
+function resolvePromptRuntimeRole(source, signals, prompt) {
+    if (source === "primary" || signals.includes("primary_edit_turn"))
+        return "primary";
+    if (signals.includes("exact_commit_path") || signals.includes("diff_identifier")) {
+        return "direct_anchor";
+    }
+    if (isShortSelectionPrompt(prompt) && hasBridgeAnchorSignal(signals)) {
+        return "anchored_bridge";
+    }
+    if (hasScopeSignal(signals))
+        return "scope";
+    if (source === "tail")
+        return "tail";
+    if (isShortSelectionPrompt(prompt) && signals.includes("between_non_excluded_prompts")) {
+        return "bridge";
+    }
+    return "background";
+}
+function scorePromptRuntime(opts) {
+    let score = roleBaseScore(opts.role);
+    for (const signal of opts.signals)
+        score += signalScore(signal);
+    const [min, max] = roleScoreClamp(opts.role);
+    score = Math.max(min, Math.min(score, max));
+    if (opts.role === "primary")
+        return Math.max(score, 80);
+    if (opts.role === "bridge") {
+        const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+        return Math.min(score, maxBridgeScore);
+    }
+    if (opts.role === "anchored_bridge")
+        return Math.min(score, 65);
+    if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
+        return Math.min(score, 44);
+    }
+    return score;
+}
+function resolvePromptRuntimeLevel(runtime) {
+    if (runtime.role === "primary")
+        return "high";
+    if (runtime.role === "bridge")
+        return runtime.score >= 45 ? "medium" : "low";
+    if (runtime.role === "anchored_bridge")
+        return runtime.score >= 45 ? "medium" : "low";
+    if (runtime.score >= 75)
+        return "high";
+    if (runtime.score >= 45)
+        return "medium";
+    return "low";
+}
+function roleBaseScore(role) {
+    switch (role) {
+        case "primary":
+            return 90;
+        case "direct_anchor":
+            return 75;
+        case "scope":
+            return 60;
+        case "tail":
+        case "anchored_bridge":
+            return 45;
+        case "bridge":
+            return 25;
+        case "background":
+            return 15;
+    }
+}
+function roleScoreClamp(role) {
+    switch (role) {
+        case "primary":
+            return [80, 100];
+        case "direct_anchor":
+            return [65, 95];
+        case "scope":
+            return [50, 80];
+        case "tail":
+            return [35, 70];
+        case "anchored_bridge":
+            return [40, 65];
+        case "bridge":
+            return [20, 55];
+        case "background":
+            return [0, 30];
+    }
+}
+function signalScore(signal) {
+    switch (signal) {
+        case "primary_edit_turn":
+            return 0;
+        case "exact_commit_path":
+            return 30;
+        case "commit_file_basename":
+            return 10;
+        case "diff_identifier":
+            return 20;
+        case "response_exact_commit_path":
+            return 18;
+        case "response_basename_or_identifier":
+            return 10;
+        case "commit_subject_overlap":
+            return 4;
+        case "list_or_checklist_shape":
+            return 10;
+        case "multi_line_instruction":
+            return 6;
+        case "inline_code_or_path_shape":
+            return 6;
+        case "substantive_prompt_shape":
+            return 12;
+        case "before_commit_boundary":
+            return 5;
+        case "between_non_excluded_prompts":
+            return 8;
+    }
+}
+function hasBridgeAnchorSignal(signals) {
+    return (signals.includes("exact_commit_path") ||
+        signals.includes("diff_identifier") ||
+        signals.includes("commit_file_basename"));
+}
+function hasTailStructuralAnchorSignal(signals) {
+    return (signals.includes("exact_commit_path") ||
+        signals.includes("diff_identifier") ||
+        signals.includes("commit_file_basename") ||
+        signals.includes("inline_code_or_path_shape") ||
+        signals.includes("substantive_prompt_shape"));
+}
+function hasScopeSignal(signals) {
+    return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
+}
+function isShortSelectionPrompt(prompt) {
+    const trimmed = prompt.trim();
+    if (!trimmed)
+        return true;
+    return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+}
 // ─── Functions ───
 /**
  * Calculate AI ratio.
@@ -36598,6 +36755,13 @@ function buildEntry(opts) {
         if (i.files_touched && i.files_touched.length > 0) {
             base.files_touched = i.files_touched;
         }
+        if (i.selection) {
+            base.selection = {
+                schema: i.selection.schema,
+                source: i.selection.source,
+                signals: [...i.selection.signals],
+            };
+        }
         // Attach tools from interactionTools map (preserving null), or inherit from interaction.
         if (opts.interactionTools?.has(idx)) {
             base.tools = opts.interactionTools.get(idx) ?? null;
@@ -36619,6 +36783,10 @@ function buildEntry(opts) {
     };
 }
 
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: ../cli/src/git.ts
 
 
@@ -37010,8 +37178,16 @@ function renderHeader(report) {
     }
     return lines;
 }
-function renderMarkdown(report) {
+function renderMarkdown(report, opts = {}) {
+    const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
     const lines = [];
+    const visibleInteractionsBySha = new Map();
+    let visiblePromptCount = 0;
+    for (const commit of report.commits) {
+        const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter((interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail));
+        visibleInteractionsBySha.set(commit.sha, interactions);
+        visiblePromptCount += interactions.length;
+    }
     lines.push("## 🧑💬🤖 Agent Note");
     lines.push("");
     lines.push(...renderHeader(report));
@@ -37037,35 +37213,46 @@ function renderMarkdown(report) {
         }
         lines.push("");
     }
-    const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
-    if (withPrompts.length > 0) {
+    const withPrompts = report.commits.filter((commit) => (visibleInteractionsBySha.get(commit.sha)?.length ?? 0) > 0);
+    if (report.total_prompts > 0) {
         lines.push("<details>");
-        lines.push(`<summary>💬 Prompts & Responses (${report.total_prompts} total)</summary>`);
+        lines.push(`<summary>💬 Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`);
         lines.push("");
-        for (const commit of withPrompts) {
-            lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
+        if (withPrompts.length === 0) {
+            lines.push(`_No prompts are shown at the current \`prompt_detail\` setting. Use \`full\` to show every stored prompt._`);
             lines.push("");
-            for (const interaction of mergePromptOnlyDisplayInteractions(commit.interactions)) {
-                const context = renderInteractionContext(interaction);
-                if (context) {
-                    pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
-                    lines.push(">");
-                }
-                const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
-                pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
-                if (interaction.response) {
-                    const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR
-                        ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
-                        : interaction.response;
-                    lines.push(">");
-                    pushBlockquoteSection(lines, "🤖 Response", truncated);
-                }
+        }
+        else {
+            for (const commit of withPrompts) {
+                lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
                 lines.push("");
+                for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
+                    const context = renderInteractionContext(interaction);
+                    if (context) {
+                        pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
+                        lines.push(">");
+                    }
+                    const cleaned = cleanPrompt(interaction.prompt, TRUNCATE_PROMPT_PR);
+                    pushBlockquoteSection(lines, "🧑 Prompt", cleaned);
+                    if (interaction.response) {
+                        const truncated = interaction.response.length > TRUNCATE_RESPONSE_PR
+                            ? `${interaction.response.slice(0, TRUNCATE_RESPONSE_PR)}…`
+                            : interaction.response;
+                        lines.push(">");
+                        pushBlockquoteSection(lines, "🤖 Response", truncated);
+                    }
+                    lines.push("");
+                }
             }
         }
         lines.push("</details>");
     }
     return lines.join("\n");
+}
+function renderPromptSummary(visible, total, detail) {
+    if (detail === "full" || visible === total)
+        return `${total} total`;
+    return `${visible} shown / ${total} total`;
 }
 async function detectBaseBranch() {
     for (const name of ["main", "master", "develop"]) {
@@ -37112,6 +37299,7 @@ function isPromptOnlyDisplayPrefix(interaction) {
         !interaction.context &&
         (!interaction.contexts || interaction.contexts.length === 0) &&
         (!interaction.files_touched || interaction.files_touched.length === 0) &&
+        !interaction.selection &&
         interaction.tools === undefined);
 }
 function cleanContext(context) {
@@ -37156,6 +37344,7 @@ function basename(path) {
 }
 
 ;// CONCATENATED MODULE: ./src/index.ts
+
 
 
 
@@ -37261,6 +37450,7 @@ async function run() {
             `origin/${github_context.payload.pull_request?.base?.ref ?? "main"}`;
         const headSha = github_context.payload.pull_request?.head?.sha;
         const prOutputMode = resolvePrOutputMode(getInput("pr_output"));
+        const promptDetail = parsePromptDetail(getInput("prompt_detail"));
         const token = process.env.GITHUB_TOKEN || "";
         let report = null;
         const maxAttempts = 3;
@@ -37289,7 +37479,7 @@ async function run() {
         setOutput("total_commits", String(report.total_commits ?? 0));
         setOutput("total_prompts", String(report.total_prompts ?? 0));
         setOutput("json", json);
-        const markdown = renderMarkdown(report);
+        const markdown = renderMarkdown(report, { promptDetail });
         setOutput("markdown", markdown);
         await postPrReport(prOutputMode, markdown);
     }
@@ -37300,4 +37490,3 @@ async function run() {
     }
 }
 run();
-
