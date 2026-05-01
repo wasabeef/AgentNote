@@ -453,6 +453,6 @@
   "pull_request": {
     "number": 46,
     "title": "fix(report): simplify prompt detail presets",
-    "state": "open"
+    "state": "merged"
   }
 }
