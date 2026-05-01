@@ -1,0 +1,122 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T16:00:46.205Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "もしかしたら\n\nいまの standard を compact として\n\ncompact (旧standard) と full だけでもいいかもしれない。\nどう思う？",
+      "response": "その案はかなり筋がいいです。いまの `compact` は少し削りすぎで、`standard` が実質「PR body に載せたい既定値」になっているので、preset を 2 段階に整理した方が利用者にも説明しやすいです。念のため、今走らせている集計結果を見てから判断を固めます。\n賛成です。むしろ今の実データを見ると、その方が自然です。\n\n今の挙動はこうです。\n\n- 現 `compact`: high のみ。PR #45 だと `2/7`、直近 note 全体でも約 `8%` しか出ない。かなり削りすぎ。\n- 現 `standard`: high + medium。PR #45 だと `4/7`、直近 note 全体で約 `13%`。実質これが「PR body に載せる compact view」。\n- 現 `full`: 全部。`commit push` や `PR まで作成して` も全部出るので調査用。\n\nなので整理するなら:\n\n- `compact` = 現 `standard`\n- `full` = 全部\n- `standard` は廃止、または `compact` の alias\n\nが一番わかりやすいです。\n\n個人的には、公開前なら `standard` は消して `compact` / `full` の 2 択でいいと思います。`standard` という名前は「標準なのに何を基準に？」となりやすいし、今の `compact` は使い道が薄いです。PR Report の default は `compact`、深掘りしたい人だけ `full` がきれいです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "マージしたので、新しくブランチ切って `prompt_detail` preset の整理 の作業をしてほしい",
+      "response": "`prompt_detail` preset の整理に入ります。まず `main` に戻して最新化し、TODO の内容を確認してから専用ブランチを切ります。今回は preset 変更なので、実装・tests・README / docs / website の更新漏れまで一緒に確認します。\nいま `docs/TODO.md` の追記が未コミットで残っています。これは今回の作業の起点そのものなので、破棄せず新ブランチに引き継いで進めます。\n`prompt_detail` preset を「普段使いで迷わない 2 段階」に寄せる作業として進めます。まず最新 `main` に戻して新しいブランチを切り、未コミットの `docs/TODO.md` は今回の設計メモとして引き継ぎます。\n`TODO.md` の差分は今回の作業内容そのものなので、そのまま持った状態で `main` に移動します。もし `main` 側の更新と衝突したら、その時点で止めて差分を守る方に寄せます。\n`main` への切り替えが `docs/TODO.md` の差分でブロックされました。差分を一時退避してから `main` を最新化し、新ブランチ上で戻します。\n新ブランチ `refactor/prompt-detail-presets` を最新 `main` から切り、`TODO.md` の作業メモも戻しました。次に `prompt_detail` の定義・CLI・Action・docs の参照箇所を洗って、2 preset 化の影響範囲を固めます。\n現状は `compact / standard / full` が実装・docs・website に広く散っています。今回の中身は、ユーザーに見せる preset を `compact = high + medium` と `full = 全件` に整理し、`standard` は表に出さない互換 alias として扱うのが安全そうです。\n実装方針は固めました。`compact` は今までの `standard` と同じ「high + medium」、`full` は全件表示にし、`standard` は docs から消しつつ parser では `compact` alias として受ける形にします。\nまず runtime の真ん中を変えます。ここを 2 preset にしないと、docs だけ直しても実際の PR Report が旧 `compact` のまま削りすぎになります。\n次に設計ドキュメントを実装に合わせます。ここは将来また判断が揺れやすい場所なので、「score/level はそのまま、preset だけ 2 択」という意図が残るように書き換えます。\n公開向けの説明は `compact` と `full` の 2 択に揃えます。`standard` は互換 alias としてコードには残しますが、README / website には出さないようにします。\nコードと docs の表記を一通り `compact / full` に寄せました。ここから build で `dist` を再生成し、型・テストで実際に旧 `standard` alias と新 `compact` 挙動が崩れていないか確認します。\nCLI / PR Report の主要テストは進行中で、ここまで `pr-report` と lint/typecheck は通っています。CLI の統合テストは agent ごとの git fixture を回しているので少し時間がかかっていますが、今のところ失敗は出ていません。\nCLI / PR Report のテストは全通過しました。website は build を確認中です。なお `website` に `lint` script、`packages/pr-report` に `typecheck` script は定義されていないので、その 2 つは実行対象外として扱います。\n生成された `packages/pr-report/dist/index.js` に ncc 由来の trailing whitespace が入っていたので、生成物の整形だけ行います。ソース側の意味は変えません。\n`prompt_detail` preset の整理を実装しました。公開上は `compact` / `full` の 2 択に統一し、`compact` は旧 `standard` 相当の `high + medium`、`full` は全件表示です。既存 workflow の安全弁として `standard` は parser では `compact` alias として受けますが、README / website / Action docs には出さない形にしました。\n\n確認済みです。\n\n- `npm run build --prefix packages/cli`\n- `npm run build --prefix packages/pr-report`\n- `npm run typecheck --prefix packages/cli`\n- `npm run lint --prefix packages/cli`\n- `npm test --prefix packages/cli`\n- `npm test --prefix packages/pr-report`\n- `npm run build --prefix website`\n- `git diff --check`\n\n`website` に `lint` script、`packages/pr-report` に `typecheck` script は未定義でした。変更はまだ未コミットです。",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/cli/src/commands/pr.ts",
+        "packages/cli/src/cli.ts",
+        "action.yml",
+        ".github/workflows/agentnote-pr-report.yml",
+        "packages/pr-report/src/report.test.ts",
+        "packages/cli/src/core/record.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "update_plan",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "PR まで作成して",
+      "response": "`common:commit` と `common:pr-create` を使って、変更内容を意味のある単位で commit し、そのまま push と PR 作成まで進めます。まず差分とブランチ状態を最終確認します。\n差分は動作変更とドキュメント更新に分けるのがきれいです。先に `prompt_detail` の実装・Action default・テスト・bundle を commit し、その後 README / website / docs を別 commit にします。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_basename_or_identifier",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/agentnote-pr-report.yml",
+      "by_ai": true
+    },
+    {
+      "path": "action.yml",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/cli.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/pr.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 78,
+    "method": "file"
+  }
+}
