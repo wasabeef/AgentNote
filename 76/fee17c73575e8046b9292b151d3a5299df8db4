@@ -1,0 +1,107 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-01T16:55:15.055Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージしました",
+      "response": "`main` に戻して最新化しました。working tree は clean です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "ちなみに dashboard って最新の PR",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "ちなみに dashboard って最新の PR しかみれないの？",
+      "response": "いいえ、Dashboard は最新 PR だけを見る想定ではないです。\n\n基本的には `gh-pages/dashboard/notes/*.json` に蓄積された git note data を読んで、Open / Merged を含む PR / commit の履歴を一覧できます。つまり Dashboard workflow が継続して動いていて、過去 PR の note が保存・永続化されていれば、過去の PR も見られる設計です。\n\nただし条件があります。\n\n- PR 作成前や workflow 初回実行前の古い commit は、git note が存在しないと表示できません。\n- Dashboard data が `gh-pages` に persist されていない場合、次回 build で消える可能性があります。\n- PR preview は Pages の deploy timing / environment protection の影響を受けるので、Open PR の反映は merge 後より遅れることがあります。\n- Dashboard 側が取得できるのは Agent Note が記録した commit / PR data だけで、GitHub 上の全 PR を自動で過去まで復元するわけではありません。\n\nなので、「最新 PR だけ」ではなく「保存済み Dashboard data に入っている PR が見える」が正確です。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "いいえ、Dashboard は最新 PR だけを見る想定ではないです。 基本的には `gh-pages/dashboard/notes/*.json` に蓄積された git note data を読んで、Open / Merged を含む PR / commit の履歴を一覧できます。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://wasabeef.github.io/AgentNote/dashboard にアクセスしても\nhttps://wasabeef.github.io/AgentNote/dashboard/?pr=47 にリダイレクトされる\n\n\nhttps://wasabeef.github.io/AgentNote/dashboard/?pr=46 にアクセスしても\nhttps://wasabeef.github.io/AgentNote/dashboard/?pr=47 にリダイレクトされる",
+      "response": "Dashboard の URL selection / redirect logic を確認します。まず live URL の挙動と、local の `packages/dashboard/src/pages/index.astro` 側で `?pr=` をどう扱っているかを突き合わせます。\nlive URL は web fetch 側では取得できませんでしたが、local code に原因候補が見えています。`?pr=` を読んだあとに、初期選択ロジックが最新 PR を上書きしていないかを確認します。\n原因はかなり絞れました。`restoreFromUrl()` は `?pr=46` が `state.index.prs` に存在しない場合、fallback で `state.index.prs[0]`、つまり最新 PR を `selectPR()` して URL を `?pr=47` に書き換えます。なので「46 がない扱い」になっているのが直接原因です。\n次に実データ側を確認します。`gh-pages` に PR #46 の note JSON が残っているかを見ると、frontend の復元ロジック問題なのか、workflow の persist 問題なのかが切り分けられます。\n`origin/gh-pages` を見ると `dashboard/notes` が 1 件、`656a7f0.json` だけです。つまり今回の症状は frontend の表示だけではなく、Dashboard の永続化データ自体が最新 PR で上書きされている状態です。gh-pages の履歴で、どのタイミングで note が 1 件に縮んだかを確認します。\n根本原因は「URL の redirect」ではなく、PR #47 の Dashboard persist が `gh-pages/dashboard/notes` を 1 件だけの snapshot で置き換えたことです。PR #46 の JSON は直前の gh-pages commit には存在していましたが、最新 commit で削除されています。次は persist を “replace all” ではなく “merge latest gh-pages + current snapshot” に変えます。\n`persist-notes.mjs` を小さく refactor して、テストから pure helper を呼べるようにします。動作は「current PR の古い note だけ置き換え、他 PR の note は最新 gh-pages 側を保持」に変えます。\nDashboard の URL が勝手に最新 PR に寄る原因は、UI の選択ではなく `gh-pages` 側の `dashboard/notes` が最新 PR の snapshot で丸ごと置き換わっていることでした。これから persist 処理を「全削除して置換」ではなく「対象 PR の note だけ置換して他 PR を保持」に直します。\n`persist-notes.mjs` はもう途中まで refactor 済みでした。次は workflow から PR 番号を渡すところと、PR #46 の note を消さず PR #47 だけ差し替える regression test を足して仕上げます。\nテストは「PR #46 の note が残り、PR #47 だけ置換される」ケースと、「current PR の snapshot が空なら current PR の古い note だけ消える」ケースを追加しました。これで今回の再発ポイントをかなりピン留めできます。\nローカルの Dashboard build も通りました。念のため live の `gh-pages` 側が本当に PR #47 の note だけになっているかを再確認して、説明の精度を上げます。\nもう一つ UI 側も小さく直します。`?pr=46` のような明示 URL が見つからないときは最新 PR に勝手に書き換えず、「その PR の Dashboard data が見つからない」と表示するほうが誠実です。\n原因は 2 つありました。\n\n`/dashboard` → `?pr=47` は「最新 PR をデフォルト表示」なので想定動作です。\n\n`/dashboard/?pr=46` → `?pr=47` は問題で、`gh-pages` の `dashboard/notes` が PR #47 の snapshot だけで上書きされ、PR #46 の notes が消えていました。その結果、UI が #46 を見つけられず最新 PR に fallback していました。\n\n修正済みです。\n- `persist-notes.mjs` を全置換から merge 方式に変更し、current PR の note だけ置換して他 PR を保持\n- 明示 `?pr=46` が見つからない場合、最新 PR に URL を書き換えず missing 表示\n- regression test 追加\n- `npm test --prefix packages/dashboard`\n- `npm run build --prefix packages/dashboard`\n- `git diff --check`\n\nただし、既に消えた PR #46 の live data は別途 `gh-pages` に復旧が必要です。コミット/PR に進めるなら続けます。\n\nMay the Force be with you.",
+      "files_touched": [
+        "packages/dashboard/workflow/persist-notes.mjs",
+        "action.yml",
+        "packages/dashboard/workflow/sync-notes.test.mjs",
+        "packages/dashboard/src/pages/index.astro",
+        "packages/dashboard/workflow/dashboard-source.test.mjs"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "action.yml",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/dashboard-source.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/persist-notes.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/sync-notes.test.mjs",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
