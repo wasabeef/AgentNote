@@ -108,6 +108,6 @@
   "pull_request": {
     "number": 44,
     "title": "refactor: persist prompt selection evidence",
-    "state": "open"
+    "state": "merged"
   }
 }
