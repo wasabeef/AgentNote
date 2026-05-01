@@ -245,6 +245,8 @@ PR Report Mode 是默认值：
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+如果想让 prompt 历史更短或完整显示，可以把 `prompt_detail` 设为 `compact`、`standard` 或 `full`。默认值是 `standard`。
+
 Dashboard Mode 使用同一个 action，并传入 `dashboard: true`：
 
 ```yaml

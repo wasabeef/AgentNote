@@ -245,6 +245,8 @@ PR Report Mode es el predeterminado:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+Configura `prompt_detail` como `compact`, `standard` o `full` cuando quieras un historial de prompts más corto o completo. El valor predeterminado es `standard`.
+
 Dashboard Mode usa la misma action con `dashboard: true`:
 
 ```yaml

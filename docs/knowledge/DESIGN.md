@@ -405,7 +405,7 @@ agent-note init              add hooks to agent config (commit to share with tea
 agent-note commit [args]       git commit with session context (convenience wrapper)
 agent-note show [commit]       show session details for HEAD or a commit SHA
 agent-note log [n]             list recent commits with session info
-agent-note pr [base] [--json] [--output description|comment] [--update <PR#>]
+agent-note pr [base] [--json] [--output description|comment] [--update <PR#>] [--prompt-detail compact|standard|full]
 agent-note status              show current tracking state
 agent-note hook                handle agent hook events (internal, via stdin, agent-specific)
 agent-note record <session-id> record git note for HEAD (internal, used by post-commit hook)
@@ -428,6 +428,7 @@ Flags: `--agent <name...>`, `--dashboard`, `--no-hooks`, `--no-git-hooks`, `--no
 
 ```bash
 agent-note pr                              # markdown report (table format)
+agent-note pr --prompt-detail compact      # shorter prompt/response details
 agent-note pr --json                       # structured JSON (for scripts/actions)
 agent-note pr --output description --update 42  # upsert into PR description
 agent-note pr --output comment --update 42      # post as PR comment
@@ -491,6 +492,7 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
+| `prompt_detail` | `standard` | Prompt history detail in PR Report: `compact`, `standard`, or `full` |
 | `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report Mode |
 
 ### Action outputs

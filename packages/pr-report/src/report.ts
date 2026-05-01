@@ -5,8 +5,14 @@ import type {
   Attribution,
   InteractionContext,
   InteractionSelection,
+  PromptDetail,
 } from "../../cli/src/core/entry.js";
-import { countAiRatioEligibleFiles, normalizeInteractionContexts } from "../../cli/src/core/entry.js";
+import {
+  DEFAULT_PROMPT_DETAIL,
+  countAiRatioEligibleFiles,
+  normalizeInteractionContexts,
+  shouldRenderInteractionByPromptDetail,
+} from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
@@ -53,6 +59,10 @@ export interface PrReport {
   overall_method: "line" | "file" | "mixed" | "none";
   model: string | null;
   commits: CommitEntry[];
+}
+
+export interface RenderMarkdownOptions {
+  promptDetail?: PromptDetail;
 }
 
 export async function collectReport(
@@ -216,8 +226,19 @@ export function renderHeader(report: PrReport): string[] {
   return lines;
 }
 
-export function renderMarkdown(report: PrReport): string {
+export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {}): string {
+  const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
   const lines: string[] = [];
+  const visibleInteractionsBySha = new Map<string, Interaction[]>();
+  let visiblePromptCount = 0;
+
+  for (const commit of report.commits) {
+    const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter(
+      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail),
+    );
+    visibleInteractionsBySha.set(commit.sha, interactions);
+    visiblePromptCount += interactions.length;
+  }
 
   lines.push("## 🧑💬🤖 Agent Note");
   lines.push("");
@@ -258,17 +279,21 @@ export function renderMarkdown(report: PrReport): string {
     lines.push("");
   }
 
-  const withPrompts = report.commits.filter((commit) => commit.interactions.length > 0);
+  const withPrompts = report.commits.filter(
+    (commit) => (visibleInteractionsBySha.get(commit.sha)?.length ?? 0) > 0,
+  );
   if (withPrompts.length > 0) {
     lines.push("<details>");
-    lines.push(`<summary>💬 Prompts & Responses (${report.total_prompts} total)</summary>`);
+    lines.push(
+      `<summary>💬 Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`,
+    );
     lines.push("");
 
     for (const commit of withPrompts) {
       lines.push(`### ${commitLink(commit, report.repo_url)} ${commit.message}`);
       lines.push("");
 
-      for (const interaction of mergePromptOnlyDisplayInteractions(commit.interactions)) {
+      for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
         const context = renderInteractionContext(interaction);
         if (context) {
           pushBlockquoteSection(lines, "📝 Context", cleanContext(context));
@@ -293,6 +318,11 @@ export function renderMarkdown(report: PrReport): string {
   }
 
   return lines.join("\n");
+}
+
+function renderPromptSummary(visible: number, total: number, detail: PromptDetail): string {
+  if (detail === "full" || visible === total) return `${total} total`;
+  return `${visible} shown / ${total} total`;
 }
 
 export async function detectBaseBranch(): Promise<string | null> {

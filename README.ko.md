@@ -245,6 +245,8 @@ PR Report Mode 가 기본값입니다.
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+prompt 기록을 짧게 보거나 전체로 보려면 `prompt_detail` 을 `compact`, `standard`, `full` 중 하나로 설정할 수 있습니다. 기본값은 `standard` 입니다.
+
 Dashboard Mode 는 같은 action 에 `dashboard: true` 를 전달합니다.
 
 ```yaml

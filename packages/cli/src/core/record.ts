@@ -21,9 +21,17 @@ import type {
   Interaction,
   InteractionSelection,
   LineCounts,
+  PromptRuntimeSelection,
   PromptSelectionSignal,
 } from "./entry.js";
-import { buildEntry, hasGeneratedArtifactMarkers, isGeneratedArtifactPath } from "./entry.js";
+import {
+  buildEntry,
+  hasGeneratedArtifactMarkers,
+  isGeneratedArtifactPath,
+  resolvePromptRuntimeLevel,
+  resolvePromptRuntimeRole,
+  scorePromptRuntime,
+} from "./entry.js";
 import {
   buildCommitContextSignature,
   type CommitContextSignature,
@@ -1211,29 +1219,6 @@ type PromptWindowSelection = {
   consumed: Record<string, unknown>[];
 };
 
-export type PromptSelectionRole =
-  | "primary"
-  | "direct_anchor"
-  | "scope"
-  | "tail"
-  | "anchored_bridge"
-  | "bridge"
-  | "background";
-
-export type PromptRuntimeLevel = "low" | "medium" | "high";
-
-export type PromptRuntimeSelection = {
-  score: number;
-  role: PromptSelectionRole;
-  level: PromptRuntimeLevel;
-};
-
-export type PromptRuntimeContext = {
-  commitFiles: string[];
-  commitSubject: string;
-  diffIdentifiers: Set<string>;
-};
-
 export type PromptSelectionCandidate = {
   prompt: string;
   response: string | null;
@@ -1357,130 +1342,6 @@ function collectPromptSelectionSignals(
   }
 
   return [...new Set(signals)];
-}
-
-function resolvePromptRuntimeRole(
-  source: InteractionSelection["source"],
-  signals: PromptSelectionSignal[],
-  prompt: string,
-): PromptSelectionRole {
-  if (source === "primary" || signals.includes("primary_edit_turn")) return "primary";
-  if (signals.includes("exact_commit_path") || signals.includes("diff_identifier")) {
-    return "direct_anchor";
-  }
-  if (isShortSelectionPrompt(prompt) && hasBridgeAnchorSignal(signals)) {
-    return "anchored_bridge";
-  }
-  if (hasScopeSignal(signals)) return "scope";
-  if (source === "tail") return "tail";
-  if (isShortSelectionPrompt(prompt) && signals.includes("between_non_excluded_prompts")) {
-    return "bridge";
-  }
-  return "background";
-}
-
-function scorePromptRuntime(opts: {
-  role: PromptSelectionRole;
-  signals: PromptSelectionSignal[];
-}): number {
-  let score = roleBaseScore(opts.role);
-  for (const signal of opts.signals) score += signalScore(signal);
-  const [min, max] = roleScoreClamp(opts.role);
-  score = Math.max(min, Math.min(score, max));
-  if (opts.role === "primary") return Math.max(score, 80);
-  if (opts.role === "bridge") return Math.min(score, 44);
-  if (opts.role === "anchored_bridge") return Math.min(score, 65);
-  return score;
-}
-
-function resolvePromptRuntimeLevel(runtime: {
-  score: number;
-  role: PromptSelectionRole;
-}): PromptRuntimeLevel {
-  if (runtime.role === "primary") return "high";
-  if (runtime.role === "bridge") return "low";
-  if (runtime.role === "anchored_bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.score >= 75) return "high";
-  if (runtime.score >= 45) return "medium";
-  return "low";
-}
-
-function roleBaseScore(role: PromptSelectionRole): number {
-  switch (role) {
-    case "primary":
-      return 90;
-    case "direct_anchor":
-      return 75;
-    case "scope":
-      return 60;
-    case "tail":
-    case "anchored_bridge":
-      return 45;
-    case "bridge":
-      return 25;
-    case "background":
-      return 15;
-  }
-}
-
-function roleScoreClamp(role: PromptSelectionRole): [number, number] {
-  switch (role) {
-    case "primary":
-      return [80, 100];
-    case "direct_anchor":
-      return [65, 95];
-    case "scope":
-      return [50, 80];
-    case "tail":
-      return [35, 70];
-    case "anchored_bridge":
-      return [40, 65];
-    case "bridge":
-      return [20, 45];
-    case "background":
-      return [0, 30];
-  }
-}
-
-function signalScore(signal: PromptSelectionSignal): number {
-  switch (signal) {
-    case "primary_edit_turn":
-      return 0;
-    case "exact_commit_path":
-      return 30;
-    case "commit_file_basename":
-      return 10;
-    case "diff_identifier":
-      return 20;
-    case "response_exact_commit_path":
-      return 18;
-    case "response_basename_or_identifier":
-      return 10;
-    case "commit_subject_overlap":
-      return 4;
-    case "list_or_checklist_shape":
-      return 10;
-    case "multi_line_instruction":
-      return 6;
-    case "inline_code_or_path_shape":
-      return 6;
-    case "before_commit_boundary":
-      return 5;
-    case "between_non_excluded_prompts":
-      return 8;
-  }
-}
-
-function hasBridgeAnchorSignal(signals: PromptSelectionSignal[]): boolean {
-  return (
-    signals.includes("exact_commit_path") ||
-    signals.includes("diff_identifier") ||
-    signals.includes("commit_file_basename")
-  );
-}
-
-function hasScopeSignal(signals: PromptSelectionSignal[]): boolean {
-  return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
 }
 
 function hasExactCommitPath(text: string, commitFiles: string[]): boolean {

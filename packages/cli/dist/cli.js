@@ -1900,6 +1900,133 @@ function normalizeInteractionContexts(interaction) {
   }
   return normalized;
 }
+function parsePromptDetail(value) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (!normalized) return DEFAULT_PROMPT_DETAIL;
+  if (normalized === "compact" || normalized === "standard" || normalized === "full") {
+    return normalized;
+  }
+  throw new Error("prompt_detail must be one of: compact, standard, full");
+}
+function shouldRenderInteractionByPromptDetail(interaction, detail) {
+  const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
+  if (detail === "full") return true;
+  if (detail === "standard") return runtime.level !== "low";
+  return runtime.level === "high";
+}
+function resolvePromptRuntimeSelection(selection, interaction) {
+  if (!selection) return { score: 100, role: "primary", level: "high" };
+  const role = resolvePromptRuntimeRole(selection.source, selection.signals, interaction.prompt);
+  const score = scorePromptRuntime({ role, signals: selection.signals });
+  return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
+}
+function resolvePromptRuntimeRole(source, signals, prompt) {
+  if (source === "primary" || signals.includes("primary_edit_turn")) return "primary";
+  if (signals.includes("exact_commit_path") || signals.includes("diff_identifier")) {
+    return "direct_anchor";
+  }
+  if (isShortSelectionPrompt(prompt) && hasBridgeAnchorSignal(signals)) {
+    return "anchored_bridge";
+  }
+  if (hasScopeSignal(signals)) return "scope";
+  if (source === "tail") return "tail";
+  if (isShortSelectionPrompt(prompt) && signals.includes("between_non_excluded_prompts")) {
+    return "bridge";
+  }
+  return "background";
+}
+function scorePromptRuntime(opts) {
+  let score = roleBaseScore(opts.role);
+  for (const signal of opts.signals) score += signalScore(signal);
+  const [min, max] = roleScoreClamp(opts.role);
+  score = Math.max(min, Math.min(score, max));
+  if (opts.role === "primary") return Math.max(score, 80);
+  if (opts.role === "bridge") return Math.min(score, 44);
+  if (opts.role === "anchored_bridge") return Math.min(score, 65);
+  return score;
+}
+function resolvePromptRuntimeLevel(runtime) {
+  if (runtime.role === "primary") return "high";
+  if (runtime.role === "bridge") return "low";
+  if (runtime.role === "anchored_bridge") return runtime.score >= 45 ? "medium" : "low";
+  if (runtime.score >= 75) return "high";
+  if (runtime.score >= 45) return "medium";
+  return "low";
+}
+function roleBaseScore(role) {
+  switch (role) {
+    case "primary":
+      return 90;
+    case "direct_anchor":
+      return 75;
+    case "scope":
+      return 60;
+    case "tail":
+    case "anchored_bridge":
+      return 45;
+    case "bridge":
+      return 25;
+    case "background":
+      return 15;
+  }
+}
+function roleScoreClamp(role) {
+  switch (role) {
+    case "primary":
+      return [80, 100];
+    case "direct_anchor":
+      return [65, 95];
+    case "scope":
+      return [50, 80];
+    case "tail":
+      return [35, 70];
+    case "anchored_bridge":
+      return [40, 65];
+    case "bridge":
+      return [20, 45];
+    case "background":
+      return [0, 30];
+  }
+}
+function signalScore(signal) {
+  switch (signal) {
+    case "primary_edit_turn":
+      return 0;
+    case "exact_commit_path":
+      return 30;
+    case "commit_file_basename":
+      return 10;
+    case "diff_identifier":
+      return 20;
+    case "response_exact_commit_path":
+      return 18;
+    case "response_basename_or_identifier":
+      return 10;
+    case "commit_subject_overlap":
+      return 4;
+    case "list_or_checklist_shape":
+      return 10;
+    case "multi_line_instruction":
+      return 6;
+    case "inline_code_or_path_shape":
+      return 6;
+    case "before_commit_boundary":
+      return 5;
+    case "between_non_excluded_prompts":
+      return 8;
+  }
+}
+function hasBridgeAnchorSignal(signals) {
+  return signals.includes("exact_commit_path") || signals.includes("diff_identifier") || signals.includes("commit_file_basename");
+}
+function hasScopeSignal(signals) {
+  return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
+}
+function isShortSelectionPrompt(prompt) {
+  const trimmed = prompt.trim();
+  if (!trimmed) return true;
+  return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+}
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
     return Math.round(lineCounts.aiAddedLines / lineCounts.totalAddedLines * 100);
@@ -1964,11 +2091,12 @@ function buildEntry(opts) {
     attribution
   };
 }
-var GENERATED_DIR_SEGMENTS, GENERATED_FILE_NAMES, GENERATED_FILE_SUFFIXES, GENERATED_CONTENT_PATTERNS;
+var DEFAULT_PROMPT_DETAIL, GENERATED_DIR_SEGMENTS, GENERATED_FILE_NAMES, GENERATED_FILE_SUFFIXES, GENERATED_CONTENT_PATTERNS;
 var init_entry = __esm({
   "src/core/entry.ts"() {
     "use strict";
     init_constants();
+    DEFAULT_PROMPT_DETAIL = "standard";
     GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([
       // Web / JS / TS build outputs
       ".next",
@@ -3334,112 +3462,10 @@ function collectPromptSelectionSignals(candidate) {
   if (hasMultiLineInstruction(prompt)) signals.push("multi_line_instruction");
   if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
   if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
-  if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
+  if (isShortSelectionPrompt2(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
     signals.push("between_non_excluded_prompts");
   }
   return [...new Set(signals)];
-}
-function resolvePromptRuntimeRole(source, signals, prompt) {
-  if (source === "primary" || signals.includes("primary_edit_turn")) return "primary";
-  if (signals.includes("exact_commit_path") || signals.includes("diff_identifier")) {
-    return "direct_anchor";
-  }
-  if (isShortSelectionPrompt(prompt) && hasBridgeAnchorSignal(signals)) {
-    return "anchored_bridge";
-  }
-  if (hasScopeSignal(signals)) return "scope";
-  if (source === "tail") return "tail";
-  if (isShortSelectionPrompt(prompt) && signals.includes("between_non_excluded_prompts")) {
-    return "bridge";
-  }
-  return "background";
-}
-function scorePromptRuntime(opts) {
-  let score = roleBaseScore(opts.role);
-  for (const signal of opts.signals) score += signalScore(signal);
-  const [min, max] = roleScoreClamp(opts.role);
-  score = Math.max(min, Math.min(score, max));
-  if (opts.role === "primary") return Math.max(score, 80);
-  if (opts.role === "bridge") return Math.min(score, 44);
-  if (opts.role === "anchored_bridge") return Math.min(score, 65);
-  return score;
-}
-function resolvePromptRuntimeLevel(runtime) {
-  if (runtime.role === "primary") return "high";
-  if (runtime.role === "bridge") return "low";
-  if (runtime.role === "anchored_bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.score >= 75) return "high";
-  if (runtime.score >= 45) return "medium";
-  return "low";
-}
-function roleBaseScore(role) {
-  switch (role) {
-    case "primary":
-      return 90;
-    case "direct_anchor":
-      return 75;
-    case "scope":
-      return 60;
-    case "tail":
-    case "anchored_bridge":
-      return 45;
-    case "bridge":
-      return 25;
-    case "background":
-      return 15;
-  }
-}
-function roleScoreClamp(role) {
-  switch (role) {
-    case "primary":
-      return [80, 100];
-    case "direct_anchor":
-      return [65, 95];
-    case "scope":
-      return [50, 80];
-    case "tail":
-      return [35, 70];
-    case "anchored_bridge":
-      return [40, 65];
-    case "bridge":
-      return [20, 45];
-    case "background":
-      return [0, 30];
-  }
-}
-function signalScore(signal) {
-  switch (signal) {
-    case "primary_edit_turn":
-      return 0;
-    case "exact_commit_path":
-      return 30;
-    case "commit_file_basename":
-      return 10;
-    case "diff_identifier":
-      return 20;
-    case "response_exact_commit_path":
-      return 18;
-    case "response_basename_or_identifier":
-      return 10;
-    case "commit_subject_overlap":
-      return 4;
-    case "list_or_checklist_shape":
-      return 10;
-    case "multi_line_instruction":
-      return 6;
-    case "inline_code_or_path_shape":
-      return 6;
-    case "before_commit_boundary":
-      return 5;
-    case "between_non_excluded_prompts":
-      return 8;
-  }
-}
-function hasBridgeAnchorSignal(signals) {
-  return signals.includes("exact_commit_path") || signals.includes("diff_identifier") || signals.includes("commit_file_basename");
-}
-function hasScopeSignal(signals) {
-  return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
 }
 function hasExactCommitPath(text, commitFiles) {
   const lower = text.toLowerCase();
@@ -3480,7 +3506,7 @@ function hasMultiLineInstruction(text) {
 function hasInlineCodeOrPathShape(text) {
   return /`[^`]+`/.test(text) || /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) || /--[a-z0-9-]+/i.test(text);
 }
-function isShortSelectionPrompt(prompt) {
+function isShortSelectionPrompt2(prompt) {
   const trimmed = prompt.trim();
   const lines = trimmed.split("\n").filter((line) => line.trim().length > 0);
   return trimmed.length <= 120 && lines.length <= 3;
@@ -5461,8 +5487,18 @@ function renderHeader(report) {
   }
   return lines;
 }
-function renderMarkdown(report) {
+function renderMarkdown(report, opts = {}) {
+  const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
   const lines = [];
+  const visibleInteractionsBySha = /* @__PURE__ */ new Map();
+  let visiblePromptCount = 0;
+  for (const commit2 of report.commits) {
+    const interactions = mergePromptOnlyDisplayInteractions(commit2.interactions).filter(
+      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail)
+    );
+    visibleInteractionsBySha.set(commit2.sha, interactions);
+    visiblePromptCount += interactions.length;
+  }
   lines.push("## \u{1F9D1}\u{1F4AC}\u{1F916} Agent Note");
   lines.push("");
   lines.push(...renderHeader(report));
@@ -5496,15 +5532,17 @@ function renderMarkdown(report) {
     }
     lines.push("");
   }
-  const withPrompts = report.commits.filter((commit2) => commit2.interactions.length > 0);
+  const withPrompts = report.commits.filter(
+    (commit2) => (visibleInteractionsBySha.get(commit2.sha)?.length ?? 0) > 0
+  );
   if (withPrompts.length > 0) {
     lines.push("<details>");
-    lines.push(`<summary>\u{1F4AC} Prompts & Responses (${report.total_prompts} total)</summary>`);
+    lines.push(`<summary>\u{1F4AC} Prompts & Responses (${renderPromptSummary(visiblePromptCount, report.total_prompts, promptDetail)})</summary>`);
     lines.push("");
     for (const commit2 of withPrompts) {
       lines.push(`### ${commitLink(commit2, report.repo_url)} ${commit2.message}`);
       lines.push("");
-      for (const interaction of mergePromptOnlyDisplayInteractions(commit2.interactions)) {
+      for (const interaction of visibleInteractionsBySha.get(commit2.sha) ?? []) {
         const context = renderInteractionContext(interaction);
         if (context) {
           pushBlockquoteSection(lines, "\u{1F4DD} Context", cleanContext(context));
@@ -5523,6 +5561,10 @@ function renderMarkdown(report) {
     lines.push("</details>");
   }
   return lines.join("\n");
+}
+function renderPromptSummary(visible, total, detail) {
+  if (detail === "full" || visible === total) return `${total} total`;
+  return `${visible} shown / ${total} total`;
 }
 async function detectBaseBranch() {
   for (const name of ["main", "master", "develop"]) {
@@ -5603,15 +5645,22 @@ function basename2(path) {
 }
 
 // src/commands/pr.ts
+init_entry();
 async function pr(args2) {
   const isJson = args2.includes("--json");
   const outputIdx = args2.indexOf("--output");
   const updateIdx = args2.indexOf("--update");
   const headIdx = args2.indexOf("--head");
+  const promptDetailIdx = args2.indexOf("--prompt-detail");
   const prNumber = updateIdx !== -1 ? args2[updateIdx + 1] : null;
   const headRef = headIdx !== -1 ? args2[headIdx + 1] : "HEAD";
+  if (promptDetailIdx !== -1 && !args2[promptDetailIdx + 1]) {
+    console.error("error: --prompt-detail requires compact, standard, or full");
+    process.exit(1);
+  }
+  const promptDetail = promptDetailIdx !== -1 ? parsePromptDetail(args2[promptDetailIdx + 1]) : parsePromptDetail(null);
   const positional = args2.filter(
-    (arg, index) => !arg.startsWith("--") && (outputIdx === -1 || index !== outputIdx + 1) && (updateIdx === -1 || index !== updateIdx + 1) && (headIdx === -1 || index !== headIdx + 1)
+    (arg, index) => !arg.startsWith("--") && (outputIdx === -1 || index !== outputIdx + 1) && (updateIdx === -1 || index !== updateIdx + 1) && (headIdx === -1 || index !== headIdx + 1) && (promptDetailIdx === -1 || index !== promptDetailIdx + 1)
   );
   const base = positional[0] ?? await detectBaseBranch();
   if (!base) {
@@ -5632,7 +5681,7 @@ async function pr(args2) {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
-  const rendered = renderMarkdown(report);
+  const rendered = renderMarkdown(report, { promptDetail });
   if (!prNumber) {
     console.log(rendered);
     return;
@@ -6098,7 +6147,7 @@ usage:
                                     remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
   agent-note log [n]                list recent commits with session info
-  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment]
+  agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|standard|full]
                                     generate PR report or update PR description/comment
   agent-note session <id>           show commits for a session
   agent-note commit [args]          git commit with session tracking

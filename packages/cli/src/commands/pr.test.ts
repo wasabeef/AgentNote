@@ -202,7 +202,7 @@ describe("agentnote pr", () => {
   });
 
   it("includes prompts section in markdown output", () => {
-    const output = execSync(`node ${cliPath} pr HEAD~2`, {
+    const output = execSync(`node ${cliPath} pr HEAD~2 --prompt-detail full`, {
       cwd: testDir,
       encoding: "utf-8",
     });

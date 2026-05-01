@@ -8,6 +8,9 @@ import {
   countAiRatioEligibleFiles,
   hasGeneratedArtifactMarkers,
   isGeneratedArtifactPath,
+  parsePromptDetail,
+  resolvePromptRuntimeSelection,
+  shouldRenderInteractionByPromptDetail,
 } from "./entry.js";
 
 describe("isGeneratedArtifactPath", () => {
@@ -126,6 +129,76 @@ describe("countAiRatioEligibleFiles", () => {
       { path: "Sources/App.swift", by_ai: true },
     ];
     assert.deepEqual(countAiRatioEligibleFiles(files), { total: 1, ai: 1 });
+  });
+});
+
+describe("prompt detail rendering", () => {
+  it("parses prompt detail presets", () => {
+    assert.equal(parsePromptDetail(""), "standard");
+    assert.equal(parsePromptDetail(undefined), "standard");
+    assert.equal(parsePromptDetail("compact"), "compact");
+    assert.equal(parsePromptDetail("STANDARD"), "standard");
+    assert.equal(parsePromptDetail(" full "), "full");
+    assert.throws(() => parsePromptDetail("high"), /prompt_detail/);
+  });
+
+  it("derives runtime levels without persisting score fields", () => {
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: ["exact_commit_path", "commit_file_basename"],
+        },
+        { prompt: "Update packages/cli/src/core/record.ts" },
+      ),
+      { score: 95, role: "direct_anchor", level: "high" },
+    );
+
+    assert.deepEqual(
+      resolvePromptRuntimeSelection(
+        {
+          schema: 1,
+          source: "window",
+          signals: ["between_non_excluded_prompts"],
+        },
+        { prompt: "continue" },
+      ),
+      { score: 33, role: "bridge", level: "low" },
+    );
+  });
+
+  it("maps prompt detail presets to runtime levels", () => {
+    const high = {
+      prompt: "Update packages/cli/src/core/record.ts",
+      selection: {
+        schema: 1 as const,
+        source: "window" as const,
+        signals: ["exact_commit_path" as const],
+      },
+    };
+    const medium = {
+      prompt: "README.md",
+      selection: {
+        schema: 1 as const,
+        source: "tail" as const,
+        signals: ["commit_file_basename" as const],
+      },
+    };
+    const low = {
+      prompt: "continue",
+      selection: {
+        schema: 1 as const,
+        source: "window" as const,
+        signals: ["between_non_excluded_prompts" as const],
+      },
+    };
+
+    assert.equal(shouldRenderInteractionByPromptDetail(high, "compact"), true);
+    assert.equal(shouldRenderInteractionByPromptDetail(medium, "compact"), false);
+    assert.equal(shouldRenderInteractionByPromptDetail(medium, "standard"), true);
+    assert.equal(shouldRenderInteractionByPromptDetail(low, "standard"), false);
+    assert.equal(shouldRenderInteractionByPromptDetail(low, "full"), true);
   });
 });
 
