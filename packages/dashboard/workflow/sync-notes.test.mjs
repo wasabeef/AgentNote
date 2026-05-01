@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { mergeDashboardNotes } from "./persist-notes.mjs";
+import { restoreDashboardNotes } from "./restore-notes.mjs";
 import {
   MAX_DIFF_TOTAL_LINES,
   parseDiffFiles,
@@ -113,6 +114,29 @@ test("mergeDashboardNotes removes stale notes for the current PR when no replace
     assert.deepEqual(readdirSync(dashboardNotesDir).sort(), ["old-pr46.json"]);
     assert.equal(readNoteShortSha(join(dashboardNotesDir, "old-pr46.json")), "old-pr46");
     assert.equal(existsSync(join(dashboardNotesDir, "old-pr47.json")), false);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("restoreDashboardNotes replaces local notes with the persisted gh-pages notes", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-restore-test-"));
+  const persistedNotesDir = join(tempDir, "persisted-notes");
+  const localNotesDir = join(tempDir, "local-notes");
+
+  try {
+    mkdirSync(persistedNotesDir, { recursive: true });
+    mkdirSync(localNotesDir, { recursive: true });
+    writeNote(join(persistedNotesDir, "pr47.json"), 47, "pr47");
+    writeNote(join(persistedNotesDir, "pr48.json"), 48, "pr48");
+    writeNote(join(localNotesDir, "stale-pr46.json"), 46, "stale-pr46");
+
+    const restored = restoreDashboardNotes(persistedNotesDir, localNotesDir);
+
+    assert.equal(restored, 2);
+    assert.deepEqual(readdirSync(localNotesDir).sort(), ["pr47.json", "pr48.json"]);
+    assert.equal(readNoteShortSha(join(localNotesDir, "pr47.json")), "pr47");
+    assert.equal(readNoteShortSha(join(localNotesDir, "pr48.json")), "pr48");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
