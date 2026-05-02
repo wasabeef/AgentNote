@@ -15,6 +15,7 @@ import {
   EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
+  TEXT_ENCODING,
   TURN_FILE,
 } from "./constants.js";
 import type {
@@ -1265,6 +1266,9 @@ const PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
 const PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
 const PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
 const PROMPT_SELECTION_SCHEMA = 1;
+const QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
+const QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
+const QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
 
 function emptyPromptWindowSelection(): PromptWindowSelection {
   return { selected: [], consumed: [] };
@@ -1646,10 +1650,17 @@ function isStructurallyTinyPrompt(prompt: string): boolean {
 
 function isQuotedPromptHistory(prompt: string): boolean {
   if (/🧑\s*Prompt/.test(prompt) && /🤖\s*Response/.test(prompt)) return true;
-  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > 300)
+  if (
+    /\bPrompt:\s/.test(prompt) &&
+    /\bResponse:\s/.test(prompt) &&
+    prompt.length > QUOTED_HISTORY_MIN_PROMPT_CHARS
+  )
     return true;
   const indentedQuoteLines = prompt.match(/^\s{2,}\S/gm)?.length ?? 0;
-  return prompt.length > 500 && indentedQuoteLines >= 8;
+  return (
+    prompt.length > QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS &&
+    indentedQuoteLines >= QUOTED_HISTORY_MIN_INDENTED_LINES
+  );
 }
 
 function scoreTextShape(text: string): number {
@@ -1856,7 +1867,7 @@ async function readCommittedFilePrefix(
         finish(null);
         return;
       }
-      finish(Buffer.concat(chunks).toString("utf-8"));
+      finish(Buffer.concat(chunks).toString(TEXT_ENCODING));
     });
   });
 }
@@ -2191,7 +2202,7 @@ async function readMaxConsumedTurn(sessionDir: string): Promise<number> {
 async function readCurrentTurn(sessionDir: string): Promise<number> {
   const file = join(sessionDir, TURN_FILE);
   if (!existsSync(file)) return 0;
-  return Number.parseInt((await readFile(file, "utf-8")).trim(), 10) || 0;
+  return Number.parseInt((await readFile(file, TEXT_ENCODING)).trim(), 10) || 0;
 }
 
 async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {

@@ -87,6 +87,7 @@ wasabeef/AgentNote/
 
 Other knowledge files are narrower design or research records:
 
+- `../CODING_RULES.md` — coding conventions for constants, comments, Dashboard workflow safety, and verification.
 - `PROMPT_CONTEXT_DESIGN.md` — deterministic `interactions[].contexts[]` selection and display rules.
 - `PROMPT_SELECTION_SCORING_DESIGN.md` — prompt selection evidence, scoring, tail handling, and display-density design.
 - `AGENT_SUPPORT_PROMOTION_PLAN.md` — support-tier gates for promoting agent adapters.

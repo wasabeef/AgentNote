@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs";
 import { appendFile, readFile } from "node:fs/promises";
+import { TEXT_ENCODING } from "./constants.js";
 
 /** Read a specific field from each line of a JSONL file. Deduplicates values. */
 export async function readJsonlField(filePath: string, field: string): Promise<string[]> {
   if (!existsSync(filePath)) return [];
-  const content = await readFile(filePath, "utf-8");
+  const content = await readFile(filePath, TEXT_ENCODING);
   const seen = new Set<string>();
   const values: string[] = [];
   for (const line of content.trim().split("\n")) {
@@ -26,7 +27,7 @@ export async function readJsonlField(filePath: string, field: string): Promise<s
 /** Read all entries from a JSONL file as full objects. */
 export async function readJsonlEntries(filePath: string): Promise<Record<string, unknown>[]> {
   if (!existsSync(filePath)) return [];
-  const content = await readFile(filePath, "utf-8");
+  const content = await readFile(filePath, TEXT_ENCODING);
   const entries: Record<string, unknown>[] = [];
   for (const line of content.trim().split("\n")) {
     if (!line) continue;

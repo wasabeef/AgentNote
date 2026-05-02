@@ -2,11 +2,13 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
+import { AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
 const HOOK_COMMAND = "npx --yes agent-note hook";
 const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
+const ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
 
 const HOOKS_CONFIG = {
   SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
@@ -34,7 +36,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 /** Resolve the Claude data directory (defaults to ~/.claude/). */
 function claudeHome(): string {
-  return process.env.AGENTNOTE_CLAUDE_HOME ?? join(homedir(), ".claude");
+  return process.env[ENV_AGENTNOTE_CLAUDE_HOME] ?? join(homedir(), ".claude");
 }
 
 /** Validate that a session ID looks like a UUID. */
@@ -98,7 +100,7 @@ export const claude: AgentAdapter = {
     let settings: Record<string, unknown> = {};
     if (existsSync(settingsPath)) {
       try {
-        settings = JSON.parse(await readFile(settingsPath, "utf-8"));
+        settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
       } catch {
         settings = {};
       }
@@ -109,7 +111,7 @@ export const claude: AgentAdapter = {
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
         const text = JSON.stringify(entry);
-        return !text.includes("agent-note hook") && !text.includes("cli.js hook");
+        return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
       });
       if (hooks[event].length === 0) delete hooks[event];
     }
@@ -126,13 +128,13 @@ export const claude: AgentAdapter = {
     if (!existsSync(settingsPath)) return;
 
     try {
-      const settings = JSON.parse(await readFile(settingsPath, "utf-8"));
+      const settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
       if (!settings.hooks) return;
 
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return !text.includes("agent-note hook") && !text.includes("cli.js hook");
+          return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -147,7 +149,7 @@ export const claude: AgentAdapter = {
     const settingsPath = join(repoRoot, this.settingsRelPath);
     if (!existsSync(settingsPath)) return false;
     try {
-      const content = await readFile(settingsPath, "utf-8");
+      const content = await readFile(settingsPath, TEXT_ENCODING);
       return content.includes(CLAUDE_HOOK_COMMAND);
     } catch {
       return false;
@@ -267,7 +269,7 @@ export const claude: AgentAdapter = {
     if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
 
     try {
-      const content = await readFile(transcriptPath, "utf-8");
+      const content = await readFile(transcriptPath, TEXT_ENCODING);
       const lines = content.trim().split("\n");
       const interactions: TranscriptInteraction[] = [];
       let pendingPrompt: string | null = null;

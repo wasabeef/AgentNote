@@ -3,6 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
+import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
 
@@ -154,13 +155,19 @@ function repoRoot(): string {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"], {
       cwd: process.cwd(),
-      encoding: "utf-8",
+      encoding: TEXT_ENCODING,
     }).trim();
   } catch {
     return resolve(process.cwd());
   }
 }
 
+/**
+ * Resolve the repo-local Cursor transcript directory.
+ *
+ * Cursor stores transcripts below a sanitized absolute repo path. Tests and
+ * custom local setups can override that root without changing the adapter.
+ */
 function cursorTranscriptDir(): string {
   const override = process.env[CURSOR_TRANSCRIPTS_DIR_ENV]?.trim();
   if (override) return resolve(override);
@@ -343,7 +350,7 @@ function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {
     Object.entries(config.hooks)
       .map(([event, entries]) => [
         event,
-        entries.filter((entry) => !entry.command.includes("agent-note hook")),
+        entries.filter((entry) => !entry.command.includes(AGENTNOTE_HOOK_COMMAND)),
       ])
       .filter(([, entries]) => entries.length > 0),
   );
@@ -382,7 +389,7 @@ export const cursor: AgentAdapter = {
     let hooksConfig: CursorHooksConfig = {};
     if (existsSync(hooksPath)) {
       try {
-        hooksConfig = JSON.parse(await readFile(hooksPath, "utf-8")) as CursorHooksConfig;
+        hooksConfig = JSON.parse(await readFile(hooksPath, TEXT_ENCODING)) as CursorHooksConfig;
       } catch {
         hooksConfig = {};
       }
@@ -396,7 +403,7 @@ export const cursor: AgentAdapter = {
     if (!existsSync(hooksPath)) return;
 
     try {
-      const parsed = JSON.parse(await readFile(hooksPath, "utf-8")) as CursorHooksConfig;
+      const parsed = JSON.parse(await readFile(hooksPath, TEXT_ENCODING)) as CursorHooksConfig;
       await writeFile(hooksPath, `${JSON.stringify(stripAgentnoteHooks(parsed), null, 2)}\n`);
     } catch {
       // leave malformed config untouched
@@ -408,7 +415,7 @@ export const cursor: AgentAdapter = {
     if (!existsSync(hooksPath)) return false;
 
     try {
-      const content = await readFile(hooksPath, "utf-8");
+      const content = await readFile(hooksPath, TEXT_ENCODING);
       return content.includes(HOOK_COMMAND);
     } catch {
       return false;
@@ -522,7 +529,7 @@ export const cursor: AgentAdapter = {
 
     let content = "";
     try {
-      content = await readFile(transcriptPath, "utf-8");
+      content = await readFile(transcriptPath, TEXT_ENCODING);
     } catch {
       return [];
     }

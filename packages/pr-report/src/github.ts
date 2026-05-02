@@ -5,10 +5,18 @@ export const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
+const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+const PR_QUERY_PARAM = "pr";
+const TEXT_ENCODING = "utf-8";
+
 const execFileAsync = promisify(execFile);
 
 /**
- * Resolve PR output mode from the action input.
+ * Resolve the PR report output mode from action input.
+ *
+ * Unknown values intentionally fall back to `description` so a misconfigured
+ * workflow still produces the primary PR report instead of silently doing
+ * nothing.
  */
 export function resolvePrOutputMode(
 	prOutputInput: string,
@@ -24,8 +32,10 @@ export function resolvePrOutputMode(
 }
 
 /**
- * Upsert the agentnote markdown section into a PR description body.
- * Replaces the existing section (begin/end markers) if present, appends if not.
+ * Upsert the Agent Note markdown section into a PR description body.
+ *
+ * The begin/end markers make the update idempotent: existing reports are
+ * replaced in place, while user-written PR description text is preserved.
  */
 export function upsertDescription(
 	existingBody: string,
@@ -61,6 +71,12 @@ export function shouldRetryNotesFetch(report: {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
+/**
+ * Infer the public Dashboard URL from a GitHub remote URL.
+ *
+ * The PR number is appended only for PR reports so the general dashboard route
+ * can remain a team-level entry point without forced `?pr=` redirects.
+ */
 export function inferDashboardUrl(
 	repoUrl: string | null,
 	prNumber?: number | string | null,
@@ -68,7 +84,7 @@ export function inferDashboardUrl(
 	if (!repoUrl) return null;
 
 	const normalized = repoUrl.replace(/\.git$/, "");
-	const match = normalized.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+	const match = normalized.match(GITHUB_REPOSITORY_URL_PATTERN);
 	if (!match) return null;
 
 	const [, owner, repo] = match;
@@ -89,10 +105,16 @@ function appendPrNumber(
 	if (!Number.isInteger(normalized) || normalized <= 0) return dashboardUrl;
 
 	const url = new URL(dashboardUrl);
-	url.searchParams.set("pr", String(normalized));
+	url.searchParams.set(PR_QUERY_PARAM, String(normalized));
 	return url.toString();
 }
 
+/**
+ * Detect whether the GitHub Pages environment restricts deploy branches.
+ *
+ * When protection is enabled, PR previews may wait for approval or merge, so
+ * the PR report can explain why the Dashboard link is not live yet.
+ */
 export function hasDeploymentBranchProtection(
 	policy:
 		| {
@@ -109,6 +131,9 @@ export function hasDeploymentBranchProtection(
 	);
 }
 
+/**
+ * Update a PR description with the current Agent Note report.
+ */
 export async function updatePrDescription(
 	prNumber: string,
 	markdown: string,
@@ -116,10 +141,13 @@ export async function updatePrDescription(
 	const currentBody = await readPrBody(prNumber);
 	const newBody = upsertDescription(currentBody, markdown);
 	await execFileAsync("gh", ["pr", "edit", prNumber, "--body", newBody], {
-		encoding: "utf-8",
+		encoding: TEXT_ENCODING,
 	});
 }
 
+/**
+ * Maintain a single Agent Note PR comment.
+ */
 export async function postPrComment(
 	prNumber: string,
 	content: string,
@@ -138,7 +166,7 @@ export async function postPrComment(
 				"--jq",
 				`.comments[] | select(.body | contains("${COMMENT_MARKER}")) | .id`,
 			],
-			{ encoding: "utf-8" },
+			{ encoding: TEXT_ENCODING },
 		);
 		const commentId = stdout.trim().split("\n")[0];
 		if (commentId) {
@@ -152,7 +180,7 @@ export async function postPrComment(
 					"-f",
 					`body=${body}`,
 				],
-				{ encoding: "utf-8" },
+				{ encoding: TEXT_ENCODING },
 			);
 			return;
 		}
@@ -161,7 +189,7 @@ export async function postPrComment(
 	}
 
 	await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], {
-		encoding: "utf-8",
+		encoding: TEXT_ENCODING,
 	});
 }
 
@@ -173,7 +201,7 @@ async function readPrBody(prNumber: string): Promise<string> {
 	const { stdout } = await execFileAsync(
 		"gh",
 		["pr", "view", prNumber, "--json", "body"],
-		{ encoding: "utf-8" },
+		{ encoding: TEXT_ENCODING },
 	);
 	return JSON.parse(stdout).body ?? "";
 }

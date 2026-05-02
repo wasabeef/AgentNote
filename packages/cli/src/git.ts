@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { TEXT_ENCODING } from "./core/constants.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -18,7 +19,7 @@ type GitCommitCommand = {
 export async function git(args: string[], options?: { cwd?: string }): Promise<string> {
   const { stdout } = await execFileAsync("git", args, {
     cwd: options?.cwd,
-    encoding: "utf-8",
+    encoding: TEXT_ENCODING,
   });
   return stdout.trim();
 }

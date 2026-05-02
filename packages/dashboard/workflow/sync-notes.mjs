@@ -3,24 +3,50 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const notesDir = process.env.NOTES_DIR || ".agentnote-dashboard-notes";
-const eventName = process.env.EVENT_NAME || "";
-const before = process.env.BEFORE_SHA || "";
-const defaultBranch = process.env.DEFAULT_BRANCH || "";
-const head = process.env.HEAD_SHA || "";
-const repo = process.env.GITHUB_REPOSITORY || "";
-const prNumber = Number(process.env.PR_NUMBER || "");
-const prTitle = process.env.PR_TITLE || "";
-const prHeadRepo = process.env.PR_HEAD_REPO || "";
-const refName = process.env.REF_NAME || "";
-const githubOutput = process.env.GITHUB_OUTPUT || "";
-const zeroSha = /^0+$/;
+const AGENTNOTE_GIT_NOTES_REF = "agentnote";
+const AGENTNOTE_NOTES_REF = "refs/notes/agentnote";
+const ACTIONS_FALSE = "false";
+const ACTIONS_TRUE = "true";
+const BINARY_FILES_MARKER = "Binary files ";
+const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
+const DIFF_GIT_PREFIX = "diff --git ";
+const ENV_BEFORE_SHA = "BEFORE_SHA";
+const ENV_DEFAULT_BRANCH = "DEFAULT_BRANCH";
+const ENV_EVENT_NAME = "EVENT_NAME";
+const ENV_GITHUB_OUTPUT = "GITHUB_OUTPUT";
+const ENV_GITHUB_REPOSITORY = "GITHUB_REPOSITORY";
+const ENV_HEAD_SHA = "HEAD_SHA";
+const ENV_NOTES_DIR = "NOTES_DIR";
+const ENV_PR_HEAD_REPO = "PR_HEAD_REPO";
+const ENV_PR_NUMBER = "PR_NUMBER";
+const ENV_PR_TITLE = "PR_TITLE";
+const ENV_REF_NAME = "REF_NAME";
+const EVENT_PULL_REQUEST = "pull_request";
+const GIT_BINARY_PATCH_MARKER = "GIT binary patch";
+const JSON_EXTENSION = ".json";
+const PR_STATE_MERGED = "merged";
+const PR_STATE_OPEN = "open";
+const TEXT_ENCODING = "utf-8";
+const UNKNOWN_DIFF_PATH = "(unknown)";
+const ZERO_SHA_PATTERN = /^0+$/;
+const notesDir = process.env[ENV_NOTES_DIR] || DEFAULT_DASHBOARD_NOTES_DIR;
+const eventName = process.env[ENV_EVENT_NAME] || "";
+const before = process.env[ENV_BEFORE_SHA] || "";
+const defaultBranch = process.env[ENV_DEFAULT_BRANCH] || "";
+const head = process.env[ENV_HEAD_SHA] || "";
+const repo = process.env[ENV_GITHUB_REPOSITORY] || "";
+const prNumber = Number(process.env[ENV_PR_NUMBER] || "");
+const prTitle = process.env[ENV_PR_TITLE] || "";
+const prHeadRepo = process.env[ENV_PR_HEAD_REPO] || "";
+const refName = process.env[ENV_REF_NAME] || "";
+const githubOutput = process.env[ENV_GITHUB_OUTPUT] || "";
+
 export const MAX_DIFF_LINES_PER_FILE = 1000;
 export const MAX_DIFF_TOTAL_LINES = 3000;
 
 function run(command, args) {
   return execFileSync(command, args, {
-    encoding: "utf-8",
+    encoding: TEXT_ENCODING,
     stdio: ["pipe", "pipe", "pipe"],
     env: process.env,
   }).trim();
@@ -29,7 +55,7 @@ function run(command, args) {
 function readGitNote(sha) {
   let raw = "";
   try {
-    raw = run("git", ["notes", "--ref=agentnote", "show", sha]);
+    raw = run("git", ["notes", `--ref=${AGENTNOTE_GIT_NOTES_REF}`, "show", sha]);
   } catch {
     return null;
   }
@@ -60,6 +86,12 @@ function readCommitMetadata(sha) {
   }
 }
 
+/**
+ * Normalize commit metadata for a Dashboard note.
+ *
+ * Older note files may not include enough commit fields for the UI, so git is
+ * used as the source of truth when metadata is missing.
+ */
 function buildDashboardCommit(sha, commit) {
   const fallback = readCommitMetadata(typeof commit?.sha === "string" ? commit.sha : sha);
   const resolvedSha =
@@ -92,7 +124,7 @@ function buildDashboardCommit(sha, commit) {
 
 function createDiffFile(path) {
   return {
-    path: path || "(unknown)",
+    path: path || UNKNOWN_DIFF_PATH,
     lines: [],
     truncated: false,
     binary: false,
@@ -104,13 +136,19 @@ function normalizeDiffPath(rawPath) {
   return rawPath.replace(/^[ab]\//, "");
 }
 
+/**
+ * Convert a unified git diff into the compact Dashboard diff payload.
+ *
+ * Line caps keep the persisted Pages data bounded while still exposing enough
+ * code context for review-oriented browsing.
+ */
 export function parseDiffFiles(rawDiff) {
   const files = [];
   let current = null;
   let totalLines = 0;
 
   for (const line of rawDiff.split("\n")) {
-    if (line.startsWith("diff --git ")) {
+    if (line.startsWith(DIFF_GIT_PREFIX)) {
       const match = line.match(/^diff --git a\/(.+?) b\/(.+)$/);
       current = createDiffFile(match ? match[2] : "");
       files.push(current);
@@ -118,7 +156,7 @@ export function parseDiffFiles(rawDiff) {
     }
 
     if (!current) continue;
-    if (line.startsWith("GIT binary patch") || line.startsWith("Binary files ")) {
+    if (line.startsWith(GIT_BINARY_PATCH_MARKER) || line.startsWith(BINARY_FILES_MARKER)) {
       current.binary = true;
       current.truncated = true;
       current.lines = [];
@@ -167,6 +205,12 @@ function needsDiff(note) {
   return !Array.isArray(note?.diff?.files) || note.diff.files.length === 0;
 }
 
+/**
+ * Materialize one Agent Note git note as Dashboard JSON.
+ *
+ * The output is static data consumed by the browser; missing diff data is
+ * populated here so old and new notes share one UI format.
+ */
 function writeDashboardNote(sha, pullRequest) {
   const note = readGitNote(sha);
   if (!note) return false;
@@ -193,18 +237,24 @@ function writeDashboardNote(sha, pullRequest) {
 
 function listNoteFiles() {
   return readdirSync(notesDir)
-    .filter((name) => name.endsWith(".json"))
+    .filter((name) => name.endsWith(JSON_EXTENSION))
     .map((name) => join(notesDir, name));
 }
 
 function readDashboardNote(path) {
   try {
-    return JSON.parse(readFileSync(path, "utf-8"));
+    return JSON.parse(readFileSync(path, TEXT_ENCODING));
   } catch {
     return null;
   }
 }
 
+/**
+ * Backfill restored Dashboard notes before writing new data.
+ *
+ * This keeps existing gh-pages history compatible when schema fields such as
+ * commit metadata or diff payloads are added after notes were first published.
+ */
 function backfillDashboardNotes() {
   for (const path of listNoteFiles()) {
     const note = readDashboardNote(path);
@@ -285,7 +335,7 @@ function fetchCommitPulls(sha) {
 }
 
 function buildCommitRange() {
-  if (before && !zeroSha.test(before)) {
+  if (before && !ZERO_SHA_PATTERN.test(before)) {
     return run("git", ["rev-list", "--reverse", `${before}..${head}`])
       .split(/\s+/)
       .filter(Boolean);
@@ -304,24 +354,30 @@ function setFlags({ build, persist, deploy }) {
   setOutput("should_deploy", deploy);
 }
 
+/**
+ * Sync Agent Note git notes into Dashboard JSON for the current workflow event.
+ *
+ * Pull request events write open PR snapshots, while default-branch push events
+ * update merged PR state by asking GitHub which PRs contain each commit.
+ */
 function main() {
   mkdirSync(notesDir, { recursive: true });
 
   try {
-    execFileSync("git", ["fetch", "origin", "refs/notes/agentnote:refs/notes/agentnote"], {
+    execFileSync("git", ["fetch", "origin", `${AGENTNOTE_NOTES_REF}:${AGENTNOTE_NOTES_REF}`], {
       stdio: "pipe",
-      encoding: "utf-8",
+      encoding: TEXT_ENCODING,
     });
   } catch {
-    // allow empty note refs
+    // A repository may not have Agent Note git notes before the first recorded commit.
   }
 
   backfillDashboardNotes();
 
-  if (eventName === "pull_request") {
+  if (eventName === EVENT_PULL_REQUEST) {
     if (!Number.isInteger(prNumber) || !prTitle) {
       console.log("Pull request metadata is missing.");
-      setFlags({ build: "false", persist: "false", deploy: "false" });
+      setFlags({ build: ACTIONS_FALSE, persist: ACTIONS_FALSE, deploy: ACTIONS_FALSE });
       return;
     }
 
@@ -331,16 +387,16 @@ function main() {
     }
 
     setFlags({
-      build: "true",
-      persist: isForkPullRequest ? "false" : "true",
-      deploy: isForkPullRequest ? "false" : "true",
+      build: ACTIONS_TRUE,
+      persist: isForkPullRequest ? ACTIONS_FALSE : ACTIONS_TRUE,
+      deploy: isForkPullRequest ? ACTIONS_FALSE : ACTIONS_TRUE,
     });
     removeNotesForPr(prNumber);
 
     const pullRequest = {
       number: prNumber,
       title: prTitle,
-      state: "open",
+      state: PR_STATE_OPEN,
     };
 
     for (const sha of fetchPullRequestCommits(prNumber)) {
@@ -351,11 +407,11 @@ function main() {
 
   if (defaultBranch && refName && refName !== defaultBranch) {
     console.log(`Skip Dashboard publish on non-default branch ${refName}.`);
-    setFlags({ build: "false", persist: "false", deploy: "false" });
+    setFlags({ build: ACTIONS_FALSE, persist: ACTIONS_FALSE, deploy: ACTIONS_FALSE });
     return;
   }
 
-  setFlags({ build: "true", persist: "true", deploy: "true" });
+  setFlags({ build: ACTIONS_TRUE, persist: ACTIONS_TRUE, deploy: ACTIONS_TRUE });
   const mergedPullRequests = new Map();
   for (const sha of buildCommitRange()) {
     const pulls = fetchCommitPulls(sha);
@@ -370,7 +426,7 @@ function main() {
         ? {
             number: pull.number,
             title: pull.title,
-            state: pull.merged_at ? "merged" : "open",
+            state: pull.merged_at ? PR_STATE_MERGED : PR_STATE_OPEN,
           }
         : null;
 

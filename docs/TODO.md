@@ -2,7 +2,15 @@
 
 ## 未解決の調査
 
-なし
+### PR #49 prompt selection に過去タスクの prompt が混入する
+
+- 対象 PR: `#49`
+- 対象 commit: `ae056f4 refactor: centralize constants`
+- 観測結果: PR body の Agent Note に、今回の定数化とは関係ない `もう次の作業はないので、プロンプト選択の改善をもう一度やってみよう` と `https://wasabeef.github.io/AgentNote/dashboard のリダイレクトはなおった？` が表示されました。
+- 原因候補: 同じ長い session 内で、今回タスク開始前の prompt が `primary` / `window` として残っています。特に前者は過去タスクで `packages/cli/src/core/constants.ts` / `packages/cli/src/commands/init.ts` を触っており、今回 commit でも同じ file が含まれたため、古い primary edit turn が復活した可能性があります。
+- 問題: `prompt_detail=compact` でも関係ない過去タスクの prompt が出ると、PR の作業意図が読みにくくなります。`selection.signals` が強くても、現在の task boundary より前の prompt は current commit から除外できる必要があります。
+- 調査方針: session 内の明確な task start / branch switch / first current-task edit を boundary として扱えるか、または previous commit / consumed marker だけでは切れない長期 session の stale primary をどう抑えるかを検討します。keyword list ではなく、turn boundary、branch creation、commit boundary、current-task first edit、path ownership などの structural signal を優先します。
+- Regression case: PR #49 の `ae056f4` note を fixture 化し、今回タスクの prompt (`ちょっとここでリファクタリングしたい`, `docs/ 以下にコーディングルール`, `全てのファイルを精査`, `定数化の作業が終わったら...`) は残し、過去の prompt selection / dashboard redirect prompt は落ちることを検証します。
 
 ## 解決済みの調査
 
