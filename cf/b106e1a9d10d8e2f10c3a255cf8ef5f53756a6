@@ -1,0 +1,1140 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-02T07:04:51.676Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "website で追加したほうが良いページとかある？",
+      "response": "website の現状メニューと docs 構成を見て、追加したほうが価値のあるページを絞ります。使い手が迷う導線と、公開前に信頼感を上げる導線の両方で確認します。\n現状はかなり絞られていて、Basics と GitHub の 5 ページ構成です。追加候補はたくさん作れますが、今のサイトの良さを壊さないなら「ユーザーが次に詰まる場所」だけをページ化するのがよさそうです。\n追加するなら、優先度高いのはこの 3 つだと思います。\n\n1. **Troubleshooting / FAQ**\n   一番ほしいです。`PR Report に出ない`、`Dashboard に No data`、`git notes が fetch されない`、`hook が動かない`、`Pages が 404` みたいな実運用の詰まりどころを集約するページ。公開後の問い合わせ削減に効きます。\n\n2. **Agent Support**\n   今は `Getting Started` と `How It Works` に分散しています。Claude / Codex / Cursor / Gemini それぞれで「何が取れるか」「line-level になる条件」「取れないケース」を 1 ページにすると信頼感が上がります。\n\n3. **Data & Privacy**\n   Agent Note の強みである「backend なし」「git notes 保存」「telemetry なし」「何を保存するか」をまとめるページ。OSS として導入判断する人にはかなり刺さるはずです。\n\n追加するなら sidebar はこんな感じが自然です。\n\n```text\nBasics\n  Getting Started\n  Commands\n  How It Works\n\nGitHub\n  GitHub Action\n  Dashboard\n\nReference\n  Agent Support\n  Data & Privacy\n  Troubleshooting\n```\n\n最初に作るなら **Troubleshooting** が一番 ROI 高いです。次に **Agent Support**。`Data & Privacy` は README / How It Works の情報を整理するだけでもかなり良くなります。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "website の現状メニューと docs 構成を見て、追加したほうが価値のあるページを絞ります。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "あなたが考える最良の構成にしてほしい他のOSSを参考に。\n\n各ページ内のセクションにおける文字量は今くらいのが適切かなと思います。\n\nブランチきって作業してほしい。なお、確認できるように localhost をあとで立ち上げて",
+      "response": "website を「導入で迷わない」「運用で詰まらない」「OSS として信頼できる」の 3 軸で組み替えます。まず main から専用ブランチを切り、OSS docs の構成を軽く確認したうえで、ページ追加と sidebar 再設計を進めます。\n参考にした OSS docs では、Next.js が「Getting Started / Guides / API Reference」の 3 層で入口を整理し、Vite は独立した Troubleshooting を持っています。Agent Note は小さめの OSS なので、重厚な API Reference ではなく `Reference` グループに `Agent Support`、`Data & Privacy`、`Troubleshooting` を足すのが最良だと判断しました。\nこれから追加するのは 3 ページに絞ります。`Troubleshooting` は問い合わせ削減、`Agent Support` は導入判断、`Data & Privacy` は OSS としての信頼感を補うためのページです。\n英語版の新規 3 ページと sidebar は入りました。次に日本語版を同じ粒度で追加し、その後ほかの locale も短くならないように同じセクション構成で揃えます。\n全 locale に新しい 3 ページを追加しました。次は既存ページからの導線を軽くつなぎ、重複説明が増えすぎないように homepage / getting-started / GitHub 系から Reference ページへ自然に逃がします。\n既存ページから Reference への導線も追加しました。英語と日本語は homepage / getting started / GitHub Action / Dashboard / How It Works から直接つながるようにして、他 locale は sidebar から同等ページへ入れる構成です。\nbuild は成功しました。Starlight が新しい 109 ページを生成できているので、slug や locale 追加の破綻はありません。確認用に localhost を起動します。\nブランチ `docs/website-reference-pages` で作業しました。\n\n追加した構成は、Next.js docs と Vite docs のような「入口 / GitHub 連携 / Reference / Troubleshooting」を分ける形に寄せています。\n参考: https://nextjs.org/docs, https://vite.dev/guide/troubleshooting\n\n追加内容:\n- `Reference` sidebar group を追加\n- `Agent Support`\n- `Data & Privacy`\n- `Troubleshooting`\n- 全 12 locale 分の新規ページを追加\n- 英語 / 日本語の既存主要ページから新 Reference ページへ導線を追加\n\n確認:\n- `npm run build` pass\n- localhost 起動済み\n\nURL:\n`http://127.0.0.1:4321/AgentNote/`\n\nまだ commit はしていません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "website を「導入で迷わない」「運用で詰まらない」「OSS として信頼できる」の 3 軸で組み替えます。 まず main から専用ブランチを切り、OSS docs の構成を軽く確認したうえで、ページ追加と sidebar 再設計を進めます。"
+        }
+      ],
+      "files_touched": [
+        "website/astro.config.mjs",
+        "website/src/content/docs/agent-support.mdx",
+        "website/src/content/docs/data-and-privacy.mdx",
+        "website/src/content/docs/troubleshooting.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/ja/data-and-privacy.mdx",
+        "website/src/content/docs/ja/troubleshooting.mdx",
+        "website/src/content/docs/fr/agent-support.mdx",
+        "website/src/content/docs/fr/data-and-privacy.mdx",
+        "website/src/content/docs/fr/troubleshooting.mdx",
+        "website/src/content/docs/de/agent-support.mdx",
+        "website/src/content/docs/de/data-and-privacy.mdx",
+        "website/src/content/docs/de/troubleshooting.mdx",
+        "website/src/content/docs/es/agent-support.mdx",
+        "website/src/content/docs/es/data-and-privacy.mdx",
+        "website/src/content/docs/es/troubleshooting.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/it/data-and-privacy.mdx",
+        "website/src/content/docs/it/troubleshooting.mdx",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/ko/data-and-privacy.mdx",
+        "website/src/content/docs/ko/troubleshooting.mdx",
+        "website/src/content/docs/zh-cn/agent-support.mdx",
+        "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "website/src/content/docs/zh-cn/troubleshooting.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx",
+        "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "website/src/content/docs/zh-tw/troubleshooting.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/ru/data-and-privacy.mdx",
+        "website/src/content/docs/ru/troubleshooting.mdx",
+        "website/src/content/docs/id/agent-support.mdx",
+        "website/src/content/docs/id/data-and-privacy.mdx",
+        "website/src/content/docs/id/troubleshooting.mdx",
+        "website/src/content/docs/pt-br/agent-support.mdx",
+        "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "website/src/content/docs/pt-br/troubleshooting.mdx",
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/getting-started.mdx",
+        "website/src/content/docs/github-action.mdx",
+        "website/src/content/docs/dashboard.mdx",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/ja/getting-started.mdx",
+        "website/src/content/docs/ja/github-action.mdx",
+        "website/src/content/docs/ja/dashboard.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "compact は high と medium prompt を表示します。\nfull は保存された prompt をすべて表示します。\n\n\nユーザーには high とか medium とかはわからないので説明をもっとわかりやすく",
+      "response": "`high / medium` は内部分類なので、ユーザー向けには確かに露出しないほうが自然です。`compact` は「通常レビューに必要な prompt」、`full` は「保存済みを全部」という表現に寄せて、全言語の該当箇所を直します。\n該当は今回追加した Troubleshooting だけでなく、README と GitHub Action / Commands の説明にも残っていました。公開 docs / README から `high + medium` を消して、内部用語ではなく「PR review に必要な会話」「保存済みすべて」に統一します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "該当は今回追加した Troubleshooting だけでなく、README と GitHub Action / Commands の説明にも残っていました。 公開 docs / README から `high + medium` を消して、内部用語ではなく「PR review に必要な会話」「保存済みすべて」に統一します。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "他にもそういうノノがないか全チェック",
+      "response": "全体を見ます。`high / medium / low` や `score / runtime level` みたいな内部分類が、README / website のユーザー向け説明に漏れていないか洗い出して、必要なものだけ言い換えます。\n確認したところ、README の多言語版と各 locale の GitHub Action / Troubleshooting にまだ残っていました。内部設計書の `PROMPT_SELECTION_SCORING_DESIGN.md` は開発者向けの scoring 設計なので残しますが、ユーザー向け docs からは消します。\n多言語 README と website locale の該当箇所を直しました。次に、ユーザー向け範囲で内部分類語が残っていないか再スキャンします。\n追加で TODO の説明文も直しました。内部設計書にある scoring 用語は実装設計の説明として残し、README / website / TODO のユーザー寄り説明では出ない状態に寄せています。\n全チェックして修正しました。\n\nユーザー向けの `README*`、`website/src/content/docs/**`、`docs/TODO.md`、`docs/knowledge/DESIGN.md` から `high + medium` のような内部分類説明は消しました。今は `compact` を「commit の説明に必要な prompt を中心に表示」、`full` を「保存された prompt をすべて表示」という説明に統一しています。\n\n`docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` だけは内部設計ドキュメントなので、`high / medium / low` や score の説明を残しています。\n\n確認済み:\n- 内部分類語の再スキャン: public docs 範囲では該当なし\n- `npm run build` pass\n\nlocalhost は引き続き `http://127.0.0.1:4321/AgentNote/` です。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`high / medium / low` や `score / runtime level` みたいな内部分類が、README / website のユーザー向け説明に漏れていないか洗い出して、必要なものだけ言い換えます。 確認したところ、README の多言語版と各 locale の GitHub Action / Troubleshooting にまだ残っていました。"
+        }
+      ],
+      "files_touched": [
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/fr/github-action.mdx",
+        "website/src/content/docs/fr/troubleshooting.mdx",
+        "website/src/content/docs/de/github-action.mdx",
+        "website/src/content/docs/de/troubleshooting.mdx",
+        "website/src/content/docs/es/github-action.mdx",
+        "website/src/content/docs/es/troubleshooting.mdx",
+        "website/src/content/docs/it/github-action.mdx",
+        "website/src/content/docs/it/troubleshooting.mdx",
+        "website/src/content/docs/ko/github-action.mdx",
+        "website/src/content/docs/ko/troubleshooting.mdx",
+        "website/src/content/docs/zh-cn/github-action.mdx",
+        "website/src/content/docs/zh-cn/troubleshooting.mdx",
+        "website/src/content/docs/zh-tw/github-action.mdx",
+        "website/src/content/docs/zh-tw/troubleshooting.mdx",
+        "website/src/content/docs/ru/github-action.mdx",
+        "website/src/content/docs/ru/troubleshooting.mdx",
+        "website/src/content/docs/id/github-action.mdx",
+        "website/src/content/docs/id/troubleshooting.mdx",
+        "website/src/content/docs/pt-br/github-action.mdx",
+        "website/src/content/docs/pt-br/troubleshooting.mdx",
+        "docs/TODO.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "１０回以上改善ループ繰り返して、他のOSS参考にして",
+      "response": "10 回以上の改善ループで、構成・導線・言葉・多言語差分をかなり厳しめに見直します。まず他 OSS docs の構成をもう一段確認して、そこから Agent Note に必要な改善だけを実装します。\n他 OSS を見たうえで、10 回の改善観点を走らせます。参考にする型は、Next.js の “How to use the docs / Next Steps”、Vite の症状別 Troubleshooting、Playwright の設定 table、Prisma の prerequisite / step flow です。\n10 回以上の改善ループとして、単なる文言修正ではなく「初回導線」「参照ページ」「トラブル時の迷い」「公開前の安心感」「多言語での自然さ」を順番に潰します。まず現状の差分と該当ページをもう一度見て、他 OSS の docs でよくある構成に寄せながら実装します。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "自然な文言になることを心がけてね",
+      "response": "自然な文言チェックには `common:style-ai-writing` を使います。ここからは「OSS docs の導線を参考にする」→「人間が読む文章として不自然な箇所を削る」→「全 locale と build で検証」の順に進めます。\n参考にした OSS docs では、Next.js は「Getting Started / Reference」の分離、Prisma は「Choose Your Path」、Vite は症状別の Troubleshooting、Playwright は最初に何を学べるかを明示する構成が強いです。Agent Note 側も同じく、トップで迷わない導線を作り、詳細は Reference に逃がす形へ寄せます。\n全体スキャンで、`compact` の説明はだいぶ自然になっていました。一方で日本語ページには「current commit」「structural anchor」など内部実装寄りの語がまだ少し残っているので、ユーザー向けページでは「今回の commit」「変更ファイル名や code identifier」のように読める表現へ寄せます。\nここから編集に入ります。今回の編集は、OSS docs でよく見る「迷ったらここ」「症状別に進む」「公開前に確認する」を追加しつつ、内部実装語が前に出すぎている箇所を自然な説明へ落とします。\nトップページの「次に読むページ」は、英語と日本語だけだと導線が locale ごとに不揃いになります。ここは全 locale に同じ役割の短い表を入れて、文量を増やしすぎずにナビゲーションだけ揃えます。",
+      "files_touched": [
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/troubleshooting.mdx",
+        "website/src/content/docs/ja/troubleshooting.mdx",
+        "website/src/content/docs/data-and-privacy.mdx",
+        "website/src/content/docs/ja/data-and-privacy.mdx",
+        "website/src/content/docs/agent-support.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "ちゃんと各言語同等のものを作ってね",
+      "response": "その通りです。今のままだと英語・日本語だけ導線が厚くなり、他 locale が置いていかれるので、同じ役割のセクションを全言語に入れます。まず各 locale の見出し差分を確認して、見出し名に合わせて確実に patch します。\n全 locale のトップ導線は揃いました。続いて、新しく追加した Reference の 3 ページも「英語・日本語だけ詳細」という状態を避け、Agent Support / Data & Privacy / Troubleshooting に同じ役割の表を全言語へ入れます。",
+      "files_touched": [
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/fr/agent-support.mdx",
+        "website/src/content/docs/de/agent-support.mdx",
+        "website/src/content/docs/es/agent-support.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/zh-cn/agent-support.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/id/agent-support.mdx",
+        "website/src/content/docs/pt-br/agent-support.mdx",
+        "website/src/content/docs/fr/data-and-privacy.mdx",
+        "website/src/content/docs/de/data-and-privacy.mdx",
+        "website/src/content/docs/es/data-and-privacy.mdx",
+        "website/src/content/docs/it/data-and-privacy.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "英語をベースにしていると思うが各言語の翻訳は完璧なものにしてほしい",
+      "response": "英語を下敷きにしつつ、各言語は「直訳」ではなく、その言語で自然に読める形へ寄せます。完璧という言葉は軽く扱いたくないので、全 locale で役割が同等か、用語が不自然に英語のまま残っていないか、追加した Reference ページのセクション差分がないかを順に潰します。\nReference 追加分の構造差分はかなり減りました。次は Troubleshooting に全言語で「症状から探す」と「Dashboard が違う PR を開く」を追加して、英語・日本語だけが厚い状態を解消します。\n追加した表は全言語に入りました。次の改善ループでは、翻訳として不自然な「AI-authored committed file」「structural anchor」「successful deploy」みたいな内部英語混じりを、各言語で読める説明に置き換えます。",
+      "files_touched": [
+        "website/src/content/docs/ko/data-and-privacy.mdx",
+        "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "website/src/content/docs/ru/data-and-privacy.mdx",
+        "website/src/content/docs/id/data-and-privacy.mdx",
+        "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "website/src/content/docs/fr/troubleshooting.mdx",
+        "website/src/content/docs/de/troubleshooting.mdx",
+        "website/src/content/docs/es/troubleshooting.mdx",
+        "website/src/content/docs/it/troubleshooting.mdx",
+        "website/src/content/docs/ko/troubleshooting.mdx",
+        "website/src/content/docs/zh-cn/troubleshooting.mdx",
+        "website/src/content/docs/zh-tw/troubleshooting.mdx",
+        "website/src/content/docs/ru/troubleshooting.mdx",
+        "website/src/content/docs/id/troubleshooting.mdx",
+        "website/src/content/docs/pt-br/troubleshooting.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "色々なドキュメントを参考にして100回見直してほしい。",
+      "response": "100 回を「気合いで眺める」ではなく、ちゃんと検査項目に分解します。Next.js / Vite / Playwright / Prisma / Starlight 系の docs で使われている導線を参考にしつつ、12 locale × 複数観点で構造・翻訳・用語・リンク・build を機械的にも目視でも回します。\n参考にした構成は、Next.js の “Next Steps”、Prisma の “Choose Your Path”、Vite の症状別 Troubleshooting、Playwright の初回導線です。これを Agent Note に写すなら、トップは「次に読む」、Troubleshooting は「症状から探す」、Reference は「期待値で選ぶ / 公開前に確認する」が自然です。\n「完璧な翻訳」に近づけるなら、本文だけでなく表のヘッダーも locale に合わせる必要があります。`Field / Purpose` や `Layer / Location / Shared?` が非英語ページに残っていたので、ここをまず揃えます。\nここまでで、追加した導線は 12 locale 全部に入りました。次は「100 回以上」の部分を、実際に 200+ 個の構造チェックとして走らせます。人間の目だけに頼ると抜けるので、各 locale のページ・見出し・必須リンク・表の行を機械的に検査します。\n次に `how-it-works` の `📝 Context` 説明を見直します。ここは実装寄りのページですが、`structural anchor` という言葉をそのまま出すと読者が一瞬止まるので、各言語で「file 名 / code identifier などの手がかり」として説明します。",
+      "files_touched": [
+        "website/src/content/docs/ja/data-and-privacy.mdx",
+        "website/src/content/docs/fr/data-and-privacy.mdx",
+        "website/src/content/docs/de/data-and-privacy.mdx",
+        "website/src/content/docs/es/data-and-privacy.mdx",
+        "website/src/content/docs/it/data-and-privacy.mdx",
+        "website/src/content/docs/ko/data-and-privacy.mdx",
+        "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "website/src/content/docs/ru/data-and-privacy.mdx",
+        "website/src/content/docs/id/data-and-privacy.mdx",
+        "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "website/src/content/docs/de/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/id/agent-support.mdx",
+        "website/src/content/docs/pt-br/agent-support.mdx",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "技術用語みたいなのは無理に翻訳する必要はないからね",
+      "response": "了解です。`git notes`、`Dashboard`、`PR Report`、`prompt`、`response`、`attribution` みたいな製品・技術用語は残しつつ、読者が詰まりやすい説明語だけ自然にします。ここからは「翻訳しすぎ」を戻す観点も入れて見直します。\n技術語を残す方針に合わせ、`Agent Note service` などは無理に訳さずそのままでもよい一方、非英語の `No` だけは表として不自然なので修正します。あと README の一部に残っている `AI-authored files` は技術語として残してよいですが、各言語で自然にする余地があります。\n機械チェックは 216 件通過済みで、そこからさらに翻訳の不自然さを数件直しました。ここで一度 build して、リンク解決や Starlight sidebar が壊れていないか確認します。\nBuild は通りました。Starlight が 109 pages を生成し、新しい Reference ページも全 locale で route 化されています。最後に差分全体、リンク導線、残っている不自然語をもう一段スキャンして、100 回レビュー相当のチェック結果としてまとめられる状態にします。\nlocalhost は応答しています。`/AgentNote/`、`/AgentNote/ja/troubleshooting/`、`/AgentNote/fr/data-and-privacy/` が 200 でした。PID は変わっていそうですが、確認 URL はそのまま使えます。\nwebsite docs を 100 回レビュー相当の観点に分解して見直しました。参考にしたのは [Next.js Docs](https://nextjs.org/docs)、[Vite Troubleshooting](https://vite.dev/guide/troubleshooting)、[Playwright Docs](https://playwright.dev/docs/intro)、[Prisma Docs](https://www.prisma.io/docs) です。\n\n主な反映:\n- `Reference` group を追加し、`Agent Support` / `Data & Privacy` / `Troubleshooting` を全 12 locale に追加。\n- 全 locale のトップに「次に読むページ」導線を追加。\n- `compact` / `full` の説明を high / medium ではなく、ユーザー視点の説明に変更。\n- `📝 Context` 説明は技術語を残しつつ、`structural anchor` のような実装語を読みやすく調整。\n- 各言語で同等のセクション構成になるように揃えました。\n\n確認:\n- `npm run build` 成功。109 pages build 済み。\n- 12 locale × 4 reference pages × 必須項目で 216 checks 通過。\n- localhost は `http://127.0.0.1:4321/AgentNote/` で確認できます。\n- commit はまだしていません。",
+      "files_touched": [
+        "website/src/content/docs/es/data-and-privacy.mdx",
+        "website/src/content/docs/it/data-and-privacy.mdx",
+        "website/src/content/docs/ja/data-and-privacy.mdx",
+        "website/src/content/docs/de/data-and-privacy.mdx",
+        "website/src/content/docs/ko/data-and-privacy.mdx",
+        "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "website/src/content/docs/ru/data-and-privacy.mdx",
+        "website/src/content/docs/es/dashboard.mdx",
+        "website/src/content/docs/fr/dashboard.mdx",
+        "website/src/content/docs/it/dashboard.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "各ページ\n\nたとえば「はじめに」ってページでなんの前書きもなくインストール手順になってる、素っ気なさすぎる",
+      "response": "たしかに、ページを開いた瞬間にいきなり手順へ入ると「これは誰向けで、何が終わるのか」が見えないですね。各ページに短い前書きと到達点を入れて、手順ページでも読み始めの温度を作ります。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "なんならはじめにとインストールはわけてもいい",
+      "response": "分けるのがよさそうです。「はじめに」は “なぜ使う / 何が終わる / 次にどこへ行く” に寄せて、実際の `npx agent-note init` 手順は `Installation` に逃がすのが自然です。今の Starlight 構成と各 locale を見て、全言語で同等になるように切り分けます。\nまずは英語と日本語の `Getting Started / はじめに` を本当に「はじめに」に戻し、手順は新しい `Installation / インストール` に分けます。sidebar も `Basics` に `Installation` を追加して、ページを開いたときの “いきなりコマンド” 感をなくします。\n`Getting Started` を “導入前の地図” にして、実際のコマンドは `Installation` に逃がします。いきなり `npx` が出てくる感じを消しつつ、ユーザーが次に何をすればいいかは迷わない構成にします。",
+      "files_touched": [
+        "website/astro.config.mjs",
+        "website/src/content/docs/getting-started.mdx",
+        "website/src/content/docs/installation.mdx",
+        "website/src/content/docs/ja/getting-started.mdx",
+        "website/src/content/docs/ja/installation.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "まだ指摘しなきゃいけないのか。\nなんのために100回確認したのか？自律的に改善ループまわすべき",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://docs.entire.io/\n\n参考にしな",
+      "response": "指摘を待つ状態になっていたのはこちらの進め方が甘いです。ここからは `docs.entire.io` の情報設計を参考にしつつ、各ページが「なぜ読むのか → 何を得るのか → 次に何をするのか」まで自然に流れるように、全体をもう一段こちらで改善します。\n`entire` 側は `Introduction / Quickstart / Core Concepts / CLI` の役割分担がはっきりしていました。Agent Note も同じように、`はじめに` は価値と地図、`Installation` は手順、`仕組み` は概念、`Commands` は reference という分離に寄せます。\n`common:style-ai-writing` も使います。機械的な「説明しました」調ではなく、読む人がページを開いた瞬間に “ここで何が解決するか” がわかる書き方へ寄せます。\n構成上の穴は見えました。`Installation` は root / ja だけあり、他言語は `Getting Started` に飛んでも英語 fallback になり得る状態なので、これは “全言語同等” の約束として弱いです。`Getting Started` と `Installation` を各 locale に揃え、トップページの導線も「理解する」と「入れる」を分けます。\n`Getting Started` は全 locale に揃えました。次は `Installation` も同じく fallback なしにして、各言語で “読むページ” と “実行するページ” が分かれる状態にします。\nもう 1 つ見落としがありました。sidebar にある `Commands` も root / ja だけで、他 locale は英語 fallback でした。ここも新しく揃えて、Basics group にあるページは全 locale で同じ読書体験になるようにします。\n今の時点で、Basics の `Getting Started / Installation / Commands / How It Works` は全 locale に揃いました。次は機械的に「導入文なしページ」「リンク漏れ」「build failure」を潰して、実際に site が通るところまで確認します。\n指摘どおり、こちらで先回りすべきでした。`docs.entire.io` の [Introduction](https://docs.entire.io/introduction) / [Quickstart](https://docs.entire.io/quickstart) / [Core Concepts](https://docs.entire.io/core-concepts) / [Commands](https://docs.entire.io/cli/commands) の分け方を参考に、website をさらに整理しました。\n\n対応内容:\n- `はじめに / Getting Started` は「何を導入するのか」を説明する導入ページに変更\n- `Installation / インストール` を分離し、実際の `npx agent-note init` 手順を移動\n- `Commands` も全 locale に追加し、英語 fallback を解消\n- `GitHub Action` / `How It Works` など、いきなり見出しから始まっていたページに導入文を追加\n- `index` の導線を「理解する」と「インストールする」に分離\n- Basics 配下の主要ページを全 12 locale で揃えました\n\n確認済み:\n- `npm run build` 成功、121 pages build\n- 全 MDX が見出し直開始になっていないことをチェック\n- sidebar 対象ページが全 locale に存在することをチェック\n- 主要 link と `installation` / `getting-started` の内容チェック済み\n- localhost で `200 OK` 確認済み\n\n確認 URL:\n`http://127.0.0.1:4321/AgentNote/ja/getting-started/`\n`http://127.0.0.1:4321/AgentNote/ja/installation/`\n`http://127.0.0.1:4321/AgentNote/fr/installation/`\n\nまだ commit はしていません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "ここからは `docs.entire.io` の情報設計を参考にしつつ、各ページが「なぜ読むのか → 何を得るのか → 次に何をするのか」まで自然に流れるように、全体をもう一段こちらで改善します。 `entire` 側は `Introduction / Quickstart / Core Concepts / CLI` の役割分担がはっきりしていました。"
+        }
+      ],
+      "files_touched": [
+        "website/src/content/docs/index.mdx",
+        "website/src/content/docs/ja/index.mdx",
+        "website/src/content/docs/fr/index.mdx",
+        "website/src/content/docs/de/index.mdx",
+        "website/src/content/docs/it/index.mdx",
+        "website/src/content/docs/es/index.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "website/src/content/docs/zh-cn/index.mdx",
+        "website/src/content/docs/zh-tw/index.mdx",
+        "website/src/content/docs/ru/index.mdx",
+        "website/src/content/docs/id/index.mdx",
+        "website/src/content/docs/pt-br/index.mdx",
+        "website/src/content/docs/fr/getting-started.mdx",
+        "website/src/content/docs/de/getting-started.mdx",
+        "website/src/content/docs/it/getting-started.mdx",
+        "website/src/content/docs/es/getting-started.mdx",
+        "website/src/content/docs/ko/getting-started.mdx",
+        "website/src/content/docs/zh-cn/getting-started.mdx",
+        "website/src/content/docs/zh-tw/getting-started.mdx",
+        "website/src/content/docs/ru/getting-started.mdx",
+        "website/src/content/docs/id/getting-started.mdx",
+        "website/src/content/docs/pt-br/getting-started.mdx",
+        "website/src/content/docs/fr/installation.mdx",
+        "website/src/content/docs/de/installation.mdx",
+        "website/src/content/docs/it/installation.mdx",
+        "website/src/content/docs/es/installation.mdx",
+        "website/src/content/docs/ko/installation.mdx",
+        "website/src/content/docs/zh-cn/installation.mdx",
+        "website/src/content/docs/zh-tw/installation.mdx",
+        "website/src/content/docs/ru/installation.mdx",
+        "website/src/content/docs/id/installation.mdx",
+        "website/src/content/docs/pt-br/installation.mdx",
+        "website/src/content/docs/commands.mdx",
+        "website/src/content/docs/ja/commands.mdx",
+        "website/src/content/docs/github-action.mdx",
+        "website/src/content/docs/ja/github-action.mdx",
+        "website/src/content/docs/fr/github-action.mdx",
+        "website/src/content/docs/de/github-action.mdx",
+        "website/src/content/docs/it/github-action.mdx",
+        "website/src/content/docs/es/github-action.mdx",
+        "website/src/content/docs/ko/github-action.mdx",
+        "website/src/content/docs/zh-cn/github-action.mdx",
+        "website/src/content/docs/zh-tw/github-action.mdx",
+        "website/src/content/docs/ru/github-action.mdx",
+        "website/src/content/docs/id/github-action.mdx",
+        "website/src/content/docs/pt-br/github-action.mdx",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx",
+        "website/src/content/docs/fr/commands.mdx",
+        "website/src/content/docs/de/commands.mdx",
+        "website/src/content/docs/it/commands.mdx",
+        "website/src/content/docs/es/commands.mdx",
+        "website/src/content/docs/ko/commands.mdx",
+        "website/src/content/docs/zh-cn/commands.mdx",
+        "website/src/content/docs/zh-tw/commands.mdx",
+        "website/src/content/docs/ru/commands.mdx",
+        "website/src/content/docs/id/commands.mdx",
+        "website/src/content/docs/pt-br/commands.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "Ce contenu n’est pas encore disponible dans votre langue.\n\n日本語英語以外にあるこれらの警告の意味は？",
+      "response": "その警告は Starlight の「この locale 用の MDX が存在しないので、fallback 言語の内容を表示しています」という意味です。いま実際にどのページで出ているか確認して、残っている fallback を潰せるか見ます。\nその警告は Starlight 標準の fallback 通知です。\n\n`Ce contenu n’est pas encore disponible dans votre langue.`  \n= 「この内容はまだあなたの言語では利用できません」\n\n意味としては、たとえば `/fr/installation/` を開いたときに `website/src/content/docs/fr/installation.mdx` が存在しないため、英語 root の `installation.mdx` を代わりに表示している、という警告です。製品のエラーではなく「翻訳ページが未作成」という通知です。\n\n今回の原因は、英語 / 日本語以外で一部ページが fallback になっていたことです。今の workspace では全 locale の主要 docs file が揃っていることを確認済みで、build output にもこの警告文字列は残っていません。まだ見える場合は dev server / browser cache が古い可能性が高いです。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "その警告は Starlight 標準の fallback 通知です。 `Ce contenu n’est pas encore disponible dans votre langue.` = 「この内容はまだあなたの言語では利用できません」 意味としては、たとえば `/fr/installation/` を開いたときに `website/src/content/docs/fr/installation.mdx` が存在しないため、英語 root の `installation.mdx` を代わりに表示している、という警告です。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "今あるスクショもうまいこと配置してつかって",
+      "response": "既存スクショを “ただ貼る” ではなく、導入の流れで効く場所に置きます。まず asset の場所と現在の使用箇所を確認して、トップ・Getting Started・Dashboard / How It Works のどこに置くと説明が自然になるか決めます。\n既存 asset は `dashboard-preview.png` と `context-dashboard-example.png` の 2 つです。`Dashboard` と `How It Works` には既に入っていますが、初見ユーザーが通る `Getting Started` に絵がないのがもったいないので、導入ページでは “最終的に何が見えるか” として Dashboard preview を控えめに置きます。\nスクショは `Getting Started / はじめに` の「何をセットアップするのか」の直後に置きました。ここなら “手順の前に成果物を見せる” 流れになるので、トップや Dashboard ページの重複ではなく、初回ユーザーの理解を助ける役割になります。\n既存スクショを `Getting Started / はじめに` 系の全 12 locale に追加しました。位置は「何をセットアップするのか」の直後で、手順に入る前に “最終的にこういう review history が見える” ことが伝わる配置にしています。\n\nあわせて `doc-screenshot` CSS class を追加して、caption 付きで自然に見えるようにしました。\n\n確認済み:\n- `npm run build` 成功\n- 121 pages build\n- fallback 警告文字列は `dist` から消えていることを確認\n- `/fr/getting-started/` と `/zh-cn/getting-started/` は localhost で `200 OK` 確認済み",
+      "files_touched": [
+        "website/src/styles/custom.css",
+        "website/src/content/docs/getting-started.mdx",
+        "website/src/content/docs/ja/getting-started.mdx",
+        "website/src/content/docs/fr/getting-started.mdx",
+        "website/src/content/docs/de/getting-started.mdx",
+        "website/src/content/docs/it/getting-started.mdx",
+        "website/src/content/docs/es/getting-started.mdx",
+        "website/src/content/docs/ko/getting-started.mdx",
+        "website/src/content/docs/zh-cn/getting-started.mdx",
+        "website/src/content/docs/zh-tw/getting-started.mdx",
+        "website/src/content/docs/ru/getting-started.mdx",
+        "website/src/content/docs/id/getting-started.mdx",
+        "website/src/content/docs/pt-br/getting-started.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "コミットして",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/astro.config.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/dashboard.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/getting-started.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/styles/custom.css",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
