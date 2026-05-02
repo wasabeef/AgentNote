@@ -1462,6 +1462,9 @@ function selectCommitPromptWindow(
     hadStalePrimaryBeforeWindow && hasCurrentWindowExplanation
       ? trimLeadingStaleWindowRows(boundedRows)
       : boundedRows;
+  // The task-boundary trim narrows both selected and consumed rows. Leading rows
+  // before the first current-task boundary are treated as stale context rather
+  // than as prompts this commit should mark consumed.
   markPostPrimaryEditBarriers(taskBoundedRows);
 
   if (taskBoundedRows.length === 0) return emptyPromptWindowSelection();

@@ -182,6 +182,25 @@ type PromptBoundarySimulationCase = {
   expectedKeep: boolean;
 };
 
+type PromptBoundaryTrimSimulationRow = {
+  label: string;
+  isPrimaryTurn: boolean;
+  isWithinCommitWindow: boolean;
+  shapeScore: number;
+};
+
+type PromptBoundaryTrimSimulationCase = {
+  name: string;
+  hadStalePrimaryBeforeWindow: boolean;
+  hasCurrentWindowExplanation: boolean;
+  rows: PromptBoundaryTrimSimulationRow[];
+  expectedLabels: string[];
+};
+
+const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE = 44;
+const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE = 55;
+const PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE = 0;
+
 function buildPromptBoundarySimulationCases(): PromptBoundarySimulationCase[] {
   const agents: PromptBoundarySimulationCase["agent"][] = ["claude", "codex", "cursor", "gemini"];
   const cases: PromptBoundarySimulationCase[] = [];
@@ -305,6 +324,141 @@ function legacyPrimaryBypassWouldKeep(promptCase: PromptBoundarySimulationCase):
   return true;
 }
 
+function buildPromptBoundaryTrimSimulationCases(): PromptBoundaryTrimSimulationCase[] {
+  const agents: PromptBoundarySimulationCase["agent"][] = ["claude", "codex", "cursor", "gemini"];
+  const cases: PromptBoundaryTrimSimulationCase[] = [];
+
+  for (const agent of agents) {
+    cases.push({
+      name: `${agent}: trims low-shape leading rows after a stale primary when the current task has an anchor`,
+      hadStalePrimaryBeforeWindow: true,
+      hasCurrentWindowExplanation: true,
+      rows: [
+        {
+          label: "old-primary",
+          isPrimaryTurn: true,
+          isWithinCommitWindow: false,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE,
+        },
+        {
+          label: "old-dashboard-question",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+        {
+          label: "old-merge-ack",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+        {
+          label: "current-plan",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE,
+        },
+        {
+          label: "current-edit",
+          isPrimaryTurn: true,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+      ],
+      expectedLabels: ["current-plan", "current-edit"],
+    });
+
+    cases.push({
+      name: `${agent}: keeps leading context when no stale primary was carried into the window`,
+      hadStalePrimaryBeforeWindow: false,
+      hasCurrentWindowExplanation: true,
+      rows: [
+        {
+          label: "current-bridge",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+        {
+          label: "current-plan",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE,
+        },
+      ],
+      expectedLabels: ["current-bridge", "current-plan"],
+    });
+
+    cases.push({
+      name: `${agent}: keeps split-commit carryover when the current window has no explanation`,
+      hadStalePrimaryBeforeWindow: true,
+      hasCurrentWindowExplanation: false,
+      rows: [
+        {
+          label: "split-primary",
+          isPrimaryTurn: true,
+          isWithinCommitWindow: false,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE,
+        },
+        {
+          label: "split-follow-up",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+      ],
+      expectedLabels: ["split-primary", "split-follow-up"],
+    });
+
+    cases.push({
+      name: `${agent}: trims to the in-window primary when it is the first current-task boundary`,
+      hadStalePrimaryBeforeWindow: true,
+      hasCurrentWindowExplanation: true,
+      rows: [
+        {
+          label: "old-primary",
+          isPrimaryTurn: true,
+          isWithinCommitWindow: false,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE,
+        },
+        {
+          label: "old-short-context",
+          isPrimaryTurn: false,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+        {
+          label: "current-primary",
+          isPrimaryTurn: true,
+          isWithinCommitWindow: true,
+          shapeScore: PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE,
+        },
+      ],
+      expectedLabels: ["current-primary"],
+    });
+  }
+
+  return cases;
+}
+
+function simulatePromptBoundaryTrim(promptCase: PromptBoundaryTrimSimulationCase): string[] {
+  const boundedRows = promptCase.rows.filter((row) => {
+    if (row.isWithinCommitWindow) return true;
+    if (!row.isPrimaryTurn) return false;
+    return !promptCase.hasCurrentWindowExplanation;
+  });
+
+  if (!promptCase.hadStalePrimaryBeforeWindow || !promptCase.hasCurrentWindowExplanation) {
+    return boundedRows.map((row) => row.label);
+  }
+
+  const taskStartIndex = boundedRows.findIndex(
+    (row) => row.isPrimaryTurn || row.shapeScore >= PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE,
+  );
+  const taskBoundedRows = taskStartIndex > 0 ? boundedRows.slice(taskStartIndex) : boundedRows;
+  return taskBoundedRows.map((row) => row.label);
+}
+
 describe("prompt task-boundary policy simulation", () => {
   it("separates stale primary revival from legitimate split-commit carryover across 100+ cases", () => {
     const cases = buildPromptBoundarySimulationCases();
@@ -331,6 +485,22 @@ describe("prompt task-boundary policy simulation", () => {
       ),
       "Codex transcript-driven stale primary revival must be represented",
     );
+  });
+
+  it("trims stale leading window rows only after stale primary carryover is detected", () => {
+    const cases = buildPromptBoundaryTrimSimulationCases();
+    assert.ok(
+      cases.length >= 16,
+      `expected at least 16 trim simulation cases, got ${cases.length}`,
+    );
+
+    for (const promptCase of cases) {
+      assert.deepEqual(
+        simulatePromptBoundaryTrim(promptCase),
+        promptCase.expectedLabels,
+        promptCase.name,
+      );
+    }
   });
 });
 
