@@ -204,7 +204,7 @@ shell rewrite は optional optimization として扱う。
 ### Phase 5: Docs / UX
 
 - `README.md` の support matrix を更新
-- `CONTRIBUTING.md` と `DESIGN.md` に Cursor 設定を追記
+- `CONTRIBUTING.md` と `../../architecture.md` に Cursor 設定を追記
 - `init` の next steps を Cursor 専用 config に合わせて確認
 
 ## 8. 実装分岐表

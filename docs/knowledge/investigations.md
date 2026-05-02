@@ -1,10 +1,14 @@
-# TODO
+# Investigation History
 
-## 未解決の調査
+このファイルは、解決済みの調査と regression の判断を残す場所です。未解決タスクの TODO list ではありません。
+
+新しい調査を書くときは、対象 PR / commit、観測結果、原因、修正、regression coverage を残してください。
+
+## Open Investigations
 
 なし。
 
-## 解決済みの調査
+## Resolved Investigations
 
 ### PR #49 prompt selection に過去タスクの prompt が混入する
 
@@ -48,7 +52,7 @@
 - 結果: 旧 `standard` 相当、つまり現 `compact` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `compact` に出すべきではないと判断しました。
 - 修正: `substantive_prompt_shape` を追加し、長めの質問・相談は keyword なしで `medium` に上げます。一方で `commit push`, `PR 作成`, `please create the pull request` のような操作指示は、response 側に path があっても `low` に留めます。
 - Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `compact` に残る case、operation-only prompt が `compact` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
-- 設計メモ: 詳細は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
+- 設計メモ: 詳細は `docs/knowledge/prompt-selection.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
 
 ### PR #34 go-ahead prompt の前段 context 表示
 

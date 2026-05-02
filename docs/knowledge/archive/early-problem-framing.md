@@ -2,7 +2,7 @@
 
 > **注意: この文書は初期設計時 (agent-note プロジェクト) に作成されたもので、現在の agent-note 実装とは乖離があります。**
 > 特に git hooks の使用、notes の auto-push、multi-agent 対応方針は実装時に変更されました。
-> 最新の設計は `DESIGN.md` を参照してください。
+> 最新の設計は `../../architecture.md` を参照してください。
 
 > entire CLI の既知の問題点を洗い出し、agent-note プロジェクトで引き継がない設計指針を定める。
 > 対象スコープ: **Claude Code のみ**。

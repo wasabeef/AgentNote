@@ -47,4 +47,4 @@ Agent Note is a lightweight, Git-native tool focused on attaching AI session con
 - Entire CLI Commands: https://docs.entire.io/cli/commands
 - Entire Web Overview: https://docs.entire.io/web/overview
 - Entire Web Checkpoints: https://docs.entire.io/web/checkpoints
-- Agent Note local docs: `README.md`, `docs/knowledge/DESIGN.md`
+- Agent Note local docs: `README.md`, `docs/architecture.md`

@@ -1,9 +1,9 @@
-# Agent Support Promotion Plan
+# Agent Support Policy
 
 > この文書は Agent Note における non-Claude agent の `Preview` 表記を、
-> どの条件で `Supported` あるいは `Full support` へ引き上げるかを定義する横断計画である。
-> 個別の実装経緯や詳細な制約は `CODEX_SUPPORT_PLAN.md`、`CURSOR_SUPPORT_PLAN.md`、
-> `GEMINI_SUPPORT_PLAN.md` を参照し、この文書では release judgement と rollout 順を固定する。
+> どの条件で `Supported` あるいは `Full support` へ引き上げるかを定義する横断 policy である。
+> 個別の実装経緯や詳細な制約は `archive/codex-support-plan.md`、`archive/cursor-support-plan.md`、
+> `archive/gemini-support-plan.md` を参照し、この文書では release judgement と rollout 順を固定する。
 >
 > 2026-04-15 時点で `packages/cli` の `build` / `typecheck` / `lint` / `test` は green であり、
 > 現在の議論は「実装が壊れているか」ではなく「どの条件で preview を外せるか」にある。

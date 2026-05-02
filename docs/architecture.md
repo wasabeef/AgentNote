@@ -1,4 +1,4 @@
-# agent-note — Design Document
+# Agent Note Architecture
 
 > Remember why your code changed. Minimal tooling, maximum traceability.
 
@@ -69,7 +69,10 @@ wasabeef/AgentNote/
 ├── website/                        # Starlight docs site
 │
 ├── docs/
-│   └── knowledge/
+│   ├── engineering.md             # implementation guidelines for humans and AI agents
+│   ├── architecture.md            # this canonical architecture reference
+│   ├── assets/                    # README and website images
+│   └── knowledge/                 # focused design notes, research, and archive
 │
 ├── .github/
 │   └── workflows/
@@ -83,16 +86,17 @@ wasabeef/AgentNote/
 
 ### Knowledge map
 
-`docs/knowledge/DESIGN.md` is the canonical architecture reference. Keep current implementation details here first.
+`docs/architecture.md` is the canonical architecture reference. Keep current implementation details here first.
 
 Other knowledge files are narrower design or research records:
 
-- `../CODING_RULES.md` — coding conventions for constants, comments, Dashboard workflow safety, and verification.
-- `PROMPT_CONTEXT_DESIGN.md` — deterministic `interactions[].contexts[]` selection and display rules.
-- `PROMPT_SELECTION_SCORING_DESIGN.md` — prompt selection evidence, scoring, tail handling, and display-density design.
-- `AGENT_SUPPORT_PROMOTION_PLAN.md` — support-tier gates for promoting agent adapters.
-- `CODEX_SUPPORT_PLAN.md`, `CURSOR_SUPPORT_PLAN.md`, `GEMINI_SUPPORT_PLAN.md` — agent-specific research and implementation history. Treat them as historical context unless they explicitly say otherwise.
-- `AGENTNOTE_VS_ENTIRE.md`, `PROBLEMS.md`, `RESEARCH.md` — competitive / architecture research that motivated the current design.
+- `engineering.md` — implementation guidelines for constants, comments, Dashboard workflow safety, and verification.
+- `knowledge/prompt-context.md` — deterministic `interactions[].contexts[]` selection and display rules.
+- `knowledge/prompt-selection.md` — prompt selection evidence, scoring, tail handling, and display-density design.
+- `knowledge/agent-support-policy.md` — support-tier gates for promoting agent adapters.
+- `knowledge/investigations.md` — resolved regression investigations and follow-up notes.
+- `knowledge/research/` — product and architecture research that still informs current decisions.
+- `knowledge/archive/` — historical implementation plans and older research. Treat these as context, not current behavior.
 
 ### Why monorepo
 
@@ -603,11 +607,11 @@ Agent Note records prompts, optional display-only context excerpts, and AI respo
 
 | Threat | Mitigation |
 |---|---|
-| Secrets in prompts/context/responses | **Not automatically redacted.** Users are responsible for not pushing notes to public repos. Future: optional secret detection before note creation. |
+| Secrets in prompts/context/responses | **Not automatically redacted.** Users are responsible for reviewing notes before pushing them to public repos. |
 | Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
-| GitHub Action markdown injection | PR Report embeds raw prompts/context/responses in markdown. **Sanitization is not yet implemented.** Untrusted content could inject markdown/HTML into PR descriptions. |
+| GitHub Action markdown injection | PR Report renders prompts/context/responses as markdown inside the PR body. Treat git notes as trusted repository data; do not push untrusted prompt content to public notes. |
 | `npx --yes` supply chain | Claude Code agent hooks use `npx --yes agent-note hook`. Git hooks (installed by `init`) prefer local binary (`node_modules/.bin/agent-note`), falling back to PATH. |
 | Fork PR attacks | The GitHub Action should not run on `pull_request_target` with fork PRs. Default trigger is `pull_request` which is safe. |
 
@@ -615,7 +619,6 @@ Agent Note records prompts, optional display-only context excerpts, and AI respo
 
 - **Be aware that `agent-note init` installs a `pre-push` hook that auto-pushes notes** on every `git push`. On public repositories, this means prompts and AI responses will be visible. Use `--no-git-hooks` to skip git hook installation if this is a concern.
 - Use `agent-note pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared.
-- Consider `agent-note init --no-responses` (future) to record prompts only, without AI responses.
 
 ## Known limitations
 
