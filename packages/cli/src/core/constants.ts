@@ -62,7 +62,3 @@ export const SCHEMA_VERSION = 1 as const;
 
 // ─── Encoding ───
 export const TEXT_ENCODING = "utf-8";
-
-// ─── Debug ───
-export const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
-export const DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];
