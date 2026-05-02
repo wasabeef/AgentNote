@@ -1,0 +1,321 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-02T09:38:27.998Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "20回自己レビューと改善ループして",
+      "response": "20 回分、観点を変えて PR #51 を再点検します。単なる「見たことにする」ではなく、機械チェックで拾えるもの、文脈として危ないもの、将来の AI Agent が誤読しそうなものまで見て、直せるものはその場で直します。\n前半レビューで 2 点だけ改善余地が見えました。`investigations.md` が「未解決なし」と言いながら後半に future cleanup を持っている点、archive の外部調査に「古い snapshot」という警告が弱い点です。ここは誤読の元なので直します。\n加えて README の一部 language で `Architecture details` が英語のまま残っていました。docs だけでなく入口の多言語表記もこの PR に含まれているので、ここも直します。\n改善を入れました。ここから後半 10 観点は再チェック寄りに回して、今回の修正で新しいズレを作っていないか確認します。\n相対 link checker は Astro の `./slug/` 形式を通常 filesystem directory として見て false positive になっていました。checker 側を MDX route 仕様に合わせて再実行しつつ、build と差分チェックをもう一度通します。\n**Findings**\nmerge blocker は見つかりませんでした。20 観点で見直して、軽微な改善を 3 件だけ入れました。\n\n改善済み:\n- `docs/knowledge/investigations.md` の「未解決なし」と `今後の cleanup` が矛盾していたので、`Open Follow-ups` に整理しました。\n- `docs/knowledge/archive/early-research.md` と `agentnote-vs-entire.md` に、外部情報は historical snapshot であり最新確認が必要という注意を追加しました。\n- 多言語 README の `Architecture details` が一部英語のままだったので、`ja / ko / zh-cn / zh-tw / ru / id / pt-br` を自然な表記へ修正しました。\n\n確認済み:\n- 20 観点レビュー: docs 構造、archive 境界、README 多言語、website locale parity、frontmatter、relative links、旧 path 残存、placeholder、prompt_detail 説明、Dashboard 説明、privacy、agent support、troubleshooting、sidebar、CI 対象、外部情報鮮度、AI agent 読みやすさ、test fixture、build、diff hygiene\n- `git diff --check` OK\n- `website npm run build` OK\n- relative markdown / MDX links OK\n- website frontmatter `120` files OK\n\n修正は未コミットです。commit / push するなら次に進めます。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "補足として、`docs/knowledge/archive/early-research.md` には star 数など時間で古くなる外部情報があります。ただし `archive/README.md` で「current behavior の source of truth ではない」と明記されているため blocker ではありません。気になるなら後続で日付付き historical snapshot として明示するとさらに安全です。"
+        }
+      ],
+      "files_touched": [
+        "docs/knowledge/investigations.md",
+        "docs/knowledge/archive/early-research.md",
+        "docs/knowledge/research/agentnote-vs-entire.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/archive/early-research.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/research/agentnote-vs-entire.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "72f42ecef51803a51b418aa175827f0eed79abd0",
+    "short_sha": "72f42ec",
+    "message": "docs: polish maintainer knowledge references",
+    "date": "2026-05-02T18:38:26+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.id.md",
+        "lines": [
+          "index d8da3e2..0a72c1d 100644",
+          "--- a/README.id.md",
+          "+++ b/README.id.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[Detail arsitektur →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ja.md",
+        "lines": [
+          "index 790be0d..e53287e 100644",
+          "--- a/README.ja.md",
+          "+++ b/README.ja.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[アーキテクチャ詳細 →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 23bdc3a..5b9b596 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[아키텍처 자세히 보기 →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index cb63a02..62b2e51 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[Detalhes da arquitetura →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ru.md",
+        "lines": [
+          "index 875cb23..a473e00 100644",
+          "--- a/README.ru.md",
+          "+++ b/README.ru.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[Детали архитектуры →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-cn.md",
+        "lines": [
+          "index e2451fb..b7c4950 100644",
+          "--- a/README.zh-cn.md",
+          "+++ b/README.zh-cn.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[架构详情 →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-tw.md",
+        "lines": [
+          "index bedcaac..8f942a7 100644",
+          "--- a/README.zh-tw.md",
+          "+++ b/README.zh-tw.md",
+          "@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7",
+          " ",
+          " Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture",
+          " ",
+          "-[Architecture details →](docs/architecture.md)",
+          "+[架構詳情 →](docs/architecture.md)",
+          " ",
+          " ## Contributing",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/archive/early-research.md",
+        "lines": [
+          "index 45f6225..11f5de0 100644",
+          "--- a/docs/knowledge/archive/early-research.md",
+          "+++ b/docs/knowledge/archive/early-research.md",
+          "@@ -1,6 +1,8 @@",
+          " # lore — 調査レポート",
+          " ",
+          " > AI Agent セッション履歴を Git に紐づけて管理する仕組みの調査と、Claude Code + GitHub のみで再現する設計。",
+          "+>",
+          "+> Archived snapshot. External facts such as stars, funding, and supported agents were collected during early research and are not maintained here. Use current references before relying on any behavior described in this file.",
+          " ",
+          " ## 目次",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/investigations.md",
+        "lines": [
+          "index 18a063d..355812f 100644",
+          "--- a/docs/knowledge/investigations.md",
+          "+++ b/docs/knowledge/investigations.md",
+          "@@ -4,9 +4,13 @@",
+          " ",
+          " 新しい調査を書くときは、対象 PR / commit、観測結果、原因、修正、regression coverage を残してください。",
+          " ",
+          "-## Open Investigations",
+          "+## Open Follow-ups",
+          " ",
+          "-なし。",
+          "+### CLI dist tracking",
+          "+",
+          "+- 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。",
+          "+- 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。",
+          "+- tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。",
+          " ",
+          " ## Resolved Investigations",
+          " ",
+          "@@ -92,11 +96,3 @@",
+          " - 主な再現例: `e1e1596` は `Agentnote-Session` trailer を持っていたのに git note がなく、前後の commit には note がありました。",
+          " - 修正では、transcript attribution が committed files を拾えない prompt-only Codex case でも、正当な note を落とさないようにしました。同時に human-only skip path は維持しています。",
+          " - regression coverage では、workflow-only edit、consumed turn / file pair、prompt-only transcript fallback を継続して確認します。",
+          "-",
+          "-## 今後の cleanup",
+          "-",
+          "-### CLI dist tracking",
+          "-",
+          "-- 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。",
+          "-- 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。",
+          "-- tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/research/agentnote-vs-entire.md",
+        "lines": [
+          "index 2d876b9..c2d9f4b 100644",
+          "--- a/docs/knowledge/research/agentnote-vs-entire.md",
+          "+++ b/docs/knowledge/research/agentnote-vs-entire.md",
+          "@@ -1,6 +1,6 @@",
+          " # Agent Note vs Entire",
+          " ",
+          "-> Public comparison note. Updated from publicly available documentation checked on 2026-04-12.",
+          "+> Public comparison note. Updated from publicly available documentation checked on 2026-04-12. External product details can change; verify current public docs before making release or positioning decisions.",
+          " ",
+          " This page is intentionally narrow. It compares documented product shape and workflow, not undocumented internals or subjective quality claims."
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 51,
+    "title": "docs: improve website and maintainer docs",
+    "state": "open"
+  }
+}
