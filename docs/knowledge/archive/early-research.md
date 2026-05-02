@@ -1,6 +1,8 @@
 # lore — 調査レポート
 
 > AI Agent セッション履歴を Git に紐づけて管理する仕組みの調査と、Claude Code + GitHub のみで再現する設計。
+>
+> Archived snapshot. External facts such as stars, funding, and supported agents were collected during early research and are not maintained here. Use current references before relying on any behavior described in this file.
 
 ## 目次
 

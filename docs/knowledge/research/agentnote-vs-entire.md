@@ -1,6 +1,6 @@
 # Agent Note vs Entire
 
-> Public comparison note. Updated from publicly available documentation checked on 2026-04-12.
+> Public comparison note. Updated from publicly available documentation checked on 2026-04-12. External product details can change; verify current public docs before making release or positioning decisions.
 
 This page is intentionally narrow. It compares documented product shape and workflow, not undocumented internals or subjective quality claims.
 

@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7
 
 Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
 
-[Architecture details →](docs/architecture.md)
+[아키텍처 자세히 보기 →](docs/architecture.md)
 
 ## Contributing
 
