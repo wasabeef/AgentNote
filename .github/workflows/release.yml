@@ -83,7 +83,35 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm -w packages/cli run build
-      - name: Publish
+      - name: Publish canonical package
         run: npm -w packages/cli publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish typo-reservation alias package
+        run: |
+          ALIAS_DIR=$(mktemp -d)
+          cp packages/cli/package.json "$ALIAS_DIR/package.json"
+          cp -R packages/cli/dist "$ALIAS_DIR/dist"
+
+          ALIAS_DIR="$ALIAS_DIR" node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const packagePath = path.join(process.env.ALIAS_DIR, "package.json");
+          const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+
+          pkg.name = "@wasabeef/agentnote";
+          pkg.bin = { agentnote: "dist/cli.js" };
+          pkg.keywords = Array.from(new Set([...(pkg.keywords || []), "agentnote"]));
+          pkg.repository = {
+            ...pkg.repository,
+            url: "git+https://github.com/wasabeef/AgentNote.git",
+          };
+
+          fs.writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+
+          npm publish "$ALIAS_DIR" --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
