@@ -1,0 +1,105 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-02T01:50:32.498Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$common:pr-create",
+      "response": "PR 作成しました。\n\nhttps://github.com/wasabeef/AgentNote/pull/49\n\nDraft PR、base は `main`、head は `refactor/dashboard-context-rules` です。Working tree も clean です。\n\nMay the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/49 を確認してほしい\nae056f4 refactor: centralize constants の \n\n🧑 Prompt\nもう次の作業はないので、プロンプト選択の改善をもう一度やってみよう\n\n🧑 Prompt\nhttps://wasabeef.github.io/AgentNote/dashboard のリダイレクトはなおった？\n\nこの２つは関係ないプロンプトでは？",
+      "response": "PR #49 の表示と該当 commit note を確認します。まず PR body に出ている prompt と、`ae056f4` の git note 側に保存されている interactions / selection を突き合わせます。\nPR body と git note を突き合わせました。指摘の 2 件は `ae056f4` の note に実際に保存されていて、PR renderer が勝手に混ぜたものではありません。次に、なぜ selection が通ったかをコード側の signal と合わせて確認します。\nはい、この 2 つは `ae056f4 refactor: centralize constants` には関係ない prompt です。\n\n確認結果:\n\n- `もう次の作業はないので、プロンプト選択の改善をもう一度やってみよう`\n  - これは前の prompt selection 作業の prompt です。\n  - note 上では `source: \"primary\"` になっていて、`packages/cli/src/core/constants.ts` / `packages/cli/src/commands/init.ts` を触った turn として残っていました。\n  - 今回の commit でも同じ file を触ったため、古い primary edit turn が復活してしまっています。\n\n- `https://wasabeef.github.io/AgentNote/dashboard のリダイレクトはなおった？`\n  - これは PR #48 / Dashboard redirect 確認の話で、今回の定数化 commit とは別文脈です。\n  - note 上では `files_touched` は無く、`source: \"window\"` として拾われています。\n  - つまり renderer の問題ではなく、record 時点の prompt selection window が広すぎて混入しています。\n\n原因はざっくり言うと、同じ長い session 内で過去タスクの prompt が残っていて、今回の task start より前の会話を十分に切れていないことです。特に 1 件目は「同じ file を過去にも触っていた」ため、古い primary prompt として強く残ってしまっています。\n\nこれは prompt selection の改善対象にした方がよいです。PR #49 の作業自体とは別件の bug / tuning として扱うのがよさそうです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "TODO にかいて",
+      "response": "PR #49 で見つかった prompt selection の混入を TODO に残します。既存 TODO の構成に合わせて、対象 PR / commit / 原因 / 後で見る観点を短く追加します。\nTODO に追記しました。念のため差分と working tree を確認して、問題なければこの変更を PR #49 に追加 commit します。\n`docs/TODO.md` に追記しました。\n\n内容は PR #49 / `ae056f4` で、過去タスクの prompt selection / dashboard redirect 確認 prompt が混入した件です。原因候補、問題点、structural signal ベースの調査方針、Regression case まで入れています。\n\n未コミット差分は `docs/TODO.md` だけです。commit するなら `y` ください。",
+      "files_touched": [
+        "docs/TODO.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "⏺ ---\n  PR #49 レビュー: refactor: centralize constants and document workflow intent\n\n  変更の本質\n\n  magic string / number を named constant に置き換え + CODING_RULES.md でルールを文書化。動作変更なし。\n\n  ---\n  ✅ constants.ts 追加定数\n\n  ┌────────────────────────────┬──────────────────────────────────────┬────────────────────────────────────────────────┐\n  │            定数            │                  値                  │                    使用箇所                    │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ AGENTNOTE_HOOK_COMMAND     │ \"agent-note hook\"                    │ claude/codex/cursor/gemini adapter, status.ts  │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ CLI_JS_HOOK_COMMAND        │ \"cli.js hook\"                        │ claude adapter                                 │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ GIT_HOOK_NAMES             │ [\"prepare-commit-msg\", ...] as const │ init.ts で destructuring                       │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ HEARTBEAT_TTL_SECONDS      │ 60 * 60                              │ init.ts (shell template), commit.ts, status.ts │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ MILLISECONDS_PER_SECOND    │ 1000                                 │ commit.ts, status.ts                           │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ TEXT_ENCODING              │ \"utf-8\"                              │ git.ts ほか 10+ ファイル                       │\n  ├────────────────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────┤\n  │ RECENT_STATUS_COMMIT_LIMIT │ 20                                   │ status.ts                                      │\n  └────────────────────────────┴──────────────────────────────────────┴────────────────────────────────────────────────┘\n\n  GIT_HOOK_NAMES の destructuring:\n  const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;\n  配列から意味のある名前を得つつ source of truth は一箇所。 ✓\n\n  HEARTBEAT_TTL_SECONDS が shell テンプレートに展開される:\n  if [ \"$AGE\" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi\n  Template literal なので生成されるスクリプトには 3600 が埋め込まれる。 ✓\n\n  ---\n  ✅ Dashboard workflow — local constants で正しく対処\n\n  .mjs は TypeScript の constants.ts を import できないため、各ファイル先頭に local 定数を定義:\n\n  // persist-notes.mjs\n  const EVENT_PULL_REQUEST = \"pull_request\";\n  const GITHUB_PAGES_BRANCH = \"gh-pages\";\n  const TEXT_ENCODING = \"utf-8\";\n\n  CODING_RULES.md の方針:\n\n  ▎ 共有化で依存関係が太る場合は、同名の local constant を許容する。\n\n  方針と実装が一致。 ✓\n\n  ---\n  ✅ CODING_RULES.md の内容\n\n  - 定数化、コメント、Dashboard workflow、テストの 4 セクション\n  - 例示が具体的 (良い例 / 避けたい例)\n  - 参照している AGENTS.md は存在確認済み ✓\n  - 日本語での記述は docs なので問題なし\n\n  ---\n  ⚠️  DEBUG が export されているが未使用\n\n  export const ENV_AGENTNOTE_DEBUG = \"AGENTNOTE_DEBUG\";\n  export const DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];\n\n  全ソースをグレップした結果、DEBUG を import または使用しているファイルが ゼロ。\n\n  考えられる状況:\n  - Forward-looking — 将来の debug ログ用インフラとして先行追加\n  - コミット漏れ — 実際の使用箇所 (git.ts 等) への追加を忘れた\n\n  どちらにせよ現時点では dead export。使用箇所を追加するか、この PR では定義だけで意図的に保留するなら、コメントで明記することを推奨。\n\n  ---\n  Minor: MILLISECONDS_PER_SECOND = 1000\n\n  Date.now() / 1000 の 1000 は universally understood。CODING_RULES の「magic number\n  は定数化」を厳格適用した結果だが、このケースに限っては可読性が下がっている。CODING_RULES.md 自体がこの PR\n  で追加されているので、ルールの一貫適用として許容範囲。\n\n  ---\n  総評\n\n  Merge 可 (minor 1 件確認推奨)。純粋なリファクタリングで動作変更なし、CLI src の \"utf-8\" ハードコードは完全に置換済み。CODING_RULES.md\n  の内容も実装と一致している。DEBUG の用途だけ merge 前に intent を確認推奨。",
+      "response": "レビューありがとうございます。`DEBUG` は dead export の指摘が妥当なので、この PR では使わない先行定義を残さず削除します。あわせて TODO 追記分も、許可済みなら同じ PR 更新として commit します。\n未使用 `DEBUG` export は削除しました。次は定数削除で bundle が変わるので CLI build を回し、TODO 追記と合わせて検証します。\nレビュー指摘への修正は `DEBUG` 削除と TODO 追記だけになっています。commit して PR #49 に push します。\n`packages/cli/dist` は tracked artifact ですが `.gitignore` 対象なので、必要な bundle 差分だけ `-f` で stage します。",
+      "files_touched": [
+        "packages/cli/src/core/constants.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/constants.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  }
+}
