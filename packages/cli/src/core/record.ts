@@ -1255,6 +1255,7 @@ type PromptWindowRow = {
   isTinyPrompt: boolean;
   isPrimaryTurn: boolean;
   isTail: boolean;
+  isWithinCommitWindow: boolean;
   isBeforeCommitBoundary: boolean;
   isNonPrimaryEditTurn: boolean;
   isConsumedTailPrompt: boolean;
@@ -1438,6 +1439,7 @@ function selectCommitPromptWindow(
         entry,
         primaryTurns,
         editTurns,
+        lowerTurn,
         latestPrimaryTurn,
         upperTurn,
         commitFiles,
@@ -1447,21 +1449,38 @@ function selectCommitPromptWindow(
         defaultSource,
       ),
     );
-  markPostPrimaryEditBarriers(rows);
+  const hasCurrentWindowExplanation = rows.some(
+    (row) => row.isWithinCommitWindow && isPromptWindowAnchor(row),
+  );
+  const hadStalePrimaryBeforeWindow = rows.some(
+    (row) => row.isPrimaryTurn && !row.isWithinCommitWindow,
+  );
+  const boundedRows = rows.filter((row) =>
+    shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation),
+  );
+  const taskBoundedRows =
+    hadStalePrimaryBeforeWindow && hasCurrentWindowExplanation
+      ? trimLeadingStaleWindowRows(boundedRows)
+      : boundedRows;
+  markPostPrimaryEditBarriers(taskBoundedRows);
 
-  if (rows.length === 0) return emptyPromptWindowSelection();
+  if (taskBoundedRows.length === 0) return emptyPromptWindowSelection();
 
   let hardStartIndex = 0;
-  while (hardStartIndex < rows.length - 1 && isHardTrimPromptRow(rows[hardStartIndex])) {
+  while (
+    hardStartIndex < taskBoundedRows.length - 1 &&
+    isHardTrimPromptRow(taskBoundedRows[hardStartIndex])
+  ) {
     hardStartIndex += 1;
   }
-  const hardTrimmedRows = rows.slice(0, hardStartIndex);
+  const hardTrimmedRows = taskBoundedRows.slice(0, hardStartIndex);
   const hasQuotedHardTrim = hardTrimmedRows.some((row) => row.isQuotedHistory);
-  const firstAnchorIndex = rows.findIndex(
+  const firstAnchorIndex = taskBoundedRows.findIndex(
     (row, index) => index >= hardStartIndex && isPromptWindowAnchor(row),
   );
   let startIndex = firstAnchorIndex >= 0 ? firstAnchorIndex : hardStartIndex;
-  const softLeadingRows = firstAnchorIndex >= 0 ? rows.slice(hardStartIndex, firstAnchorIndex) : [];
+  const softLeadingRows =
+    firstAnchorIndex >= 0 ? taskBoundedRows.slice(hardStartIndex, firstAnchorIndex) : [];
   const preserveShortLeadingContext =
     firstAnchorIndex >= 0 &&
     !hasQuotedHardTrim &&
@@ -1471,8 +1490,8 @@ function selectCommitPromptWindow(
     startIndex = hardStartIndex;
   }
 
-  const consumed = rows.map((row) => attachPromptSelectionMetadata(row));
-  const selectedRows = rows.slice(startIndex).filter(shouldKeepPromptWindowRow);
+  const consumed = taskBoundedRows.map((row) => attachPromptSelectionMetadata(row));
+  const selectedRows = taskBoundedRows.slice(startIndex).filter(shouldKeepPromptWindowRow);
   const selected =
     selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES
       ? trimLongPromptWindow(selectedRows).map(attachPromptSelectionMetadata)
@@ -1481,10 +1500,34 @@ function selectCommitPromptWindow(
   return { selected, consumed };
 }
 
+function trimLeadingStaleWindowRows(rows: PromptWindowRow[]): PromptWindowRow[] {
+  const taskStartIndex = rows.findIndex(isCurrentTaskBoundaryRow);
+  return taskStartIndex > 0 ? rows.slice(taskStartIndex) : rows;
+}
+
+function isCurrentTaskBoundaryRow(row: PromptWindowRow): boolean {
+  return row.isPrimaryTurn || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+
+function shouldKeepTaskBoundaryPromptRow(
+  row: PromptWindowRow,
+  hasCurrentWindowExplanation: boolean,
+): boolean {
+  if (row.isWithinCommitWindow) return true;
+  if (!row.isPrimaryTurn) return false;
+
+  // Split commits may reuse an older primary prompt only when the current
+  // commit has no in-window explanation. If the current window already
+  // explains the commit, carrying older primary prompts forward revives stale
+  // task history even when files overlap.
+  return !hasCurrentWindowExplanation;
+}
+
 function buildPromptWindowRow(
   entry: Record<string, unknown>,
   primaryTurns: Set<number>,
   editTurns: Set<number>,
+  lowerTurn: number,
   latestPrimaryTurn: number,
   upperTurn: number,
   commitFiles: string[],
@@ -1527,6 +1570,7 @@ function buildPromptWindowRow(
     isTinyPrompt: analysis.hardExcluded,
     isPrimaryTurn,
     isTail,
+    isWithinCommitWindow: turn > lowerTurn && turn <= upperTurn,
     isBeforeCommitBoundary: turn === upperTurn,
     isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
     isConsumedTailPrompt: isTail && hasConsumedTailPrompt,

@@ -168,6 +168,172 @@ describe("prompt selection analysis", () => {
   });
 });
 
+type PromptBoundarySimulationCase = {
+  name: string;
+  agent: "claude" | "codex" | "cursor" | "gemini";
+  position: "before-window" | "in-window" | "tail";
+  isPrimaryTurn: boolean;
+  hasUnconsumedCurrentFile: boolean;
+  hasCurrentWindowExplanation: boolean;
+  hasExactCurrentFilePath: boolean;
+  hasOnlyBasenameAnchor: boolean;
+  isNonPrimaryEditTurn: boolean;
+  isAfterEditBarrier: boolean;
+  expectedKeep: boolean;
+};
+
+function buildPromptBoundarySimulationCases(): PromptBoundarySimulationCase[] {
+  const agents: PromptBoundarySimulationCase["agent"][] = ["claude", "codex", "cursor", "gemini"];
+  const cases: PromptBoundarySimulationCase[] = [];
+
+  for (const agent of agents) {
+    for (const hasCurrentWindowExplanation of [false, true]) {
+      for (const hasExactCurrentFilePath of [false, true]) {
+        for (const hasOnlyBasenameAnchor of [false, true]) {
+          cases.push({
+            name: `${agent}: stale primary outside window, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "before-window",
+            isPrimaryTurn: true,
+            hasUnconsumedCurrentFile: false,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: false,
+            isAfterEditBarrier: false,
+            expectedKeep: false,
+          });
+
+          cases.push({
+            name: `${agent}: split commit carryover outside window, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "before-window",
+            isPrimaryTurn: true,
+            hasUnconsumedCurrentFile: true,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: false,
+            isAfterEditBarrier: false,
+            expectedKeep: !hasCurrentWindowExplanation,
+          });
+
+          cases.push({
+            name: `${agent}: current in-window prompt, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "in-window",
+            isPrimaryTurn: hasExactCurrentFilePath,
+            hasUnconsumedCurrentFile: false,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: false,
+            isAfterEditBarrier: false,
+            expectedKeep: true,
+          });
+
+          cases.push({
+            name: `${agent}: tail after barrier, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "tail",
+            isPrimaryTurn: false,
+            hasUnconsumedCurrentFile: false,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: false,
+            isAfterEditBarrier: true,
+            expectedKeep: hasExactCurrentFilePath || hasOnlyBasenameAnchor,
+          });
+
+          cases.push({
+            name: `${agent}: non-primary edit barrier, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "in-window",
+            isPrimaryTurn: false,
+            hasUnconsumedCurrentFile: false,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: true,
+            isAfterEditBarrier: false,
+            expectedKeep: false,
+          });
+
+          cases.push({
+            name: `${agent}: stale leading window after pre-window primary, explanation=${hasCurrentWindowExplanation}, exact=${hasExactCurrentFilePath}, basename=${hasOnlyBasenameAnchor}`,
+            agent,
+            position: "before-window",
+            isPrimaryTurn: false,
+            hasUnconsumedCurrentFile: false,
+            hasCurrentWindowExplanation,
+            hasExactCurrentFilePath,
+            hasOnlyBasenameAnchor,
+            isNonPrimaryEditTurn: false,
+            isAfterEditBarrier: false,
+            expectedKeep: false,
+          });
+        }
+      }
+    }
+  }
+
+  return cases;
+}
+
+function shouldKeepPromptBoundarySimulation(promptCase: PromptBoundarySimulationCase): boolean {
+  if (promptCase.isNonPrimaryEditTurn) return false;
+
+  if (promptCase.position === "before-window") {
+    return (
+      promptCase.isPrimaryTurn &&
+      promptCase.hasUnconsumedCurrentFile &&
+      !promptCase.hasCurrentWindowExplanation
+    );
+  }
+
+  if (promptCase.position === "tail" && promptCase.isAfterEditBarrier) {
+    return promptCase.hasExactCurrentFilePath || promptCase.hasOnlyBasenameAnchor;
+  }
+
+  return true;
+}
+
+function legacyPrimaryBypassWouldKeep(promptCase: PromptBoundarySimulationCase): boolean {
+  if (promptCase.isNonPrimaryEditTurn) return false;
+  if (promptCase.position === "before-window") return promptCase.isPrimaryTurn;
+  return true;
+}
+
+describe("prompt task-boundary policy simulation", () => {
+  it("separates stale primary revival from legitimate split-commit carryover across 100+ cases", () => {
+    const cases = buildPromptBoundarySimulationCases();
+    assert.ok(cases.length >= 100, `expected at least 100 simulation cases, got ${cases.length}`);
+
+    const riskyLegacyCases: PromptBoundarySimulationCase[] = [];
+    for (const promptCase of cases) {
+      const expected = promptCase.expectedKeep;
+      const simulated = shouldKeepPromptBoundarySimulation(promptCase);
+      assert.equal(simulated, expected, promptCase.name);
+
+      if (legacyPrimaryBypassWouldKeep(promptCase) !== expected) {
+        riskyLegacyCases.push(promptCase);
+      }
+    }
+
+    assert.ok(
+      riskyLegacyCases.length >= 24,
+      "the simulation should cover many stale-primary cases that the old primary-turn bypass keeps",
+    );
+    assert.ok(
+      riskyLegacyCases.some(
+        (promptCase) => promptCase.agent === "codex" && promptCase.position === "before-window",
+      ),
+      "Codex transcript-driven stale primary revival must be represented",
+    );
+  });
+});
+
 function setupGitRepo(): { repoDir: string; agentnoteDirPath: string; sessionDir: string } {
   const repoDir = mkdtempSync(join(tmpdir(), "agentnote-record-"));
   execSync("git init", { cwd: repoDir });
@@ -2657,6 +2823,189 @@ describe("recordCommitEntry", () => {
 
       const note = await readNote(commitSha);
       assert.equal(note, null, "stale unlinked transcript edits must not create a note");
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex: stale primary turns outside the commit window do not revive past tasks", async () => {
+    // PR #49 regression shape:
+    // - the previous task had a transcript edit touching a file that the current
+    //   commit also changes;
+    // - a commit-window marker already advanced past that old task;
+    // - line-count suffix matching can still surface the old turn as a primary
+    //   candidate, but it must not pull the old task prompt back into the note.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      mkdirSync(join(repoDir, "packages", "cli", "src", "core"), { recursive: true });
+      mkdirSync(join(repoDir, "docs"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "packages", "cli", "src", "core", "constants.ts"),
+        "export const ONE = 1;\n",
+      );
+      writeFileSync(join(repoDir, "docs", "CODING_RULES.md"), "# Coding Rules\n");
+      execSync("git add packages/cli/src/core/constants.ts docs/CODING_RULES.md", {
+        cwd: repoDir,
+      });
+      execSync('git commit -m "baseline docs and constants"', { cwd: repoDir });
+
+      const transcriptDir = join(codexHome, "sessions");
+      mkdirSync(transcriptDir, { recursive: true });
+      const transcriptPath = join(transcriptDir, "stale-primary-task-boundary.jsonl");
+      const transcriptRows = [
+        {
+          timestamp: "2026-04-15T12:00:00Z",
+          type: "session_meta",
+          payload: { id: SESSION_ID, timestamp: "2026-04-15T12:00:00Z" },
+        },
+        {
+          timestamp: "2026-04-15T12:00:01Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "improve prompt selection scoring again",
+              },
+            ],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:00:02Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: "touching constants for the old task" }],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:00:03Z",
+          type: "response_item",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            call_id: "old-task",
+            arguments: JSON.stringify({
+              patch:
+                "*** Begin Patch\n*** Update File: packages/cli/src/core/constants.ts\n@@\n export const ONE = 1;\n+export const OLD_TASK = true;\n*** End Patch\n",
+            }),
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:10:01Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "centralize constants and comments in Agent Note",
+              },
+            ],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:10:02Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "assistant",
+            content: [
+              {
+                type: "output_text",
+                text: "I will keep constants and documentation aligned.",
+              },
+            ],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:11:01Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "add coding rules documentation" }],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:11:02Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: "adding the coding rules" }],
+          },
+        },
+        {
+          timestamp: "2026-04-15T12:11:03Z",
+          type: "response_item",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            call_id: "current-task",
+            arguments: JSON.stringify({
+              patch:
+                "*** Begin Patch\n*** Update File: packages/cli/src/core/constants.ts\n@@\n export const ONE = 1;\n+export const TWO = 2;\n*** Update File: docs/CODING_RULES.md\n@@\n # Coding Rules\n+Prefer named constants.\n*** End Patch\n",
+            }),
+          },
+        },
+      ];
+      writeFileSync(transcriptPath, transcriptRows.map((row) => JSON.stringify(row)).join("\n"));
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"improve prompt selection scoring again","prompt_id":"id-old-task","turn":1,"timestamp":"2026-04-15T12:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"https://wasabeef.github.io/AgentNote/dashboard のリダイレクトはなおった？","prompt_id":"id-dashboard-check","turn":2,"timestamp":"2026-04-15T12:05:01Z"}\n' +
+          '{"event":"prompt","prompt":"merged it","prompt_id":"id-merged","turn":3,"timestamp":"2026-04-15T12:06:01Z"}\n' +
+          '{"event":"prompt","prompt":"centralize constants and comments in Agent Note\\n\\n- replace magic strings with named constants\\n- add comments that explain workflow intent","prompt_id":"id-current-plan","turn":4,"timestamp":"2026-04-15T12:10:01Z"}\n' +
+          '{"event":"prompt","prompt":"add coding rules documentation","prompt_id":"id-current-edit","turn":5,"timestamp":"2026-04-15T12:11:01Z"}\n',
+      );
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"prompt_id":"id-old-task","file":null,"prompt_scope":"window","change_id":null,"tool_use_id":null}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "5\n");
+
+      writeFileSync(
+        join(repoDir, "packages", "cli", "src", "core", "constants.ts"),
+        "export const ONE = 1;\nexport const TWO = 2;\nexport const THREE = 3;\n",
+      );
+      writeFileSync(
+        join(repoDir, "docs", "CODING_RULES.md"),
+        "# Coding Rules\nPrefer named constants.\n",
+      );
+      execSync("git add packages/cli/src/core/constants.ts docs/CODING_RULES.md", {
+        cwd: repoDir,
+      });
+      execSync('git commit -m "refactor: centralize constants"', { cwd: repoDir });
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID, transcriptPath });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null);
+      const prompts = (note.interactions as Array<{ prompt: string }>).map((i) => i.prompt);
+      assert.deepEqual(prompts, [
+        "centralize constants and comments in Agent Note\n\n- replace magic strings with named constants\n- add comments that explain workflow intent",
+        "add coding rules documentation",
+      ]);
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
