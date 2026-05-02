@@ -812,6 +812,6 @@
   "pull_request": {
     "number": 50,
     "title": "fix(record): trim stale task prompts",
-    "state": "open"
+    "state": "merged"
   }
 }
