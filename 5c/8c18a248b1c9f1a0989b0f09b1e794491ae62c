@@ -1,0 +1,307 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-02T09:17:44.222Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "docs/ 以下を完璧に整理したい。",
+      "response": "`docs/` を整理します。まず現状の構成、古い TODO / knowledge の残り、README / website との重複を棚卸しして、削る・統合する・残すの判断をこちらで進めます。\n`docs/` は今、公開 README から参照される canonical な `DESIGN.md` と、実装相談・調査メモが同じ `knowledge/` に混ざっています。まず「残すべき恒久 docs」「完了済み調査として archive」「削るべき TODO」を分けて、読む人が迷わない形にします。\n整理方針を決めました。`docs/` は「入口」「現在の設計」「調査・履歴」に分けます。`TODO.md` は未解決が空なので、TODO ではなく解決済み調査の履歴として移動し、古い実装計画・初期調査は `archive/` に隔離します。\n`docs/` を「今見るべきもの」と「履歴として残すもの」に分けて、迷子にならない構造に整えます。まず移動と index 追加を入れてから、参照切れと表記のズレを全部確認します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "まず現状の構成、古い TODO / knowledge の残り、README / website との重複を棚卸しして、削る・統合する・残すの判断をこちらで進めます。 `docs/` は今、公開 README から参照される canonical な `DESIGN.md` と、実装相談・調査メモが同じ `knowledge/` に混ざっています。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "統合だったりリネームだったり、考えてほしい\n\nCODING_RULES.md もあるけど、 AI Agent のナレッジベースやルールとして使える形にして",
+      "response": "方針を少し変えます。単なる棚卸しではなく、`docs/` を「AI Agent が参照する current rules / knowledge」と「人間があとで読む archive」に分け、名前も用途が一目で分かる形に寄せます。\n`CODING_RULES.md` は名前が少し狭いですね。ここは `AGENT_RULES.md` にリネームして、「AI Agent が作業中に読む実装ルール」として強め、設計資料は `knowledge/` の current / research / archive に分けます。\nここから実際に整理します。リネームは `git mv` で履歴を追えるようにして、古い計画書は捨てずに `archive/` へ逃がします。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "AGENT は AGENTS.md や CLAUDE.md などがあるから違うと思う",
+      "response": "その通りです。`AGENT_RULES.md` だと `AGENTS.md` / `CLAUDE.md` と役割が衝突するのでやめます。ここは AI Agent も人間も参照する実装基準として `docs/DEVELOPMENT_GUIDELINES.md` に寄せます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "ちゃんと考えて",
+      "response": "ちゃんと設計し直します。いまの `DEVELOPMENT_GUIDELINES.md` も悪くはないですが、`CONTRIBUTING.md` と役割が近すぎるので、もう一段きれいに分けます。\n最終方針はこれでいきます。`AGENTS.md` / `CLAUDE.md` は「作業時の振る舞い」、`CONTRIBUTING.md` は「外部 contributor の手順」、`docs/engineering.md` は「実装ルール」、`docs/knowledge/` は「AI Agent も読める設計知識」です。役割が混ざらないようにします。\n`RESEARCH.md` だけ Git 管理外として残っていました。ユーザー作成の可能性もあるので、削除ではなく通常の `mv` で archive に移して、履歴管理対象にするかどうかは後で状態を確認します。\n実体に合わせて参照名も直します。README は architecture への入口、`knowledge/` は active design と investigation history、archive は過去の調査として読めるようにします。\n`archive/research.md` も名前が曖昧なので、過去資料だと分かる `archive/early-research.md` にします。`research/` 配下は今後も参照価値がある調査、`archive/` は履歴という切り分けです。\n参照切れの第一段階は潰れました。次は Markdown link と test fixture の整合性を見て、ドキュメント移動がコード側の regression test を壊していないか確認します。\n`archive/problems.md` もまだ曖昧なので、過去の問題整理だと分かる名前へ寄せます。active knowledge と archive を見間違えないのが今回の肝です。\n`agent-support-promotion.md` も「計画」より「policy」のほうが current reference として自然なので、`agent-support-policy.md` にします。中身も release gate と support tier の基準として読める名前に寄せます。\n古いファイル名の参照は消え、docs 内の Markdown link も通りました。次は最低限の破損確認として whitespace と、変更した fixture 周辺のテストを回します。\n確認結果は良いです。`docs` link check、`git diff --check`、CLI 全 test `383/383`、PR Report test `35/35` が通りました。最後に差分全体をもう一度見て、過剰な rename や参照漏れがないか締めます。\n最後の grep で `architecture.md` に「Sanitization is not yet implemented」という強い古い注意が残っていました。これは今回の整理で見逃すと危ないので、実装と照らして正しい表現に直します。\n`docs/` の整理を実施しました。\n\n主な変更:\n- `docs/README.md` を追加して docs 全体の入口を作成\n- `docs/engineering.md` に実装ルールを整理\n- `docs/architecture.md` を canonical architecture として昇格\n- `docs/knowledge/` を current knowledge / research / archive に分割\n- 古い計画書は `docs/knowledge/archive/` へ移動\n- `TODO.md` は `docs/knowledge/investigations.md` に変更\n- README 多言語版の architecture link を更新\n- `AGENTS.md` / `CLAUDE.md` に maintainer docs の参照を追加\n- rename に合わせて関連 test fixture も更新\n\n確認済み:\n- `docs` Markdown link check OK\n- `git diff --check` OK\n- `packages/cli` test: `383/383` pass\n- `packages/pr-report` test: `35/35` pass\n\nコミットはまだしていません。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "最終方針はこれでいきます。 `AGENTS.md` / `CLAUDE.md` は「作業時の振る舞い」、`CONTRIBUTING.md` は「外部 contributor の手順」、`docs/engineering.md` は「実装ルール」、`docs/knowledge/` は「AI Agent も読める設計知識」です。"
+        }
+      ],
+      "files_touched": [
+        "docs/README.md",
+        "docs/knowledge/README.md",
+        "docs/knowledge/archive/README.md",
+        "docs/knowledge/research/README.md",
+        "docs/engineering.md",
+        "docs/architecture.md",
+        "docs/knowledge/investigations.md",
+        "docs/knowledge/prompt-context.md",
+        "docs/knowledge/research/agentnote-vs-entire.md",
+        "packages/cli/src/core/record.test.ts",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/knowledge/agent-support-policy.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/CODING_RULES.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/README.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/TODO.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/engineering.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/AGENTNOTE_VS_ENTIRE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/AGENT_SUPPORT_PROMOTION_PLAN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/CODEX_SUPPORT_PLAN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/CURSOR_SUPPORT_PLAN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/DESIGN.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/GEMINI_SUPPORT_PLAN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/PROBLEMS.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/PROMPT_CONTEXT_DESIGN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/README.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/agent-support-policy.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/archive/README.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/archive/codex-support-plan.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/archive/cursor-support-plan.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/archive/early-problem-framing.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/archive/early-research.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/archive/gemini-support-plan.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/prompt-context.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/prompt-selection.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/research/README.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/research/agentnote-vs-entire.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/interaction-context.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 64,
+    "method": "file"
+  }
+}
