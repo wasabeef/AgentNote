@@ -30,6 +30,12 @@ const publicNotesDir = join(dashboardDir, PUBLIC_DIR_NAME, NOTES_DIR_NAME);
 const tempDir = mkdtempSync(join(tmpdir(), TEMP_DIR_PREFIX));
 const originalNotesDir = join(tempDir, ORIGINAL_NOTES_DIR_NAME);
 
+/**
+ * Mirror directory contents across build-stage handoffs.
+ *
+ * Dashboard workflow scripts use this helper when moving generated note JSON
+ * between the temporary public directory, build output, and Pages artifact.
+ */
 function copyDirectoryContents(sourceDir, targetDir) {
   for (const entry of readdirSync(sourceDir)) {
     cpSync(join(sourceDir, entry), join(targetDir, entry), {
@@ -51,6 +57,7 @@ const base =
     : `/${repositoryName}/${DASHBOARD_SUBDIRECTORY}`;
 
 try {
+  // Astro reads dashboard notes from public/notes only during the static build.
   rmSync(publicNotesDir, { recursive: true, force: true });
   mkdirSync(publicNotesDir, { recursive: true });
   if (existsSync(notesDir)) {
@@ -74,6 +81,7 @@ try {
   });
 
   if (pagesMode === PUBLISH_MODE_INTEGRATED) {
+    // Integrated mode must replace only dashboard/, leaving the caller's docs artifact intact.
     mkdirSync(pagesDir, { recursive: true });
     rmSync(join(pagesDir, DASHBOARD_SUBDIRECTORY), { recursive: true, force: true });
   } else {
@@ -84,6 +92,7 @@ try {
     recursive: true,
   });
 } finally {
+  // CI builds should not leave generated public notes in the repository checkout.
   rmSync(publicNotesDir, { recursive: true, force: true });
   mkdirSync(publicNotesDir, { recursive: true });
   if (existsSync(originalNotesDir)) {

@@ -112,6 +112,13 @@ function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[
   ];
 }
 
+/**
+ * Identify the Agent Note session inside a Codex transcript candidate.
+ *
+ * Transcript files can grow quickly during long sessions, so discovery reads a
+ * bounded prefix and accepts both parsed JSONL metadata and raw-text fallback
+ * matches for partially written files.
+ */
 function readTranscriptSessionId(candidate: string): string | null {
   try {
     const preview = readFileSync(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS);
@@ -136,6 +143,12 @@ function readTranscriptSessionId(candidate: string): string | null {
   }
 }
 
+/**
+ * Find the Codex transcript that belongs to the current Agent Note session.
+ *
+ * Codex has used both flat and nested transcript layouts, so the search is
+ * breadth-first and bounded to avoid expensive scans in large history dirs.
+ */
 function findTranscriptCandidate(rootDir: string, sessionId: string): string | null {
   const queue: string[] = [rootDir];
   let scanned = 0;

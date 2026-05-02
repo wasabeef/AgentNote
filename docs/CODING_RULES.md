@@ -35,6 +35,7 @@ if (eventName === "pull_request") {
 ## コメント
 
 - コメントは「何をしているか」よりも「なぜ必要か」を説明する。
+- exported function、workflow entry point、複雑な判定関数には TSDoc/JSDoc 形式の block comment を付ける。
 - Agent Note の `📝 Context` として読まれても意味が通る短い英語コメントを優先する。
 - obvious な代入や関数呼び出しにはコメントを付けない。
 - fallback、heuristic、安全側の判断、永続化 boundary、外部 service 制約にはコメントを付ける。
@@ -43,7 +44,12 @@ if (eventName === "pull_request") {
 良い例:
 
 ```js
-// PR snapshots are partial, so replace only the affected PR instead of the whole store.
+/**
+ * Merge the current dashboard snapshot into the durable gh-pages note store.
+ *
+ * The snapshot may contain only one PR, so the merge removes stale notes for
+ * affected PRs and leaves every unrelated PR note in place.
+ */
 ```
 
 避けたい例:
@@ -66,4 +72,3 @@ rmSync(path, { force: true });
 - Dashboard workflow を触ったら `packages/dashboard` の test / build を確認する。
 - PR Report rendering や Action input を触ったら `packages/pr-report` の test / build を確認する。
 - CLI core / agent adapter を触ったら `packages/cli` の build、typecheck、lint、test を確認する。
-

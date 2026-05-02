@@ -26,6 +26,12 @@ function copyDirectoryContents(sourceDir, targetDir) {
   return count;
 }
 
+/**
+ * Restore persisted Dashboard notes from gh-pages into the local build snapshot.
+ *
+ * Local restore is replace-all because the later persist step performs the safe
+ * PR-aware merge back into the durable gh-pages store.
+ */
 export function restoreDashboardNotes(sourceNotesDir, targetNotesDir) {
   rmSync(targetNotesDir, { recursive: true, force: true });
   mkdirSync(targetNotesDir, { recursive: true });
@@ -41,6 +47,9 @@ function git(args, options = {}) {
   });
 }
 
+/**
+ * Fetch gh-pages and restore Dashboard notes before the current build runs.
+ */
 export function main() {
   rmSync(notesDir, { recursive: true, force: true });
   mkdirSync(notesDir, { recursive: true });

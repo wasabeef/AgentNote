@@ -211,6 +211,12 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
     .filter((group) => group.hooks.length > 0);
 }
 
+/**
+ * Identify the Agent Note session inside a Gemini JSONL transcript candidate.
+ *
+ * Gemini writes metadata near the start of the file, so a bounded prefix is
+ * enough for discovery while keeping large transcript scans cheap.
+ */
 function readTranscriptSessionId(candidate: string): string | null {
   try {
     const preview = readFileSync(candidate, TEXT_ENCODING).slice(0, TRANSCRIPT_PREVIEW_CHARS);
@@ -222,6 +228,12 @@ function readTranscriptSessionId(candidate: string): string | null {
   }
 }
 
+/**
+ * Locate the Gemini transcript for the current Agent Note session.
+ *
+ * File names are controlled by Gemini CLI, so matching must use transcript
+ * metadata instead of assuming a deterministic path.
+ */
 function findTranscriptCandidate(rootDir: string, sessionId: string): string | null {
   const queue: string[] = [rootDir];
   let scanned = 0;

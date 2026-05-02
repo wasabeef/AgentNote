@@ -13,6 +13,13 @@ import {
 import { recordCommitEntry } from "../core/record.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 
+/**
+ * Provide a hook-compatible manual commit path.
+ *
+ * This fallback command mirrors the git hooks: it validates the session
+ * heartbeat, lets git own the commit UX, then records a git note only after a
+ * successful commit.
+ */
 export async function commit(args: string[]): Promise<void> {
   const sf = await sessionFile();
   let sessionId = "";

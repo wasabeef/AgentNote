@@ -70,6 +70,12 @@ function hasLineData(lines: Record<string, unknown>): boolean {
   return typeof lines.total_added === "number" && lines.total_added > 0;
 }
 
+/**
+ * Keep historical dashboard notes readable after schema growth.
+ *
+ * Newer sync jobs backfill this data into each note, but the static build keeps
+ * a git-based fallback so historical notes remain readable.
+ */
 function readCommitMetadata(sha: string) {
   if (!sha) return null;
   if (commitMetadataCache.has(sha)) {
@@ -102,6 +108,12 @@ function readCommitMetadata(sha: string) {
   }
 }
 
+/**
+ * Build the static dashboard index from note JSON files.
+ *
+ * The client loads this index by URL instead of querying GitHub at runtime, so
+ * every PR and commit relationship must be materialized during the Astro build.
+ */
 function buildDashboardIndex(): DashboardIndexData {
   const noteFiles = existsSync(notesDir)
     ? readdirSync(notesDir).filter((file) => file.endsWith(JSON_EXTENSION)).sort()

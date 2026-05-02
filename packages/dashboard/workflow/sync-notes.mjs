@@ -86,6 +86,12 @@ function readCommitMetadata(sha) {
   }
 }
 
+/**
+ * Normalize commit metadata for a Dashboard note.
+ *
+ * Older note files may not include enough commit fields for the UI, so git is
+ * used as the source of truth when metadata is missing.
+ */
 function buildDashboardCommit(sha, commit) {
   const fallback = readCommitMetadata(typeof commit?.sha === "string" ? commit.sha : sha);
   const resolvedSha =
@@ -130,6 +136,12 @@ function normalizeDiffPath(rawPath) {
   return rawPath.replace(/^[ab]\//, "");
 }
 
+/**
+ * Convert a unified git diff into the compact Dashboard diff payload.
+ *
+ * Line caps keep the persisted Pages data bounded while still exposing enough
+ * code context for review-oriented browsing.
+ */
 export function parseDiffFiles(rawDiff) {
   const files = [];
   let current = null;
@@ -193,6 +205,12 @@ function needsDiff(note) {
   return !Array.isArray(note?.diff?.files) || note.diff.files.length === 0;
 }
 
+/**
+ * Materialize one Agent Note git note as Dashboard JSON.
+ *
+ * The output is static data consumed by the browser; missing diff data is
+ * populated here so old and new notes share one UI format.
+ */
 function writeDashboardNote(sha, pullRequest) {
   const note = readGitNote(sha);
   if (!note) return false;
@@ -231,6 +249,12 @@ function readDashboardNote(path) {
   }
 }
 
+/**
+ * Backfill restored Dashboard notes before writing new data.
+ *
+ * This keeps existing gh-pages history compatible when schema fields such as
+ * commit metadata or diff payloads are added after notes were first published.
+ */
 function backfillDashboardNotes() {
   for (const path of listNoteFiles()) {
     const note = readDashboardNote(path);
@@ -330,6 +354,12 @@ function setFlags({ build, persist, deploy }) {
   setOutput("should_deploy", deploy);
 }
 
+/**
+ * Sync Agent Note git notes into Dashboard JSON for the current workflow event.
+ *
+ * Pull request events write open PR snapshots, while default-branch push events
+ * update merged PR state by asking GitHub which PRs contain each commit.
+ */
 function main() {
   mkdirSync(notesDir, { recursive: true });
 

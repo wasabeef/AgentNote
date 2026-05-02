@@ -45,6 +45,12 @@ function leadingSpaces(line) {
   return line.match(/^\s*/)?.[0].length ?? 0;
 }
 
+/**
+ * Resolve the caller workflow path from GitHub Actions metadata.
+ *
+ * The action only trusts workflow files that belong to the current repository
+ * and live under `.github/workflows/`.
+ */
 export function resolveWorkflowPath({
   repositoryName = repository,
   workflowReference = workflowRef,
@@ -63,6 +69,12 @@ export function resolveWorkflowPath({
   return join(workspaceDir, relativePath);
 }
 
+/**
+ * Parse the path configured for actions/upload-pages-artifact.
+ *
+ * This lightweight parser is intentionally limited to the workflow shapes the
+ * action needs; it avoids pulling a YAML dependency into the dashboard package.
+ */
 export function parseUploadPagesArtifactPath(workflowText) {
   const lines = workflowText.split(/\r?\n/);
 
@@ -101,6 +113,9 @@ export function parseUploadPagesArtifactPath(workflowText) {
   return null;
 }
 
+/**
+ * Detect whether a workflow already owns GitHub Pages publishing.
+ */
 export function hasPagesPublishStep(workflowText) {
   return /\buses:\s*['"]?actions\/(?:upload-pages-artifact|deploy-pages)@/i.test(workflowText);
 }
@@ -109,6 +124,12 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Extract one job block from a GitHub Actions workflow.
+ *
+ * When the calling job already uploads Pages, the dashboard can merge into that
+ * artifact; when another job owns Pages, the dashboard must avoid overwriting it.
+ */
 export function extractJobBlock(workflowText, jobId) {
   if (!jobId) return null;
 
@@ -151,6 +172,9 @@ export function extractJobBlock(workflowText, jobId) {
   return null;
 }
 
+/**
+ * Guard artifact merging to paths known before the workflow runs.
+ */
 function isStaticPath(value) {
   return Boolean(value) && !/[`${}*?[\]\n\r]/.test(value);
 }
@@ -163,6 +187,9 @@ function realpathIfExists(path) {
   }
 }
 
+/**
+ * Check that a resolved artifact path stays inside the GitHub workspace.
+ */
 function isInsideWorkspace(path, workspaceDir) {
   const realPath = realpathIfExists(resolve(path));
   const realWorkspaceDir = realpathIfExists(resolve(workspaceDir));
@@ -171,6 +198,12 @@ function isInsideWorkspace(path, workspaceDir) {
     (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
+/**
+ * Decide how Dashboard should publish alongside the caller's Pages workflow.
+ *
+ * The result intentionally favors safe no-op states over guessing when another
+ * job, another workflow, or a dynamic artifact path owns Pages.
+ */
 export function resolvePagesTarget({
   workflowText,
   otherWorkflowTexts = [],

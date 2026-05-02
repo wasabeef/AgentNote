@@ -23,6 +23,12 @@ import { normalizeEntry } from "./normalize.js";
 declare const __VERSION__: string;
 const VERSION = __VERSION__;
 
+/**
+ * Print a compact health summary for Agent Note in the current repository.
+ *
+ * The command checks configured agents, managed git hooks, active sessions, and
+ * recent note linkage without mutating repository state.
+ */
 export async function status(): Promise<void> {
   console.log(`agent-note v${VERSION}`);
   console.log();
@@ -119,6 +125,12 @@ export async function status(): Promise<void> {
   console.log(`linked:  ${linked}/${RECENT_STATUS_COMMIT_LIMIT} recent commits`);
 }
 
+/**
+ * Summarize capture capabilities for each enabled agent adapter.
+ *
+ * These labels are intentionally derived from configuration files rather than
+ * live processes so `agent-note status` remains deterministic and cheap.
+ */
 async function readAgentCaptureDetails(
   repoRoot: string,
   enabledAgents: string[],
@@ -153,6 +165,9 @@ type CodexHooksConfig = {
   hooks?: Record<string, Array<{ hooks?: Array<{ command?: string }> }>>;
 };
 
+/**
+ * Describe Codex capture coverage from `.codex/hooks.json`.
+ */
 async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]> {
   const hooksPath = join(repoRoot, ".codex", "hooks.json");
   if (!existsSync(hooksPath)) return [];
@@ -237,6 +252,12 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
   }
 }
 
+/**
+ * Identify git hooks currently managed by Agent Note.
+ *
+ * Existing user hooks are ignored unless they contain the Agent Note marker, so
+ * the status output does not claim ownership of unrelated hook scripts.
+ */
 async function readManagedGitHooks(repoRoot: string): Promise<string[]> {
   const hookDir = await resolveHookDir(repoRoot);
   const active: string[] = [];

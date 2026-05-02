@@ -25,6 +25,12 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Fetch Agent Note git notes from the remote before collecting PR data.
+ *
+ * Notes can arrive slightly after the branch push, so callers may retry this
+ * fetch to cover the race between branch publication and notes publication.
+ */
 function fetchAgentnoteNotes(): void {
 	try {
 		execSync(`git fetch origin ${AGENTNOTE_NOTES_REFSPEC}`, {
@@ -100,6 +106,12 @@ async function postPrReport(
 	core.info("Agent Note report posted as PR comment.");
 }
 
+/**
+ * Explain delayed Dashboard previews caused by Pages environment protection.
+ *
+ * The PR report only shows this explanation when the Dashboard URL exists and
+ * GitHub reports branch protection on the Pages environment.
+ */
 async function inferDashboardPreviewHelpUrl(
 	token: string,
 	dashboardUrl: string | null,
@@ -134,6 +146,12 @@ async function inferDashboardPreviewHelpUrl(
 	return null;
 }
 
+/**
+ * Entry point for the GitHub Action.
+ *
+ * It fetches notes, collects the PR report, retries when the notes ref appears
+ * stale, and finally writes the report to the configured PR surface.
+ */
 async function run(): Promise<void> {
 	try {
 		const base =
@@ -148,6 +166,7 @@ async function run(): Promise<void> {
 		let report: Awaited<ReturnType<typeof collectReport>> = null;
 
 		for (let attempt = 1; attempt <= MAX_NOTES_FETCH_ATTEMPTS; attempt++) {
+			// Fetch/retry covers the race between code push and refs/notes/agentnote push.
 			fetchAgentnoteNotes();
 
 			report = await collectReport(base, headSha, {

@@ -12,7 +12,11 @@ const TEXT_ENCODING = "utf-8";
 const execFileAsync = promisify(execFile);
 
 /**
- * Resolve PR output mode from the action input.
+ * Resolve the PR report output mode from action input.
+ *
+ * Unknown values intentionally fall back to `description` so a misconfigured
+ * workflow still produces the primary PR report instead of silently doing
+ * nothing.
  */
 export function resolvePrOutputMode(
 	prOutputInput: string,
@@ -28,8 +32,10 @@ export function resolvePrOutputMode(
 }
 
 /**
- * Upsert the agentnote markdown section into a PR description body.
- * Replaces the existing section (begin/end markers) if present, appends if not.
+ * Upsert the Agent Note markdown section into a PR description body.
+ *
+ * The begin/end markers make the update idempotent: existing reports are
+ * replaced in place, while user-written PR description text is preserved.
  */
 export function upsertDescription(
 	existingBody: string,
@@ -65,6 +71,12 @@ export function shouldRetryNotesFetch(report: {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
+/**
+ * Infer the public Dashboard URL from a GitHub remote URL.
+ *
+ * The PR number is appended only for PR reports so the general dashboard route
+ * can remain a team-level entry point without forced `?pr=` redirects.
+ */
 export function inferDashboardUrl(
 	repoUrl: string | null,
 	prNumber?: number | string | null,
@@ -97,6 +109,12 @@ function appendPrNumber(
 	return url.toString();
 }
 
+/**
+ * Detect whether the GitHub Pages environment restricts deploy branches.
+ *
+ * When protection is enabled, PR previews may wait for approval or merge, so
+ * the PR report can explain why the Dashboard link is not live yet.
+ */
 export function hasDeploymentBranchProtection(
 	policy:
 		| {
@@ -113,6 +131,9 @@ export function hasDeploymentBranchProtection(
 	);
 }
 
+/**
+ * Update a PR description with the current Agent Note report.
+ */
 export async function updatePrDescription(
 	prNumber: string,
 	markdown: string,
@@ -124,6 +145,9 @@ export async function updatePrDescription(
 	});
 }
 
+/**
+ * Maintain a single Agent Note PR comment.
+ */
 export async function postPrComment(
 	prNumber: string,
 	content: string,

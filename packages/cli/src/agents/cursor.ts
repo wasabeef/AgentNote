@@ -162,6 +162,12 @@ function repoRoot(): string {
   }
 }
 
+/**
+ * Resolve the repo-local Cursor transcript directory.
+ *
+ * Cursor stores transcripts below a sanitized absolute repo path. Tests and
+ * custom local setups can override that root without changing the adapter.
+ */
 function cursorTranscriptDir(): string {
   const override = process.env[CURSOR_TRANSCRIPTS_DIR_ENV]?.trim();
   if (override) return resolve(override);
