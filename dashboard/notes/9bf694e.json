@@ -878,6 +878,6 @@
   "pull_request": {
     "number": 49,
     "title": "refactor: centralize constants and document workflow intent",
-    "state": "open"
+    "state": "merged"
   }
 }
