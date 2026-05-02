@@ -1,0 +1,76 @@
+---
+title: Instalasi
+description: Memasang hooks Agent Note, berbagi lewat git notes, dan workflow PR Report.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Halaman ini adalah langkah praktis. Setelah selesai, repository dapat merekam data Agent Note saat `git commit` biasa dan menerbitkan PR Report di GitHub.
+
+## Memasang
+
+<Steps>
+1. Jalankan `init` di repository.
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   Agent lain:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - Beberapa agent: `npx agent-note init --agent claude cursor`
+
+   Dengan Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. Commit file yang dibuat.
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI menambahkan `.codex/config.toml` dan `.codex/hooks.json`. Cursor menambahkan `.cursor/hooks.json`. Gemini CLI menambahkan `.gemini/settings.json`. Dengan `--dashboard`, tambahkan juga `.github/workflows/agentnote-dashboard.yml`.
+
+3. Bekerja seperti biasa dengan agent Anda.
+
+   Jika git hooks yang dibuat sudah terpasang, `git commit` biasa sudah cukup. Gunakan `agent-note commit -m "..."` hanya ketika git hooks tidak tersedia.
+</Steps>
+
+## Setiap clone
+
+Git hooks berada di `.git/` dan tidak ikut di-commit. Setiap developer perlu menjalankan `init` setelah `git clone`.
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  File konfigurasi agent dibagikan lewat git. Git hooks tetap lokal untuk setiap clone.
+</Aside>
+
+## Verifikasi
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+Jika PR Report kosong atau prompt terasa terlalu pendek, buka [Troubleshooting](./troubleshooting/).
+
+## Menghapus
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Tambahkan `--remove-workflow` untuk menghapus workflow PR Report dan Dashboard juga.
+

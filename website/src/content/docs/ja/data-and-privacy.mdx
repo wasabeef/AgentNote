@@ -1,0 +1,81 @@
+---
+title: データとプライバシー
+description: Agent Note が保存するもの、保存場所、送信しないもの
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+Agent Note は、hosted backend なしで AI review history を残したいチーム向けに設計されています。永続データは git-native で、作業中の一時データは repository clone の中に残ります。
+
+## 要点
+
+<CardGrid>
+  <Card title="Hosted service なし" icon="rocket">
+    Agent Note server は不要です。PR Report と Dashboard は repository の GitHub Actions で動きます。
+  </Card>
+  <Card title="Git-native history" icon="document">
+    永続データは `refs/notes/agentnote` の git notes に保存されます。
+  </Card>
+  <Card title="Local temp data" icon="laptop">
+    作業中の session file は `.git/agentnote/` の下に置かれ、commit されません。
+  </Card>
+  <Card title="Telemetry なし" icon="setting">
+    CLI は prompt、response、file path を Agent Note service へ送信しません。
+  </Card>
+</CardGrid>
+
+## 保存するもの
+
+Agent Note は commit を説明するために必要な情報を保存します。
+
+| 項目 | 目的 |
+|---|---|
+| `prompt` / `response` | commit につながった会話 |
+| `contexts[]` | 短い prompt のための表示専用 hint |
+| `files` | committed file と AI が触ったかどうか |
+| `attribution` | AI ratio、method、利用可能な line count |
+| `agent` / `model` | agent と model の metadata |
+
+schema は [仕組み](./how-it-works/#note-スキーマ) にあります。
+
+## Dashboard を有効にする前に
+
+| 確認したいこと | おすすめ |
+|---|---|
+| Pages を見られる人に prompt も見えてよいか | repository の運用ルールと Pages の公開範囲を揃える |
+| prompt に secret や顧客情報が入る可能性があるか | git notes も review data として扱い、secret を prompt に入れない |
+| PR review の文脈だけ見えればよいか | `--dashboard` は使わず、PR Report だけを使う |
+
+## 保存場所
+
+| 層 | 保存場所 | 共有されるか |
+|---|---|---|
+| 一時 session data | `.git/agentnote/sessions/` | いいえ |
+| 永続 notes | `refs/notes/agentnote` | はい、`git push` 時 |
+| PR Report | Pull Request description または comment | はい、GitHub 上 |
+| Dashboard bundle | GitHub Pages artifact と `gh-pages/dashboard/notes/*.json` | はい、Dashboard 有効時 |
+
+<Aside>
+  git notes は branch 上の通常ファイルではありません。`refs/notes/agentnote` という別 ref として push / fetch されます。
+</Aside>
+
+## 保存しないもの
+
+Agent Note は agent が見たものすべてを保存するわけではありません。
+
+- workspace 全体は保存しません。
+- すべての shell command output は保存しません。
+- shell command だけで行われた edit から、AI が触った file を推測しません。
+- Agent Note の backend へ data を upload しません。
+
+## チーム内での見え方
+
+`refs/notes/agentnote` を fetch できる人は、保存された prompt と response を読めます。git notes は review metadata として便利ですが、repository data として扱ってください。
+
+機密性の高い prompt を含む repository では、repository と Pages の公開範囲をチームの review policy に合わせてください。
+
+## Dashboard の扱い
+
+Dashboard は任意です。有効化すると、workflow が作成した note snapshot を GitHub Pages の static view として公開します。
+
+共有 web view が不要なら、`--dashboard` を使わず PR Report のみを使ってください。

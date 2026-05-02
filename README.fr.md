@@ -245,7 +245,7 @@ PR Report Mode est le mode par défaut:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Définissez `prompt_detail` sur `compact` ou `full` pour raccourcir l'historique des prompts ou l'afficher en entier. La valeur par défaut est `compact`: il affiche les prompts high + medium, tandis que `full` affiche tous les prompts enregistrés.
+Définissez `prompt_detail` sur `compact` ou `full` pour obtenir un historique de prompts ciblé ou complet. La valeur par défaut est `compact`: il garde le rapport lisible en affichant les prompts qui expliquent le commit, tandis que `full` affiche tous les prompts enregistrés.
 
 Dashboard Mode utilise la même action avec `dashboard: true`:
 
@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7
 
 Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
 
-[Détails d'architecture →](docs/knowledge/DESIGN.md)
+[Détails d'architecture →](docs/architecture.md)
 
 ## Contribuer
 

@@ -1,0 +1,76 @@
+---
+title: Installation
+description: Agent Note Hooks, git-notes Sharing und den PR-Report-Workflow installieren.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Diese Seite ist der praktische Setup-Pfad. Danach kann dein Repository Agent-Note-Daten während eines normalen `git commit` speichern und auf GitHub einen PR Report veröffentlichen.
+
+## Installieren
+
+<Steps>
+1. Führe `init` im Repository aus.
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   Andere Agents:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - Mehrere Agents: `npx agent-note init --agent claude cursor`
+
+   Mit Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. Committe die generierten Dateien.
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI ergänzt `.codex/config.toml` und `.codex/hooks.json`. Cursor ergänzt `.cursor/hooks.json`. Gemini CLI ergänzt `.gemini/settings.json`. Mit `--dashboard` kommt `.github/workflows/agentnote-dashboard.yml` dazu.
+
+3. Arbeite normal mit deinem Agent.
+
+   Wenn die generierten Git-Hooks installiert sind, reicht `git commit`. Nutze `agent-note commit -m "..."` nur, wenn Git-Hooks nicht verfügbar sind.
+</Steps>
+
+## Jeder Clone
+
+Jede Person sollte nach `git clone` einmal `init` ausführen, weil Git-Hooks in `.git/` liegen und nicht committet werden.
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  Agent-Konfigurationsdateien werden per git geteilt. Git-Hooks bleiben lokal pro Clone.
+</Aside>
+
+## Prüfen
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+Wenn der PR Report leer ist oder Prompts zu kurz wirken, lies [Troubleshooting](./troubleshooting/).
+
+## Entfernen
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Mit `--remove-workflow` entfernst du auch die PR-Report- und Dashboard-Workflows.
+

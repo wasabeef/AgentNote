@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: Memperbaiki masalah umum setup, PR Report, Dashboard, dan git notes.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Sebagian besar masalah berasal dari local git hooks, git notes yang belum tersedia, atau pengaturan GitHub Pages.
+
+## Pemeriksaan cepat
+
+<Steps>
+1. Periksa local setup.
+
+   ```bash
+   npx agent-note status
+   ```
+
+2. Periksa apakah commit punya note.
+
+   ```bash
+   npx agent-note show
+   ```
+
+3. Periksa remote notes.
+
+   ```bash
+   git fetch origin refs/notes/agentnote:refs/notes/agentnote
+   git notes --ref=agentnote show HEAD
+   ```
+</Steps>
+
+## Mulai dari gejalanya
+
+| Gejala | Mulai dari sini |
+|---|---|
+| PR Report kosong | Pastikan notes sudah di-push dan workflow mengambil git history lengkap |
+| Prompt yang diharapkan tidak muncul | Bandingkan `compact` dan `full` |
+| Dashboard terbuka, tetapi PR tidak punya data | Periksa apakah notes untuk PR itu sudah dipublikasikan |
+| `git commit` tidak membuat note | Jalankan `init` lagi dan lihat baris `git:` di `status` |
+| Attribution tetap file-level | Periksa apakah agent menyediakan edit history yang cukup |
+
+## PR Report kosong
+
+- PR branch di-push setelah Agent Note diaktifkan.
+- `refs/notes/agentnote` ada di remote.
+- `actions/checkout` memakai `fetch-depth: 0`.
+- PR berisi commit dengan file yang disentuh agent.
+
+Agent Note tidak menulis note untuk commit ketika tidak ada committed file yang dapat dikaitkan dengan agent.
+
+## Prompt hilang
+
+Prompt selection mengikuti commit-to-commit window, bukan seluruh session.
+
+- `compact` menjaga laporan tetap fokus dengan menampilkan prompt yang menjelaskan commit.
+- `full` menampilkan semua prompt yang disimpan.
+- Prompt task lama dilewati jika commit saat ini sudah punya penjelasan sendiri.
+- `📝 Context` muncul untuk prompt pendek ketika nama file atau code identifier membantu menjelaskannya.
+
+```yaml
+with:
+  prompt_detail: full
+```
+
+## Dashboard tidak punya data
+
+- GitHub Pages source harus **GitHub Actions**.
+- Workflow harus menjalankan `dashboard: true`.
+- Deploy sukses pertama membuat `/dashboard/`.
+- Jika Pull Request Deploys diblokir, Open PR data muncul setelah merge.
+
+<Aside>
+  `?pr=123` hanya bekerja setelah notes untuk PR tersebut dipublikasikan.
+</Aside>
+
+## Dashboard membuka PR yang salah
+
+Halaman awal Dashboard seharusnya menampilkan riwayat bersama tanpa memaksa pindah ke `?pr=`. Hanya link dari PR Report yang menambahkan `?pr=<number>` untuk PR saat ini.
+
+Jika deploy Pages lama masih melakukan redirect, jalankan ulang workflow Dashboard atau tunggu deploy berikutnya dari `main` berhasil.
+
+## `git commit` tidak terlacak
+
+```bash
+npx agent-note status
+npx agent-note init --agent claude
+```
+
+Git hooks bersifat local di `.git/`, jadi setiap clone perlu `init`.
+
+## Tidak ada line-level attribution
+
+Ini sering normal. Claude Code biasanya punya edit history yang cukup. Codex CLI dan Cursor hanya naik ke line-level ketika signals cocok dengan final diff. Gemini CLI tetap file-level.

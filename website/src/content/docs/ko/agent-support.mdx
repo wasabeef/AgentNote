@@ -1,0 +1,77 @@
+---
+title: Agent 지원
+description: Agent Note 가 각 coding agent 에서 수집할 수 있는 정보
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 agent 가 제공하는 hook 과 transcript 정보는 다릅니다. 팀에 적용하기 전에 기대할 수 있는 범위를 확인하세요.
+
+## 지원 매트릭스
+
+| Agent | 상태 | Prompt / Response | Attribution |
+|---|---|---|---|
+| Claude Code | Full support | Hook native | 기본 line-level |
+| Codex CLI | Preview | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
+| Cursor Preview | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |
+| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+
+<Aside>
+  Preview 는 현재 공개된 동작을 지원한다는 뜻입니다. agent 의 local hook 또는 transcript 형식은 바뀔 수 있습니다.
+</Aside>
+
+## 권장 설정
+
+```bash
+npx agent-note init --agent claude
+```
+
+팀에서 실제로 쓰는 agent 만 활성화하세요. 하나의 repository 에 여러 agent 를 같이 설정할 수 있습니다.
+
+```bash
+npx agent-note init --agent claude codex cursor gemini
+```
+
+git hook 은 `.git/` 안에 있으므로, 각 developer 는 clone 후 한 번 `init` 을 실행해야 합니다.
+
+## 기대값으로 선택하기
+
+| 필요한 것 | 기대할 수 있는 것 |
+|---|---|
+| 현재 가장 자세한 line attribution | Claude Code |
+| 보수적인 attribution 의 Codex CLI support | Preview 의 Codex CLI |
+| Cursor editor history 와 response 복원 | Cursor Preview |
+| Gemini CLI prompt / response 기록 | Gemini CLI Preview |
+
+## Attribution
+
+Line-level 은 AI edit, 이후 human edit, 최종 commit diff 를 안전하게 비교할 수 있을 때 AI-added lines 를 계산합니다. 증거가 부족하면 file-level 로 fallback 합니다.
+
+Agent Note 는 추측보다 보수적인 fallback 을 우선합니다.
+
+## Agent 별 메모
+
+### Claude Code
+
+Claude Code 는 hook 으로 prompt, response, edit data 를 제공합니다. Agent Note 는 AI edit 전후의 file state 를 기록하고 이후 human edit 을 final diff 에서 제외합니다.
+
+### Codex CLI
+
+Codex CLI 는 transcript-driven 입니다. local transcript 를 읽고, `apply_patch` count 가 final diff 와 맞을 때만 line-level 로 승격합니다.
+
+### Cursor Preview
+
+Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final blob 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.
+
+### Gemini CLI Preview
+
+Gemini CLI 는 file edit 에 `BeforeTool` / `AfterTool`, prompt / response 에 `BeforeAgent` / `AfterAgent` 를 사용합니다. 현재 attribution 은 file-level 입니다.
+
+## 데이터가 없을 때
+
+- AI-authored file 이 없는 commit 에는 note 를 쓰지 않습니다.
+- 오래된 prompt 는 다른 commit window 에 속하면 생략될 수 있습니다.
+- agent 가 response 를 노출하지 않으면 response 가 비어 있을 수 있습니다.
+- generated artifacts 는 AI ratio denominator 에서 제외될 수 있습니다.
+
+조사는 [Troubleshooting](./troubleshooting/) 에서 시작하세요.

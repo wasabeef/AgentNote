@@ -1,0 +1,102 @@
+---
+title: 命令
+description: Agent Note CLI 命令参考。
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+当你已经理解 Agent Note 的流程，只需要查找具体 command 或 flag 时，可以使用这一页。首次 setup 请从 [安装](./installation/) 开始。
+
+## 常用任务
+
+- 首次 setup: `agent-note init`
+- 查看 commit 记录了什么: `agent-note show`
+- 查看最近活动: `agent-note log`
+- 生成 PR Report: `agent-note pr`
+- 检查 hooks 和 active adapter: `agent-note status`
+
+## agent-note init
+
+```bash
+npx agent-note init --agent claude
+```
+
+| Flag | 说明 |
+|---|---|
+| `--agent <name...>` | 必填。一个或多个 adapter: `claude`, `codex`, `cursor`, `gemini` |
+| `--dashboard` | 同时创建 shared Dashboard workflow |
+| `--no-hooks` | 跳过 agent hook 配置 |
+| `--no-git-hooks` | 跳过 git hook 安装 |
+| `--no-action` | 跳过 workflow 创建 |
+| `--no-notes` | 跳过 notes auto-fetch 配置 |
+| `--hooks` | 只安装 agent hooks |
+| `--action` | 只创建 workflow |
+
+## agent-note show
+
+```bash
+npx agent-note show
+npx agent-note show abc1234
+```
+
+显示某个 commit 的 prompts、responses、touched files、agent、model 和 attribution。
+
+## agent-note log
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+列出最近 commit，并显示 AI ratio 和保存的 prompt 数量。
+
+## agent-note pr
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  npx agent-note pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  npx agent-note pr origin/main --json
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  `compact` 会让 PR Report 聚焦在解释 commit 的 prompts。`full` 会显示所有保存的 prompts。
+</Aside>
+
+## agent-note status
+
+```bash
+npx agent-note status
+```
+
+检查 active adapter、hooks 收集的内容、git hooks 状态和 commit 记录路径。
+
+## agent-note deinit
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+若也要删除 PR Report 和 Dashboard workflow，请加上 `--remove-workflow`。
+
+## agent-note commit
+
+```bash
+npx agent-note commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  如果 git hooks 已安装，则不需要它。普通 `git commit` 已经会记录同样的数据。
+</Aside>
+

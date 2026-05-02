@@ -1,0 +1,77 @@
+---
+title: Agent 支持
+description: Agent Note 可以从每个 coding agent 捕获哪些信息。
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴露的 hook 和 transcript 数据不同。本页帮助你在团队启用前了解预期效果。
+
+## 支持矩阵
+
+| Agent | 状态 | Prompt / Response | Attribution |
+|---|---|---|---|
+| Claude Code | Full support | Hook native | 默认 line-level |
+| Codex CLI | Preview | Local transcript | 默认 file-level，`apply_patch` 计数匹配最终 diff 时为 line-level |
+| Cursor Preview | Supported | Response hook 或 local transcript | 默认 file-level，edit count 和 final blob 匹配时为 line-level |
+| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+
+<Aside>
+  Preview 表示 Agent Note 支持当前公开行为，但 agent 的本地 hook 或 transcript 格式仍可能变化。
+</Aside>
+
+## 推荐设置
+
+```bash
+npx agent-note init --agent claude
+```
+
+只启用团队实际使用的 agent。一个 repository 可以同时启用多个 agent。
+
+```bash
+npx agent-note init --agent claude codex cursor gemini
+```
+
+每个 developer 在 clone 后都需要运行一次 `init`，因为 git hooks 位于 `.git/` 内。
+
+## 按期望选择
+
+| 你需要... | 可以期待... |
+|---|---|
+| 目前最完整的逐行归因 | Claude Code |
+| 保守归因的 Codex CLI 支持 | Preview 中的 Codex CLI |
+| Cursor 编辑器历史和 response 恢复 | Cursor Preview |
+| Gemini CLI 的 prompt / response 捕获 | Gemini CLI Preview |
+
+## Attribution
+
+Line-level 会在 Agent Note 能安全比较 AI edit、后续 human edit 和最终 commit diff 时统计 AI-added lines。证据不足时使用 file-level。
+
+Agent Note 优先保守 fallback，而不是猜测。
+
+## Agent 说明
+
+### Claude Code
+
+Claude Code 通过 hook 提供 prompt、response 和 edit data。Agent Note 记录 AI edit 前后的 file state，并从最终 diff 中扣除后续 human edit。
+
+### Codex CLI
+
+Codex CLI 是 transcript-driven。Agent Note 读取 local transcript，并仅在 `apply_patch` 计数匹配最终 diff 时升级到 line-level。
+
+### Cursor Preview
+
+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final blob 仍匹配最后一次 AI edit 时，才可使用 line-level。
+
+### Gemini CLI Preview
+
+Gemini CLI 使用 `BeforeTool` / `AfterTool` 记录文件，使用 `BeforeAgent` / `AfterAgent` 记录 prompt / response。目前 attribution 为 file-level。
+
+## 数据缺失时
+
+- 没有 AI-authored file 的 commit 不会写入 note。
+- 属于旧 commit window 的 prompt 可能被省略。
+- agent 没有暴露 response 时，response 可能为空。
+- generated artifacts 可能从 AI ratio denominator 中排除。
+
+排查请从 [Troubleshooting](./troubleshooting/) 开始。

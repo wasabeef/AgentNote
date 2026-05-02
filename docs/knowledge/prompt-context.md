@@ -425,7 +425,7 @@ Scope negative:
 
 ## Documentation / Website
 
-実装済みの公開説明は、README では短く、website では使う人向けに説明します。詳細な抽出条件はこの knowledge と `DESIGN.md` に集約します。
+実装済みの公開説明は、README では短く、website では使う人向けに説明します。詳細な抽出条件はこの knowledge と `../architecture.md` に集約します。
 
 反映対象:
 

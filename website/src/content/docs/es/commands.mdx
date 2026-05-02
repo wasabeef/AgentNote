@@ -1,0 +1,102 @@
+---
+title: Comandos
+description: Referencia de comandos CLI de Agent Note.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Usa esta página cuando ya conozcas el flujo de Agent Note y necesites un comando o flag concreto. Para el primer setup, empieza por [Instalación](./installation/).
+
+## Tareas comunes
+
+- Primer setup: `agent-note init`
+- Ver qué registró un commit: `agent-note show`
+- Revisar actividad reciente: `agent-note log`
+- Generar un PR Report: `agent-note pr`
+- Verificar hooks y adapter activo: `agent-note status`
+
+## agent-note init
+
+```bash
+npx agent-note init --agent claude
+```
+
+| Flag | Descripción |
+|---|---|
+| `--agent <name...>` | Obligatorio. Uno o más adapters: `claude`, `codex`, `cursor`, `gemini` |
+| `--dashboard` | Crea también el workflow del Dashboard compartido |
+| `--no-hooks` | Omite la configuración de hooks del agente |
+| `--no-git-hooks` | Omite la instalación de git hooks |
+| `--no-action` | Omite la creación del workflow |
+| `--no-notes` | Omite la configuración de auto-fetch de notes |
+| `--hooks` | Instala solo hooks del agente |
+| `--action` | Crea solo el workflow |
+
+## agent-note show
+
+```bash
+npx agent-note show
+npx agent-note show abc1234
+```
+
+Muestra prompts, responses, archivos tocados, agent, model y attribution para un commit.
+
+## agent-note log
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+Lista commits recientes con ratio IA y número de prompts guardados.
+
+## agent-note pr
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  npx agent-note pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  npx agent-note pr origin/main --json
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  `compact` mantiene el PR Report centrado en los prompts que explican el commit. `full` muestra todos los prompts guardados.
+</Aside>
+
+## agent-note status
+
+```bash
+npx agent-note status
+```
+
+Verifica el adapter activo, qué capturan los hooks, el estado de los git hooks y el camino de commit.
+
+## agent-note deinit
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Añade `--remove-workflow` para eliminar también los workflows de PR Report y Dashboard.
+
+## agent-note commit
+
+```bash
+npx agent-note commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  No hace falta si los git hooks están instalados. Un `git commit` normal ya registra lo mismo.
+</Aside>
+

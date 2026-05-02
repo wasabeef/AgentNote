@@ -5,6 +5,8 @@ description: Como o Agent Note captura dados de sessão de IA e os anexa aos com
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
+Esta página explica a mecânica por trás do report: o que é capturado localmente, o que vira git note e como esses dados chegam ao PR Report e ao Dashboard. Você não precisa memorizar tudo para usar o Agent Note, mas este é o modelo para consultar quando algo parecer inesperado.
+
 ## Fluxo de dados
 
 <div class="agent-flow" role="img" aria-label="Fluxo do Agent Note do prompt até as git notes compartilhadas">
@@ -128,13 +130,13 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast
 
 ## Como o `📝 Context` é coletado
 
-`📝 Context` é metadata apenas visual para prompts curtos como "continue" ou "faça o próximo". Ele ajuda a entender o prompt sem mudar a attribution.
+`📝 Context` é uma nota apenas visual para prompts curtos como "continue" ou "faça o próximo". Ela ajuda a entender o prompt sem mudar a attribution.
 
 <img src="/AgentNote/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
 
-- O `reference` context vem da response imediatamente anterior quando essa response contém um structural anchor forte, como changed file path, file basename ou code identifier do diff final.
-- O `scope` context vem da response atual quando o começo dela nomeia o escopo do trabalho com structural anchors.
-- O Agent Note não usa approval keywords como `yes`, `continue` ou `お願いします` como regra de seleção. Se não houver structural anchor, ele omite Context.
+- O `reference` context vem da response imediatamente anterior quando ela menciona um caminho de arquivo alterado, nome de arquivo ou code identifier do diff final.
+- O `scope` context vem da response atual quando as primeiras linhas explicam claramente o trabalho em andamento.
+- O Agent Note não usa palavras curtas de aprovação como `yes`, `continue` ou `お願いします` como regra de seleção. Se não houver uma pista concreta de arquivo ou código, ele omite Context.
 - Context nunca muda `files_touched`, prompt ownership, AI ratio, attribution method ou se uma git note será gravada.
 
 ## Agent Note vs Entire

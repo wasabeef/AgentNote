@@ -1,0 +1,102 @@
+---
+title: Commands
+description: Referensi command CLI Agent Note.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Gunakan halaman ini ketika Anda sudah memahami alur Agent Note dan membutuhkan command atau flag tertentu. Untuk setup pertama, mulai dari [Instalasi](./installation/).
+
+## Tugas umum
+
+- Setup pertama: `agent-note init`
+- Melihat data yang direkam commit: `agent-note show`
+- Melihat aktivitas terbaru: `agent-note log`
+- Membuat PR Report: `agent-note pr`
+- Memeriksa hooks dan active adapter: `agent-note status`
+
+## agent-note init
+
+```bash
+npx agent-note init --agent claude
+```
+
+| Flag | Deskripsi |
+|---|---|
+| `--agent <name...>` | Wajib. Satu atau beberapa adapter: `claude`, `codex`, `cursor`, `gemini` |
+| `--dashboard` | Juga membuat workflow shared Dashboard |
+| `--no-hooks` | Melewati konfigurasi agent hooks |
+| `--no-git-hooks` | Melewati instalasi git hooks |
+| `--no-action` | Melewati pembuatan workflow |
+| `--no-notes` | Melewati konfigurasi notes auto-fetch |
+| `--hooks` | Hanya memasang agent hooks |
+| `--action` | Hanya membuat workflow |
+
+## agent-note show
+
+```bash
+npx agent-note show
+npx agent-note show abc1234
+```
+
+Menampilkan prompts, responses, touched files, agent, model, dan attribution untuk commit.
+
+## agent-note log
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+Menampilkan commit terbaru dengan AI ratio dan jumlah prompt yang tersimpan.
+
+## agent-note pr
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  npx agent-note pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  npx agent-note pr origin/main --json
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  `compact` menjaga PR Report tetap fokus pada prompt yang menjelaskan commit. `full` menampilkan semua prompt yang tersimpan.
+</Aside>
+
+## agent-note status
+
+```bash
+npx agent-note status
+```
+
+Memeriksa active adapter, apa yang dikumpulkan hooks, status git hooks, dan jalur commit.
+
+## agent-note deinit
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Tambahkan `--remove-workflow` untuk menghapus workflow PR Report dan Dashboard juga.
+
+## agent-note commit
+
+```bash
+npx agent-note commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  Tidak diperlukan jika git hooks sudah terpasang. `git commit` biasa sudah merekam hal yang sama.
+</Aside>
+

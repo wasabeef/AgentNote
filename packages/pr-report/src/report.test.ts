@@ -159,7 +159,7 @@ describe("renderMarkdown", () => {
               response: null,
             },
             {
-              prompt: "This also applies to PROMPT_CONTEXT_DESIGN.md.",
+              prompt: "This also applies to prompt-context.md.",
               response: "I will use structural anchors only.",
             },
           ],
@@ -172,7 +172,7 @@ describe("renderMarkdown", () => {
     assert.equal(markdown.match(/\*\*🧑 Prompt\*\*/g)?.length, 1);
     assert.equal(markdown.match(/\*\*🤖 Response\*\*/g)?.length, 1);
     assert.ok(markdown.includes("Please avoid keyword heuristics."));
-    assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
+    assert.ok(markdown.includes("This also applies to prompt-context.md."));
     assert.ok(markdown.includes("I will use structural anchors only."));
   });
 
@@ -194,7 +194,7 @@ describe("renderMarkdown", () => {
               },
             },
             {
-              prompt: "This also applies to PROMPT_CONTEXT_DESIGN.md.",
+              prompt: "This also applies to prompt-context.md.",
               response: "I will use structural anchors only.",
               selection: {
                 schema: 1,
@@ -211,7 +211,7 @@ describe("renderMarkdown", () => {
 
     assert.equal(markdown.match(/\*\*🧑 Prompt\*\*/g)?.length, 2);
     assert.ok(markdown.includes("Please avoid keyword heuristics."));
-    assert.ok(markdown.includes("This also applies to PROMPT_CONTEXT_DESIGN.md."));
+    assert.ok(markdown.includes("This also applies to prompt-context.md."));
   });
 
   it("uses compact prompt detail by default", () => {

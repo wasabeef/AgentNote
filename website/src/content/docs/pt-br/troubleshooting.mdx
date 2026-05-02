@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: Resolva problemas comuns de setup, PR Report, Dashboard e git notes.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+A maioria dos problemas vem de local git hooks, git notes ausentes ou configurações do GitHub Pages.
+
+## Checks rápidos
+
+<Steps>
+1. Verifique o setup local.
+
+   ```bash
+   npx agent-note status
+   ```
+
+2. Verifique se o commit tem note.
+
+   ```bash
+   npx agent-note show
+   ```
+
+3. Verifique as remote notes.
+
+   ```bash
+   git fetch origin refs/notes/agentnote:refs/notes/agentnote
+   git notes --ref=agentnote show HEAD
+   ```
+</Steps>
+
+## Comece pelo sintoma
+
+| Sintoma | Comece por aqui |
+|---|---|
+| PR Report vazio | Confirme que as notes foram enviadas e que o workflow busca o histórico git completo |
+| Um prompt esperado não aparece | Compare `compact` e `full` |
+| Dashboard abre, mas a PR não tem dados | Verifique se as notes dessa PR já foram publicadas |
+| `git commit` não cria note | Rode `init` novamente e veja a linha `git:` em `status` |
+| Attribution continua em file-level | Verifique se o agent expõe edit history suficiente |
+
+## PR Report vazio
+
+- O PR branch foi pushado depois de ativar Agent Note.
+- `refs/notes/agentnote` existe no remote.
+- `actions/checkout` usa `fetch-depth: 0`.
+- A PR contém commits com arquivos tocados pelo agent.
+
+Agent Note não escreve note para commits em que nenhum arquivo commitado pode ser associado ao agent.
+
+## Prompts faltando
+
+Prompt selection segue a commit-to-commit window, não a session inteira.
+
+- `compact` mantém o relatório focado mostrando os prompts que explicam o commit.
+- `full` mostra todos os prompts salvos.
+- Prompts de tarefas antigas são omitidos quando o commit atual já tem explicação própria.
+- `📝 Context` aparece para prompts curtos quando um nome de arquivo ou identificador de código ajuda a entendê-los.
+
+```yaml
+with:
+  prompt_detail: full
+```
+
+## Dashboard sem dados
+
+- GitHub Pages source deve ser **GitHub Actions**.
+- O workflow deve executar `dashboard: true`.
+- O primeiro deploy bem-sucedido cria `/dashboard/`.
+- Se Pull Request Deploys estiver bloqueado, Open PR data aparece após o merge.
+
+<Aside>
+  `?pr=123` funciona somente após publicar as notes dessa PR.
+</Aside>
+
+## Dashboard abre a PR errada
+
+A home do Dashboard deve mostrar o histórico compartilhado sem forçar `?pr=`. Apenas os links do PR Report adicionam o `?pr=<number>` da PR atual.
+
+Se um deploy antigo do Pages ainda redirecionar, rode novamente o workflow Dashboard ou espere o próximo deploy bem-sucedido a partir de `main`.
+
+## `git commit` não é rastreado
+
+```bash
+npx agent-note status
+npx agent-note init --agent claude
+```
+
+Git hooks são locais em `.git/`, então cada clone precisa de `init`.
+
+## Sem line-level attribution
+
+Isso costuma ser normal. Claude Code geralmente tem edit history suficiente. Codex CLI e Cursor só sobem para line-level quando os signals batem com o final diff. Gemini CLI permanece file-level.

@@ -1,0 +1,88 @@
+---
+title: エージェント対応
+description: Agent Note が各 coding agent から取得できる情報
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+Agent Note はどの agent でも同じ git note 形式で保存します。ただし、各 agent が提供する hook や transcript の情報量は異なります。このページでは、チームで有効化する前に期待できる範囲を確認できます。
+
+## 対応状況
+
+| Agent | 状態 | Prompt / Response | Attribution |
+|---|---|---|---|
+| Claude Code | Full support | Hook native | 既定で line-level |
+| Codex CLI | Preview | Local transcript | 既定は file-level。`apply_patch` 行数が最終 diff と一致したとき line-level |
+| Cursor Preview | Supported | Response hook または local transcript | 既定は file-level。edit 行数と最終 blob が一致したとき line-level |
+| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+
+<Aside>
+  Preview は、現在公開されている hook / transcript の挙動に対応しているという意味です。agent 側の形式が変わる可能性があります。
+</Aside>
+
+## 推奨セットアップ
+
+```bash
+npx agent-note init --agent claude
+```
+
+チームで実際に使う agent だけを指定します。複数 agent も同じ repository で有効化できます。
+
+```bash
+npx agent-note init --agent claude codex cursor gemini
+```
+
+git hook は `.git/` の中にあるため、各 developer は clone 後に 1 回 `init` を実行する必要があります。
+
+## 期待値で選ぶ
+
+| 必要なこと | 期待できるもの |
+|---|---|
+| いま最も詳しい行単位の attribution | Claude Code |
+| Codex CLI を安全側の判定で使う | Preview の Codex CLI support |
+| Cursor の editor history と response 復元 | Cursor Preview |
+| Gemini CLI の prompt / response 取得 | Gemini CLI Preview |
+
+## Attribution の考え方
+
+<CardGrid>
+  <Card title="Line-level" icon="document">
+    AI edit、あとから入った人間の edit、最終 commit diff を安全に比較できるとき、AI が追加した行数を数えます。
+  </Card>
+  <Card title="File-level" icon="setting">
+    line-level の証拠が足りないときは、committed file が agent に触られたかどうかで ratio を計算します。
+  </Card>
+</CardGrid>
+
+line-level は保守的です。証拠が揃わない場合、Agent Note は推測せずに file-level へ fallback するか、不確かな note を保存しません。
+
+## Agent ごとの補足
+
+### Claude Code
+
+Claude Code は prompt、response、edit data を hook から取得できます。Agent Note は AI edit 前後の file 状態を記録し、あとから入った人間の edit を最終 diff から差し引きます。
+
+### Codex CLI
+
+Codex CLI は transcript ベースです。Agent Note は local transcript を読み、`apply_patch` を committed file に接続し、patch 行数が最終 diff と一致したときだけ line-level に昇格します。
+
+shell-only edit は command 文字列だけから推測しません。信頼できる transcript がない場合、不確かな attribution は書きません。
+
+### Cursor Preview
+
+Cursor は `afterFileEdit` / `afterTabFileEdit` hook と response hook または local transcript を使います。line-level は、committed blob が最後の AI edit とまだ一致しているときだけ可能です。
+
+### Gemini CLI Preview
+
+Gemini CLI は file edit の `BeforeTool` / `AfterTool` と、prompt / response の `BeforeAgent` / `AfterAgent` を使います。attribution は現在 file-level です。
+
+## データがないとき
+
+データがない場合、多くは Agent Note が安全側に倒した結果です。
+
+- agent が触った committed file を見つけられない commit には note を書きません。
+- 古い commit window に属する prompt は省略されることがあります。
+- agent が hook や transcript で response を公開しない場合、response は空になることがあります。
+- generated artifact は AI ratio の分母から除外されることがあります。
+
+具体的な確認は [Troubleshooting](./troubleshooting/) から始めてください。

@@ -245,7 +245,7 @@ PR Report Mode 是默认值：
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-如果想让 prompt 历史更短或完整显示，可以把 `prompt_detail` 设为 `compact` 或 `full`。默认值是 `compact`：它会显示 high + medium prompt，`full` 会显示所有已保存的 prompt。
+如果想让 prompt 历史保持重点或完整显示，可以把 `prompt_detail` 设为 `compact` 或 `full`。默认值是 `compact`：它会优先显示解释 commit 所需的 prompt，`full` 会显示所有已保存的 prompt。
 
 Dashboard Mode 使用同一个 action，并传入 `dashboard: true`：
 
@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7
 
 Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
 
-[Architecture details →](docs/knowledge/DESIGN.md)
+[架构详情 →](docs/architecture.md)
 
 ## Contributing
 

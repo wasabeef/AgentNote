@@ -1,0 +1,63 @@
+---
+title: Данные и приватность
+description: Что Agent Note хранит, где хранит и что никогда не отправляет.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note создан для команд, которым нужна AI review history без hosted backend. Постоянные данные git-native, временные данные остаются в local clone.
+
+## Кратко
+
+| Тема | Поведение |
+|---|---|
+| Hosted service | Сервер Agent Note не нужен |
+| Постоянная история | Git notes в `refs/notes/agentnote` |
+| Временные данные | `.git/agentnote/`, не commitятся |
+| Telemetry | Prompts, responses и paths не отправляются в Agent Note service |
+
+## Что хранится
+
+| Поле | Назначение |
+|---|---|
+| `prompt` / `response` | Разговор, связанный с commit |
+| `contexts[]` | Подсказки для коротких prompts, только для отображения |
+| `files` | Committed files и признак, изменял ли их AI |
+| `attribution` | AI ratio, method, and line counts |
+| `agent` / `model` | Agent and model metadata |
+
+Полная схема описана в [How It Works](./how-it-works/#note-schema).
+
+## Перед включением Dashboard
+
+| Вопрос | Рекомендация |
+|---|---|
+| Можно ли всем с доступом к Pages читать prompts? | Включайте Dashboard только если видимость Pages совпадает с политикой репозитория. |
+| Могут ли prompts содержать secrets или клиентские данные? | Относитесь к git notes как к данным review и не помещайте secrets в prompts. |
+| Нужен только контекст для PR review? | Используйте только PR Report и пропустите `--dashboard`. |
+
+## Где хранится
+
+| Слой | Где хранится | Доступно команде? |
+|---|---|---|
+| Временные данные сессии | `.git/agentnote/sessions/` | Нет |
+| Постоянные notes | `refs/notes/agentnote` | Да, при `git push` |
+| PR Report | Описание PR или комментарий | Да, в GitHub |
+| Dashboard | Pages artifact и `gh-pages/dashboard/notes/*.json` | Да, если включено |
+
+<Aside>
+  Git notes не являются обычными файлами branch. Они push / fetch через отдельный ref `refs/notes/agentnote`.
+</Aside>
+
+## Что не хранится
+
+- Весь workspace.
+- Все shell command outputs.
+- Файлы, приписанные AI только по shell command.
+- Данные, отправленные в Agent Note backend.
+
+## Видимость для команды
+
+Любой, кто может fetch `refs/notes/agentnote`, может читать сохраненные prompts и responses. Считайте git notes данными repository.
+
+Dashboard optional. Если shared web view не нужен, используйте только PR Report и не включайте `--dashboard`.

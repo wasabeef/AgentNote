@@ -5,6 +5,8 @@ description: Aggiunge automaticamente un report della sessione IA a ogni pull re
 
 import { Aside } from '@astrojs/starlight/components';
 
+Questa pagina riguarda il PR Report che appare nelle Pull Request GitHub. Se vuoi completare solo il setup locale del CLI, inizia da [Installazione](./installation/); torna qui quando i reviewer devono vedere il riepilogo Agent Note.
+
 ## Setup rapido
 
 Esegui questo comando una volta nel tuo repository:
@@ -44,7 +46,7 @@ Fatto. Ogni PR riceve un report della sessione AI.
 |---|---|---|
 | `base` | Branch base della PR | Branch usato per il confronto |
 | `pr_output` | `description` | Destinazione del report della PR: `description`, `comment` o `none` |
-| `prompt_detail` | `compact` | Dettaglio della cronologia dei prompt nel report della PR: `compact` = high + medium, `full` = tutti i prompt salvati |
+| `prompt_detail` | `compact` | Dettaglio della cronologia dei prompt nel report della PR: `compact` mantiene il report mirato, `full` mostra tutti i prompt salvati |
 | `dashboard` | `false` | Esegue la modalità Dashboard invece della modalità PR Report. Di solito viene generato da `agent-note init --dashboard` |
 
 ## Dashboard

@@ -5,6 +5,8 @@ description: Wie Agent Note KI-Sitzungsdaten erfasst und an Git-Commits anhängt
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
+Diese Seite erklärt die Mechanik hinter dem Report: was lokal erfasst wird, was als git note gespeichert wird und wie diese Daten in PR Report und Dashboard landen. Du musst nicht jedes Detail kennen, um Agent Note zu nutzen; hier findest du aber das Modell, wenn etwas unerwartet aussieht.
+
 ## Datenfluss
 
 <div class="agent-flow" role="img" aria-label="Agent Note Ablauf vom Prompt bis zu geteilten Git Notes">
@@ -128,13 +130,13 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi
 
 ## Wie `📝 Context` gesammelt wird
 
-`📝 Context` ist display-only metadata für kurze Prompts wie "continue" oder "mach den nächsten Schritt". Es macht den Prompt leichter verständlich, ohne die Attribution zu ändern.
+`📝 Context` ist ein reiner Anzeigehinweis für kurze Prompts wie "continue" oder "mach den nächsten Schritt". Er macht den Prompt verständlicher, ohne die Attribution zu ändern.
 
 <img src="/AgentNote/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
 
-- `reference` context kommt aus der unmittelbar vorherigen Response, wenn diese Response einen starken structural anchor enthält, etwa changed file path, file basename oder code identifier aus dem finalen diff.
-- `scope` context kommt aus der aktuellen Response, wenn deren Anfang den Arbeitsumfang mit structural anchors benennt.
-- Agent Note nutzt approval keywords wie `yes`, `continue` oder `お願いします` nicht als Auswahlregel. Ohne structural anchor wird Context ausgelassen.
+- `reference` context kommt aus der unmittelbar vorherigen Response, wenn sie einen geänderten Dateipfad, Dateinamen oder Code-Bezeichner aus dem finalen Diff erwähnt.
+- `scope` context kommt aus der aktuellen Response, wenn die ersten Zeilen den Arbeitsumfang klar beschreiben.
+- Agent Note nutzt Zustimmungswörter wie `yes`, `continue` oder `お願いします` nicht als Auswahlregel. Ohne konkreten Datei- oder Code-Hinweis wird Context ausgelassen.
 - Context ändert nie `files_touched`, prompt ownership, AI ratio, attribution method oder ob eine git note gespeichert wird.
 
 ## Agent Note vs Entire

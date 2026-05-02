@@ -5,6 +5,8 @@ description: Agent Note 如何擷取 AI 工作階段資料，並把它附加到 
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
+這一頁說明 report 背後的機制：哪些內容在 local 被收集，哪些內容會變成 git note，以及這些 data 如何進入 PR Report 和 Dashboard。使用 Agent Note 不需要記住所有細節，但當結果不符合預期時，這裡是可以回看的 model。
+
 ## 資料流程
 
 <div class="agent-flow" role="img" aria-label="Agent Note 從 prompt 到共享 git notes 的流程">
@@ -128,13 +130,13 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## `📝 Context` 的收集方式
 
-`📝 Context` 是只用於顯示的 metadata，用來幫助理解 `continue` 或 `做下一個` 這類很短的 prompt。它不會改變 attribution。
+`📝 Context` 是只用於顯示的補充說明，用來幫助理解 `continue` 或 `做下一個` 這類很短的 prompt。它不會改變 attribution。
 
 <img src="/AgentNote/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" style="width: 100%; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);" />
 
-- `reference` context 來自上一則 response。只有當上一則 response 包含最終 diff 中的 changed file path、file basename、code identifier 等強 structural anchor 時才會使用。
-- `scope` context 來自目前的 response。只有當 response 開頭用 structural anchor 說明工作範圍時才會使用。
-- Agent Note 不會把 `yes`、`continue`、`お願いします` 這類 approval keyword 當成選擇規則。如果沒有 structural anchor，就不會加入 Context。
+- `reference` context 來自上一則 response。只有當上一則 response 提到最終 diff 中的 file path、file name 或 code identifier 時才會使用。
+- `scope` context 來自目前的 response。只有當 response 開頭明確說明本次工作範圍時才會使用。
+- Agent Note 不會只根據 `yes`、`continue`、`お願いします` 這類短確認來選擇 Context。如果沒有具體的 file 或 code 線索，就不會加入 Context。
 - Context 永遠不會改變 `files_touched`、prompt ownership、AI ratio、attribution method，也不會影響是否保存 git note。
 
 ## Agent Note vs Entire

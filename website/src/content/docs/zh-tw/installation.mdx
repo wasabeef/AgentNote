@@ -1,0 +1,76 @@
+---
+title: 安裝
+description: 安裝 Agent Note hooks、git notes 共享和 PR Report workflow。
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+這一頁是實際設定步驟。完成後，倉庫可以在一般 `git commit` 中記錄 Agent Note data，並在 GitHub 上發布 PR Report。
+
+## 安裝
+
+<Steps>
+1. 在倉庫中執行 `init`。
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   其他 agent:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - 多個 agent: `npx agent-note init --agent claude cursor`
+
+   同時啟用 Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. 提交產生的檔案。
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI 會加入 `.codex/config.toml` 和 `.codex/hooks.json`。Cursor 會加入 `.cursor/hooks.json`。Gemini CLI 會加入 `.gemini/settings.json`。使用 `--dashboard` 時，也要提交 `.github/workflows/agentnote-dashboard.yml`。
+
+3. 像平常一樣使用 agent 寫程式。
+
+   產生的 git hooks 安裝後，一般 `git commit` 就足夠了。只有在 git hooks 不可用時才使用 `agent-note commit -m "..."`。
+</Steps>
+
+## 每個 clone
+
+git hooks 位於 `.git/` 中，不會被 commit。每位開發者在 `git clone` 後都需要執行一次 `init`。
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  agent 設定檔透過 git 共享。git hooks 則安裝在每個 clone 的本機。
+</Aside>
+
+## 驗證
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+如果 PR Report 是空的，或 prompt 看起來過短，請查看 [Troubleshooting](./troubleshooting/)。
+
+## 解除安裝
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+若也要刪除 PR Report 和 Dashboard workflow，請加上 `--remove-workflow`。
+

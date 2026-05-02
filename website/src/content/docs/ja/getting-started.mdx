@@ -1,175 +1,74 @@
 ---
 title: はじめに
-description: 1 コマンドで Agent Note をリポジトリにセットアップ
+description: Agent Note の目的、使いどころ、最初の PR Report までの道筋
 ---
 
-import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
 
-## インストール
+Agent Note は、AI と進めた実装の「なぜ」を code review に残すための tool です。prompt、response、触った file、model、attribution の手がかりを commit に紐づけます。
 
-<Steps>
-1. **`init` を実行**
+このページは全体の地図です。いきなり細かい option に入るのではなく、fresh repository から最初の PR Report までの流れを短く確認できます。
 
-   ```bash
-   npx agent-note init --agent claude
-   ```
-
-   Codex CLI の場合:
-
-   ```bash
-   npx agent-note init --agent codex
-   ```
-
-   Cursor の場合:
-
-   ```bash
-   npx agent-note init --agent cursor
-   ```
-
-   Gemini CLI の場合:
-
-   ```bash
-   npx agent-note init --agent gemini
-   ```
-
-   複数エージェントを同時に:
-
-   ```bash
-   npx agent-note init --agent claude cursor
-   ```
-
-   Agent Note は次を設定します:
-   - エージェントフック (`.claude/settings.json`、Codex CLI では `.codex/config.toml` と `.codex/hooks.json`、Cursor では `.cursor/hooks.json`、Gemini CLI では `.gemini/settings.json`)
-   - Git フック (`prepare-commit-msg`, `post-commit`, `pre-push`)
-   - GitHub Actions ワークフロー (`.github/workflows/agentnote-pr-report.yml`)
-   - notes の自動 fetch 設定
-
-   共有 Dashboard も使いたい場合:
-
-   ```bash
-   npx agent-note init --agent claude --dashboard
-   ```
-
-   この場合は `.github/workflows/agentnote-dashboard.yml` も追加されます。
-
-2. **生成されたファイルをコミット**
-
-   ```bash
-   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
-   # --dashboard を使った場合は .github/workflows/agentnote-dashboard.yml も追加
-   git commit -m "chore: enable agent-note"
-   git push
-   ```
-
-   Codex CLI では `.codex/config.toml` と `.codex/hooks.json` をコミットします。
-   Cursor では `.cursor/hooks.json` をコミットします。
-   Gemini CLI では `.gemini/settings.json` をコミットします。
-   `--dashboard` を使った場合は `.github/workflows/agentnote-dashboard.yml` もコミットします。
-
-3. **準備完了。** 生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
-   git hook が使えない環境だけ `agent-note commit -m "..."` を代替手段として使います。
-</Steps>
-
-## セットアップ
-
-クローンしたら、各開発者が一度 `init` を実行してローカルの git hook を入れます。
-
-```bash
-git clone <repository-url>
-cd <repository-dir>
-npx agent-note init --agent claude
-```
-
-<Aside>
-  git hook は `.git/` の中に置かれるため、コミットされません。クローンごとに一度だけ `init` が必要です。
-</Aside>
-
-## 自動で行われること
-
-セットアップ後は、通常の `git commit` で次が行われます。
-
-1. **追加** `Agentnote-Session` trailer をコミットメッセージに追加
-2. **記録** Prompt、Response、file attribution を git note として保存
-3. **送信** `git push` 時に notes も自動で送信
-
-Cursor Preview では response hook または local transcript から prompt / response も復元されます。
-git hook が使えない環境では `agent-note commit` を使います。
-
-## 動作確認
-
-```bash
-npx agent-note show
-```
-
-```
-commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
-
-ai:      60% (45/75 lines) [█████░░░]
-model:   claude-sonnet-4-20250514
-agent:   claude
-files:   5 changed, 3 by AI
-
-  src/middleware/auth.ts  🤖
-  src/types/token.ts  🤖
-  CHANGELOG.md  👤
-```
-
-```bash
-npx agent-note status
-```
-
-```text
-agent-note v0.x.x
-
-agent:   active (cursor)
-capture: cursor(prompt, response, edits, shell)
-git:     active (prepare-commit-msg, post-commit, pre-push)
-commit:  tracked via git hooks
-session: a1b2c3d4…
-agent:   cursor
-linked:  3/20 recent commits
-```
-
-`agent:` は有効な adapter、`capture:` は今の hook が何を集めるか、`git:` はリポジトリ内の git hook の状態、`commit:` は通常の `git commit` が主経路かどうかを示します。
-
-## 各エージェントの機能
+## 何をセットアップするのか
 
 <CardGrid>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Claude Code</div>
-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は hook から復元され、attribution は既定で line-level です。
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Local capture" icon="laptop">
+    作業中の prompt、response、file edit、attribution の手がかりを agent hook で集めます。
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Codex CLI</div>
-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は local transcript から復元され、transcript の patch 行数が commit と一致したときだけ line-level に上がります。
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Git-native history" icon="document">
+    各 commit に `refs/notes/agentnote` の git note を付けます。branch の中身は汚しません。
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Cursor Preview</div>
-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Pull Request context" icon="rocket">
+    GitHub Action が git notes を読み、reviewer 向けの PR Report を作ります。
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Gemini CLI Preview</div>
-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Optional Dashboard" icon="setting">
+    チームで 1 つの履歴ページを見たい場合は、GitHub Pages に Dashboard を公開できます。
   </Card>
 </CardGrid>
 
-## アンインストール
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard は optional ですが、通常の commit と Pull Request からどんな review history を作れるかを確認できます。</figcaption>
+</figure>
+
+## おすすめの進め方
+
+<Steps>
+1. repository に Agent Note をインストールします。
+
+   実際に `npx agent-note init` を実行する段階になったら [インストール](./installation/) に進んでください。
+
+2. 生成された agent config と workflow を commit します。
+
+   team で共有する設定は repository に残し、local git hook は clone ごとに入れます。
+
+3. Pull Request を開きます。
+
+   生成された GitHub Action が `refs/notes/agentnote` を読み、PR Report を書き込みます。
+
+4. 必要な場合だけ Dashboard を追加します。
+
+   多くの team は PR Report だけで十分です。open / merged PR の履歴を 1 つの画面で見たい場合に Dashboard を使います。
+</Steps>
+
+## 次に読むページ
+
+| やりたいこと | 読むページ |
+|---|---|
+| いま Agent Note を入れる | [インストール](./installation/) |
+| Pull Request の report を設定する | [GitHub Action](./github-action/) |
+| team 共有の画面を公開する | [Dashboard](./dashboard/) |
+| agent ごとの取得範囲を確認する | [エージェント対応](./agent-support/) |
+| 保存される data と見える範囲を知る | [データとプライバシー](./data-and-privacy/) |
+| notes や prompt が出ない問題を直す | [Troubleshooting](./troubleshooting/) |
+
+## 成功するとどうなるか
+
+セットアップ後は、通常の `git commit` と `git push` で十分です。Pull Request には Agent Note section が入り、AI ratio、model、commit table、各 commit を説明する prompt が表示されます。
+
+まず raw data を確認したい場合:
 
 ```bash
-npx agent-note deinit --agent claude
+npx agent-note status
+npx agent-note show
 ```
-
-`--remove-workflow` を付けると `agentnote-pr-report.yml` と `agentnote-dashboard.yml` も削除します。

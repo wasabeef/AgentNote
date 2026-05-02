@@ -5,6 +5,8 @@ description: Fügt Pull Requests automatisch einen KI-Sitzungsbericht hinzu.
 
 import { Aside } from '@astrojs/starlight/components';
 
+Diese Seite erklärt den PR Report, der in GitHub Pull Requests erscheint. Wenn du zuerst nur das lokale CLI-Setup abschließen willst, starte mit [Installation](./installation/); komm hierher zurück, wenn Reviewer die Agent-Note-Zusammenfassung sehen sollen.
+
 ## Schnellstart
 
 Führe das einmal in deinem Repository aus:
@@ -44,7 +46,7 @@ Damit ist alles bereit. Jede PR erhält einen KI-Sitzungsbericht.
 |---|---|---|
 | `base` | Basis-Branch der PR | Branch, gegen den verglichen wird |
 | `pr_output` | `description` | Ziel des PR-Berichts: `description`, `comment` oder `none` |
-| `prompt_detail` | `compact` | Detailgrad der Prompt-Historie im PR-Bericht: `compact` = high + medium, `full` = alle gespeicherten Prompts |
+| `prompt_detail` | `compact` | Detailgrad der Prompt-Historie im PR-Bericht: `compact` hält den Bericht fokussiert, `full` zeigt alle gespeicherten Prompts |
 | `dashboard` | `false` | Führt den Dashboard-Modus statt des PR-Report-Modus aus. Normalerweise durch `agent-note init --dashboard` generiert |
 
 ## Dashboard

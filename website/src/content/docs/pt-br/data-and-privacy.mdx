@@ -1,0 +1,63 @@
+---
+title: Dados e privacidade
+description: O que o Agent Note salva, onde salva e o que nunca envia.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+O Agent Note foi feito para times que querem AI review history sem hosted backend. Os dados permanentes são git-native, e os dados temporários ficam no clone local.
+
+## Resumo
+
+| Tema | Comportamento |
+|---|---|
+| Hosted service | Nenhum servidor Agent Note é necessário |
+| Histórico permanente | Git notes em `refs/notes/agentnote` |
+| Dados temporários | `.git/agentnote/`, não commitados |
+| Telemetry | Não envia prompt, response ou path para serviço Agent Note |
+
+## O que é salvo
+
+| Campo | Finalidade |
+|---|---|
+| `prompt` / `response` | Conversa por trás do commit |
+| `contexts[]` | Hints display-only para prompts curtos |
+| `files` | Committed files e se a IA tocou neles |
+| `attribution` | AI ratio, method e line counts |
+| `agent` / `model` | Metadata de agent e model |
+
+O schema completo está em [Como funciona](./how-it-works/#note-schema).
+
+## Antes de ativar o Dashboard
+
+| Pergunta | Recomendação |
+|---|---|
+| Quem vê Pages também pode ler os prompts? | Ative o Dashboard apenas se a visibilidade de Pages combinar com a política do repositório. |
+| Os prompts podem conter secrets ou dados de clientes? | Trate git notes como dados de review e evite secrets nos prompts. |
+| Você só precisa de contexto para review na PR? | Use apenas PR Report e ignore `--dashboard`. |
+
+## Onde fica
+
+| Camada | Local | Compartilhado? |
+|---|---|---|
+| Dados temporários de sessão | `.git/agentnote/sessions/` | Não |
+| Notes permanentes | `refs/notes/agentnote` | Sim, no `git push` |
+| PR Report | Descrição da PR ou comentário | Sim, no GitHub |
+| Dashboard | Artefato do Pages e `gh-pages/dashboard/notes/*.json` | Sim, se ativado |
+
+<Aside>
+  Git notes não são arquivos comuns no branch. Elas são enviadas e baixadas por um ref separado: `refs/notes/agentnote`.
+</Aside>
+
+## O que não é salvo
+
+- O workspace inteiro.
+- Todos os outputs de shell command.
+- Arquivos atribuídos à AI apenas a partir de comandos shell.
+- Dados enviados para um backend do Agent Note.
+
+## Visibilidade do time
+
+Quem consegue fetch `refs/notes/agentnote` pode ler prompts e responses salvos. Trate git notes como dados do repository.
+
+Dashboard é opcional. Se não quiser uma shared web view, use apenas PR Report e ignore `--dashboard`.

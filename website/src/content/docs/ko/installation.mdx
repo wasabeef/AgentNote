@@ -1,0 +1,76 @@
+---
+title: 설치
+description: Agent Note hook, git notes 공유, PR Report workflow 를 설치합니다.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+이 페이지는 실제 설정 절차입니다. 완료하면 일반 `git commit` 중에 Agent Note data 를 기록하고 GitHub 에 PR Report 를 게시할 수 있습니다.
+
+## 설치
+
+<Steps>
+1. repository 에서 `init` 을 실행합니다.
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   다른 agent:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - 여러 agent: `npx agent-note init --agent claude cursor`
+
+   Dashboard 도 함께:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. 생성된 file 을 commit 합니다.
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI 는 `.codex/config.toml` 과 `.codex/hooks.json` 을 추가합니다. Cursor 는 `.cursor/hooks.json` 을 추가합니다. Gemini CLI 는 `.gemini/settings.json` 을 추가합니다. `--dashboard` 를 쓰면 `.github/workflows/agentnote-dashboard.yml` 도 추가합니다.
+
+3. 평소처럼 agent 와 작업합니다.
+
+   생성된 git hook 이 설치되어 있으면 `git commit` 만으로 충분합니다. git hook 을 쓸 수 없는 환경에서만 `agent-note commit -m "..."` 을 사용하세요.
+</Steps>
+
+## 각 clone
+
+git hooks 는 `.git/` 안에 있어 commit 되지 않습니다. 각 개발자는 `git clone` 후 한 번 `init` 을 실행해야 합니다.
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  agent config file 은 git 으로 공유됩니다. git hooks 는 clone 마다 local 에 설치됩니다.
+</Aside>
+
+## 확인
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+PR Report 가 비어 있거나 prompt 가 너무 짧아 보이면 [Troubleshooting](./troubleshooting/) 을 확인하세요.
+
+## 제거
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+PR Report 와 Dashboard workflow 까지 지우려면 `--remove-workflow` 를 추가하세요.
+

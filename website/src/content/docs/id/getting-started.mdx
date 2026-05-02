@@ -1,0 +1,52 @@
+---
+title: Mulai
+description: Pahami apa yang ditambahkan Agent Note sebelum memasangnya di repository.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Agent Note lebih mudah diadopsi ketika bagian-bagiannya jelas: local hooks mengumpulkan context, git notes menempelkan context ke commit, dan GitHub Action mengubahnya menjadi PR Report.
+
+Halaman ini adalah peta. Perintah instalasi ada di halaman berikutnya agar Anda tahu dulu apa yang akan diaktifkan.
+
+## Apa yang akan disiapkan
+
+<CardGrid>
+  <Card title="Local capture" icon="laptop">
+    Agent hooks mengumpulkan prompt, response, touched files, dan attribution signal saat Anda bekerja.
+  </Card>
+  <Card title="Git-native history" icon="document">
+    Setiap commit mendapat git note di `refs/notes/agentnote`, tanpa mengubah isi branch.
+  </Card>
+  <Card title="Pull Request context" icon="rocket">
+    GitHub Action membaca notes itu dan menulis PR Report untuk reviewer.
+  </Card>
+  <Card title="Optional Dashboard" icon="setting">
+    Jika tim membutuhkan tampilan bersama, Dashboard dapat dipublikasikan ke GitHub Pages.
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard bersifat optional, tetapi menunjukkan review history yang dapat dibangun Agent Note dari commit dan Pull Request biasa.</figcaption>
+</figure>
+
+## Alur yang disarankan
+
+<Steps>
+1. Baca model singkat ini terlebih dahulu.
+2. Ikuti [Instalasi](./installation/) untuk menjalankan `npx agent-note init`.
+3. Buka Pull Request dan periksa PR Report.
+4. Tambahkan Dashboard hanya jika tim membutuhkan halaman bersama.
+</Steps>
+
+## Baca berikutnya
+
+| Kebutuhan | Halaman |
+|---|---|
+| Memasang Agent Note sekarang | [Instalasi](./installation/) |
+| Mengatur PR Report | [GitHub Action](./github-action/) |
+| Menerbitkan tampilan bersama | [Dashboard](./dashboard/) |
+| Memeriksa batas tiap agent | [Agent Support](./agent-support/) |
+| Memahami data yang disimpan | [Data & Privacy](./data-and-privacy/) |
+| Memperbaiki data yang hilang | [Troubleshooting](./troubleshooting/) |

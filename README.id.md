@@ -245,7 +245,7 @@ PR Report Mode adalah default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Atur `prompt_detail` ke `compact` atau `full` jika ingin riwayat prompt yang lebih pendek atau lengkap. Default-nya adalah `compact`: preset ini menampilkan prompt high + medium, sedangkan `full` menampilkan semua prompt yang tersimpan.
+Atur `prompt_detail` ke `compact` atau `full` jika ingin riwayat prompt yang fokus atau lengkap. Default-nya adalah `compact`: preset ini menjaga laporan tetap mudah dibaca dengan menampilkan prompt yang menjelaskan commit, sedangkan `full` menampilkan semua prompt yang tersimpan.
 
 Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
@@ -344,7 +344,7 @@ $ git notes --ref=agentnote show ce941f7
 
 Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
 
-[Architecture details →](docs/knowledge/DESIGN.md)
+[Detail arsitektur →](docs/architecture.md)
 
 ## Contributing
 

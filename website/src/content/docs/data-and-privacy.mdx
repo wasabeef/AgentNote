@@ -1,0 +1,81 @@
+---
+title: Data & Privacy
+description: What Agent Note stores, where it stores it, and what it never sends.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+Agent Note is designed for teams that want AI review history without a hosted backend. The permanent record is git-native, and the temporary working data stays inside the repository clone.
+
+## Short Version
+
+<CardGrid>
+  <Card title="No hosted service" icon="rocket">
+    Agent Note does not require an Agent Note server. PR Report and Dashboard run in your repository's GitHub Actions.
+  </Card>
+  <Card title="Git-native history" icon="document">
+    Permanent records are stored as git notes under `refs/notes/agentnote`.
+  </Card>
+  <Card title="Local temp data" icon="laptop">
+    In-progress session files live under `.git/agentnote/` and are not committed.
+  </Card>
+  <Card title="No telemetry" icon="setting">
+    The CLI does not send prompts, responses, or file paths to an Agent Note service.
+  </Card>
+</CardGrid>
+
+## What Gets Stored
+
+Agent Note stores the information needed to explain a commit:
+
+| Field | Purpose |
+|---|---|
+| `prompt` / `response` | Conversation that led to the commit |
+| `contexts[]` | Display-only hints for short prompts |
+| `files` | Committed files and whether AI touched them |
+| `attribution` | AI ratio, method, and line counts when available |
+| `agent` / `model` | Agent and model metadata when exposed |
+
+The schema is shown in [How It Works](./how-it-works/#note-schema).
+
+## Before You Enable Dashboard
+
+| Question | Recommendation |
+|---|---|
+| Can everyone who sees Pages also read the prompts? | Enable Dashboard only when Pages visibility matches your repository policy. |
+| Do prompts contain secrets or customer data? | Treat git notes like review data and avoid putting secrets in prompts. |
+| Do you only need PR review context? | Use PR Report only and skip `--dashboard`. |
+
+## Where It Lives
+
+| Layer | Location | Shared? |
+|---|---|---|
+| Session temp | `.git/agentnote/sessions/` | No |
+| Permanent notes | `refs/notes/agentnote` | Yes, on `git push` |
+| PR Report | Pull Request description or comment | Yes, in GitHub |
+| Dashboard bundle | GitHub Pages artifact and `gh-pages/dashboard/notes/*.json` | Yes, if Dashboard is enabled |
+
+<Aside>
+  Git notes are not regular files in your branch. They are pushed and fetched through the separate `refs/notes/agentnote` ref.
+</Aside>
+
+## What Is Not Stored
+
+Agent Note does not store everything the agent can see.
+
+- It does not store your full workspace.
+- It does not store every shell command output.
+- It does not infer AI-authored files from shell-only edits.
+- It does not upload data to an Agent Note backend.
+
+## Team Visibility
+
+Anyone who can fetch `refs/notes/agentnote` can read the stored prompts and responses. Treat git notes like review metadata: useful for collaboration, but still repository data.
+
+If your repository includes sensitive prompts, keep repository and Pages visibility aligned with your team's review policy.
+
+## Dashboard Privacy
+
+Dashboard is optional. When enabled, it publishes a static view through GitHub Pages using the note snapshots produced by your workflow.
+
+If you do not want a shared web view, use PR Report only and skip `--dashboard`.

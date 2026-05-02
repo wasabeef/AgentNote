@@ -1,10 +1,18 @@
-# TODO
+# Investigation History
 
-## 未解決の調査
+このファイルは、解決済みの調査と regression の判断を残す場所です。未解決タスクの TODO list ではありません。
 
-なし。
+新しい調査を書くときは、対象 PR / commit、観測結果、原因、修正、regression coverage を残してください。
 
-## 解決済みの調査
+## Open Follow-ups
+
+### CLI dist tracking
+
+- 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。
+- 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。
+- tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。
+
+## Resolved Investigations
 
 ### PR #49 prompt selection に過去タスクの prompt が混入する
 
@@ -20,12 +28,12 @@
 
 - 対象: PR Report / GitHub Action の `prompt_detail` preset
 - 対象 PR: `#45` の follow-up
-- 観測結果: 旧 `compact` は `high` のみを表示し、PR #45 では `2/7`、直近 80 commit の note 集計では約 8% しか表示されませんでした。一方、旧 `standard` は `high + medium` を表示し、PR #45 では `4/7`、直近集計では約 13% で、実質的に「PR body に載せたい compact view」として機能していました。
+- 観測結果: 旧 `compact` は表示を絞りすぎ、PR #45 では `2/7`、直近 80 commit の note 集計では約 8% しか表示されませんでした。一方、旧 `standard` 相当の範囲は PR #45 では `4/7`、直近集計では約 13% で、実質的に「PR body に載せたい compact view」として機能していました。
 - 問題: `standard` という名前は基準が曖昧で、旧 `compact` は削りすぎて意図が落ちやすいです。利用者にとっては `compact` と `full` の 2 択の方が分かりやすい可能性があります。
-- 修正: `prompt_detail` の公開 preset を `compact` / `full` の 2 つに整理しました。`compact` は `high + medium`、`full` は保存済み prompt すべてを表示します。
+- 修正: `prompt_detail` の公開 preset を `compact` / `full` の 2 つに整理しました。`compact` は commit の説明に必要な prompt を中心に表示し、`full` は保存済み prompt すべてを表示します。
 - 互換: 既存 workflow への安全弁として、`standard` は parser で `compact` の legacy alias として受けます。ただし README / website / Action docs には出しません。
 - 確認範囲: PR Report、CLI `agent-note pr --prompt-detail`、GitHub Action `prompt_detail` input、README / website / docs の説明を更新しました。
-- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/pr-report/src/report.test.ts` で、`compact = high + medium`、`full = all`、`standard` alias を検証します。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/pr-report/src/report.test.ts` で、`compact` の表示範囲、`full = all`、`standard` alias を検証します。
 
 ### Dashboard の `0/0 AI-added lines` 表示
 
@@ -48,7 +56,7 @@
 - 結果: 旧 `standard` 相当、つまり現 `compact` の過剰 filter risk は、raw simulation では 13 件検出されました。ただし内訳は `Risk`, `Problem`, `Root cause`, `Verification` のような PR template heading / one-word heading で、prompt 自体の情報量が弱く、response path だけで `compact` に出すべきではないと判断しました。
 - 修正: `substantive_prompt_shape` を追加し、長めの質問・相談は keyword なしで `medium` に上げます。一方で `commit push`, `PR 作成`, `please create the pull request` のような操作指示は、response 側に path があっても `low` に留めます。
 - Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/cli/src/core/record.test.ts` に、CJK の長め相談が `compact` に残る case、operation-only prompt が `compact` に上がらない case、response evidence だけでは tail を `medium` にしない case を追加しました。
-- 設計メモ: 詳細は `docs/knowledge/PROMPT_SELECTION_SCORING_DESIGN.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
+- 設計メモ: 詳細は `docs/knowledge/prompt-selection.md` の `Substantive prompt policy` と `Response evidence cap` に反映済みです。
 
 ### PR #34 go-ahead prompt の前段 context 表示
 
@@ -88,11 +96,3 @@
 - 主な再現例: `e1e1596` は `Agentnote-Session` trailer を持っていたのに git note がなく、前後の commit には note がありました。
 - 修正では、transcript attribution が committed files を拾えない prompt-only Codex case でも、正当な note を落とさないようにしました。同時に human-only skip path は維持しています。
 - regression coverage では、workflow-only edit、consumed turn / file pair、prompt-only transcript fallback を継続して確認します。
-
-## 今後の cleanup
-
-### CLI dist tracking
-
-- 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。
-- 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。
-- tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。

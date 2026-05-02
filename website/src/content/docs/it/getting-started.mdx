@@ -1,0 +1,52 @@
+---
+title: Primi passi
+description: Capire cosa aggiunge Agent Note prima di installarlo in un repository.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Agent Note è più facile da adottare quando i pezzi sono chiari: gli hook locali raccolgono il contesto, le git notes lo collegano ai commit, e la GitHub Action lo trasforma in un PR Report.
+
+Questa pagina è la mappa. I comandi di installazione sono nella pagina successiva, così puoi capire prima cosa stai abilitando.
+
+## Cosa stai configurando
+
+<CardGrid>
+  <Card title="Cattura locale" icon="laptop">
+    Gli hook dell'agente raccolgono prompt, risposte, file toccati e segnali di attribution mentre lavori.
+  </Card>
+  <Card title="Cronologia git-native" icon="document">
+    Ogni commit riceve una git note in `refs/notes/agentnote`, senza modificare il contenuto del branch.
+  </Card>
+  <Card title="Contesto della Pull Request" icon="rocket">
+    La GitHub Action legge le notes e scrive il PR Report per i reviewer.
+  </Card>
+  <Card title="Dashboard opzionale" icon="setting">
+    Se il team vuole una vista condivisa, Dashboard pubblica la cronologia su GitHub Pages.
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard è opzionale, ma mostra il tipo di cronologia di review che Agent Note può costruire da commit e Pull Request normali.</figcaption>
+</figure>
+
+## Percorso consigliato
+
+<Steps>
+1. Leggi questo modello breve.
+2. Vai a [Installazione](./installation/) per eseguire `npx agent-note init`.
+3. Apri una Pull Request e controlla il PR Report.
+4. Aggiungi Dashboard solo se vuoi una pagina condivisa per il team.
+</Steps>
+
+## Prossima pagina
+
+| Bisogno | Pagina |
+|---|---|
+| Installare Agent Note ora | [Installazione](./installation/) |
+| Configurare il PR Report | [GitHub Action](./github-action/) |
+| Pubblicare una vista condivisa | [Dashboard](./dashboard/) |
+| Controllare i limiti degli agent | [Agent Support](./agent-support/) |
+| Capire quali dati vengono salvati | [Data & Privacy](./data-and-privacy/) |
+| Risolvere dati mancanti | [Troubleshooting](./troubleshooting/) |

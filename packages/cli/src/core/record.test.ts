@@ -1670,7 +1670,7 @@ describe("recordCommitEntry", () => {
       "  R9 language-neutral selection logic uses structural signals.",
       "  R10 PR #29 package split history is covered.",
       "",
-      "R14 gap: add direct record-level coverage for Cursor and Gemini. Update packages/cli/src/core/record.test.ts and docs/TODO.md.",
+      "R14 gap: add direct record-level coverage for Cursor and Gemini. Update packages/cli/src/core/record.test.ts and docs/knowledge/investigations.md.",
     ].join("\n");
 
     writeFileSync(
@@ -3023,8 +3023,8 @@ describe("recordCommitEntry", () => {
         join(repoDir, "packages", "cli", "src", "core", "constants.ts"),
         "export const ONE = 1;\n",
       );
-      writeFileSync(join(repoDir, "docs", "CODING_RULES.md"), "# Coding Rules\n");
-      execSync("git add packages/cli/src/core/constants.ts docs/CODING_RULES.md", {
+      writeFileSync(join(repoDir, "docs", "engineering.md"), "# Engineering Guidelines\n");
+      execSync("git add packages/cli/src/core/constants.ts docs/engineering.md", {
         cwd: repoDir,
       });
       execSync('git commit -m "baseline docs and constants"', { cwd: repoDir });
@@ -3129,7 +3129,7 @@ describe("recordCommitEntry", () => {
             call_id: "current-task",
             arguments: JSON.stringify({
               patch:
-                "*** Begin Patch\n*** Update File: packages/cli/src/core/constants.ts\n@@\n export const ONE = 1;\n+export const TWO = 2;\n*** Update File: docs/CODING_RULES.md\n@@\n # Coding Rules\n+Prefer named constants.\n*** End Patch\n",
+                "*** Begin Patch\n*** Update File: packages/cli/src/core/constants.ts\n@@\n export const ONE = 1;\n+export const TWO = 2;\n*** Update File: docs/engineering.md\n@@\n # Engineering Guidelines\n+Prefer named constants.\n*** End Patch\n",
             }),
           },
         },
@@ -3155,10 +3155,10 @@ describe("recordCommitEntry", () => {
         "export const ONE = 1;\nexport const TWO = 2;\nexport const THREE = 3;\n",
       );
       writeFileSync(
-        join(repoDir, "docs", "CODING_RULES.md"),
+        join(repoDir, "docs", "engineering.md"),
         "# Coding Rules\nPrefer named constants.\n",
       );
-      execSync("git add packages/cli/src/core/constants.ts docs/CODING_RULES.md", {
+      execSync("git add packages/cli/src/core/constants.ts docs/engineering.md", {
         cwd: repoDir,
       });
       execSync('git commit -m "refactor: centralize constants"', { cwd: repoDir });

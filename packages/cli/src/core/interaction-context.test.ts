@@ -335,11 +335,11 @@ describe("selectInteractionScopeContext", () => {
           "The first pass checks schema compatibility. " +
           "The second pass checks rendering. " +
           "The third pass checks selector behavior. " +
-          "A later detail mentions #36 and docs/knowledge/PROMPT_CONTEXT_DESIGN.md.",
+          "A later detail mentions #36 and docs/knowledge/prompt-context.md.",
       },
       signature({
-        changedFiles: ["docs/knowledge/PROMPT_CONTEXT_DESIGN.md"],
-        changedFileBasenames: ["PROMPT_CONTEXT_DESIGN.md"],
+        changedFiles: ["docs/knowledge/prompt-context.md"],
+        changedFileBasenames: ["prompt-context.md"],
       }),
     );
 

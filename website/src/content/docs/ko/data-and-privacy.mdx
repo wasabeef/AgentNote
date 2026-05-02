@@ -1,0 +1,63 @@
+---
+title: 데이터와 개인정보
+description: Agent Note 가 저장하는 것, 저장 위치, 보내지 않는 것
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note 는 hosted backend 없이 AI review history 를 남기려는 팀을 위해 설계되었습니다. 영구 데이터는 git-native 이고, 임시 데이터는 local clone 안에 남습니다.
+
+## 요약
+
+| 항목 | 동작 |
+|---|---|
+| Hosted service | Agent Note server 불필요 |
+| 영구 기록 | `refs/notes/agentnote` 의 git notes |
+| 임시 데이터 | `.git/agentnote/`, commit 되지 않음 |
+| Telemetry | prompt, response, path 를 Agent Note service 로 보내지 않음 |
+
+## 저장되는 것
+
+| 항목 | 목적 |
+|---|---|
+| `prompt` / `response` | commit 으로 이어진 대화 |
+| `contexts[]` | 짧은 prompt 를 위한 display-only hint |
+| `files` | committed files 와 AI touch 여부 |
+| `attribution` | AI ratio, method, line counts |
+| `agent` / `model` | agent 와 model metadata |
+
+전체 schema 는 [작동 방식](./how-it-works/#note-schema) 에 있습니다.
+
+## Dashboard 를 켜기 전에
+
+| 확인할 점 | 권장 사항 |
+|---|---|
+| Pages 를 볼 수 있는 사람이 prompt 도 읽어도 되는가 | repository 정책과 Pages 공개 범위가 맞을 때만 Dashboard 를 켜세요. |
+| prompt 에 secret 이나 고객 데이터가 들어갈 수 있는가 | git notes 를 review data 로 다루고, secret 은 prompt 에 넣지 마세요. |
+| PR review 문맥만 필요한가 | PR Report 만 사용하고 `--dashboard` 는 생략하세요. |
+
+## 저장 위치
+
+| 계층 | 저장 위치 | 공유 여부 |
+|---|---|---|
+| 임시 session data | `.git/agentnote/sessions/` | 아니요 |
+| 영구 notes | `refs/notes/agentnote` | 예, `git push` 시 |
+| PR Report | PR description 또는 comment | 예, GitHub 에서 |
+| Dashboard | Pages artifact 와 `gh-pages/dashboard/notes/*.json` | 예, 활성화한 경우 |
+
+<Aside>
+  git notes 는 branch 의 일반 file 이 아닙니다. 별도 ref 인 `refs/notes/agentnote` 로 push / fetch 됩니다.
+</Aside>
+
+## 저장하지 않는 것
+
+- 전체 workspace.
+- 모든 shell command output.
+- shell command 만으로 AI 가 수정했다고 추측한 file.
+- Agent Note backend 로 전송되는 데이터.
+
+## 팀 가시성
+
+`refs/notes/agentnote` 를 fetch 할 수 있는 사람은 저장된 prompt 와 response 를 읽을 수 있습니다. git notes 를 repository data 로 다루세요.
+
+Dashboard 는 optional 입니다. 공유 web view 가 필요 없다면 PR Report 만 쓰고 `--dashboard` 는 생략하세요.

@@ -69,6 +69,7 @@ export default defineConfig({
           label: "Basics",
           items: [
             { slug: "getting-started" },
+            { slug: "installation" },
             { slug: "commands" },
             { slug: "how-it-works" },
           ],
@@ -76,6 +77,14 @@ export default defineConfig({
         {
           label: "GitHub",
           items: [{ slug: "github-action" }, { slug: "dashboard" }],
+        },
+        {
+          label: "Reference",
+          items: [
+            { slug: "agent-support" },
+            { slug: "data-and-privacy" },
+            { slug: "troubleshooting" },
+          ],
         },
       ],
       editLink: {

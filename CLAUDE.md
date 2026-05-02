@@ -8,6 +8,13 @@ Agent Note (`agent-note`) is a monorepo CLI + GitHub Action that links AI coding
 
 Repository development uses Node.js >= 22.12.0 and npm 11.13.0. The published CLI package still supports Node.js >= 20.
 
+## Maintainer docs
+
+- `docs/README.md`: Start here for the maintainer documentation map.
+- `docs/engineering.md`: Implementation guidelines for constants, comments, safety boundaries, and verification.
+- `docs/architecture.md`: Canonical architecture and data-flow reference.
+- `docs/knowledge/README.md`: Focused design notes, investigation history, research, and archive.
+
 ## Repository structure
 
 ```
@@ -95,7 +102,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 ### Core modules
 
 - **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Agent-aware via registry. Idempotent (checks existing note). Includes consumed-pairs deduplication to prevent re-attribution across split commits.
-- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, `interactions[].context`, and `interactions[].tools`.
+- **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, `interactions[].contexts[]`, and `interactions[].tools`.
 - **`core/attribution.ts`**: 3-diff position algorithm for line-level AI attribution. Parses unified diff hunks, computes AI vs human line positions.
 - **`core/session.ts`**: `writeSessionAgent()` / `readSessionAgent()` / `writeSessionTranscriptPath()` / `readSessionTranscriptPath()`. Per-session agent metadata.
 - **`core/constants.ts`**: Shared constants — `TRAILER_KEY`, `SESSION_AGENT_FILE`, `HEARTBEAT_FILE`, `PENDING_COMMIT_FILE`, etc.
