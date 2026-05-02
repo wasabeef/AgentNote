@@ -1,0 +1,52 @@
+---
+title: 快速开始
+description: 在仓库中安装之前，先了解 Agent Note 会添加什么。
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+先理解几个组成部分，Agent Note 会更容易上手：local hooks 收集 context，git notes 把 context 绑定到 commit，GitHub Action 再生成 PR Report。
+
+这一页是路线图。安装命令放在下一页，方便你先确认自己将要启用什么。
+
+## 你会配置什么
+
+<CardGrid>
+  <Card title="Local capture" icon="laptop">
+    agent hooks 会在工作时收集 prompt、response、touched files 和 attribution signal。
+  </Card>
+  <Card title="Git-native history" icon="document">
+    每个 commit 会得到 `refs/notes/agentnote` 下的 git note，不会改动 branch 内容。
+  </Card>
+  <Card title="Pull Request context" icon="rocket">
+    GitHub Action 读取 notes，并为 reviewer 写入 PR Report。
+  </Card>
+  <Card title="Optional Dashboard" icon="setting">
+    如果团队需要共享视图，Dashboard 可以发布到 GitHub Pages。
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard 是 optional 的，但它能展示 Agent Note 如何从普通 commits 和 Pull Requests 构建 review history。</figcaption>
+</figure>
+
+## 推荐路径
+
+<Steps>
+1. 先读完这个简短模型。
+2. 前往 [安装](./installation/) 执行 `npx agent-note init`。
+3. 打开 Pull Request，确认 PR Report。
+4. 只有在团队需要共享页面时再启用 Dashboard。
+</Steps>
+
+## 接下来
+
+| 需求 | 页面 |
+|---|---|
+| 现在安装 Agent Note | [安装](./installation/) |
+| 配置 PR Report | [GitHub Action](./github-action/) |
+| 发布共享视图 | [Dashboard](./dashboard/) |
+| 查看各 agent 的能力边界 | [Agent Support](./agent-support/) |
+| 了解保存的数据 | [Data & Privacy](./data-and-privacy/) |
+| 排查缺失数据 | [Troubleshooting](./troubleshooting/) |

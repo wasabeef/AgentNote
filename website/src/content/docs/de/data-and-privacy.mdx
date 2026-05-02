@@ -1,0 +1,63 @@
+---
+title: Daten und Datenschutz
+description: Was Agent Note speichert, wo es gespeichert wird und was nie gesendet wird.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note ist für Teams gebaut, die AI review history ohne gehosteten Backend-Service speichern möchten. Permanente Daten sind git-native; temporäre Daten bleiben im lokalen Clone.
+
+## Kurzfassung
+
+| Thema | Verhalten |
+|---|---|
+| Hosted service | Kein Agent Note Server erforderlich |
+| Permanente Historie | Git notes in `refs/notes/agentnote` |
+| Temporäre Daten | `.git/agentnote/`, nicht committed |
+| Telemetry | Keine Prompts, Responses oder Paths an einen Agent Note Service |
+
+## Gespeicherte Daten
+
+| Feld | Zweck |
+|---|---|
+| `prompt` / `response` | Gespräch zum Commit |
+| `contexts[]` | Display-only Hinweise für kurze Prompts |
+| `files` | Commit-Dateien und ob der Agent sie bearbeitet hat |
+| `attribution` | AI ratio, Methode und line counts |
+| `agent` / `model` | Agent- und Modell-Metadata |
+
+Das Schema steht in [How It Works](./how-it-works/#note-schema).
+
+## Vor dem Aktivieren des Dashboards
+
+| Frage | Empfehlung |
+|---|---|
+| Dürfen alle mit Pages-Zugriff auch die Prompts lesen? | Aktivieren Sie Dashboard nur, wenn die Pages-Sichtbarkeit zur Repository-Policy passt. |
+| Können Prompts Secrets oder Kundendaten enthalten? | Behandeln Sie git notes wie Review-Daten und schreiben Sie keine Secrets in Prompts. |
+| Reicht der Kontext im PR-Review? | Nutzen Sie nur PR Report und lassen Sie `--dashboard` weg. |
+
+## Speicherorte
+
+| Ebene | Ort | Geteilt? |
+|---|---|---|
+| Temporäre Sitzungsdaten | `.git/agentnote/sessions/` | Nein |
+| Permanente Notes | `refs/notes/agentnote` | Ja, via `git push` |
+| PR Report | PR-Beschreibung oder Kommentar | Ja, in GitHub |
+| Dashboard | Pages-Artefakt und `gh-pages/dashboard/notes/*.json` | Ja, wenn aktiviert |
+
+<Aside>
+  Git notes sind keine normalen Dateien im Branch. Sie werden über den separaten ref `refs/notes/agentnote` gepusht und gefetcht.
+</Aside>
+
+## Nicht gespeicherte Daten
+
+- Der vollständige Workspace.
+- Alle Shell-Ausgaben.
+- Dateien, die nur anhand von Shell-Befehlen der KI zugeschrieben würden.
+- Daten an einen Agent Note Backend-Service.
+
+## Sichtbarkeit im Team
+
+Wer `refs/notes/agentnote` fetchen kann, kann gespeicherte Prompts und Responses lesen. Behandeln Sie git notes als Repository-Daten.
+
+Dashboard ist optional. Ohne gemeinsame Webansicht nutzen Sie nur PR Report und lassen `--dashboard` weg.

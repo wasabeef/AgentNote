@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: 解決 Agent Note setup、PR Report、Dashboard 和 git notes 常見問題。
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+大多數問題來自 local git hooks、缺失的 git notes，或 GitHub Pages 設定。
+
+## 快速檢查
+
+<Steps>
+1. 檢查 local setup。
+
+   ```bash
+   npx agent-note status
+   ```
+
+2. 檢查 commit 是否有 note。
+
+   ```bash
+   npx agent-note show
+   ```
+
+3. 檢查 remote notes。
+
+   ```bash
+   git fetch origin refs/notes/agentnote:refs/notes/agentnote
+   git notes --ref=agentnote show HEAD
+   ```
+</Steps>
+
+## 從症狀開始
+
+| 症狀 | 先看這裡 |
+|---|---|
+| PR Report 為空 | 確認 notes 已 push，且 workflow 取得了完整 git history |
+| 期望的 prompt 沒有顯示 | 比較 `compact` 與 `full` |
+| Dashboard 能開啟，但 PR 沒有資料 | 確認該 PR 的 notes 是否已發布 |
+| `git commit` 沒有建立 note | 重新執行 `init`，並檢查 `status` 中的 `git:` 行 |
+| attribution 停留在 file-level | 確認 agent 是否提供了足夠的 edit history |
+
+## PR Report 為空
+
+- PR branch 是在啟用 Agent Note 後 push 的。
+- remote 上存在 `refs/notes/agentnote`。
+- `actions/checkout` 使用 `fetch-depth: 0`。
+- PR 包含 agent 修改過檔案的 commits。
+
+如果 commit 中找不到 agent 修改過的已提交檔案，Agent Note 不會寫 note。
+
+## Prompt 缺失
+
+prompt selection 基於 commit-to-commit window，而不是整個 session。
+
+- `compact` 優先顯示解釋 commit 所需的 prompt。
+- `full` 顯示所有保存的 prompt。
+- 目前 commit 有自己的說明時，舊 task prompt 會被省略。
+- 當檔名或 code identifier 能幫助理解短 prompt 時，會顯示 `📝 Context`。
+
+```yaml
+with:
+  prompt_detail: full
+```
+
+## Dashboard 沒有資料
+
+- GitHub Pages source 應為 **GitHub Actions**。
+- workflow 必須以 `dashboard: true` 執行。
+- 第一次 deploy 成功後會建立 `/dashboard/`。
+- 如果 Pull Request Deploy 被阻擋，open PR data 會在 merge 後顯示。
+
+<Aside>
+  `?pr=123` 只有在該 PR 的 notes 已發布後才可用。
+</Aside>
+
+## Dashboard 開啟了錯誤的 PR
+
+Dashboard 首頁應顯示共享歷史，而不是強制跳轉到 `?pr=`。只有 PR Report 連結會附帶目前 PR 的 `?pr=<number>`。
+
+如果舊的 Pages deploy 仍然跳轉，請重新執行 Dashboard workflow，或等待 `main` 的下一次成功 deploy。
+
+## `git commit` 沒有被追蹤
+
+```bash
+npx agent-note status
+npx agent-note init --agent claude
+```
+
+git hooks 是 `.git/` 內的本機設定，因此每個 clone 都需要 `init`。
+
+## 沒有 line-level attribution
+
+這通常是正常的。Claude Code 通常有足夠 edit history。Codex CLI 和 Cursor 只有在 signal 符合最終 diff 時才升級到 line-level。Gemini CLI 保持 file-level。

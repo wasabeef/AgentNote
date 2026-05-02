@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: Agent Note setup, PR Report, Dashboard, git notes 문제 해결
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+대부분의 문제는 local git hooks, 누락된 git notes, GitHub Pages 설정에서 발생합니다.
+
+## 빠른 확인
+
+<Steps>
+1. local setup 을 확인합니다.
+
+   ```bash
+   npx agent-note status
+   ```
+
+2. commit 에 note 가 있는지 확인합니다.
+
+   ```bash
+   npx agent-note show
+   ```
+
+3. remote notes 를 확인합니다.
+
+   ```bash
+   git fetch origin refs/notes/agentnote:refs/notes/agentnote
+   git notes --ref=agentnote show HEAD
+   ```
+</Steps>
+
+## 증상에서 시작하기
+
+| 증상 | 먼저 볼 곳 |
+|---|---|
+| PR Report 가 비어 있음 | notes 가 push 되었고 workflow 가 전체 git history 를 가져오는지 확인 |
+| 기대한 prompt 가 보이지 않음 | `compact` 와 `full` 표시를 비교 |
+| Dashboard 는 열리지만 PR 데이터가 없음 | 해당 PR 의 notes 가 공개되었는지 확인 |
+| `git commit` 이 note 를 만들지 않음 | `init` 을 다시 실행하고 `status` 의 `git:` 줄 확인 |
+| attribution 이 file-level 에 머무름 | agent 가 충분한 edit history 를 제공하는지 확인 |
+
+## PR Report 가 비어 있음
+
+- Agent Note 활성화 후 PR branch 를 push 했는지 확인합니다.
+- remote 에 `refs/notes/agentnote` 가 있어야 합니다.
+- `actions/checkout` 은 `fetch-depth: 0` 을 사용해야 합니다.
+- PR 에 agent 가 수정한 file 을 포함한 commit 이 있어야 합니다.
+
+agent 가 수정한 committed file 을 찾을 수 없는 commit 에는 note 를 쓰지 않습니다.
+
+## Prompt 가 부족함
+
+prompt selection 은 전체 session 이 아니라 commit-to-commit window 를 기준으로 합니다.
+
+- `compact` 는 commit 을 이해하는 데 필요한 prompt 를 중심으로 보여줍니다.
+- `full` 은 저장된 모든 prompt 를 보여줍니다.
+- 이번 commit 에 설명이 있으면 오래된 task prompt 는 생략됩니다.
+- file 이름이나 code identifier 가 짧은 prompt 를 설명해 줄 때 `📝 Context` 가 붙습니다.
+
+```yaml
+with:
+  prompt_detail: full
+```
+
+## Dashboard 에 데이터가 없음
+
+- GitHub Pages source 는 **GitHub Actions** 여야 합니다.
+- workflow 는 `dashboard: true` 로 실행되어야 합니다.
+- 첫 deploy 가 성공하면 `/dashboard/` 가 만들어집니다.
+- Pull Request Deploy 가 막혀 있으면 open PR data 는 merge 후 표시됩니다.
+
+<Aside>
+  `?pr=123` 은 해당 PR 의 notes 가 publish 된 뒤에만 동작합니다.
+</Aside>
+
+## Dashboard 가 다른 PR 을 엽니다
+
+Dashboard home 은 공유 이력을 보여주며 `?pr=` 로 강제 이동하지 않아야 합니다. PR Report link 만 현재 PR 에 맞는 `?pr=<number>` 를 붙입니다.
+
+이전 Pages deploy 가 아직 이동시킨다면 Dashboard workflow 를 다시 실행하거나, `main` 에서 다음 deploy 가 성공할 때까지 기다리세요.
+
+## `git commit` 이 추적되지 않음
+
+```bash
+npx agent-note status
+npx agent-note init --agent claude
+```
+
+git hooks 는 `.git/` 내부의 local 설정이므로 clone 마다 `init` 이 필요합니다.
+
+## line-level attribution 이 없음
+
+정상일 수 있습니다. Claude Code 는 대개 충분한 edit history 를 갖고 있습니다. Codex CLI 와 Cursor 는 signal 이 final diff 와 맞을 때만 line-level 로 올라갑니다. Gemini CLI 는 file-level 입니다.

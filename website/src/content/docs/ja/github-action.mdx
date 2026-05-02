@@ -5,6 +5,8 @@ description: プルリクエストに AI セッションレポートを自動で
 
 import { Aside } from '@astrojs/starlight/components';
 
+このページは、GitHub の Pull Request に表示される PR Report の設定です。まず local の CLI setup だけ済ませたい場合は [インストール](./installation/) を先に読み、reviewer に Agent Note の summary を見せたい段階で戻ってきてください。
+
 ## クイックセットアップ
 
 まずはリポジトリで次を 1 回実行します。
@@ -44,7 +46,7 @@ jobs:
 |---|---|---|
 | `base` | PR のベースブランチ | 比較対象のブランチ |
 | `pr_output` | `description` | PR レポートの出力先: `description` / `comment` / `none` |
-| `prompt_detail` | `compact` | PR レポートに出す prompt 履歴の細かさ: `compact` = high + medium、`full` = 保存された prompt すべて |
+| `prompt_detail` | `compact` | PR レポートに出す prompt 履歴の細かさ: `compact` は説明に必要な prompt を中心に表示、`full` は保存された prompt すべて |
 | `dashboard` | `false` | PR Report Mode の代わりに Dashboard Mode を実行します。通常は `agent-note init --dashboard` が生成します |
 
 ## Dashboard も使いたいとき
@@ -85,3 +87,5 @@ PR レポートには次が入ります。
 ## 次のステップ
 
 Open / Merged の PR 履歴を 1 つの Pages URL で見たいなら、続けて <a href="./dashboard/">Dashboard</a> を読んでください。
+
+レポートが空、または prompt が想定より少ない場合は [Troubleshooting](./troubleshooting/) を確認してください。

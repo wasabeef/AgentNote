@@ -1,0 +1,63 @@
+---
+title: 資料與隱私
+description: Agent Note 保存什麼、保存在哪裡、以及不會傳送什麼。
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note 面向希望保留 AI review history、但不想依賴 hosted backend 的團隊。永久資料是 git-native，暫存資料保留在 local clone 中。
+
+## 簡短說明
+
+| 項目 | 行為 |
+|---|---|
+| Hosted service | 不需要 Agent Note server |
+| 永久歷史 | `refs/notes/agentnote` 中的 git notes |
+| 暫存資料 | `.git/agentnote/`，不會 commit |
+| Telemetry | 不向 Agent Note service 傳送 prompt、response 或 path |
+
+## 保存的內容
+
+| 欄位 | 用途 |
+|---|---|
+| `prompt` / `response` | 產生 commit 的對話 |
+| `contexts[]` | 給短 prompt 的 display-only hint |
+| `files` | committed files 以及 AI 是否修改 |
+| `attribution` | AI ratio、method 與 line counts |
+| `agent` / `model` | agent 與 model metadata |
+
+完整 schema 見 [運作方式](./how-it-works/#note-schema)。
+
+## 啟用 Dashboard 前
+
+| 需要確認的事 | 建議 |
+|---|---|
+| 能看到 Pages 的人是否也可以讀取 prompt | 只有當 Pages 可見範圍符合倉庫政策時，才啟用 Dashboard。 |
+| prompt 是否可能包含 secret 或客戶資料 | 將 git notes 視為 review data，不要把 secret 寫進 prompt。 |
+| 是否只需要 PR review 的上下文 | 只使用 PR Report，略過 `--dashboard`。 |
+
+## 保存位置
+
+| 層級 | 位置 | 是否共享 |
+|---|---|---|
+| 暫時 session data | `.git/agentnote/sessions/` | 否 |
+| 永久 notes | `refs/notes/agentnote` | 是，執行 `git push` 時 |
+| PR Report | PR description 或 comment | 是，在 GitHub 中 |
+| Dashboard | Pages artifact 與 `gh-pages/dashboard/notes/*.json` | 是，啟用後 |
+
+<Aside>
+  git notes 不是 branch 上的一般檔案。它們透過獨立的 `refs/notes/agentnote` ref push / fetch。
+</Aside>
+
+## 不保存的內容
+
+- 整個 workspace。
+- 所有 shell command output。
+- 只根據 shell command 推測出的 AI 修改檔案。
+- 上傳到 Agent Note backend 的資料。
+
+## 團隊可見性
+
+能 fetch `refs/notes/agentnote` 的人可以讀取保存的 prompt 和 response。請將 git notes 視為 repository data。
+
+Dashboard 是 optional。如果不需要 shared web view，只使用 PR Report，並略過 `--dashboard`。

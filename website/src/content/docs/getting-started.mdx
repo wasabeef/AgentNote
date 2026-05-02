@@ -1,195 +1,74 @@
 ---
 title: Getting Started
-description: Set up Agent Note in your repository in one command.
+description: What Agent Note does, when to use it, and the shortest path to your first PR Report.
 ---
 
-import { Steps, Aside, Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
 
-## Installation
+Agent Note is for teams that want the story behind AI-assisted commits to survive code review. It records the prompts, responses, touched files, model, and attribution signals that explain why a commit changed.
 
-<Steps>
-1. **Run `init`** in your repository
+Use this page as the map. It explains the path from a fresh repository to the first PR Report without forcing you through every option up front.
 
-   ```bash
-   npx agent-note init --agent claude
-   ```
-
-   For Codex CLI:
-
-   ```bash
-   npx agent-note init --agent codex
-   ```
-
-   For Cursor:
-
-   ```bash
-   npx agent-note init --agent cursor
-   ```
-
-   For Gemini CLI:
-
-   ```bash
-   npx agent-note init --agent gemini
-   ```
-
-   Multiple agents at once:
-
-   ```bash
-   npx agent-note init --agent claude cursor
-   ```
-
-   Agent Note sets up:
-   - Agent hooks (`.claude/settings.json` for Claude Code, `.codex/config.toml` + `.codex/hooks.json` for Codex CLI, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI)
-   - Git hooks (`prepare-commit-msg`, `post-commit`, `pre-push`)
-   - GitHub Action workflow (`.github/workflows/agentnote-pr-report.yml`)
-   - Auto-fetch for git notes on pull
-
-   If you also want the shared Dashboard:
-
-   ```bash
-   npx agent-note init --agent claude --dashboard
-   ```
-
-   That also adds `.github/workflows/agentnote-dashboard.yml`.
-
-2. **Commit** the generated files
-
-   ```bash
-   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
-   # with --dashboard, also add .github/workflows/agentnote-dashboard.yml
-   git commit -m "chore: enable agent-note"
-   git push
-   ```
-
-   Codex repositories commit `.codex/config.toml`, `.codex/hooks.json`, and `.github/workflows/agentnote-pr-report.yml`.
-   Cursor repositories commit `.cursor/hooks.json` and `.github/workflows/agentnote-pr-report.yml`.
-   Gemini CLI repositories commit `.gemini/settings.json` and `.github/workflows/agentnote-pr-report.yml`.
-   With `--dashboard`, also commit `.github/workflows/agentnote-dashboard.yml`.
-
-3. **You're ready.** Start coding with your agent.
-   Normal `git commit` works when the generated git hooks are installed.
-   Use `agent-note commit -m "..."` only when git hooks are unavailable.
-</Steps>
-
-## Set Up Each Clone
-
-Every developer should run `init` after cloning to install local git hooks:
-
-```bash
-git clone <repository-url>
-cd <repository-dir>
-npx agent-note init --agent claude
-```
-
-<Aside>
-  Git hooks live inside `.git/`, so they are never committed. Each clone needs one local `init`.
-</Aside>
-
-## What Happens Automatically
-
-After setup, plain `git commit` will:
-
-1. **Inject** an `Agentnote-Session` trailer into the commit message
-2. **Record** prompts, responses, and file attribution as a git note
-3. **Push** notes to the remote on `git push`
-
-Cursor preview also restores prompt / response pairs from response hooks or local transcripts.
-If git hooks are unavailable, `agent-note commit` remains the fallback wrapper.
-
-## Verify It Works
-
-```bash
-npx agent-note show
-```
-
-```
-commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
-
-ai:      60% (45/75 lines) [█████░░░]
-model:   claude-sonnet-4-20250514
-files:   5 changed, 3 by AI
-
-  src/middleware/auth.ts  🤖
-  src/types/token.ts  🤖
-  src/middleware/__tests__/auth.test.ts  🤖
-  CHANGELOG.md  👤
-  README.md  👤
-
-prompts: 2
-
-  1. Implement JWT auth middleware with refresh token rotation
-  2. Add tests for expired token and invalid signature
-```
-
-```bash
-npx agent-note status
-```
-
-```text
-agent-note v0.x.x
-
-agent:   active (cursor)
-capture: cursor(prompt, response, edits, shell)
-git:     active (prepare-commit-msg, post-commit, pre-push)
-commit:  tracked via git hooks
-session: a1b2c3d4…
-agent:   cursor
-linked:  3/20 recent commits
-```
-
-`agent:` shows the enabled adapter, `capture:` shows what the active hooks collect, `git:` confirms the repository-local git hooks, and `commit:` tells you whether plain `git commit` is the primary path.
-
-## Init Flags
-
-| Flag | Description |
-|---|---|
-| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
-| `--dashboard` | Also create `.github/workflows/agentnote-dashboard.yml` for the shared Dashboard |
-| `--no-hooks` | Skip agent hook configuration |
-| `--no-git-hooks` | Skip git hook installation |
-| `--no-action` | Skip workflow creation |
-| `--no-notes` | Skip auto-fetch config |
-| `--hooks` | Only install agent hooks |
-| `--action` | Only create workflow |
-
-## What Each Agent Supports
+## What You Are Setting Up
 
 <CardGrid>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Claude Code</div>
-      Plain `git commit` works with the generated git hooks. Prompt / response recovery is hook-native, and attribution starts at line-level.
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/claude.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Local capture" icon="laptop">
+    Agent hooks collect prompts, responses, file edits, and attribution clues while you work.
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Codex CLI</div>
-      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from the local transcript, and attribution upgrades to line-level only when transcript patch counts match the commit.
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/codex.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Git-native history" icon="document">
+    Each commit gets a git note under `refs/notes/agentnote`, so your branch stays clean.
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Cursor Preview</div>
-      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final blob still match.
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Pull Request context" icon="rocket">
+    The GitHub Action turns those notes into a PR Report for reviewers.
   </Card>
-  <Card>
-    <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Gemini CLI Preview</div>
-      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from `BeforeAgent` / `AfterAgent` hooks, and attribution currently stays at file-level.
-      <img class="agent-capability-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
-    </div>
+  <Card title="Optional Dashboard" icon="setting">
+    Teams that want one shared history page can publish Dashboard on GitHub Pages.
   </Card>
 </CardGrid>
 
-## Uninstall
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard is optional, but it shows the kind of review history Agent Note can build from ordinary commits and Pull Requests.</figcaption>
+</figure>
+
+## Recommended Path
+
+<Steps>
+1. Install Agent Note in the repository.
+
+   Go to [Installation](./installation/) when you are ready to run `npx agent-note init`.
+
+2. Commit the generated agent config and workflow files.
+
+   Those files make the setup repeatable for the team, while local git hooks are installed per clone.
+
+3. Open a Pull Request.
+
+   The generated GitHub Action reads `refs/notes/agentnote` and writes the PR Report.
+
+4. Add Dashboard only if your team wants a shared Pages view.
+
+   PR Report is enough for many teams. Dashboard is useful when you want to browse open and merged PR history outside a single PR.
+</Steps>
+
+## Which Page Should I Read Next?
+
+| Need | Read |
+|---|---|
+| Install Agent Note now | [Installation](./installation/) |
+| Configure the Pull Request report | [GitHub Action](./github-action/) |
+| Publish a shared team view | [Dashboard](./dashboard/) |
+| Check each agent's capture limits | [Agent Support](./agent-support/) |
+| Understand stored data and visibility | [Data & Privacy](./data-and-privacy/) |
+| Fix missing notes or prompts | [Troubleshooting](./troubleshooting/) |
+
+## What Success Looks Like
+
+After setup, a normal `git commit` and `git push` should be enough. Your Pull Request gets an Agent Note section with AI ratio, model, commit table, and the prompts that explain each commit.
+
+If you prefer to see the raw commit data first, run:
 
 ```bash
-npx agent-note deinit --agent claude
+npx agent-note status
+npx agent-note show
 ```
-
-This removes agent hooks and git hooks. Add `--remove-workflow` to also delete `agentnote-pr-report.yml` and `agentnote-dashboard.yml`.

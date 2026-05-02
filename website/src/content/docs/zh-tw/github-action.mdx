@@ -5,6 +5,8 @@ description: 自動為每個 pull request 加上 AI 會話報告。
 
 import { Aside } from '@astrojs/starlight/components';
 
+這一頁介紹 GitHub Pull Request 中顯示的 PR Report。如果你只想先完成本機 CLI setup，請從 [安裝](./installation/) 開始；當需要讓 reviewer 看到 Agent Note summary 時再回到這裡。
+
 ## 快速設定
 
 先在你的儲存庫裡執行一次：
@@ -44,7 +46,7 @@ jobs:
 |---|---|---|
 | `base` | PR 的 base branch | 用來比較的分支 |
 | `pr_output` | `description` | PR 報告的輸出位置：`description`、`comment` 或 `none` |
-| `prompt_detail` | `compact` | PR 報告中 prompt 歷史的詳細程度：`compact` = high + medium，`full` = 所有已保存 prompt |
+| `prompt_detail` | `compact` | PR 報告中 prompt 歷史的詳細程度：`compact` 保持報告聚焦，`full` 顯示所有已保存 prompt |
 | `dashboard` | `false` | 執行 Dashboard Mode，而不是 PR Report Mode。通常由 `agent-note init --dashboard` 產生 |
 
 ## Dashboard

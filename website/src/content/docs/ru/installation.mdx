@@ -1,0 +1,76 @@
+---
+title: Установка
+description: Установить hooks Agent Note, обмен через git notes и workflow для PR Report.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Это практический путь настройки. После него репозиторий сможет записывать данные Agent Note во время обычного `git commit` и публиковать PR Report в GitHub.
+
+## Установить
+
+<Steps>
+1. Выполните `init` в репозитории.
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   Другие agents:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - Несколько agents: `npx agent-note init --agent claude cursor`
+
+   С Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. Закоммитьте созданные файлы.
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI добавляет `.codex/config.toml` и `.codex/hooks.json`. Cursor добавляет `.cursor/hooks.json`. Gemini CLI добавляет `.gemini/settings.json`. С `--dashboard` также добавьте `.github/workflows/agentnote-dashboard.yml`.
+
+3. Работайте с agent как обычно.
+
+   Если сгенерированные git hooks установлены, достаточно `git commit`. Используйте `agent-note commit -m "..."` только когда git hooks недоступны.
+</Steps>
+
+## Каждый clone
+
+Git hooks находятся внутри `.git/` и не коммитятся. Каждый разработчик должен выполнить `init` после `git clone`.
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  Файлы конфигурации agent передаются через git. Git hooks остаются локальными для каждого clone.
+</Aside>
+
+## Проверить
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+Если PR Report пустой или prompts выглядят слишком короткими, откройте [Troubleshooting](./troubleshooting/).
+
+## Удалить
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Добавьте `--remove-workflow`, чтобы удалить также workflows PR Report и Dashboard.
+

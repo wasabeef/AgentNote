@@ -1,0 +1,52 @@
+---
+title: Démarrage
+description: Comprendre ce qu'Agent Note ajoute avant de l'installer dans un dépôt.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Agent Note est plus simple à adopter quand les pièces sont claires dès le départ. Les hooks collectent le contexte local, les git notes attachent ce contexte aux commits, et la GitHub Action transforme le tout en PR Report.
+
+Cette page sert de carte. Les commandes d'installation sont sur la page suivante, pour que vous puissiez d'abord comprendre ce que vous activez.
+
+## Ce que vous mettez en place
+
+<CardGrid>
+  <Card title="Capture locale" icon="laptop">
+    Les hooks d'agent collectent prompts, réponses, fichiers touchés et signaux d'attribution pendant le travail.
+  </Card>
+  <Card title="Historique git-native" icon="document">
+    Chaque commit reçoit une git note dans `refs/notes/agentnote`, sans modifier le contenu de la branche.
+  </Card>
+  <Card title="Contexte de Pull Request" icon="rocket">
+    La GitHub Action lit ces notes et écrit le PR Report pour les reviewers.
+  </Card>
+  <Card title="Dashboard optionnel" icon="setting">
+    Si l'équipe veut une vue partagée, Dashboard publie l'historique sur GitHub Pages.
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard est optionnel, mais il montre le type d'historique de review qu'Agent Note peut construire à partir des commits et Pull Requests ordinaires.</figcaption>
+</figure>
+
+## Parcours recommandé
+
+<Steps>
+1. Lisez ce modèle rapide.
+2. Suivez [Installation](./installation/) pour exécuter `npx agent-note init`.
+3. Ouvrez une Pull Request et vérifiez le PR Report.
+4. Activez Dashboard seulement si vous voulez une page partagée pour l'équipe.
+</Steps>
+
+## Ensuite
+
+| Besoin | Page |
+|---|---|
+| Installer Agent Note maintenant | [Installation](./installation/) |
+| Configurer le rapport de PR | [GitHub Action](./github-action/) |
+| Publier une vue partagée | [Dashboard](./dashboard/) |
+| Vérifier les limites par agent | [Agent Support](./agent-support/) |
+| Comprendre les données stockées | [Data & Privacy](./data-and-privacy/) |
+| Corriger une capture manquante | [Troubleshooting](./troubleshooting/) |

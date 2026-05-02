@@ -5,6 +5,8 @@ description: Menambahkan laporan sesi AI ke setiap pull request secara otomatis.
 
 import { Aside } from '@astrojs/starlight/components';
 
+Halaman ini membahas PR Report yang muncul di GitHub Pull Request. Jika Anda hanya ingin menyelesaikan setup CLI lokal, mulai dari [Instalasi](./installation/); kembali ke sini saat reviewer perlu melihat summary Agent Note.
+
 ## Quick setup
 
 Jalankan ini sekali di repositori Anda:
@@ -44,7 +46,7 @@ Selesai. Setiap PR akan mendapatkan laporan sesi AI.
 |---|---|---|
 | `base` | Branch dasar PR | Branch pembanding |
 | `pr_output` | `description` | Tujuan laporan PR: `description`, `comment`, atau `none` |
-| `prompt_detail` | `compact` | Tingkat detail riwayat prompt di laporan PR: `compact` = high + medium, `full` = semua prompt tersimpan |
+| `prompt_detail` | `compact` | Tingkat detail riwayat prompt di laporan PR: `compact` menjaga laporan tetap fokus, `full` menampilkan semua prompt tersimpan |
 | `dashboard` | `false` | Menjalankan mode Dashboard, bukan mode PR Report. Biasanya dibuat oleh `agent-note init --dashboard` |
 
 ## Dashboard

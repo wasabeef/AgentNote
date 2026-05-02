@@ -1,0 +1,102 @@
+---
+title: Команды
+description: Справочник команд CLI Agent Note.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Используйте эту страницу, когда вы уже понимаете поток Agent Note и ищете конкретную command или flag. Для первого setup начните с [Установки](./installation/).
+
+## Частые задачи
+
+- Первый setup: `agent-note init`
+- Посмотреть данные commit: `agent-note show`
+- Проверить недавнюю активность: `agent-note log`
+- Сгенерировать PR Report: `agent-note pr`
+- Проверить hooks и active adapter: `agent-note status`
+
+## agent-note init
+
+```bash
+npx agent-note init --agent claude
+```
+
+| Flag | Описание |
+|---|---|
+| `--agent <name...>` | Обязательно. Один или несколько adapters: `claude`, `codex`, `cursor`, `gemini` |
+| `--dashboard` | Также создает workflow для shared Dashboard |
+| `--no-hooks` | Пропускает настройку agent hooks |
+| `--no-git-hooks` | Пропускает установку git hooks |
+| `--no-action` | Пропускает создание workflow |
+| `--no-notes` | Пропускает notes auto-fetch |
+| `--hooks` | Устанавливает только agent hooks |
+| `--action` | Создает только workflow |
+
+## agent-note show
+
+```bash
+npx agent-note show
+npx agent-note show abc1234
+```
+
+Показывает prompts, responses, touched files, agent, model и attribution для commit.
+
+## agent-note log
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+Показывает последние commits с AI ratio и числом сохраненных prompts.
+
+## agent-note pr
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  npx agent-note pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  npx agent-note pr origin/main --json
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  `compact` фокусирует PR Report на prompts, которые объясняют commit. `full` показывает все сохраненные prompts.
+</Aside>
+
+## agent-note status
+
+```bash
+npx agent-note status
+```
+
+Проверяет active adapter, что собирают hooks, состояние git hooks и путь записи commit.
+
+## agent-note deinit
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Добавьте `--remove-workflow`, чтобы удалить также workflows PR Report и Dashboard.
+
+## agent-note commit
+
+```bash
+npx agent-note commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  Не нужно, если git hooks установлены. Обычный `git commit` уже выполняет такую же запись.
+</Aside>
+

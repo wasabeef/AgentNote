@@ -1,0 +1,102 @@
+---
+title: 명령어
+description: Agent Note CLI command reference.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Agent Note 흐름을 이미 알고 있고 정확한 command 나 flag 를 찾을 때 사용하는 reference 입니다. 첫 setup 은 [설치](./installation/) 에서 시작하세요.
+
+## 자주 쓰는 작업
+
+- 첫 setup: `agent-note init`
+- commit 에 기록된 내용 확인: `agent-note show`
+- 최근 활동 확인: `agent-note log`
+- PR Report 생성: `agent-note pr`
+- hook 과 active adapter 확인: `agent-note status`
+
+## agent-note init
+
+```bash
+npx agent-note init --agent claude
+```
+
+| Flag | 설명 |
+|---|---|
+| `--agent <name...>` | 필수. 하나 이상의 adapter: `claude`, `codex`, `cursor`, `gemini` |
+| `--dashboard` | shared Dashboard workflow 도 생성 |
+| `--no-hooks` | agent hook 설정 건너뛰기 |
+| `--no-git-hooks` | git hook 설치 건너뛰기 |
+| `--no-action` | workflow 생성 건너뛰기 |
+| `--no-notes` | notes auto-fetch 설정 건너뛰기 |
+| `--hooks` | agent hook 만 설치 |
+| `--action` | workflow 만 생성 |
+
+## agent-note show
+
+```bash
+npx agent-note show
+npx agent-note show abc1234
+```
+
+commit 의 prompts, responses, touched files, agent, model, attribution 을 표시합니다.
+
+## agent-note log
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+최근 commit 을 AI ratio 와 저장된 prompt 수와 함께 표시합니다.
+
+## agent-note pr
+
+<Tabs>
+  <TabItem label="Markdown">
+  ```bash
+  npx agent-note pr origin/main
+  ```
+  </TabItem>
+  <TabItem label="Detail">
+  ```bash
+  npx agent-note pr origin/main --prompt-detail compact
+  ```
+  </TabItem>
+  <TabItem label="JSON">
+  ```bash
+  npx agent-note pr origin/main --json
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  `compact` 는 commit 을 설명하는 prompt 중심으로 PR Report 를 유지합니다. `full` 은 저장된 prompt 를 모두 표시합니다.
+</Aside>
+
+## agent-note status
+
+```bash
+npx agent-note status
+```
+
+active adapter, hook 이 수집하는 data, git hook 상태, commit 경로를 확인합니다.
+
+## agent-note deinit
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+PR Report 와 Dashboard workflow 도 지우려면 `--remove-workflow` 를 추가합니다.
+
+## agent-note commit
+
+```bash
+npx agent-note commit -m "feat: add auth"
+```
+
+<Aside type="tip">
+  git hooks 가 설치되어 있으면 필요하지 않습니다. 일반 `git commit` 이 같은 기록을 수행합니다.
+</Aside>
+

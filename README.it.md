@@ -245,7 +245,7 @@ PR Report Mode è il default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Imposta `prompt_detail` su `compact` o `full` quando vuoi una cronologia dei prompt più breve o completa. Il default è `compact`: mostra i prompt high + medium, mentre `full` mostra tutti i prompt salvati.
+Imposta `prompt_detail` su `compact` o `full` quando vuoi una cronologia dei prompt mirata o completa. Il default è `compact`: mantiene leggibile il report mostrando i prompt che spiegano il commit, mentre `full` mostra tutti i prompt salvati.
 
 Dashboard Mode usa la stessa action con `dashboard: true`:
 

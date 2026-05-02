@@ -1,0 +1,63 @@
+---
+title: Données et confidentialité
+description: Ce qu’Agent Note stocke, où il le stocke, et ce qu’il n’envoie jamais.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note est conçu pour garder l’historique de review IA sans backend hébergé. Les données permanentes sont git-native, et les données temporaires restent dans le clone local.
+
+## Résumé
+
+| Sujet | Comportement |
+|---|---|
+| Service hébergé | Aucun serveur Agent Note requis |
+| Historique permanent | Git notes dans `refs/notes/agentnote` |
+| Données temporaires | `.git/agentnote/`, non committées |
+| Telemetry | Aucun envoi de prompts, responses ou paths vers un service Agent Note |
+
+## Ce qui est stocké
+
+| Champ | Rôle |
+|---|---|
+| `prompt` / `response` | Conversation liée au commit |
+| `contexts[]` | Indices display-only pour prompts courts |
+| `files` | Fichiers commités et touchés par l’IA |
+| `attribution` | Ratio IA, méthode et line counts |
+| `agent` / `model` | Metadata agent et modèle |
+
+Le schema complet est décrit dans [Fonctionnement](./how-it-works/#note-schema).
+
+## Avant d'activer Dashboard
+
+| Question | Recommandation |
+|---|---|
+| Les personnes qui voient Pages peuvent-elles lire les prompts ? | Activez Dashboard seulement si la visibilité Pages correspond à la politique du dépôt. |
+| Les prompts peuvent-ils contenir des secrets ou données client ? | Traitez les git notes comme des données de revue et évitez les secrets dans les prompts. |
+| Le contexte de revue dans la PR suffit-il ? | Utilisez PR Report seulement et ignorez `--dashboard`. |
+
+## Emplacements
+
+| Couche | Emplacement | Partagé ? |
+|---|---|---|
+| Données temporaires de session | `.git/agentnote/sessions/` | Non |
+| Notes permanentes | `refs/notes/agentnote` | Oui, via `git push` |
+| PR Report | Description ou commentaire de PR | Oui, dans GitHub |
+| Dashboard | Artifact Pages et `gh-pages/dashboard/notes/*.json` | Oui, si activé |
+
+<Aside>
+  Les git notes ne sont pas des fichiers de votre branche. Elles sont poussées et récupérées via le ref séparé `refs/notes/agentnote`.
+</Aside>
+
+## Ce qui n’est pas stocké
+
+- L’ensemble du workspace.
+- Tous les outputs de commandes shell.
+- Des fichiers attribués à l'IA à partir de commandes shell seules.
+- Des données envoyées vers un backend Agent Note.
+
+## Visibilité d’équipe
+
+Toute personne pouvant fetch `refs/notes/agentnote` peut lire les prompts et responses stockés. Traitez ces notes comme des données du repository.
+
+Si vous activez Dashboard, GitHub Pages publie une vue statique des snapshots produits par votre workflow. Si vous ne voulez pas de vue web partagée, utilisez seulement PR Report.

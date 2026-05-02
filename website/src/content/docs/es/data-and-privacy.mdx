@@ -1,0 +1,63 @@
+---
+title: Datos y privacidad
+description: Qué guarda Agent Note, dónde lo guarda y qué nunca envía.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note está pensado para equipos que quieren historial de review de IA sin backend hospedado. Los datos permanentes son git-native y los temporales permanecen en el clone local.
+
+## Resumen
+
+| Tema | Comportamiento |
+|---|---|
+| Hosted service | No requiere servidor de Agent Note |
+| Historial permanente | Git notes en `refs/notes/agentnote` |
+| Datos temporales | `.git/agentnote/`, no se commitean |
+| Telemetry | No envía prompts, responses ni paths a un servicio Agent Note |
+
+## Qué se guarda
+
+| Campo | Propósito |
+|---|---|
+| `prompt` / `response` | Conversación detrás del commit |
+| `contexts[]` | Pistas display-only para prompts cortos |
+| `files` | Archivos commitados y si la IA los tocó |
+| `attribution` | AI ratio, método y line counts |
+| `agent` / `model` | Metadata de agent y modelo |
+
+El schema completo está en [Cómo funciona](./how-it-works/#note-schema).
+
+## Antes de activar Dashboard
+
+| Pregunta | Recomendación |
+|---|---|
+| ¿Quienes ven Pages también pueden leer los prompts? | Activa Dashboard solo si la visibilidad de Pages coincide con la política del repositorio. |
+| ¿Los prompts pueden contener secretos o datos de clientes? | Trata las git notes como datos de revisión y evita secretos en los prompts. |
+| ¿Solo necesitas contexto para revisar la PR? | Usa solo PR Report y omite `--dashboard`. |
+
+## Dónde vive
+
+| Capa | Ubicación | Compartido |
+|---|---|---|
+| Datos temporales de sesión | `.git/agentnote/sessions/` | No |
+| Notes permanentes | `refs/notes/agentnote` | Sí, con `git push` |
+| PR Report | Descripción o comentario de PR | Sí, en GitHub |
+| Dashboard | Artefacto de Pages y `gh-pages/dashboard/notes/*.json` | Sí, si está activado |
+
+<Aside>
+  Las git notes no son archivos normales del branch. Se push / fetch con el ref separado `refs/notes/agentnote`.
+</Aside>
+
+## Qué no se guarda
+
+- Todo el workspace.
+- Todos los outputs de shell commands.
+- Archivos atribuidos a la IA solo a partir de comandos shell.
+- Datos enviados a un backend de Agent Note.
+
+## Visibilidad del equipo
+
+Quien pueda fetch `refs/notes/agentnote` puede leer prompts y responses guardados. Trata las git notes como datos del repository.
+
+Dashboard es opcional. Si no quieres una vista web compartida, usa solo PR Report y omite `--dashboard`.

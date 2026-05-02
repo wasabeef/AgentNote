@@ -1,0 +1,52 @@
+---
+title: Начало работы
+description: Понять, что добавляет Agent Note, прежде чем устанавливать его в репозиторий.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Agent Note проще внедрять, когда понятны основные части: local hooks собирают context, git notes привязывают его к commit, а GitHub Action превращает данные в PR Report.
+
+Эта страница — карта. Команды установки вынесены на следующую страницу, чтобы сначала было ясно, что именно вы включаете.
+
+## Что вы настраиваете
+
+<CardGrid>
+  <Card title="Local capture" icon="laptop">
+    Agent hooks собирают prompts, responses, touched files и attribution signals во время работы.
+  </Card>
+  <Card title="Git-native history" icon="document">
+    Каждый commit получает git note в `refs/notes/agentnote`, не меняя содержимое ветки.
+  </Card>
+  <Card title="Pull Request context" icon="rocket">
+    GitHub Action читает notes и пишет PR Report для reviewers.
+  </Card>
+  <Card title="Optional Dashboard" icon="setting">
+    Если команде нужна общая страница, Dashboard публикует историю через GitHub Pages.
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard необязателен, но показывает, какую review history Agent Note может собрать из обычных commits и Pull Requests.</figcaption>
+</figure>
+
+## Рекомендуемый путь
+
+<Steps>
+1. Сначала прочитайте эту короткую модель.
+2. Перейдите к [Установке](./installation/) и выполните `npx agent-note init`.
+3. Откройте Pull Request и проверьте PR Report.
+4. Включайте Dashboard только если команде нужна общая страница.
+</Steps>
+
+## Что читать дальше
+
+| Задача | Страница |
+|---|---|
+| Установить Agent Note сейчас | [Установка](./installation/) |
+| Настроить PR Report | [GitHub Action](./github-action/) |
+| Опубликовать общую страницу | [Dashboard](./dashboard/) |
+| Проверить возможности agents | [Agent Support](./agent-support/) |
+| Понять, какие данные сохраняются | [Data & Privacy](./data-and-privacy/) |
+| Исправить пропавшие данные | [Troubleshooting](./troubleshooting/) |

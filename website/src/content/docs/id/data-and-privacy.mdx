@@ -1,0 +1,63 @@
+---
+title: Data dan privasi
+description: Apa yang disimpan Agent Note, di mana disimpan, dan apa yang tidak pernah dikirim.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent Note dirancang untuk tim yang ingin menyimpan AI review history tanpa hosted backend. Data permanen bersifat git-native, sedangkan data sementara tetap di local clone.
+
+## Ringkasnya
+
+| Topik | Perilaku |
+|---|---|
+| Hosted service | Tidak perlu server Agent Note |
+| Riwayat permanen | Git notes di `refs/notes/agentnote` |
+| Data sementara | `.git/agentnote/`, tidak di-commit |
+| Telemetry | Tidak mengirim prompt, response, atau path ke layanan Agent Note |
+
+## Yang disimpan
+
+| Kolom | Tujuan |
+|---|---|
+| `prompt` / `response` | Percakapan di balik commit |
+| `contexts[]` | Hint display-only untuk prompt pendek |
+| `files` | Committed files dan apakah disentuh AI |
+| `attribution` | AI ratio, method, dan line counts |
+| `agent` / `model` | Metadata agent dan model |
+
+Schema lengkap ada di [Cara kerja](./how-it-works/#note-schema).
+
+## Sebelum mengaktifkan Dashboard
+
+| Hal yang perlu dicek | Rekomendasi |
+|---|---|
+| Apakah orang yang bisa melihat Pages boleh membaca prompt? | Aktifkan Dashboard hanya jika visibilitas Pages sesuai kebijakan repository. |
+| Apakah prompt bisa berisi secret atau data pelanggan? | Perlakukan git notes sebagai data review dan jangan taruh secret di prompt. |
+| Apakah cukup melihat konteks review di PR? | Gunakan PR Report saja dan lewati `--dashboard`. |
+
+## Lokasi data
+
+| Lapisan | Lokasi | Dibagikan? |
+|---|---|---|
+| Data sementara session | `.git/agentnote/sessions/` | Tidak |
+| Notes permanen | `refs/notes/agentnote` | Ya, saat `git push` |
+| PR Report | Deskripsi PR atau komentar | Ya, di GitHub |
+| Dashboard | Pages artifact dan `gh-pages/dashboard/notes/*.json` | Ya, jika diaktifkan |
+
+<Aside>
+  Git notes bukan file biasa di branch. Data ini di-push dan di-fetch lewat ref terpisah `refs/notes/agentnote`.
+</Aside>
+
+## Yang tidak disimpan
+
+- Seluruh workspace.
+- Semua output shell command.
+- File yang dianggap disentuh AI hanya dari shell command.
+- Data yang dikirim ke backend Agent Note.
+
+## Visibilitas tim
+
+Siapa pun yang dapat fetch `refs/notes/agentnote` dapat membaca prompt dan response yang disimpan. Perlakukan git notes sebagai data repository.
+
+Dashboard bersifat optional. Jika tidak ingin shared web view, gunakan PR Report saja dan lewati `--dashboard`.

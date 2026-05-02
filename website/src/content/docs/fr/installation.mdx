@@ -1,0 +1,76 @@
+---
+title: Installation
+description: Installer les hooks Agent Note, le partage par git notes et le workflow PR Report.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Cette page est le chemin pratique. À la fin, votre dépôt peut enregistrer les données Agent Note pendant un `git commit` normal et publier un PR Report sur GitHub.
+
+## Installer
+
+<Steps>
+1. Exécutez `init` dans le dépôt.
+
+   ```bash
+   npx agent-note init --agent claude
+   ```
+
+   Autres agents:
+   - Codex CLI: `npx agent-note init --agent codex`
+   - Cursor: `npx agent-note init --agent cursor`
+   - Gemini CLI: `npx agent-note init --agent gemini`
+   - Plusieurs agents: `npx agent-note init --agent claude cursor`
+
+   Pour ajouter Dashboard:
+
+   ```bash
+   npx agent-note init --agent claude --dashboard
+   ```
+
+2. Committez les fichiers générés.
+
+   ```bash
+   git add .claude/settings.json .github/workflows/agentnote-pr-report.yml
+   git commit -m "chore: enable agent-note"
+   git push
+   ```
+
+   Codex CLI ajoute `.codex/config.toml` et `.codex/hooks.json`. Cursor ajoute `.cursor/hooks.json`. Gemini CLI ajoute `.gemini/settings.json`. Avec `--dashboard`, ajoutez aussi `.github/workflows/agentnote-dashboard.yml`.
+
+3. Travaillez normalement avec votre agent.
+
+   Quand les git hooks générés sont installés, `git commit` suffit. Utilisez `agent-note commit -m "..."` seulement si les git hooks ne sont pas disponibles.
+</Steps>
+
+## Chaque clone
+
+Chaque développeur doit exécuter `init` après un `git clone`, car les git hooks vivent dans `.git/` et ne sont pas commités.
+
+```bash
+git clone <repository-url>
+cd <repository-dir>
+npx agent-note init --agent claude
+```
+
+<Aside>
+  Les fichiers de configuration agent sont partagés par git. Les git hooks, eux, sont locaux à chaque clone.
+</Aside>
+
+## Vérifier
+
+```bash
+npx agent-note status
+npx agent-note show
+```
+
+Si le PR Report est vide ou si les prompts semblent incomplets, ouvrez [Troubleshooting](./troubleshooting/).
+
+## Désinstaller
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+Ajoutez `--remove-workflow` pour supprimer aussi les workflows PR Report et Dashboard.
+

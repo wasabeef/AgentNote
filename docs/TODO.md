@@ -20,12 +20,12 @@
 
 - 対象: PR Report / GitHub Action の `prompt_detail` preset
 - 対象 PR: `#45` の follow-up
-- 観測結果: 旧 `compact` は `high` のみを表示し、PR #45 では `2/7`、直近 80 commit の note 集計では約 8% しか表示されませんでした。一方、旧 `standard` は `high + medium` を表示し、PR #45 では `4/7`、直近集計では約 13% で、実質的に「PR body に載せたい compact view」として機能していました。
+- 観測結果: 旧 `compact` は表示を絞りすぎ、PR #45 では `2/7`、直近 80 commit の note 集計では約 8% しか表示されませんでした。一方、旧 `standard` 相当の範囲は PR #45 では `4/7`、直近集計では約 13% で、実質的に「PR body に載せたい compact view」として機能していました。
 - 問題: `standard` という名前は基準が曖昧で、旧 `compact` は削りすぎて意図が落ちやすいです。利用者にとっては `compact` と `full` の 2 択の方が分かりやすい可能性があります。
-- 修正: `prompt_detail` の公開 preset を `compact` / `full` の 2 つに整理しました。`compact` は `high + medium`、`full` は保存済み prompt すべてを表示します。
+- 修正: `prompt_detail` の公開 preset を `compact` / `full` の 2 つに整理しました。`compact` は commit の説明に必要な prompt を中心に表示し、`full` は保存済み prompt すべてを表示します。
 - 互換: 既存 workflow への安全弁として、`standard` は parser で `compact` の legacy alias として受けます。ただし README / website / Action docs には出しません。
 - 確認範囲: PR Report、CLI `agent-note pr --prompt-detail`、GitHub Action `prompt_detail` input、README / website / docs の説明を更新しました。
-- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/pr-report/src/report.test.ts` で、`compact = high + medium`、`full = all`、`standard` alias を検証します。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` と `packages/pr-report/src/report.test.ts` で、`compact` の表示範囲、`full = all`、`standard` alias を検証します。
 
 ### Dashboard の `0/0 AI-added lines` 表示
 

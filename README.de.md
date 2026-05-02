@@ -245,7 +245,7 @@ PR Report Mode ist der Standard:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Setze `prompt_detail` auf `compact` oder `full`, wenn du die Prompt-Historie kürzer oder vollständig anzeigen willst. Standard ist `compact`: Es zeigt high + medium Prompts, während `full` alle gespeicherten Prompts zeigt.
+Setze `prompt_detail` auf `compact` oder `full`, wenn du die Prompt-Historie fokussiert oder vollständig anzeigen willst. Standard ist `compact`: Es hält den Bericht lesbar und zeigt die Prompts, die den Commit erklären, während `full` alle gespeicherten Prompts zeigt.
 
 Dashboard Mode nutzt dieselbe action mit `dashboard: true`:
 

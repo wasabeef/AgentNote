@@ -493,7 +493,7 @@ JSON output structure:
 |---|---|---|
 | `base` | PR base branch | Base branch to compare against |
 | `pr_output` | `description` | PR Report destination: `description`, `comment`, or `none` |
-| `prompt_detail` | `compact` | Prompt history detail in PR Report: `compact` = high + medium, `full` = every stored prompt |
+| `prompt_detail` | `compact` | Prompt history detail in PR Report: `compact` keeps the report focused, `full` shows every stored prompt |
 | `dashboard` | `false` | Run Dashboard build/persist mode instead of PR Report Mode |
 
 ### Action outputs

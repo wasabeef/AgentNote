@@ -211,6 +211,25 @@ nav.sidebar .top-level > li > a {
   font-size: 1.04rem;
 }
 
+/* Documentation screenshots */
+.doc-screenshot {
+  margin: 2rem 0 2.75rem;
+}
+
+.doc-screenshot img {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+}
+
+.doc-screenshot figcaption {
+  margin-top: 0.75rem;
+  color: var(--sl-color-gray-2);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 /* H2 — editorial-style section divider with accent bar */
 .sl-markdown-content h2 {
   margin-top: 4rem;

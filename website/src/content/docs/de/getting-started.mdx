@@ -1,0 +1,52 @@
+---
+title: Erste Schritte
+description: Verstehen, was Agent Note ergänzt, bevor du es in einem Repository installierst.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Agent Note lässt sich leichter einführen, wenn die Bausteine vorher klar sind. Agent-Hooks erfassen den lokalen Kontext, git notes hängen ihn an Commits, und die GitHub Action macht daraus einen PR Report.
+
+Diese Seite ist die Karte. Die Installationsbefehle stehen auf der nächsten Seite, damit du zuerst weißt, was du aktivierst.
+
+## Was du einrichtest
+
+<CardGrid>
+  <Card title="Lokale Erfassung" icon="laptop">
+    Agent-Hooks sammeln Prompts, Antworten, berührte Dateien und Attribution-Signale während der Arbeit.
+  </Card>
+  <Card title="Git-native Historie" icon="document">
+    Jeder Commit erhält eine git note unter `refs/notes/agentnote`, ohne den Branch-Inhalt zu verändern.
+  </Card>
+  <Card title="Pull-Request-Kontext" icon="rocket">
+    Die GitHub Action liest diese Notes und schreibt den PR Report für Reviewer.
+  </Card>
+  <Card title="Optionales Dashboard" icon="setting">
+    Wenn das Team eine gemeinsame Ansicht möchte, veröffentlicht Dashboard die Historie auf GitHub Pages.
+  </Card>
+</CardGrid>
+
+<figure class="doc-screenshot">
+  <img src="/AgentNote/images/dashboard-preview.png" alt="Agent Note Dashboard showing Pull Request history, commits, prompts, and diffs" />
+  <figcaption>Dashboard ist optional, zeigt aber, welche Review-Historie Agent Note aus normalen Commits und Pull Requests aufbauen kann.</figcaption>
+</figure>
+
+## Empfohlener Weg
+
+<Steps>
+1. Lies zuerst dieses kurze Modell.
+2. Folge [Installation](./installation/), um `npx agent-note init` auszuführen.
+3. Öffne eine Pull Request und prüfe den PR Report.
+4. Aktiviere Dashboard nur, wenn dein Team eine gemeinsame Seite braucht.
+</Steps>
+
+## Als Nächstes
+
+| Bedarf | Seite |
+|---|---|
+| Agent Note jetzt installieren | [Installation](./installation/) |
+| PR Report konfigurieren | [GitHub Action](./github-action/) |
+| Gemeinsame Ansicht veröffentlichen | [Dashboard](./dashboard/) |
+| Agent-Grenzen prüfen | [Agent Support](./agent-support/) |
+| Gespeicherte Daten verstehen | [Data & Privacy](./data-and-privacy/) |
+| Fehlende Daten beheben | [Troubleshooting](./troubleshooting/) |

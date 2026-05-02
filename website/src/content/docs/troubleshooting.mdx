@@ -1,0 +1,114 @@
+---
+title: Troubleshooting
+description: Fix common Agent Note setup, PR Report, Dashboard, and git notes issues.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Start here when Agent Note does not show the data you expected. Most issues come from one of three places: local git hooks, missing git notes, or GitHub Pages deploy settings.
+
+## Quick Checks
+
+<Steps>
+1. Check local setup:
+
+   ```bash
+   npx agent-note status
+   ```
+
+2. Confirm the commit has a note:
+
+   ```bash
+   npx agent-note show
+   ```
+
+3. Confirm notes were pushed:
+
+   ```bash
+   git fetch origin refs/notes/agentnote:refs/notes/agentnote
+   git notes --ref=agentnote show HEAD
+   ```
+</Steps>
+
+## Start From The Symptom
+
+| Symptom | Start here |
+|---|---|
+| PR Report is empty | Confirm notes were pushed and the workflow fetched full git history |
+| A prompt you expected is not shown | Compare `compact` and `full` prompt detail |
+| Dashboard opens but the PR has no data | Check whether that PR's notes have been published |
+| Plain `git commit` does not create notes | Re-run `init` and inspect the `git:` line in `status` |
+| Attribution stays file-level | Check whether the agent exposed enough edit history |
+
+## PR Report Is Empty
+
+Check these first:
+
+- The PR branch was pushed after Agent Note was enabled.
+- `refs/notes/agentnote` exists on the remote.
+- The workflow uses `actions/checkout` with `fetch-depth: 0`.
+- The PR contains commits with AI-authored files.
+
+Agent Note skips commits where it cannot find any committed file touched by the agent. That keeps human-only commits from looking AI-generated.
+
+## Prompts Look Missing
+
+Prompt selection is scoped to the commit window, not the whole chat session.
+
+- `compact` keeps the report focused by showing the prompts that explain the commit.
+- `full` shows every stored prompt.
+- Older task prompts are trimmed when this commit already has its own explanation.
+- Short prompts can get `📝 Context` when Agent Note finds file names or code identifiers that explain what the prompt refers to.
+
+To see everything stored for a PR Report, set:
+
+```yaml
+with:
+  prompt_detail: full
+```
+
+## Dashboard Shows No Data
+
+Check the Dashboard workflow run and Pages settings.
+
+- GitHub Pages source should be **GitHub Actions**.
+- The workflow must run with `dashboard: true`.
+- The first successful deploy creates the shared `/dashboard/` URL.
+- If GitHub environment protection blocks PR deploys, open PR data appears after merge.
+
+<Aside>
+  `https://<owner>.github.io/<repo>/dashboard/?pr=123` only works after that PR's notes have been published.
+</Aside>
+
+## Dashboard Opens the Wrong PR
+
+The Dashboard home should show the shared history without forcing a `?pr=` redirect. PR Report links add the matching `?pr=<number>` so reviewers land on the current PR.
+
+If an older Pages deploy still redirects, rerun the Dashboard workflow or wait for the next successful deploy from `main`.
+
+## Plain `git commit` Is Not Tracked
+
+Run `status` and check the `git:` line.
+
+```bash
+npx agent-note status
+```
+
+If git hooks are missing, run `init` again:
+
+```bash
+npx agent-note init --agent claude
+```
+
+Git hooks live inside `.git/`, so every clone needs local setup even when the agent config files are committed.
+
+## Line-level Attribution Is Not Available
+
+This is usually expected.
+
+- Claude Code usually has enough edit history for line-level attribution.
+- Codex CLI upgrades only when transcript patch counts match the final commit diff.
+- Cursor upgrades only when edit counts match and the final blob still matches the latest AI edit.
+- Gemini CLI currently records file-level attribution.
+
+When evidence is incomplete, Agent Note falls back instead of guessing.

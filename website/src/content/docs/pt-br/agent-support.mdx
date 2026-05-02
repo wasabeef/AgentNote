@@ -1,0 +1,77 @@
+---
+title: Suporte a agents
+description: O que o Agent Note consegue capturar de cada coding agent.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+O Agent Note grava o mesmo formato de git note para todos os agents, mas cada agent expõe hooks e transcripts diferentes. Esta página mostra o que esperar antes de ativar para um time.
+
+## Matriz de suporte
+
+| Agent | Status | Prompt / Response | Attribution |
+|---|---|---|---|
+| Claude Code | Full support | Hook native | Line-level por padrão |
+| Codex CLI | Preview | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |
+| Cursor Preview | Supported | Response hook ou local transcript | File-level por padrão, line-level quando edit count e final blob batem |
+| Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+
+<Aside>
+  Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
+</Aside>
+
+## Setup recomendado
+
+```bash
+npx agent-note init --agent claude
+```
+
+Ative apenas os agents que o time usa de fato. Vários agents podem coexistir no mesmo repository.
+
+```bash
+npx agent-note init --agent claude codex cursor gemini
+```
+
+Cada developer precisa rodar `init` uma vez depois do clone, porque git hooks ficam dentro de `.git/`.
+
+## Escolha pela expectativa
+
+| Você precisa de... | Espere... |
+|---|---|
+| A attribution por linha mais completa hoje | Claude Code |
+| Suporte Codex CLI com attribution conservadora | Codex CLI em Preview |
+| Histórico do editor Cursor e recuperação de response | Cursor Preview |
+| Captura de prompt / response no Gemini CLI | Gemini CLI Preview |
+
+## Attribution
+
+Line-level conta AI-added lines quando o Agent Note consegue comparar com segurança o AI edit, edits humanos posteriores e o final commit diff. File-level é usado quando a prova não é suficiente.
+
+O Agent Note prefere fallback conservador a adivinhar.
+
+## Notas por agent
+
+### Claude Code
+
+Claude Code fornece prompts, responses e edits por hooks. O Agent Note salva o estado do arquivo antes e depois do AI edit e remove edits humanos posteriores do diff final.
+
+### Codex CLI
+
+Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para line-level apenas quando os counts de `apply_patch` batem com o diff final.
+
+### Cursor Preview
+
+Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o final blob ainda bate com o último AI edit.
+
+### Gemini CLI Preview
+
+Gemini CLI usa `BeforeTool` / `AfterTool` para arquivos e `BeforeAgent` / `AfterAgent` para prompt / response. A attribution atual é file-level.
+
+## Quando faltam dados
+
+- Nenhuma note é escrita quando o Agent Note não encontra arquivo commitado tocado pelo agent.
+- Um prompt antigo pode ser omitido se pertencer a outra commit window.
+- Uma response pode faltar se o agent não a expõe.
+- Generated artifacts podem ser excluídos do denominador do AI ratio.
+
+Para investigar, comece por [Troubleshooting](./troubleshooting/).

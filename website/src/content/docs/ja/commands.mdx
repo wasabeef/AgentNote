@@ -5,6 +5,8 @@ description: Agent Note CLI の使い方とコマンド一覧
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
+このページは、Agent Note の全体像を把握したあとにコマンドや flag を確認するための reference です。最初の導入手順だけ見たい場合は、先に [インストール](./installation/) を読んでください。
+
 ## よく使うコマンド
 
 - 最初のセットアップ: `agent-note init`
@@ -92,7 +94,7 @@ PR レポートを生成します。
 </Tabs>
 
 <Aside>
-  prompt detail の既定値は `compact` です。`compact` は high + medium の prompt、`full` は保存された prompt をすべて表示します。
+  prompt detail の既定値は `compact` です。`compact` は commit の説明に必要な prompt を中心に表示し、`full` は保存された prompt をすべて表示します。
 </Aside>
 
 ## agent-note status
