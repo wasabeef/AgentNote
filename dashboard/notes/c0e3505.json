@@ -285,6 +285,6 @@
   "pull_request": {
     "number": 52,
     "title": "ci: publish scoped npm alias",
-    "state": "open"
+    "state": "merged"
   }
 }
