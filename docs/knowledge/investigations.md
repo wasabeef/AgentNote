@@ -14,6 +14,20 @@
 
 ## Resolved Investigations
 
+### PR #52 prompt selection に前 commit の operational prompt が混入する
+
+- 対象 PR: `#52`
+- 対象 commit: `4be1573 ci: make npm alias publish rerunnable`
+- 観測結果: PR body の Agent Note で、`4be1573` に `commit して PR までつくって` が表示されました。この prompt は直前 commit `c0e3505 ci: publish scoped npm alias` の commit / PR 作成指示であり、`4be1573` の変更理由そのものではありません。
+- 正しい中心 prompt: `自己レビュー`。この turn で release workflow の再実行不能リスクを見つけ、`agent-note@<version>` / `@wasabeef/agentnote@<version>` が既に npm にある場合は publish step を skip する修正を入れました。
+- raw note の状態: `4be1573` には `commit して PR までつくって`、`自己レビュー`、`commit push` が保存されています。`commit push` は compact 表示では落ちており妥当ですが、`commit して PR までつくって` は `response_basename_or_identifier` と `between_non_excluded_prompts` により medium 相当として残っていました。
+- 原因: 前 commit で `prompt_scope: "tail"` として記録された prompt が、次 commit では `tail` ではなく通常の `window` として再評価されていました。そのため `isConsumedTailPrompt` の除外が効かず、前 commit の commit / PR boundary prompt が後続 commit の compact 表示に復活できました。
+- 修正: consumed tail prompt は、次 commit で primary edit turn になった場合、または Codex の prompt-only fallback path の場合だけ再評価します。通常の prompt window では、古い tail prompt を `window` context として復活させません。
+- Regression coverage: `packages/cli/src/core/record.test.ts` に PR #52 型の regression を追加しました。`4be1573` 相当の compact candidate では `自己レビュー` だけが残り、`commit して PR までつくって` は復活しないことを確認します。同時に、consumed tail prompt が後続 commit の primary edit turn になった場合は `primary` として再評価できることも確認します。
+- Follow-up 修正: `4be1573` では `自己レビューを5回やって` も commit 前の重要な品質確認でしたが、prompt 本文に file anchor がないため落ちていました。response に current commit file / identifier の anchor がある tail prompt は残すようにし、edit turn ではない review / verification prompt も compact に出せるようにしました。
+- Simulation coverage: `Claude` / `Codex` / `Cursor` / `Gemini`、過去 scope (`none` / `window` / `tail`)、次 commit での再解釈 (`window` / `tail` / `primary` / `fallback`)、prompt shape (`plain` / `substantive` / `exact-file` / `diff-id` / `quoted` / `tiny`)、response anchor、commit boundary、post-primary edit barrier、non-primary edit turn を組み合わせた 4,608 ケースの state-transition simulation を追加しました。旧 `isTail` 限定 dedupe なら復活してしまうケースを検出し、強い file anchor がある古い tail prompt でも通常 window context としては復活しないことを確認します。同時に、response が current commit に強く接続する review tail prompt は保持できることも検証します。
+- 注意点: `prompt_scope: "tail"` は `maxConsumedTurn` を進めない設計のままです。split commit で同じ prompt が別 file の primary edit を持つケースと、Codex の prompt-only fallback は維持します。
+
 ### PR #49 prompt selection に過去タスクの prompt が混入する
 
 - 対象 PR: `#49`

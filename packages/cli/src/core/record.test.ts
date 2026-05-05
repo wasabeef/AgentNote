@@ -197,9 +197,25 @@ type PromptBoundaryTrimSimulationCase = {
   expectedLabels: string[];
 };
 
+type ConsumedTailRevivalSimulationCase = {
+  name: string;
+  agent: "claude" | "codex" | "cursor" | "gemini";
+  previousScope: "none" | "window" | "tail";
+  currentKind: "window" | "tail" | "primary" | "fallback";
+  promptShape: "plain" | "substantive" | "exact-file" | "diff-id" | "quoted" | "tiny";
+  hasResponseAnchor: boolean;
+  isBeforeCommitBoundary: boolean;
+  hasPostPrimaryEditBarrier: boolean;
+  isNonPrimaryEditTurn: boolean;
+  expectedKeep: boolean;
+  legacyKeep: boolean;
+};
+
 const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE = 44;
 const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE = 55;
 const PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE = 0;
+const PROMPT_BOUNDARY_SIMULATION_ANCHOR_TEXT_SCORE = 2;
+const PROMPT_BOUNDARY_SIMULATION_ANCHOR_FILE_REF_SCORE = 5;
 
 function buildPromptBoundarySimulationCases(): PromptBoundarySimulationCase[] {
   const agents: PromptBoundarySimulationCase["agent"][] = ["claude", "codex", "cursor", "gemini"];
@@ -459,6 +475,133 @@ function simulatePromptBoundaryTrim(promptCase: PromptBoundaryTrimSimulationCase
   return taskBoundedRows.map((row) => row.label);
 }
 
+function buildConsumedTailRevivalSimulationCases(): ConsumedTailRevivalSimulationCase[] {
+  const agents: ConsumedTailRevivalSimulationCase["agent"][] = [
+    "claude",
+    "codex",
+    "cursor",
+    "gemini",
+  ];
+  const previousScopes: ConsumedTailRevivalSimulationCase["previousScope"][] = [
+    "none",
+    "window",
+    "tail",
+  ];
+  const currentKinds: ConsumedTailRevivalSimulationCase["currentKind"][] = [
+    "window",
+    "tail",
+    "primary",
+    "fallback",
+  ];
+  const promptShapes: ConsumedTailRevivalSimulationCase["promptShape"][] = [
+    "plain",
+    "substantive",
+    "exact-file",
+    "diff-id",
+    "quoted",
+    "tiny",
+  ];
+  const cases: ConsumedTailRevivalSimulationCase[] = [];
+
+  for (const agent of agents) {
+    for (const previousScope of previousScopes) {
+      for (const currentKind of currentKinds) {
+        for (const promptShape of promptShapes) {
+          for (const hasResponseAnchor of [false, true]) {
+            for (const isBeforeCommitBoundary of [false, true]) {
+              for (const hasPostPrimaryEditBarrier of [false, true]) {
+                for (const isNonPrimaryEditTurn of [false, true]) {
+                  const promptCase = {
+                    agent,
+                    previousScope,
+                    currentKind,
+                    promptShape,
+                    hasResponseAnchor,
+                    isBeforeCommitBoundary,
+                    hasPostPrimaryEditBarrier,
+                    isNonPrimaryEditTurn,
+                  };
+                  cases.push({
+                    name: `${agent}: previous=${previousScope}, current=${currentKind}, shape=${promptShape}, response=${hasResponseAnchor}, before=${isBeforeCommitBoundary}, barrier=${hasPostPrimaryEditBarrier}, edit=${isNonPrimaryEditTurn}`,
+                    ...promptCase,
+                    expectedKeep: shouldKeepConsumedTailRevivalSimulation(promptCase, "current"),
+                    legacyKeep: shouldKeepConsumedTailRevivalSimulation(promptCase, "legacy"),
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return cases;
+}
+
+function shouldKeepConsumedTailRevivalSimulation(
+  promptCase: Omit<ConsumedTailRevivalSimulationCase, "name" | "expectedKeep" | "legacyKeep">,
+  mode: "current" | "legacy",
+): boolean {
+  const isPrimaryTurn = promptCase.currentKind === "primary";
+  const isTail = promptCase.currentKind === "tail";
+  const isFallback = promptCase.currentKind === "fallback";
+  const isConsumedTailPrompt =
+    promptCase.previousScope === "tail" &&
+    !isPrimaryTurn &&
+    (mode === "legacy" ? isTail : !isFallback);
+
+  if (isPrimaryTurn) return true;
+  if (
+    promptCase.promptShape === "quoted" ||
+    promptCase.promptShape === "tiny" ||
+    promptCase.isNonPrimaryEditTurn
+  ) {
+    return false;
+  }
+  if (isConsumedTailPrompt) return false;
+  if (!isTail) return true;
+  if (promptCase.hasResponseAnchor) return true;
+
+  if (promptCase.hasPostPrimaryEditBarrier) {
+    return consumedTailSimulationHasStrongAnchor(promptCase.promptShape);
+  }
+  return (
+    promptCase.isBeforeCommitBoundary ||
+    consumedTailSimulationHasStrongAnchor(promptCase.promptShape) ||
+    consumedTailSimulationShapeScore(promptCase.promptShape) >=
+      PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE
+  );
+}
+
+function consumedTailSimulationHasStrongAnchor(
+  promptShape: ConsumedTailRevivalSimulationCase["promptShape"],
+): boolean {
+  return (
+    consumedTailSimulationFileRefScore(promptShape) >=
+      PROMPT_BOUNDARY_SIMULATION_ANCHOR_FILE_REF_SCORE ||
+    consumedTailSimulationTextScore(promptShape) >= PROMPT_BOUNDARY_SIMULATION_ANCHOR_TEXT_SCORE
+  );
+}
+
+function consumedTailSimulationFileRefScore(
+  promptShape: ConsumedTailRevivalSimulationCase["promptShape"],
+): number {
+  return promptShape === "exact-file" ? PROMPT_BOUNDARY_SIMULATION_ANCHOR_FILE_REF_SCORE : 0;
+}
+
+function consumedTailSimulationTextScore(
+  promptShape: ConsumedTailRevivalSimulationCase["promptShape"],
+): number {
+  return promptShape === "diff-id" ? PROMPT_BOUNDARY_SIMULATION_ANCHOR_TEXT_SCORE : 0;
+}
+
+function consumedTailSimulationShapeScore(
+  promptShape: ConsumedTailRevivalSimulationCase["promptShape"],
+): number {
+  return promptShape === "substantive" ? PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE : 0;
+}
+
 describe("prompt task-boundary policy simulation", () => {
   it("separates stale primary revival from legitimate split-commit carryover across 100+ cases", () => {
     const cases = buildPromptBoundarySimulationCases();
@@ -501,6 +644,88 @@ describe("prompt task-boundary policy simulation", () => {
         promptCase.name,
       );
     }
+  });
+
+  it("does not revive consumed tail prompts as later window context across 100+ state transitions", () => {
+    const cases = buildConsumedTailRevivalSimulationCases();
+    assert.ok(
+      cases.length >= 100,
+      `expected at least 100 consumed-tail simulation cases, got ${cases.length}`,
+    );
+
+    const legacyRevivalCases: ConsumedTailRevivalSimulationCase[] = [];
+    for (const promptCase of cases) {
+      assert.equal(
+        shouldKeepConsumedTailRevivalSimulation(promptCase, "current"),
+        promptCase.expectedKeep,
+        promptCase.name,
+      );
+
+      if (promptCase.legacyKeep !== promptCase.expectedKeep) {
+        legacyRevivalCases.push(promptCase);
+      }
+    }
+
+    assert.ok(
+      legacyRevivalCases.length >= 48,
+      "the simulation should cover many consumed-tail prompts that the old isTail-only dedupe revives",
+    );
+    assert.ok(
+      legacyRevivalCases.some(
+        (promptCase) =>
+          promptCase.agent === "codex" &&
+          promptCase.currentKind === "window" &&
+          promptCase.promptShape === "exact-file",
+      ),
+      "Codex consumed tail prompts with exact file anchors must be represented",
+    );
+    assert.ok(
+      cases
+        .filter(
+          (promptCase) =>
+            promptCase.previousScope === "tail" &&
+            promptCase.currentKind === "window" &&
+            promptCase.promptShape !== "quoted" &&
+            promptCase.promptShape !== "tiny" &&
+            !promptCase.isNonPrimaryEditTurn,
+        )
+        .every((promptCase) => !promptCase.expectedKeep),
+      "a consumed tail prompt must not revive as regular window context even when it has anchors",
+    );
+    assert.ok(
+      cases.some(
+        (promptCase) =>
+          promptCase.previousScope === "none" &&
+          promptCase.currentKind === "tail" &&
+          promptCase.hasResponseAnchor &&
+          !promptCase.isBeforeCommitBoundary &&
+          !promptCase.isNonPrimaryEditTurn &&
+          promptCase.expectedKeep,
+      ),
+      "review-style tail prompts with response anchors must survive even without prompt-side anchors",
+    );
+    assert.ok(
+      cases.some(
+        (promptCase) =>
+          promptCase.previousScope === "tail" &&
+          promptCase.currentKind === "primary" &&
+          promptCase.expectedKeep,
+      ),
+      "a consumed tail prompt must still be allowed to become a later primary turn",
+    );
+    assert.ok(
+      cases
+        .filter(
+          (promptCase) =>
+            promptCase.previousScope === "tail" &&
+            promptCase.currentKind === "fallback" &&
+            promptCase.promptShape !== "quoted" &&
+            promptCase.promptShape !== "tiny" &&
+            !promptCase.isNonPrimaryEditTurn,
+        )
+        .every((promptCase) => promptCase.expectedKeep),
+      "Codex prompt-only fallback must still be allowed to re-evaluate consumed tail prompts",
+    );
   });
 });
 
@@ -760,6 +985,125 @@ describe("recordCommitEntry", () => {
       (interaction) => interaction.prompt,
     );
     assert.deepEqual(prompts, ["update target.ts", "create the PR"]);
+  });
+
+  it("does not revive consumed tail prompts as later window context", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"publish scoped npm alias","prompt_id":"id-old-primary","turn":1,"timestamp":"2026-05-02T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"commit して PR までつくって","prompt_id":"id-old-tail","turn":2,"timestamp":"2026-05-02T10:01:00Z"}\n' +
+        '{"event":"prompt","prompt":"自己レビュー","prompt_id":"id-review","turn":3,"timestamp":"2026-05-05T14:20:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":".github/workflows/release.yml","turn":3,"prompt_id":"id-review"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"prompt_id":"id-old-primary","file":null,"prompt_scope":"window","change_id":null,"tool_use_id":null}\n' +
+        '{"turn":2,"prompt_id":"id-old-tail","file":null,"prompt_scope":"tail","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "3\n");
+
+    mkdirSync(join(repoDir, ".github", "workflows"), { recursive: true });
+    writeFileSync(join(repoDir, ".github", "workflows", "release.yml"), "name: Release\n");
+    execSync("git add .github/workflows/release.yml", { cwd: repoDir });
+    execSync('git commit -m "ci: make npm alias publish rerunnable"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const prompts = (note.interactions as Array<{ prompt: string }>).map(
+      (interaction) => interaction.prompt,
+    );
+    assert.deepEqual(prompts, ["自己レビュー"]);
+  });
+
+  it("allows a consumed tail prompt to become a later primary edit turn", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update first.ts","prompt_id":"id-first","turn":1,"timestamp":"2026-05-02T10:00:00Z"}\n' +
+        '{"event":"prompt","prompt":"split remaining file into another commit","prompt_id":"id-tail-primary","turn":2,"timestamp":"2026-05-02T10:01:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":"second.ts","turn":2,"prompt_id":"id-tail-primary"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"prompt_id":"id-first","file":null,"prompt_scope":"window","change_id":null,"tool_use_id":null}\n' +
+        '{"turn":2,"prompt_id":"id-tail-primary","file":null,"prompt_scope":"tail","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+
+    writeFileSync(join(repoDir, "second.ts"), "export const second = true;\n");
+    execSync("git add second.ts", { cwd: repoDir });
+    execSync('git commit -m "feat: add second file"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      selection?: { source: string; signals: string[] };
+    }>;
+    assert.deepEqual(
+      interactions.map((interaction) => interaction.prompt),
+      ["split remaining file into another commit"],
+    );
+    assert.equal(interactions[0].selection?.source, "primary");
+    assert.ok(interactions[0].selection?.signals.includes("primary_edit_turn"));
+  });
+
+  it("keeps review tail prompts when the response anchors to the current commit", async () => {
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"commit して PR までつくって","prompt_id":"id-old-tail","turn":1,"timestamp":"2026-05-05T14:10:00Z"}\n' +
+        '{"event":"prompt","prompt":"自己レビュー","prompt_id":"id-review","turn":2,"timestamp":"2026-05-05T14:20:00Z"}\n' +
+        '{"event":"prompt","prompt":"自己レビューを5回やって","prompt_id":"id-five-reviews","turn":3,"timestamp":"2026-05-05T14:22:00Z"}\n' +
+        '{"event":"prompt","prompt":"commit push","prompt_id":"id-commit-push","turn":4,"timestamp":"2026-05-05T14:25:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, EVENTS_FILE),
+      '{"event":"stop","turn":3,"response":"5 回自己レビューしました。release.yml と docs/architecture.md の rerun-safe publish を確認し、agent-note と @wasabeef/agentnote の既存 version skip も検証済みです。"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Edit","file":".github/workflows/release.yml","turn":2,"prompt_id":"id-review"}\n' +
+        '{"event":"file_change","tool":"Edit","file":"docs/architecture.md","turn":2,"prompt_id":"id-review"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, COMMITTED_PAIRS_FILE),
+      '{"turn":1,"prompt_id":"id-old-tail","file":null,"prompt_scope":"tail","change_id":null,"tool_use_id":null}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "4\n");
+
+    mkdirSync(join(repoDir, ".github", "workflows"), { recursive: true });
+    writeFileSync(join(repoDir, ".github", "workflows", "release.yml"), "name: Release\n");
+    mkdirSync(join(repoDir, "docs"), { recursive: true });
+    writeFileSync(join(repoDir, "docs", "architecture.md"), "# Architecture\n");
+    execSync("git add .github/workflows/release.yml docs/architecture.md", { cwd: repoDir });
+    execSync('git commit -m "ci: make npm alias publish rerunnable"', { cwd: repoDir });
+    const commitSha = execSync("git rev-parse HEAD", { cwd: repoDir, encoding: "utf-8" }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const interactions = note.interactions as Array<{
+      prompt: string;
+      selection?: { source: string; signals: string[] };
+    }>;
+    assert.deepEqual(
+      interactions.map((interaction) => interaction.prompt),
+      ["自己レビュー", "自己レビューを5回やって", "commit push"],
+    );
+    assert.equal(interactions[1].selection?.source, "tail");
+    assert.ok(interactions[1].selection?.signals.includes("response_exact_commit_path"));
   });
 
   it("idempotent: calling twice returns promptCount=0 on second call", async () => {
