@@ -540,6 +540,8 @@ Action: uses: wasabeef/AgentNote@v0             (Marketplace)
 
 `release.yml` is triggered by pushing a tag that matches `v*.*.*`. It does **not** rewrite package versions from the tag name. The npm publish job publishes whatever version is already committed in `packages/cli/package.json`.
 
+The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
+
 Release steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
@@ -554,6 +556,8 @@ Important:
 
 - Do **not** cut a release tag before the package version bump lands on `main`.
 - If `packages/cli/package.json` still says `0.1.9` and you push `v0.1.10`, the workflow will still try to publish `0.1.9` and npm will reject it as an already published version.
+- Treat `@wasabeef/agentnote` as a reserved alias only. Do not use it in README or website installation commands unless the project intentionally changes the canonical package name.
+- The npm publish job is rerun-safe: if either `agent-note@<version>` or `@wasabeef/agentnote@<version>` is already published, that package publish step is skipped.
 - The workflow updates the floating major tag (`v0`) after the GitHub release is created, but it does not manage package.json versions for you.
 
 ### Team workflow
