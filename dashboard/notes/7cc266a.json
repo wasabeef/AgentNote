@@ -1053,6 +1053,6 @@
   "pull_request": {
     "number": 53,
     "title": "fix(record): keep response-anchored review prompts",
-    "state": "open"
+    "state": "merged"
   }
 }
