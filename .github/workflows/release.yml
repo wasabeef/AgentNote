@@ -84,24 +84,40 @@ jobs:
       - run: npm ci
       - run: npm -w packages/cli run build
       - name: Publish canonical package
-        run: npm -w packages/cli publish --access public
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./packages/cli/package.json').version")
+
+          if npm view "agent-note@$PACKAGE_VERSION" version >/dev/null 2>&1; then
+            echo "agent-note@$PACKAGE_VERSION is already published; skipping canonical publish."
+            exit 0
+          fi
+
+          npm -w packages/cli publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish typo-reservation alias package
+      - name: Publish reserved alias package
         run: |
+          PACKAGE_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          ALIAS_PACKAGE="@wasabeef/agentnote"
+
+          if npm view "$ALIAS_PACKAGE@$PACKAGE_VERSION" version >/dev/null 2>&1; then
+            echo "$ALIAS_PACKAGE@$PACKAGE_VERSION is already published; skipping alias publish."
+            exit 0
+          fi
+
           ALIAS_DIR=$(mktemp -d)
           cp packages/cli/package.json "$ALIAS_DIR/package.json"
           cp -R packages/cli/dist "$ALIAS_DIR/dist"
 
-          ALIAS_DIR="$ALIAS_DIR" node <<'NODE'
+          ALIAS_DIR="$ALIAS_DIR" ALIAS_PACKAGE="$ALIAS_PACKAGE" node <<'NODE'
           const fs = require("node:fs");
           const path = require("node:path");
 
           const packagePath = path.join(process.env.ALIAS_DIR, "package.json");
           const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
 
-          pkg.name = "@wasabeef/agentnote";
+          pkg.name = process.env.ALIAS_PACKAGE;
           pkg.bin = { agentnote: "dist/cli.js" };
           pkg.keywords = Array.from(new Set([...(pkg.keywords || []), "agentnote"]));
           pkg.repository = {

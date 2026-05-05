@@ -557,6 +557,7 @@ Important:
 - Do **not** cut a release tag before the package version bump lands on `main`.
 - If `packages/cli/package.json` still says `0.1.9` and you push `v0.1.10`, the workflow will still try to publish `0.1.9` and npm will reject it as an already published version.
 - Treat `@wasabeef/agentnote` as a reserved alias only. Do not use it in README or website installation commands unless the project intentionally changes the canonical package name.
+- The npm publish job is rerun-safe: if either `agent-note@<version>` or `@wasabeef/agentnote@<version>` is already published, that package publish step is skipped.
 - The workflow updates the floating major tag (`v0`) after the GitHub release is created, but it does not manage package.json versions for you.
 
 ### Team workflow
