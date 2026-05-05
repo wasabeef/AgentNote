@@ -30,6 +30,7 @@ wasabeef/AgentNote/
 │   │   │   │   ├── entry.ts        # build entry JSON, calc ai_ratio
 │   │   │   │   ├── interaction-context.ts # display-only context selector
 │   │   │   │   ├── jsonl.ts        # JSONL read/append helpers
+│   │   │   │   ├── prompt-window.ts # prompt-window policy and selection evidence
 │   │   │   │   ├── record.ts       # shared recordCommitEntry()
 │   │   │   │   ├── rotate.ts       # log rotation after commit
 │   │   │   │   ├── session.ts      # per-session agent/transcript metadata
@@ -270,7 +271,7 @@ Fallback: if no turn data is present (entries recorded before turn tracking was 
 
 A commit note records a list of `interactions` (prompt + optional display-only `contexts[]` + response + `files_touched` + tools). Which prompts belong in that list is a separate question from which turns produce line-level attribution.
 
-**Current: commit-to-commit window with selection evidence.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. Each stored interaction may also get `selection` metadata (`schema`, `source`, `signals`) so renderers can later tune display density without changing git notes. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
+**Current: commit-to-commit window with selection evidence.** Agent Note starts from the previous recorded commit boundary, then keeps the conversation that leads to the current commit's surviving edit turns. `packages/cli/src/core/prompt-window.ts` owns this prompt-window policy, while `record.ts` owns data collection and note assembly. Each stored interaction may also get `selection` metadata (`schema`, `source`, `signals`) so renderers can later tune display density without changing git notes. The goal is to preserve the readable "why" between commits without falling back to the old full-session backlog.
 
 **Step 1 — derive primary turns.**
 

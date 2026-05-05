@@ -15,7 +15,8 @@ import {
   SESSIONS_DIR,
   TURN_FILE,
 } from "./constants.js";
-import { analyzePromptSelection, recordCommitEntry, toPersistedSelection } from "./record.js";
+import { analyzePromptSelection, toPersistedSelection } from "./prompt-window.js";
+import { recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";

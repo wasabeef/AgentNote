@@ -14,6 +14,15 @@
 
 ## Resolved Investigations
 
+### Prompt window policy の module 分離
+
+- 対象 PR: `#53` の follow-up
+- 目的: prompt selection policy を次に変更するとき、状態遷移の読み間違いで regression を増やさないように、prompt window の保存判定を dedicated module に分離しました。
+- 修正: `packages/cli/src/core/prompt-window.ts` を追加し、`PromptWindowRow`、window anchor score、tail dedupe、task-boundary trim、max-entry trim、persisted selection evidence の付与を `record.ts` から移しました。`record.ts` は commit data の収集、transcript attribution、entry assembly に集中します。
+- 命名整理: prompt window 内だけで使う score は `windowFileRefScore` / `windowShapeScore` / `windowTextScore` に揃えました。これは `entry.ts` の runtime prompt score とは別物で、git note に保存されません。
+- 維持した挙動: consumed tail prompt の dedupe、response anchor による review tail の救済、split commit carryover、Codex prompt-only fallback は既存 policy のままです。`Claude` / `Codex` / `Cursor` / `Gemini` すべてが同じ record-level policy を通ります。
+- Regression coverage: PR #53 で追加した concrete regression、100+ case の task-boundary simulation、100+ case の consumed tail state-transition simulation、full CLI test 387 件で確認します。
+
 ### PR #52 prompt selection に前 commit の operational prompt が混入する
 
 - 対象 PR: `#52`
