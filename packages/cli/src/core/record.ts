@@ -149,6 +149,7 @@ export async function recordCommitEntry(opts: {
     (e) => !consumedPairs.has(consumedKey(e)),
   );
   const consumedPromptState = await readConsumedPromptState(sessionDir);
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
 
   // Highest turn already attributed to a previous commit in this session.
   // Prompts from turns <= this are considered "spent" — their own commits
@@ -229,6 +230,7 @@ export async function recordCommitEntry(opts: {
       commitSubject,
       contextSignature,
       consumedPromptState,
+      responsesByTurn,
     );
     relevantPromptEntries = promptWindow.selected;
     promptWindowConsumedEntries = promptWindow.consumed;
@@ -318,6 +320,7 @@ export async function recordCommitEntry(opts: {
           commitSubject,
           contextSignature,
           consumedPromptState,
+          responsesByTurn,
           currentTurn,
         )
       : { selected: [], consumed: [] };
@@ -417,6 +420,7 @@ export async function recordCommitEntry(opts: {
         commitSubject,
         contextSignature,
         consumedPromptState,
+        responsesByTurn,
       );
     } else if (
       hasUnlinkedCurrentTranscriptEdit(
@@ -434,6 +438,7 @@ export async function recordCommitEntry(opts: {
         commitSubject,
         contextSignature,
         consumedPromptState,
+        responsesByTurn,
         currentTurn,
       );
     }
@@ -1164,6 +1169,7 @@ function selectPromptWindowEntries(
   commitSubject: string,
   contextSignature: CommitContextSignature,
   consumedPromptState: ConsumedPromptState,
+  responsesByTurn: Map<number, string>,
 ): PromptWindowSelection {
   if (primaryTurns.size === 0) return emptyPromptWindowSelection();
 
@@ -1181,6 +1187,7 @@ function selectPromptWindowEntries(
     commitSubject,
     contextSignature,
     consumedPromptState,
+    responsesByTurn,
     "window",
   );
 }
@@ -1192,6 +1199,7 @@ function selectPromptOnlyFallbackEntries(
   commitSubject: string,
   contextSignature: CommitContextSignature,
   consumedPromptState: ConsumedPromptState,
+  responsesByTurn: Map<number, string>,
   currentTurn = Number.POSITIVE_INFINITY,
 ): PromptWindowSelection {
   const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
@@ -1213,6 +1221,7 @@ function selectPromptOnlyFallbackEntries(
     commitSubject,
     contextSignature,
     consumedPromptState,
+    responsesByTurn,
     "fallback",
   );
 }
@@ -1251,6 +1260,7 @@ type PromptWindowRow = {
   fileRefScore: number;
   shapeScore: number;
   textScore: number;
+  hasResponseAnchor: boolean;
   isQuotedHistory: boolean;
   isTinyPrompt: boolean;
   isPrimaryTurn: boolean;
@@ -1420,6 +1430,7 @@ function selectCommitPromptWindow(
   commitSubject: string,
   contextSignature: CommitContextSignature,
   consumedPromptState: ConsumedPromptState,
+  responsesByTurn: Map<number, string>,
   defaultSource: InteractionSelection["source"],
 ): PromptWindowSelection {
   if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
@@ -1446,6 +1457,7 @@ function selectCommitPromptWindow(
         commitSubject,
         contextSignature,
         consumedPromptState,
+        responsesByTurn,
         defaultSource,
       ),
     );
@@ -1537,10 +1549,12 @@ function buildPromptWindowRow(
   commitSubject: string,
   contextSignature: CommitContextSignature,
   consumedPromptState: ConsumedPromptState,
+  responsesByTurn: Map<number, string>,
   defaultSource: InteractionSelection["source"],
 ): PromptWindowRow {
   const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
   const turn = typeof entry.turn === "number" ? entry.turn : 0;
+  const response = responsesByTurn.get(turn) ?? null;
   const isQuotedHistory = isQuotedPromptHistory(prompt);
   const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
   const isPrimaryTurn = primaryTurns.has(turn);
@@ -1550,7 +1564,7 @@ function buildPromptWindowRow(
   const hasConsumedTailPrompt = !!promptId && consumedPromptState.tailPromptIds.has(promptId);
   const analysis = analyzePromptSelection({
     prompt,
-    response: null,
+    response,
     turn,
     promptId,
     source,
@@ -1569,6 +1583,8 @@ function buildPromptWindowRow(
     fileRefScore: scorePromptFileRefs(prompt, commitFiles),
     shapeScore: scoreTextShape(prompt),
     textScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
+    hasResponseAnchor:
+      !!response && hasResponsePromptWindowAnchor(response, commitFiles, contextSignature),
     isQuotedHistory,
     isTinyPrompt: analysis.hardExcluded,
     isPrimaryTurn,
@@ -1576,7 +1592,12 @@ function buildPromptWindowRow(
     isWithinCommitWindow: turn > lowerTurn && turn <= upperTurn,
     isBeforeCommitBoundary: turn === upperTurn,
     isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
-    isConsumedTailPrompt: isTail && hasConsumedTailPrompt,
+    // A tail marker is only a display dedupe marker, not edit ownership.
+    // Re-evaluate it if the same prompt later owns a committed edit or if
+    // Codex needs the prompt-only fallback path. For ordinary prompt windows,
+    // do not let an old commit/PR boundary prompt come back as context for a
+    // later primary turn.
+    isConsumedTailPrompt: defaultSource !== "fallback" && hasConsumedTailPrompt && !isPrimaryTurn,
     hasPostPrimaryEditBarrier: false,
   };
 }
@@ -1598,6 +1619,7 @@ function shouldKeepPromptWindowRow(row: PromptWindowRow): boolean {
 }
 
 function shouldKeepTailPromptWindowRow(row: PromptWindowRow): boolean {
+  if (row.hasResponseAnchor) return true;
   if (row.hasPostPrimaryEditBarrier) {
     return (
       row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE ||
@@ -1615,10 +1637,24 @@ function shouldKeepTailPromptWindowRow(row: PromptWindowRow): boolean {
 function isPromptWindowAnchor(row: PromptWindowRow): boolean {
   if (row.isPrimaryTurn) return true;
   if (!shouldKeepPromptWindowRow(row)) return false;
+  if (row.hasResponseAnchor) return true;
   return (
     row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE ||
     row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE ||
     row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE
+  );
+}
+
+function hasResponsePromptWindowAnchor(
+  response: string,
+  commitFiles: string[],
+  contextSignature: CommitContextSignature,
+): boolean {
+  const basenames = commitFiles.map(fileBasename).filter(Boolean);
+  return (
+    hasExactCommitPath(response, commitFiles) ||
+    hasCommitFileBasename(response, basenames) ||
+    hasDiffIdentifier(response, contextSignature.codeIdentifiers)
   );
 }
 

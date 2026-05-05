@@ -2732,6 +2732,7 @@ async function recordCommitEntry(opts) {
     (e) => !consumedPairs.has(consumedKey(e))
   );
   const consumedPromptState = await readConsumedPromptState(sessionDir);
+  const responsesByTurn = await readResponsesByTurn(sessionDir);
   const maxConsumedTurn = await readMaxConsumedTurn(sessionDir);
   const currentTurn = await readCurrentTurn(sessionDir);
   const hasTurnData = promptEntries.some((e) => typeof e.turn === "number" && e.turn > 0);
@@ -2790,7 +2791,8 @@ async function recordCommitEntry(opts) {
       commitFiles,
       commitSubject,
       contextSignature,
-      consumedPromptState
+      consumedPromptState,
+      responsesByTurn
     );
     relevantPromptEntries = promptWindow.selected;
     promptWindowConsumedEntries = promptWindow.consumed;
@@ -2834,6 +2836,7 @@ async function recordCommitEntry(opts) {
     commitSubject,
     contextSignature,
     consumedPromptState,
+    responsesByTurn,
     currentTurn
   ) : { selected: [], consumed: [] };
   const canUsePromptOnlyFallback = promptOnlyFallbackEntries.selected.length >= 2 && promptOnlyFallbackEntries.selected.some((entry2) => {
@@ -2909,7 +2912,8 @@ async function recordCommitEntry(opts) {
         commitFiles,
         commitSubject,
         contextSignature,
-        consumedPromptState
+        consumedPromptState,
+        responsesByTurn
       );
     } else if (hasUnlinkedCurrentTranscriptEdit(
       allInteractions,
@@ -2925,6 +2929,7 @@ async function recordCommitEntry(opts) {
         commitSubject,
         contextSignature,
         consumedPromptState,
+        responsesByTurn,
         currentTurn
       );
     }
@@ -3413,7 +3418,7 @@ function collectConsumedTranscriptPromptFiles(interactions, promptEntries, commi
   }
   return consumed;
 }
-function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, currentTurn, commitFiles, commitSubject, contextSignature, consumedPromptState) {
+function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, currentTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn) {
   if (primaryTurns.size === 0) return emptyPromptWindowSelection();
   const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
   if (orderedPrimaryTurns.length === 0) return emptyPromptWindowSelection();
@@ -3428,10 +3433,11 @@ function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxCo
     commitSubject,
     contextSignature,
     consumedPromptState,
+    responsesByTurn,
     "window"
   );
 }
-function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, currentTurn = Number.POSITIVE_INFINITY) {
+function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, currentTurn = Number.POSITIVE_INFINITY) {
   const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
   const latestPromptTurn = promptEntries.reduce((latest, entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
@@ -3450,6 +3456,7 @@ function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitF
     commitSubject,
     contextSignature,
     consumedPromptState,
+    responsesByTurn,
     "fallback"
   );
 }
@@ -3555,7 +3562,7 @@ function hasMultiLineInstruction(text) {
 function hasInlineCodeOrPathShape(text) {
   return /`[^`]+`/.test(text) || /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) || /--[a-z0-9-]+/i.test(text);
 }
-function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, defaultSource) {
+function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
   if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
   const rows = promptEntries.filter((entry) => {
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
@@ -3576,6 +3583,7 @@ function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, u
       commitSubject,
       contextSignature,
       consumedPromptState,
+      responsesByTurn,
       defaultSource
     )
   );
@@ -3623,9 +3631,10 @@ function shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation) {
   if (!row.isPrimaryTurn) return false;
   return !hasCurrentWindowExplanation;
 }
-function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestPrimaryTurn, upperTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, defaultSource) {
+function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestPrimaryTurn, upperTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
   const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
   const turn = typeof entry.turn === "number" ? entry.turn : 0;
+  const response = responsesByTurn.get(turn) ?? null;
   const isQuotedHistory = isQuotedPromptHistory(prompt);
   const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
   const isPrimaryTurn = primaryTurns.has(turn);
@@ -3635,7 +3644,7 @@ function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestP
   const hasConsumedTailPrompt = !!promptId && consumedPromptState.tailPromptIds.has(promptId);
   const analysis = analyzePromptSelection({
     prompt,
-    response: null,
+    response,
     turn,
     promptId,
     source,
@@ -3654,6 +3663,7 @@ function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestP
     fileRefScore: scorePromptFileRefs(prompt, commitFiles),
     shapeScore: scoreTextShape(prompt),
     textScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
+    hasResponseAnchor: !!response && hasResponsePromptWindowAnchor(response, commitFiles, contextSignature),
     isQuotedHistory,
     isTinyPrompt: analysis.hardExcluded,
     isPrimaryTurn,
@@ -3661,7 +3671,12 @@ function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestP
     isWithinCommitWindow: turn > lowerTurn && turn <= upperTurn,
     isBeforeCommitBoundary: turn === upperTurn,
     isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
-    isConsumedTailPrompt: isTail && hasConsumedTailPrompt,
+    // A tail marker is only a display dedupe marker, not edit ownership.
+    // Re-evaluate it if the same prompt later owns a committed edit or if
+    // Codex needs the prompt-only fallback path. For ordinary prompt windows,
+    // do not let an old commit/PR boundary prompt come back as context for a
+    // later primary turn.
+    isConsumedTailPrompt: defaultSource !== "fallback" && hasConsumedTailPrompt && !isPrimaryTurn,
     hasPostPrimaryEditBarrier: false
   };
 }
@@ -3680,6 +3695,7 @@ function shouldKeepPromptWindowRow(row) {
   return true;
 }
 function shouldKeepTailPromptWindowRow(row) {
+  if (row.hasResponseAnchor) return true;
   if (row.hasPostPrimaryEditBarrier) {
     return row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE;
   }
@@ -3688,7 +3704,12 @@ function shouldKeepTailPromptWindowRow(row) {
 function isPromptWindowAnchor(row) {
   if (row.isPrimaryTurn) return true;
   if (!shouldKeepPromptWindowRow(row)) return false;
+  if (row.hasResponseAnchor) return true;
   return row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+function hasResponsePromptWindowAnchor(response, commitFiles, contextSignature) {
+  const basenames = commitFiles.map(fileBasename).filter(Boolean);
+  return hasExactCommitPath(response, commitFiles) || hasCommitFileBasename(response, basenames) || hasDiffIdentifier(response, contextSignature.codeIdentifiers);
 }
 function resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail) {
   if (defaultSource === "fallback") return "fallback";
