@@ -396,6 +396,6 @@
   "pull_request": {
     "number": 55,
     "title": "docs: define release note commit rules",
-    "state": "open"
+    "state": "merged"
   }
 }
