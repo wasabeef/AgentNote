@@ -658,6 +658,6 @@
   "pull_request": {
     "number": 54,
     "title": "refactor: extract prompt window policy",
-    "state": "open"
+    "state": "merged"
   }
 }
