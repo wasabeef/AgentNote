@@ -137,6 +137,10 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 - **Conventional Commits** required. Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`, `perf:`, `build:`. Used by git-cliff for changelog generation.
 - **Scope is optional** but encouraged for targeted changes: `feat(website):`, `fix(action):`.
+- **Write commit subjects for release notes.** The subject should describe the user-facing outcome, not the mechanical edit. Prefer `fix(report): hide absorbed external review prompts` over `fix: address review comments`.
+- **Use the body when the subject is not enough.** Good AI-generated commits should include `Why`, `User impact`, `Verification`, and `Release note:` sections. Do not write `Why:`, `User impact:`, or `Verification:` with colons because git-cliff may parse them as commit footers instead of body text.
+- **Release note rules.** `feat:`, `fix:`, and `perf:` commits are included by default. `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, and `build:` commits are omitted unless the body contains `Release note:` with a value other than `skip`.
+- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.
 - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.
 - **Before committing**, all four checks must pass (run from `packages/cli/`):
   1. `npm run build` — esbuild bundle
