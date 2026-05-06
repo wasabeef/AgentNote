@@ -1933,6 +1933,13 @@ function shouldRenderInteractionByPromptDetail(interaction, detail) {
   if (detail === "full") return true;
   return runtime.level !== "low";
 }
+function filterInteractionsByPromptDetail(interactions, detail) {
+  if (detail === "full") return interactions;
+  return interactions.filter((interaction, index) => {
+    if (!shouldRenderInteractionByPromptDetail(interaction, detail)) return false;
+    return !isAbsorbedExternalReviewPrompt(interaction, interactions.slice(index + 1));
+  });
+}
 function resolvePromptRuntimeSelection(selection, interaction) {
   if (!selection) return { score: 100, role: "primary", level: "high" };
   const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
@@ -2073,6 +2080,29 @@ function runtimePromptSelectionSignals(signals, prompt) {
     return signals;
   }
   return [...signals, "substantive_prompt_shape"];
+}
+function isAbsorbedExternalReviewPrompt(interaction, laterInteractions) {
+  const selection = interaction.selection;
+  if (!selection || selection.source !== "window") return false;
+  if ((interaction.files_touched?.length ?? 0) > 0) return false;
+  if (!hasExternalWorkReference(interaction.prompt)) return false;
+  if (!hasResponseAnchorSignal(selection.signals)) return false;
+  if (hasCurrentPromptAnchorSignal(selection.signals)) return false;
+  return laterInteractions.some(hasPrimaryEditInteraction);
+}
+function hasExternalWorkReference(prompt) {
+  return /https?:\/\/\S+\/(?:pull|issues)\/\d+\b/i.test(prompt);
+}
+function hasResponseAnchorSignal(signals) {
+  return signals.includes("response_exact_commit_path") || signals.includes("response_basename_or_identifier");
+}
+function hasCurrentPromptAnchorSignal(signals) {
+  return signals.includes("primary_edit_turn") || signals.includes("exact_commit_path") || signals.includes("commit_file_basename") || signals.includes("diff_identifier") || signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction") || signals.includes("inline_code_or_path_shape");
+}
+function hasPrimaryEditInteraction(interaction) {
+  if ((interaction.files_touched?.length ?? 0) > 0) return true;
+  const selection = interaction.selection;
+  return selection?.source === "primary" || selection?.signals.includes("primary_edit_turn") === true;
 }
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
@@ -5603,8 +5633,9 @@ function renderMarkdown(report, opts = {}) {
   const visibleInteractionsBySha = /* @__PURE__ */ new Map();
   let visiblePromptCount = 0;
   for (const commit2 of report.commits) {
-    const interactions = mergePromptOnlyDisplayInteractions(commit2.interactions).filter(
-      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail)
+    const interactions = filterInteractionsByPromptDetail(
+      mergePromptOnlyDisplayInteractions(commit2.interactions),
+      promptDetail
     );
     visibleInteractionsBySha.set(commit2.sha, interactions);
     visiblePromptCount += interactions.length;

@@ -10,8 +10,8 @@ import type {
 import {
   DEFAULT_PROMPT_DETAIL,
   countAiRatioEligibleFiles,
+  filterInteractionsByPromptDetail,
   normalizeInteractionContexts,
-  shouldRenderInteractionByPromptDetail,
 } from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
@@ -250,8 +250,9 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   let visiblePromptCount = 0;
 
   for (const commit of report.commits) {
-    const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter(
-      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail),
+    const interactions = filterInteractionsByPromptDetail(
+      mergePromptOnlyDisplayInteractions(commit.interactions),
+      promptDetail,
     );
     visibleInteractionsBySha.set(commit.sha, interactions);
     visiblePromptCount += interactions.length;

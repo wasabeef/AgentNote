@@ -538,6 +538,8 @@ function resolvePromptRuntimeLevel(runtime: PromptRuntimeSelection): PromptRunti
 | `medium` | 表示 | 表示 |
 | `low` | 非表示 | 表示 |
 
+`compact` は、単純に `high` / `medium` をすべて出すだけではありません。`source: "window"` で、prompt 自体には current commit の path / identifier がなく、外部 PR / Issue URL の review が後続の primary edit prompt に吸収されている場合は非表示にします。これは `3 回レビューして` のような current work review を残しつつ、過去 PR の前段調査だけが main prompt として目立ちすぎるのを避けるためです。保存済み note は変えず、`full` では引き続き表示します。
+
 GitHub Action input は PR Report で `prompt_detail` として提供します。Dashboard は現在 full trace を見せる UI として扱い、必要になったら同じ preset を UI 側に追加します。
 
 ```yaml
@@ -680,6 +682,7 @@ Simulation output は、各 fixture について `compact`, `full` の prompt li
 
 - `prompt_detail: compact` は runtime `level: "high"` と runtime `level: "medium"` を表示。
 - `prompt_detail: full` は runtime `level: "low"` も含めて表示。
+- `compact` は、後続 primary edit に吸収された外部 PR / Issue URL の review prompt を隠し、current work review prompt は残す。
 - legacy note は `selection` がなくても従来通り表示。
 - `mergePromptOnlyDisplayInteractions()` が selection metadata を失わない。
 

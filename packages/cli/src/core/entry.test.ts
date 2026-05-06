@@ -6,6 +6,7 @@ import {
   buildEntry,
   calcAiRatio,
   countAiRatioEligibleFiles,
+  filterInteractionsByPromptDetail,
   hasGeneratedArtifactMarkers,
   isGeneratedArtifactPath,
   parsePromptDetail,
@@ -360,6 +361,93 @@ describe("prompt detail rendering", () => {
     assert.equal(shouldRenderInteractionByPromptDetail(medium, "compact"), true);
     assert.equal(shouldRenderInteractionByPromptDetail(low, "compact"), false);
     assert.equal(shouldRenderInteractionByPromptDetail(low, "full"), true);
+  });
+
+  it("keeps current review prompts but hides absorbed external PR reviews in compact mode", () => {
+    const currentReview = {
+      prompt: "review this change from three angles",
+      response: "The current change touches packages/cli/src/core/entry.ts.",
+      selection: {
+        schema: 1 as const,
+        source: "window" as const,
+        signals: [
+          "response_exact_commit_path" as const,
+          "response_basename_or_identifier" as const,
+          "substantive_prompt_shape" as const,
+          "between_non_excluded_prompts" as const,
+        ],
+      },
+    };
+    const externalReview = {
+      prompt: "https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして",
+      response: "The follow-up should extract packages/cli/src/core/prompt-window.ts.",
+      selection: {
+        schema: 1 as const,
+        source: "window" as const,
+        signals: [
+          "response_exact_commit_path" as const,
+          "response_basename_or_identifier" as const,
+          "substantive_prompt_shape" as const,
+          "between_non_excluded_prompts" as const,
+        ],
+      },
+    };
+    const primaryWork = {
+      prompt: "Start the follow-up implementation",
+      response: "I will extract the prompt window policy.",
+      files_touched: ["packages/cli/src/core/prompt-window.ts"],
+      selection: {
+        schema: 1 as const,
+        source: "primary" as const,
+        signals: ["primary_edit_turn" as const],
+      },
+    };
+
+    assert.deepEqual(
+      filterInteractionsByPromptDetail([currentReview, externalReview, primaryWork], "compact").map(
+        (interaction) => interaction.prompt,
+      ),
+      [currentReview.prompt, primaryWork.prompt],
+    );
+    assert.deepEqual(
+      filterInteractionsByPromptDetail([currentReview, externalReview, primaryWork], "full").map(
+        (interaction) => interaction.prompt,
+      ),
+      [currentReview.prompt, externalReview.prompt, primaryWork.prompt],
+    );
+  });
+
+  it("does not hide short issue references without an external URL", () => {
+    const issuePrompt = {
+      prompt: "Fix #123",
+      response: "I will update packages/cli/src/core/entry.ts.",
+      selection: {
+        schema: 1 as const,
+        source: "window" as const,
+        signals: [
+          "response_exact_commit_path" as const,
+          "substantive_prompt_shape" as const,
+          "between_non_excluded_prompts" as const,
+        ],
+      },
+    };
+    const primaryWork = {
+      prompt: "Apply the fix",
+      response: "I will update the prompt detail renderer.",
+      files_touched: ["packages/cli/src/core/entry.ts"],
+      selection: {
+        schema: 1 as const,
+        source: "primary" as const,
+        signals: ["primary_edit_turn" as const],
+      },
+    };
+
+    assert.deepEqual(
+      filterInteractionsByPromptDetail([issuePrompt, primaryWork], "compact").map(
+        (interaction) => interaction.prompt,
+      ),
+      [issuePrompt.prompt, primaryWork.prompt],
+    );
   });
 });
 

@@ -270,6 +270,24 @@ export function shouldRenderInteractionByPromptDetail(
   return runtime.level !== "low";
 }
 
+/**
+ * Filter a commit's interaction list for the selected prompt preset.
+ *
+ * The compact preset keeps current-work review prompts, but suppresses
+ * background review prompts whose only strong evidence comes from a response
+ * about an external PR/issue and is later covered by an actual primary edit.
+ */
+export function filterInteractionsByPromptDetail(
+  interactions: Interaction[],
+  detail: PromptDetail,
+): Interaction[] {
+  if (detail === "full") return interactions;
+  return interactions.filter((interaction, index) => {
+    if (!shouldRenderInteractionByPromptDetail(interaction, detail)) return false;
+    return !isAbsorbedExternalReviewPrompt(interaction, interactions.slice(index + 1));
+  });
+}
+
 /** Recompute prompt score, role, and level from stable persisted selection evidence. */
 export function resolvePromptRuntimeSelection(
   selection: InteractionSelection | undefined,
@@ -455,6 +473,50 @@ function runtimePromptSelectionSignals(
     return signals;
   }
   return [...signals, "substantive_prompt_shape"];
+}
+
+function isAbsorbedExternalReviewPrompt(
+  interaction: Interaction,
+  laterInteractions: Interaction[],
+): boolean {
+  const selection = interaction.selection;
+  if (!selection || selection.source !== "window") return false;
+  if ((interaction.files_touched?.length ?? 0) > 0) return false;
+  if (!hasExternalWorkReference(interaction.prompt)) return false;
+  if (!hasResponseAnchorSignal(selection.signals)) return false;
+  if (hasCurrentPromptAnchorSignal(selection.signals)) return false;
+  return laterInteractions.some(hasPrimaryEditInteraction);
+}
+
+function hasExternalWorkReference(prompt: string): boolean {
+  return /https?:\/\/\S+\/(?:pull|issues)\/\d+\b/i.test(prompt);
+}
+
+function hasResponseAnchorSignal(signals: PromptSelectionSignal[]): boolean {
+  return (
+    signals.includes("response_exact_commit_path") ||
+    signals.includes("response_basename_or_identifier")
+  );
+}
+
+function hasCurrentPromptAnchorSignal(signals: PromptSelectionSignal[]): boolean {
+  return (
+    signals.includes("primary_edit_turn") ||
+    signals.includes("exact_commit_path") ||
+    signals.includes("commit_file_basename") ||
+    signals.includes("diff_identifier") ||
+    signals.includes("list_or_checklist_shape") ||
+    signals.includes("multi_line_instruction") ||
+    signals.includes("inline_code_or_path_shape")
+  );
+}
+
+function hasPrimaryEditInteraction(interaction: Interaction): boolean {
+  if ((interaction.files_touched?.length ?? 0) > 0) return true;
+  const selection = interaction.selection;
+  return (
+    selection?.source === "primary" || selection?.signals.includes("primary_edit_turn") === true
+  );
 }
 
 /**
