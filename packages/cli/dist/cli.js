@@ -6086,7 +6086,7 @@ init_paths();
 import { existsSync as existsSync14 } from "node:fs";
 import { readFile as readFile12 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4, join as join15 } from "node:path";
-var VERSION = "0.2.2";
+var VERSION = "0.2.3";
 async function status() {
   console.log(`agent-note v${VERSION}`);
   console.log();
@@ -6284,7 +6284,7 @@ async function resolveHookDir2(repoRoot3) {
 }
 
 // src/cli.ts
-var VERSION2 = "0.2.2";
+var VERSION2 = "0.2.3";
 var HELP = `
 agent-note v${VERSION2} \u2014 remember why your code changed
 
