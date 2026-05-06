@@ -102,6 +102,7 @@ Existing hooks are backed up and chained. Compatible with husky/lefthook.
 ### Core modules
 
 - **`core/record.ts`**: Shared `recordCommitEntry()` used by both `hook.ts` and `commit.ts`. Reads JSONL, builds entry, writes git note, rotates logs. Agent-aware via registry. Idempotent (checks existing note). Includes consumed-pairs deduplication to prevent re-attribution across split commits.
+- **`core/prompt-window.ts`**: Prompt-window policy and stable selection evidence. Keeps commit-to-commit prompt context while trimming stale task prompts, tail duplicates, quoted history, and non-primary edit turns.
 - **`core/entry.ts`**: `buildEntry()` and `calcAiRatio()`. Structured schema with `files: [{path, by_ai}]`, `attribution: {ai_ratio, method, lines}`, `model`, `interactions[].contexts[]`, and `interactions[].tools`.
 - **`core/attribution.ts`**: 3-diff position algorithm for line-level AI attribution. Parses unified diff hunks, computes AI vs human line positions.
 - **`core/session.ts`**: `writeSessionAgent()` / `readSessionAgent()` / `writeSessionTranscriptPath()` / `readSessionTranscriptPath()`. Per-session agent metadata.

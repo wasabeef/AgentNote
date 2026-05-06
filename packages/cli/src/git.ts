@@ -10,12 +10,13 @@ type ShellToken = {
   end: number;
 };
 
+/** Location where `--trailer` can be inserted into one parsed git commit command. */
 type GitCommitCommand = {
   /** Index where flags should be inserted, immediately after the commit token. */
   insertAt: number;
 };
 
-/** Run a git command and return its stdout. */
+/** Run a git command through `execFile` and return trimmed stdout. */
 export async function git(args: string[], options?: { cwd?: string }): Promise<string> {
   const { stdout } = await execFileAsync("git", args, {
     cwd: options?.cwd,
@@ -24,7 +25,7 @@ export async function git(args: string[], options?: { cwd?: string }): Promise<s
   return stdout.trim();
 }
 
-/** Run a git command and return its exit code instead of throwing. */
+/** Run a git command and return stdout plus exit code instead of throwing. */
 export async function gitSafe(
   args: string[],
   options?: { cwd?: string },
@@ -41,11 +42,12 @@ export async function gitSafe(
   }
 }
 
-/** Get the repository root path. */
+/** Resolve the current repository root path using the Git CLI. */
 export async function repoRoot(): Promise<string> {
   return git(["rev-parse", "--show-toplevel"]);
 }
 
+/** Return the length of a shell control operator starting at the given index. */
 function isShellControlStart(command: string, index: number): number {
   const char = command[index];
   const next = command[index + 1];
@@ -55,10 +57,18 @@ function isShellControlStart(command: string, index: number): number {
   return 0;
 }
 
+/** Detect shell-style environment assignments before a simple command. */
 function isEnvAssignment(value: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*=/.test(value);
 }
 
+/**
+ * Tokenize a shell command into simple-command segments.
+ *
+ * This intentionally supports only the shell features needed for hook command
+ * inspection: quoting, escaping, comments, env assignments, and command
+ * separators. It avoids executing or expanding the command.
+ */
 function tokenizeShellCommand(command: string): ShellToken[][] {
   const segments: ShellToken[][] = [[]];
   let token: ShellToken | null = null;
@@ -154,6 +164,7 @@ function tokenizeShellCommand(command: string): ShellToken[][] {
   return segments.filter((segment) => segment.length > 0);
 }
 
+/** Find the first real command token after env/command wrappers. */
 function findSimpleCommandIndex(tokens: ShellToken[]): number {
   let index = 0;
 
@@ -184,10 +195,12 @@ function findSimpleCommandIndex(tokens: ShellToken[]): number {
   return index;
 }
 
+/** Return whether a git global option consumes the following token as a value. */
 function gitOptionConsumesValue(value: string): boolean {
   return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
 }
 
+/** Find the `commit` token in a parsed `git commit` command segment. */
 function findGitCommitToken(tokens: ShellToken[]): ShellToken | null {
   let index = findSimpleCommandIndex(tokens);
   if (tokens[index]?.value !== "git") return null;
@@ -226,6 +239,7 @@ function findGitCommitToken(tokens: ShellToken[]): ShellToken | null {
   return null;
 }
 
+/** Locate a non-amend `git commit` command inside a possibly chained shell command. */
 export function findGitCommitCommand(command: string): GitCommitCommand | null {
   for (const segment of tokenizeShellCommand(command)) {
     const commitToken = findGitCommitToken(segment);
@@ -234,6 +248,7 @@ export function findGitCommitCommand(command: string): GitCommitCommand | null {
   return null;
 }
 
+/** Inject an `Agentnote-Session` trailer into the git commit segment only. */
 export function injectGitCommitTrailer(command: string, trailer: string): string | null {
   const match = findGitCommitCommand(command);
   if (!match) return null;

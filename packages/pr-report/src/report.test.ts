@@ -315,6 +315,71 @@ describe("renderMarkdown", () => {
     assert.ok(full.includes("continue"));
   });
 
+  it("hides absorbed external PR review prompts only in compact output", () => {
+    const externalPrompt = "https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして";
+    const currentReviewPrompt = "review this change from three angles";
+    const primaryPrompt = "Start the prompt-window follow-up";
+    const report = baseReport({
+      total_prompts: 3,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 3,
+          interactions: [
+            {
+              prompt: currentReviewPrompt,
+              response: "The current change touches packages/cli/src/core/entry.ts.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: [
+                  "response_exact_commit_path",
+                  "response_basename_or_identifier",
+                  "substantive_prompt_shape",
+                  "between_non_excluded_prompts",
+                ],
+              },
+            },
+            {
+              prompt: externalPrompt,
+              response: "The follow-up should extract packages/cli/src/core/prompt-window.ts.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: [
+                  "response_exact_commit_path",
+                  "response_basename_or_identifier",
+                  "substantive_prompt_shape",
+                  "between_non_excluded_prompts",
+                ],
+              },
+            },
+            {
+              prompt: primaryPrompt,
+              response: "I will extract the prompt window policy.",
+              files_touched: ["packages/cli/src/core/prompt-window.ts"],
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const compact = renderMarkdown(report, { promptDetail: "compact" });
+    const full = renderMarkdown(report, { promptDetail: "full" });
+
+    assert.ok(compact.includes("💬 Prompts & Responses (2 shown / 3 total)"));
+    assert.ok(compact.includes(currentReviewPrompt));
+    assert.ok(!compact.includes(externalPrompt));
+    assert.ok(compact.includes(primaryPrompt));
+    assert.ok(full.includes("💬 Prompts & Responses (3 total)"));
+    assert.ok(full.includes(externalPrompt));
+  });
+
   it("keeps a prompt detail summary when the current preset hides every prompt", () => {
     const report = baseReport({
       total_prompts: 1,

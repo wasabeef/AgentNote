@@ -36262,15 +36262,22 @@ var external_node_util_ = __nccwpck_require__(7975);
 ;// CONCATENATED MODULE: ./src/github.ts
 
 
+/** Hidden marker used to find and update the managed PR comment. */
 const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
+/** Hidden marker that starts the managed PR description section. */
 const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
+/** Hidden marker that ends the managed PR description section. */
 const DESCRIPTION_END = "<!-- agentnote-end -->";
 const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
 const PR_QUERY_PARAM = "pr";
 const TEXT_ENCODING = "utf-8";
 const execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
 /**
- * Resolve PR output mode from the action input.
+ * Resolve the PR report output mode from action input.
+ *
+ * Unknown values intentionally fall back to `description` so a misconfigured
+ * workflow still produces the primary PR report instead of silently doing
+ * nothing.
  */
 function resolvePrOutputMode(prOutputInput) {
     if (prOutputInput === "description" ||
@@ -36281,8 +36288,10 @@ function resolvePrOutputMode(prOutputInput) {
     return "description";
 }
 /**
- * Upsert the agentnote markdown section into a PR description body.
- * Replaces the existing section (begin/end markers) if present, appends if not.
+ * Upsert the Agent Note markdown section into a PR description body.
+ *
+ * The begin/end markers make the update idempotent: existing reports are
+ * replaced in place, while user-written PR description text is preserved.
  */
 function upsertDescription(existingBody, markdown) {
     const section = `${DESCRIPTION_BEGIN}\n${markdown}\n${DESCRIPTION_END}`;
@@ -36303,6 +36312,12 @@ function upsertDescription(existingBody, markdown) {
 function shouldRetryNotesFetch(report) {
     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
+/**
+ * Infer the public Dashboard URL from a GitHub remote URL.
+ *
+ * The PR number is appended only for PR reports so the general dashboard route
+ * can remain a team-level entry point without forced `?pr=` redirects.
+ */
 function inferDashboardUrl(repoUrl, prNumber) {
     if (!repoUrl)
         return null;
@@ -36317,6 +36332,12 @@ function inferDashboardUrl(repoUrl, prNumber) {
         : `${pagesRoot}/${repo}/dashboard/`;
     return appendPrNumber(dashboardUrl, prNumber);
 }
+/**
+ * Add a PR query parameter to a Dashboard URL when the caller has a valid PR.
+ *
+ * Invalid values are ignored so non-PR runs still link to the team-level
+ * Dashboard home instead of producing broken URLs.
+ */
 function appendPrNumber(dashboardUrl, prNumber) {
     if (prNumber == null || prNumber === "")
         return dashboardUrl;
@@ -36327,11 +36348,18 @@ function appendPrNumber(dashboardUrl, prNumber) {
     url.searchParams.set(PR_QUERY_PARAM, String(normalized));
     return url.toString();
 }
+/**
+ * Detect whether the GitHub Pages environment restricts deploy branches.
+ *
+ * When protection is enabled, PR previews may wait for approval or merge, so
+ * the PR report can explain why the Dashboard link is not live yet.
+ */
 function hasDeploymentBranchProtection(policy) {
     return Boolean(policy &&
         (policy.protected_branches === true ||
             policy.custom_branch_policies === true));
 }
+/** Update a PR description with the current Agent Note report. */
 async function updatePrDescription(prNumber, markdown) {
     const currentBody = await readPrBody(prNumber);
     const newBody = upsertDescription(currentBody, markdown);
@@ -36339,6 +36367,7 @@ async function updatePrDescription(prNumber, markdown) {
         encoding: TEXT_ENCODING,
     });
 }
+/** Create or update the single managed Agent Note PR comment. */
 async function postPrComment(prNumber, content) {
     const body = `${COMMENT_MARKER}\n${content}`;
     try {
@@ -36371,76 +36400,19 @@ async function postPrComment(prNumber, content) {
         encoding: TEXT_ENCODING,
     });
 }
+/** Wrap generated markdown in description markers for idempotent replacement. */
 function wrapWithMarkers(content) {
     return `${DESCRIPTION_BEGIN}\n${content}\n${DESCRIPTION_END}`;
 }
+/** Read only the PR body through the GitHub CLI fallback path. */
 async function readPrBody(prNumber) {
     const { stdout } = await execFileAsync("gh", ["pr", "view", prNumber, "--json", "body"], { encoding: TEXT_ENCODING });
     return JSON.parse(stdout).body ?? "";
 }
 
-;// CONCATENATED MODULE: ../cli/src/core/constants.ts
-// ─── Trailer ───
-const TRAILER_KEY = "Agentnote-Session";
-const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
-const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
-const CLI_JS_HOOK_COMMAND = "cli.js hook";
-// ─── Git notes ───
-const constants_NOTES_REF = "agentnote";
-const NOTES_REF_FULL = (/* unused pure expression or super */ null && (`refs/notes/${constants_NOTES_REF}`));
-const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}:${NOTES_REF_FULL}`));
-// ─── Directory names ───
-const AGENTNOTE_DIR = "agentnote";
-const SESSIONS_DIR = "sessions";
-const GIT_HOOK_NAMES = (/* unused pure expression or super */ null && (["prepare-commit-msg", "post-commit", "pre-push"]));
-// ─── Session file names ───
-const PROMPTS_FILE = "prompts.jsonl";
-const CHANGES_FILE = "changes.jsonl";
-const EVENTS_FILE = "events.jsonl";
-const TRANSCRIPT_PATH_FILE = "transcript_path";
-const TURN_FILE = "turn";
-/**
- * Current user prompt identity (UUID v4, one line). Overwritten at each
- * UserPromptSubmit. Authoritative primary key for pairing prompts with the
- * file edits and transcript interactions they produced.
- */
-const PROMPT_ID_FILE = "prompt_id";
-const SESSION_FILE = "session";
-const SESSION_AGENT_FILE = "agent";
-const PENDING_COMMIT_FILE = "pending_commit.json";
-// ─── Display limits ───
-const MAX_COMMITS = 500;
-const RECENT_STATUS_COMMIT_LIMIT = 20;
-const BAR_WIDTH_COMPACT = 5;
-const BAR_WIDTH_FULL = 20;
-const TRUNCATE_PROMPT = 120;
-const TRUNCATE_PROMPT_PR = 500;
-const TRUNCATE_RESPONSE_SHOW = 200;
-const TRUNCATE_RESPONSE_PR = 500;
-const TRUNCATE_RESPONSE_CHAT = 800;
-// ─── Archive ───
-/** Base36 rotation ID pattern: [0-9a-z]{6,} (future-safe for post-2059 length growth). */
-const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
-// ─── Session infrastructure ───
-const HEARTBEAT_FILE = "heartbeat";
-const HEARTBEAT_TTL_SECONDS = (/* unused pure expression or super */ null && (60 * 60));
-const MILLISECONDS_PER_SECOND = 1000;
-const PRE_BLOBS_FILE = "pre_blobs.jsonl";
-/** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
-const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
-// ─── Git ───
-/** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
-const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
-// ─── Schema ───
-const constants_SCHEMA_VERSION = 1;
-// ─── Encoding ───
-const constants_TEXT_ENCODING = "utf-8";
-// ─── Debug ───
-const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
-const DEBUG = !!process.env[ENV_AGENTNOTE_DEBUG];
-
 ;// CONCATENATED MODULE: ../cli/src/core/entry.ts
 
+/** Default prompt rendering preset for PR Report output. */
 const DEFAULT_PROMPT_DETAIL = "compact";
 // Best-effort generated-artifact heuristics grouped by ecosystem so each rule
 // stays explainable when we broaden support across languages and frameworks.
@@ -36520,6 +36492,7 @@ const GENERATED_CONTENT_PATTERNS = (/* unused pure expression or super */ null &
     // Named generators across Web, mobile, backend, and protobuf toolchains.
     /\bgenerated by (?:swiftgen|sourcery|protoc|buf|sqlc|openapi(?:-generator)?|openapitools|wire|freezed|build_runner|mockgen|rust-bindgen|apollo|drift|flutterfire|ksp)\b/i,
 ]));
+/** Detect generated artifacts from path patterns before counting AI ratio. */
 function isGeneratedArtifactPath(path) {
     const normalized = path.replaceAll("\\", "/");
     const segments = normalized.split("/").filter(Boolean);
@@ -36531,13 +36504,16 @@ function isGeneratedArtifactPath(path) {
         return true;
     return GENERATED_FILE_SUFFIXES.some((suffix) => basename.endsWith(suffix));
 }
+/** Detect generated-artifact banners from a small content header sample. */
 function hasGeneratedArtifactMarkers(content) {
     const header = content.slice(0, 2048).toLowerCase();
     return GENERATED_CONTENT_PATTERNS.some((pattern) => pattern.test(header));
 }
+/** Remove generated files from the denominator used by file-level AI ratio. */
 function filterAiRatioEligibleFiles(files) {
     return files.filter((file) => !file.generated && !isGeneratedArtifactPath(file.path));
 }
+/** Count AI-authored and total files after generated artifacts are excluded. */
 function countAiRatioEligibleFiles(files) {
     const eligible = filterAiRatioEligibleFiles(files);
     return {
@@ -36545,6 +36521,7 @@ function countAiRatioEligibleFiles(files) {
         ai: eligible.filter((file) => file.by_ai).length,
     };
 }
+/** Normalize legacy `context` and current `contexts[]` into a deduplicated list. */
 function normalizeInteractionContexts(interaction) {
     const normalized = [];
     const seen = new Set();
@@ -36567,6 +36544,7 @@ function normalizeInteractionContexts(interaction) {
     }
     return normalized;
 }
+/** Parse public prompt_detail input, keeping `standard` as a legacy compact alias. */
 function parsePromptDetail(value) {
     const normalized = (value ?? "").trim().toLowerCase();
     if (!normalized)
@@ -36578,12 +36556,30 @@ function parsePromptDetail(value) {
     }
     throw new Error("prompt_detail must be one of: compact, full");
 }
+/** Decide whether an interaction should be shown for the selected prompt preset. */
 function shouldRenderInteractionByPromptDetail(interaction, detail) {
     const runtime = resolvePromptRuntimeSelection(interaction.selection, interaction);
     if (detail === "full")
         return true;
     return runtime.level !== "low";
 }
+/**
+ * Filter a commit's interaction list for the selected prompt preset.
+ *
+ * The compact preset keeps current-work review prompts, but suppresses
+ * background review prompts whose only strong evidence comes from a response
+ * about an external PR/issue and is later covered by an actual primary edit.
+ */
+function filterInteractionsByPromptDetail(interactions, detail) {
+    if (detail === "full")
+        return interactions;
+    return interactions.filter((interaction, index) => {
+        if (!shouldRenderInteractionByPromptDetail(interaction, detail))
+            return false;
+        return !isAbsorbedExternalReviewPrompt(interaction, interactions.slice(index + 1));
+    });
+}
+/** Recompute prompt score, role, and level from stable persisted selection evidence. */
 function resolvePromptRuntimeSelection(selection, interaction) {
     if (!selection)
         return { score: 100, role: "primary", level: "high" };
@@ -36592,6 +36588,7 @@ function resolvePromptRuntimeSelection(selection, interaction) {
     const score = scorePromptRuntime({ role, signals });
     return { score, role, level: resolvePromptRuntimeLevel({ score, role }) };
 }
+/** Resolve a runtime role from provenance, stable signals, and prompt shape. */
 function resolvePromptRuntimeRole(source, signals, prompt) {
     if (source === "primary" || signals.includes("primary_edit_turn"))
         return "primary";
@@ -36610,6 +36607,7 @@ function resolvePromptRuntimeRole(source, signals, prompt) {
     }
     return "background";
 }
+/** Score prompt importance within the bounds of its runtime role. */
 function scorePromptRuntime(opts) {
     let score = roleBaseScore(opts.role);
     for (const signal of opts.signals)
@@ -36629,6 +36627,7 @@ function scorePromptRuntime(opts) {
     }
     return score;
 }
+/** Convert runtime score and role into the low/medium/high display band. */
 function resolvePromptRuntimeLevel(runtime) {
     if (runtime.role === "primary")
         return "high";
@@ -36722,12 +36721,14 @@ function hasTailStructuralAnchorSignal(signals) {
 function hasScopeSignal(signals) {
     return signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction");
 }
+/** Detect short prompts that may need neighboring context to be meaningful. */
 function isShortSelectionPrompt(prompt) {
     const trimmed = prompt.trim();
     if (!trimmed)
         return true;
     return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
 }
+/** Detect substantial prompt shape without language-specific keyword lists. */
 function hasSubstantivePromptShape(text) {
     const trimmed = text.trim();
     const compact = trimmed.replace(/\s+/g, "");
@@ -36747,7 +36748,42 @@ function runtimePromptSelectionSignals(signals, prompt) {
     }
     return [...signals, "substantive_prompt_shape"];
 }
-// ─── Functions ───
+function isAbsorbedExternalReviewPrompt(interaction, laterInteractions) {
+    const selection = interaction.selection;
+    if (!selection || selection.source !== "window")
+        return false;
+    if ((interaction.files_touched?.length ?? 0) > 0)
+        return false;
+    if (!hasExternalWorkReference(interaction.prompt))
+        return false;
+    if (!hasResponseAnchorSignal(selection.signals))
+        return false;
+    if (hasCurrentPromptAnchorSignal(selection.signals))
+        return false;
+    return laterInteractions.some(hasPrimaryEditInteraction);
+}
+function hasExternalWorkReference(prompt) {
+    return /https?:\/\/\S+\/(?:pull|issues)\/\d+\b/i.test(prompt);
+}
+function hasResponseAnchorSignal(signals) {
+    return (signals.includes("response_exact_commit_path") ||
+        signals.includes("response_basename_or_identifier"));
+}
+function hasCurrentPromptAnchorSignal(signals) {
+    return (signals.includes("primary_edit_turn") ||
+        signals.includes("exact_commit_path") ||
+        signals.includes("commit_file_basename") ||
+        signals.includes("diff_identifier") ||
+        signals.includes("list_or_checklist_shape") ||
+        signals.includes("multi_line_instruction") ||
+        signals.includes("inline_code_or_path_shape"));
+}
+function hasPrimaryEditInteraction(interaction) {
+    if ((interaction.files_touched?.length ?? 0) > 0)
+        return true;
+    const selection = interaction.selection;
+    return (selection?.source === "primary" || selection?.signals.includes("primary_edit_turn") === true);
+}
 /**
  * Calculate AI ratio.
  * When line counts are available, uses line-level ratio (added lines only).
@@ -36770,7 +36806,7 @@ function resolveMethod(lineCounts) {
         return "none";
     return "line";
 }
-/** Build an agentnote entry from collected data. */
+/** Build the final git-note entry from collected session, attribution, and prompt data. */
 function buildEntry(opts) {
     const generatedFiles = new Set(opts.generatedFiles ?? []);
     const files = opts.commitFiles.map((path) => ({
@@ -36829,12 +36865,102 @@ function buildEntry(opts) {
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+;// CONCATENATED MODULE: ../cli/src/core/constants.ts
+// ─── Trailer ───
+/** Commit trailer key that links a commit to an Agent Note session. */
+const TRAILER_KEY = "Agentnote-Session";
+/** Marker written into managed git hook files so deinit can identify them safely. */
+const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+/** Public CLI hook command used in agent configuration files. */
+const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
+/** Local shim hook command used when generated git hooks call the built CLI. */
+const CLI_JS_HOOK_COMMAND = "cli.js hook";
+// ─── Git notes ───
+/** Short git-notes ref name used for Agent Note entries. */
+const constants_NOTES_REF = "agentnote";
+/** Fully qualified git-notes ref name used for push/fetch operations. */
+const NOTES_REF_FULL = (/* unused pure expression or super */ null && (`refs/notes/${constants_NOTES_REF}`));
+/** Fetch refspec that syncs Agent Note notes into the local notes ref. */
+const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}:${NOTES_REF_FULL}`));
+// ─── Directory names ───
+/** Directory under `.git/` where local Agent Note session state is stored. */
+const AGENTNOTE_DIR = "agentnote";
+/** Session subdirectory name under `.git/agentnote/`. */
+const SESSIONS_DIR = "sessions";
+/** Git hooks managed by `agent-note init`. */
+const GIT_HOOK_NAMES = (/* unused pure expression or super */ null && (["prepare-commit-msg", "post-commit", "pre-push"]));
+// ─── Session file names ───
+/** JSONL file containing user prompts for the active session turn stream. */
+const PROMPTS_FILE = "prompts.jsonl";
+/** JSONL file containing post-edit file change events. */
+const CHANGES_FILE = "changes.jsonl";
+/** JSONL file containing session lifecycle and heartbeat-related events. */
+const EVENTS_FILE = "events.jsonl";
+/** File containing the agent transcript path for the current session. */
+const TRANSCRIPT_PATH_FILE = "transcript_path";
+/** File containing the monotonic causal turn counter. */
+const TURN_FILE = "turn";
+/**
+ * Current user prompt identity (UUID v4, one line). Overwritten at each
+ * UserPromptSubmit. Authoritative primary key for pairing prompts with the
+ * file edits and transcript interactions they produced.
+ */
+const PROMPT_ID_FILE = "prompt_id";
+/** File containing the active session ID pointer. */
+const SESSION_FILE = "session";
+/** File containing the adapter name that owns the session. */
+const SESSION_AGENT_FILE = "agent";
+/** Gemini pending commit state file used between BeforeTool and AfterTool. */
+const PENDING_COMMIT_FILE = "pending_commit.json";
+// ─── Display limits ───
+/** Maximum commits scanned by commands that need bounded history traversal. */
+const MAX_COMMITS = 500;
+/** Number of recent commits inspected by `agent-note status`. */
+const RECENT_STATUS_COMMIT_LIMIT = 20;
+/** Compact bar width used in terminal and PR table summaries. */
+const BAR_WIDTH_COMPACT = 5;
+/** Full bar width used in detailed terminal output. */
+const BAR_WIDTH_FULL = 20;
+/** Prompt truncation length for terminal summaries. */
+const TRUNCATE_PROMPT = 120;
+/** Prompt truncation length for PR Report details. */
+const TRUNCATE_PROMPT_PR = 500;
+/** Response truncation length for `agent-note show`. */
+const TRUNCATE_RESPONSE_SHOW = 200;
+/** Response truncation length for PR Report details. */
+const TRUNCATE_RESPONSE_PR = 500;
+/** Response truncation length for chat-style Dashboard snippets. */
+const TRUNCATE_RESPONSE_CHAT = 800;
+// ─── Archive ───
+/** Base36 rotation ID pattern: [0-9a-z]{6,} (future-safe for post-2059 length growth). */
+const ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
+// ─── Session infrastructure ───
+/** File containing the latest session activity timestamp. */
+const HEARTBEAT_FILE = "heartbeat";
+/** Session freshness window used by git hooks and status. */
+const HEARTBEAT_TTL_SECONDS = (/* unused pure expression or super */ null && (60 * 60));
+/** Conversion constant for timestamp math. */
+const MILLISECONDS_PER_SECOND = 1000;
+/** JSONL file containing pre-edit blob hashes captured before AI edits. */
+const PRE_BLOBS_FILE = "pre_blobs.jsonl";
+/** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
+const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+// ─── Git ───
+/** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
+const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
+// ─── Schema ───
+/** Current Agent Note git-note schema version. */
+const constants_SCHEMA_VERSION = 1;
+// ─── Encoding ───
+/** Text encoding used for all local Agent Note files. */
+const constants_TEXT_ENCODING = "utf-8";
+
 ;// CONCATENATED MODULE: ../cli/src/git.ts
 
 
 
 const git_execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_namespaceObject.execFile);
-/** Run a git command and return its stdout. */
+/** Run a git command through `execFile` and return trimmed stdout. */
 async function git(args, options) {
     const { stdout } = await git_execFileAsync("git", args, {
         cwd: options?.cwd,
@@ -36842,7 +36968,7 @@ async function git(args, options) {
     });
     return stdout.trim();
 }
-/** Run a git command and return its exit code instead of throwing. */
+/** Run a git command and return stdout plus exit code instead of throwing. */
 async function git_gitSafe(args, options) {
     try {
         const stdout = await git(args, options);
@@ -36856,10 +36982,11 @@ async function git_gitSafe(args, options) {
         };
     }
 }
-/** Get the repository root path. */
+/** Resolve the current repository root path using the Git CLI. */
 async function repoRoot() {
     return git(["rev-parse", "--show-toplevel"]);
 }
+/** Return the length of a shell control operator starting at the given index. */
 function isShellControlStart(command, index) {
     const char = command[index];
     const next = command[index + 1];
@@ -36871,9 +36998,17 @@ function isShellControlStart(command, index) {
         return 1;
     return 0;
 }
+/** Detect shell-style environment assignments before a simple command. */
 function isEnvAssignment(value) {
     return /^[A-Za-z_][A-Za-z0-9_]*=/.test(value);
 }
+/**
+ * Tokenize a shell command into simple-command segments.
+ *
+ * This intentionally supports only the shell features needed for hook command
+ * inspection: quoting, escaping, comments, env assignments, and command
+ * separators. It avoids executing or expanding the command.
+ */
 function tokenizeShellCommand(command) {
     const segments = [[]];
     let token = null;
@@ -36960,6 +37095,7 @@ function tokenizeShellCommand(command) {
     finishToken(command.length);
     return segments.filter((segment) => segment.length > 0);
 }
+/** Find the first real command token after env/command wrappers. */
 function findSimpleCommandIndex(tokens) {
     let index = 0;
     while (index < tokens.length && isEnvAssignment(tokens[index].value)) {
@@ -36985,9 +37121,11 @@ function findSimpleCommandIndex(tokens) {
     }
     return index;
 }
+/** Return whether a git global option consumes the following token as a value. */
 function gitOptionConsumesValue(value) {
     return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
 }
+/** Find the `commit` token in a parsed `git commit` command segment. */
 function findGitCommitToken(tokens) {
     let index = findSimpleCommandIndex(tokens);
     if (tokens[index]?.value !== "git")
@@ -37022,6 +37160,7 @@ function findGitCommitToken(tokens) {
     }
     return null;
 }
+/** Locate a non-amend `git commit` command inside a possibly chained shell command. */
 function findGitCommitCommand(command) {
     for (const segment of tokenizeShellCommand(command)) {
         const commitToken = findGitCommitToken(segment);
@@ -37030,6 +37169,7 @@ function findGitCommitCommand(command) {
     }
     return null;
 }
+/** Inject an `Agentnote-Session` trailer into the git commit segment only. */
 function injectGitCommitTrailer(command, trailer) {
     const match = findGitCommitCommand(command);
     if (!match)
@@ -37040,12 +37180,12 @@ function injectGitCommitTrailer(command, trailer) {
 ;// CONCATENATED MODULE: ../cli/src/core/storage.ts
 
 
-/** Write a agentnote entry as a git note on a commit. */
+/** Write an Agent Note entry as a git note on a commit. */
 async function writeNote(commitSha, data) {
     const body = JSON.stringify(data, null, 2);
     await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
 }
-/** Read a agentnote entry from a git note. Returns null if no note exists. */
+/** Read an Agent Note entry from a git note, returning null when none exists. */
 async function readNote(commitSha) {
     const { stdout, exitCode } = await git_gitSafe(["notes", `--ref=${constants_NOTES_REF}`, "show", commitSha]);
     if (exitCode !== 0 || !stdout.trim())
@@ -37085,6 +37225,7 @@ function normalizeEntry(raw) {
 
 
 
+/** Collect commits, git notes, AI ratio, and dashboard links for one PR range. */
 async function collectReport(base, headRef = "HEAD", opts = {}) {
     const head = await git(["rev-parse", "--short", headRef]);
     const raw = await git(["log", "--reverse", "--format=%H\t%h\t%s", `${base}..${headRef}`]);
@@ -37208,13 +37349,16 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
         commits,
     };
 }
+/** Render a fixed-width text progress bar for compact Markdown tables. */
 function renderProgressBar(ratio, width = 8) {
     const filled = Math.round((ratio / 100) * width);
     return "█".repeat(filled) + "░".repeat(width - filled);
 }
+/** Render AI ratio as `bar percentage` for stable table alignment. */
 function renderRatioWithBar(ratio, width) {
     return `${renderProgressBar(ratio, width)} ${ratio}%`;
 }
+/** Render the top summary lines before the per-commit table. */
 function renderHeader(report) {
     const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
     const lines = [line1];
@@ -37223,13 +37367,14 @@ function renderHeader(report) {
     }
     return lines;
 }
+/** Render a complete PR Report Markdown block suitable for PR body insertion. */
 function renderMarkdown(report, opts = {}) {
     const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
     const lines = [];
     const visibleInteractionsBySha = new Map();
     let visiblePromptCount = 0;
     for (const commit of report.commits) {
-        const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter((interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail));
+        const interactions = filterInteractionsByPromptDetail(mergePromptOnlyDisplayInteractions(commit.interactions), promptDetail);
         visibleInteractionsBySha.set(commit.sha, interactions);
         visiblePromptCount += interactions.length;
     }
@@ -37294,11 +37439,18 @@ function renderMarkdown(report, opts = {}) {
     }
     return lines.join("\n");
 }
+/**
+ * Summarize prompt filtering without exposing internal score levels.
+ *
+ * Users choose between compact and full output, so the text describes how many
+ * prompts are visible rather than why the hidden prompts were filtered.
+ */
 function renderPromptSummary(visible, total, detail) {
     if (detail === "full" || visible === total)
         return `${total} total`;
     return `${visible} shown / ${total} total`;
 }
+/** Detect the best remote base branch when the Action input omits one. */
 async function detectBaseBranch() {
     for (const name of ["main", "master", "develop"]) {
         const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
@@ -37307,15 +37459,23 @@ async function detectBaseBranch() {
     }
     return null;
 }
+/** Render a commit SHA as a link when the report can infer the GitHub remote. */
 function commitLink(commit, repoUrl) {
     if (repoUrl) {
         return `[\`${commit.short}\`](${repoUrl}/commit/${commit.sha})`;
     }
     return `\`${commit.short}\``;
 }
+/** Escape markdown table delimiters while keeping cells single-line. */
 function escapeTableCell(value) {
     return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
+/**
+ * Preserve old notes that stored prompt-only rows before the response row.
+ *
+ * New notes carry `selection` metadata and are filtered independently, so this
+ * merge is intentionally limited to legacy rows without prompt selection data.
+ */
 function mergePromptOnlyDisplayInteractions(interactions) {
     const result = [];
     let pendingPrompts = [];
@@ -37339,6 +37499,7 @@ function mergePromptOnlyDisplayInteractions(interactions) {
     }
     return result;
 }
+/** Detect a legacy prompt-only row that should be merged into the next row. */
 function isPromptOnlyDisplayPrefix(interaction) {
     return (interaction.response === null &&
         !interaction.context &&
@@ -37347,9 +37508,11 @@ function isPromptOnlyDisplayPrefix(interaction) {
         !interaction.selection &&
         interaction.tools === undefined);
 }
+/** Keep Context text intact; unlike prompts and responses, it is pre-sized. */
 function cleanContext(context) {
     return context.trim();
 }
+/** Trim generated prompt text for compact PR descriptions. */
 function cleanPrompt(prompt, maxLen) {
     const trimmed = prompt.trim();
     if (trimmed.length === 0)
@@ -37370,10 +37533,12 @@ function cleanPrompt(prompt, maxLen) {
         return body;
     return `${body.slice(0, maxLen)}…`;
 }
+/** Append a labeled blockquote section while preserving line breaks. */
 function pushBlockquoteSection(lines, label, body) {
     lines.push(`> **${label}**`);
     lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
+/** Render all structured interaction contexts in their stable display order. */
 function renderInteractionContext(interaction) {
     return normalizeInteractionContexts(interaction)
         .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
@@ -37381,9 +37546,11 @@ function renderInteractionContext(interaction) {
         .join("\n\n")
         .trim();
 }
+/** Show reference context before scope context when both are present. */
 function contextKindOrder(kind) {
     return kind === "reference" ? 0 : 1;
 }
+/** Return the last path segment for the PR report file summary. */
 function basename(path) {
     return path.split("/").pop() ?? path;
 }
@@ -37402,9 +37569,16 @@ const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 1000;
+/** Wait before retrying a notes fetch without blocking the Action event loop. */
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
+/**
+ * Fetch Agent Note git notes from the remote before collecting PR data.
+ *
+ * Notes can arrive slightly after the branch push, so callers may retry this
+ * fetch to cover the race between branch publication and notes publication.
+ */
 function fetchAgentnoteNotes() {
     try {
         (0,external_child_process_namespaceObject.execSync)(`git fetch origin ${AGENTNOTE_NOTES_REFSPEC}`, {
@@ -37415,6 +37589,12 @@ function fetchAgentnoteNotes() {
         info("No agent-note notes found on remote.");
     }
 }
+/**
+ * Write the rendered report to the configured PR surface.
+ *
+ * The function keeps GitHub API side effects isolated from report collection so
+ * retries and rendering can stay deterministic and easy to test.
+ */
 async function postPrReport(outputMode, markdown) {
     if (outputMode === "none")
         return;
@@ -37470,6 +37650,12 @@ async function postPrReport(outputMode, markdown) {
     }
     info("Agent Note report posted as PR comment.");
 }
+/**
+ * Explain delayed Dashboard previews caused by Pages environment protection.
+ *
+ * The PR report only shows this explanation when the Dashboard URL exists and
+ * GitHub reports branch protection on the Pages environment.
+ */
 async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
     if (!dashboardUrl)
         return null;
@@ -37496,6 +37682,12 @@ async function inferDashboardPreviewHelpUrl(token, dashboardUrl) {
     }
     return null;
 }
+/**
+ * Entry point for the GitHub Action.
+ *
+ * It fetches notes, collects the PR report, retries when the notes ref appears
+ * stale, and finally writes the report to the configured PR surface.
+ */
 async function run() {
     try {
         const base = getInput("base") ||
@@ -37507,6 +37699,7 @@ async function run() {
         const token = process.env[GITHUB_TOKEN_ENV] || "";
         let report = null;
         for (let attempt = 1; attempt <= MAX_NOTES_FETCH_ATTEMPTS; attempt++) {
+            // Fetch/retry covers the race between code push and refs/notes/agentnote push.
             fetchAgentnoteNotes();
             report = await collectReport(base, headSha, {
                 dashboardPrNumber: prNumber,

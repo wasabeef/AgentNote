@@ -10,14 +10,15 @@ import type {
 import {
   DEFAULT_PROMPT_DETAIL,
   countAiRatioEligibleFiles,
+  filterInteractionsByPromptDetail,
   normalizeInteractionContexts,
-  shouldRenderInteractionByPromptDetail,
 } from "../../cli/src/core/entry.js";
 import { readNote } from "../../cli/src/core/storage.js";
 import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
 import { inferDashboardUrl } from "./github.js";
 
+/** Prompt/response pair rendered in the PR Report prompt details. */
 export interface Interaction {
   prompt: string;
   response: string | null;
@@ -28,6 +29,7 @@ export interface Interaction {
   selection?: InteractionSelection;
 }
 
+/** Per-commit summary row collected from git notes and git history. */
 export interface CommitEntry {
   sha: string;
   short: string;
@@ -44,6 +46,7 @@ export interface CommitEntry {
   attribution: Attribution | null;
 }
 
+/** Full PR Report model used by Markdown rendering and GitHub Action outputs. */
 export interface PrReport {
   base: string;
   head: string;
@@ -61,14 +64,17 @@ export interface PrReport {
   commits: CommitEntry[];
 }
 
+/** Markdown rendering options for PR body/comment output. */
 export interface RenderMarkdownOptions {
   promptDetail?: PromptDetail;
 }
 
+/** Collection options supplied by the GitHub Action wrapper. */
 export interface CollectReportOptions {
   dashboardPrNumber?: number | string | null;
 }
 
+/** Collect commits, git notes, AI ratio, and dashboard links for one PR range. */
 export async function collectReport(
   base: string,
   headRef = "HEAD",
@@ -215,15 +221,18 @@ export async function collectReport(
   };
 }
 
+/** Render a fixed-width text progress bar for compact Markdown tables. */
 export function renderProgressBar(ratio: number, width = 8): string {
   const filled = Math.round((ratio / 100) * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
+/** Render AI ratio as `bar percentage` for stable table alignment. */
 export function renderRatioWithBar(ratio: number, width: number): string {
   return `${renderProgressBar(ratio, width)} ${ratio}%`;
 }
 
+/** Render the top summary lines before the per-commit table. */
 export function renderHeader(report: PrReport): string[] {
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
   const lines = [line1];
@@ -233,6 +242,7 @@ export function renderHeader(report: PrReport): string[] {
   return lines;
 }
 
+/** Render a complete PR Report Markdown block suitable for PR body insertion. */
 export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {}): string {
   const promptDetail = opts.promptDetail ?? DEFAULT_PROMPT_DETAIL;
   const lines: string[] = [];
@@ -240,8 +250,9 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   let visiblePromptCount = 0;
 
   for (const commit of report.commits) {
-    const interactions = mergePromptOnlyDisplayInteractions(commit.interactions).filter(
-      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail),
+    const interactions = filterInteractionsByPromptDetail(
+      mergePromptOnlyDisplayInteractions(commit.interactions),
+      promptDetail,
     );
     visibleInteractionsBySha.set(commit.sha, interactions);
     visiblePromptCount += interactions.length;
@@ -334,11 +345,18 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   return lines.join("\n");
 }
 
+/**
+ * Summarize prompt filtering without exposing internal score levels.
+ *
+ * Users choose between compact and full output, so the text describes how many
+ * prompts are visible rather than why the hidden prompts were filtered.
+ */
 function renderPromptSummary(visible: number, total: number, detail: PromptDetail): string {
   if (detail === "full" || visible === total) return `${total} total`;
   return `${visible} shown / ${total} total`;
 }
 
+/** Detect the best remote base branch when the Action input omits one. */
 export async function detectBaseBranch(): Promise<string | null> {
   for (const name of ["main", "master", "develop"]) {
     const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
@@ -347,6 +365,7 @@ export async function detectBaseBranch(): Promise<string | null> {
   return null;
 }
 
+/** Render a commit SHA as a link when the report can infer the GitHub remote. */
 function commitLink(commit: CommitEntry, repoUrl: string | null): string {
   if (repoUrl) {
     return `[\`${commit.short}\`](${repoUrl}/commit/${commit.sha})`;
@@ -354,10 +373,17 @@ function commitLink(commit: CommitEntry, repoUrl: string | null): string {
   return `\`${commit.short}\``;
 }
 
+/** Escape markdown table delimiters while keeping cells single-line. */
 function escapeTableCell(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
+/**
+ * Preserve old notes that stored prompt-only rows before the response row.
+ *
+ * New notes carry `selection` metadata and are filtered independently, so this
+ * merge is intentionally limited to legacy rows without prompt selection data.
+ */
 function mergePromptOnlyDisplayInteractions(interactions: Interaction[]): Interaction[] {
   const result: Interaction[] = [];
   let pendingPrompts: string[] = [];
@@ -387,6 +413,7 @@ function mergePromptOnlyDisplayInteractions(interactions: Interaction[]): Intera
   return result;
 }
 
+/** Detect a legacy prompt-only row that should be merged into the next row. */
 function isPromptOnlyDisplayPrefix(interaction: Interaction): boolean {
   return (
     interaction.response === null &&
@@ -398,10 +425,12 @@ function isPromptOnlyDisplayPrefix(interaction: Interaction): boolean {
   );
 }
 
+/** Keep Context text intact; unlike prompts and responses, it is pre-sized. */
 function cleanContext(context: string): string {
   return context.trim();
 }
 
+/** Trim generated prompt text for compact PR descriptions. */
 function cleanPrompt(prompt: string, maxLen: number): string {
   const trimmed = prompt.trim();
   if (trimmed.length === 0) return "";
@@ -426,11 +455,13 @@ function cleanPrompt(prompt: string, maxLen: number): string {
   return `${body.slice(0, maxLen)}…`;
 }
 
+/** Append a labeled blockquote section while preserving line breaks. */
 function pushBlockquoteSection(lines: string[], label: string, body: string): void {
   lines.push(`> **${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 
+/** Render all structured interaction contexts in their stable display order. */
 function renderInteractionContext(interaction: Interaction): string {
   return normalizeInteractionContexts(interaction)
     .sort((left, right) => contextKindOrder(left.kind) - contextKindOrder(right.kind))
@@ -439,10 +470,12 @@ function renderInteractionContext(interaction: Interaction): string {
     .trim();
 }
 
+/** Show reference context before scope context when both are present. */
 function contextKindOrder(kind: InteractionContext["kind"]): number {
   return kind === "reference" ? 0 : 1;
 }
 
+/** Return the last path segment for the PR report file summary. */
 function basename(path: string): string {
   return path.split("/").pop() ?? path;
 }

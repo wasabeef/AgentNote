@@ -15,7 +15,8 @@ import {
   SESSIONS_DIR,
   TURN_FILE,
 } from "./constants.js";
-import { analyzePromptSelection, recordCommitEntry, toPersistedSelection } from "./record.js";
+import { analyzePromptSelection, toPersistedSelection } from "./prompt-window.js";
+import { recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";
@@ -29,7 +30,6 @@ describe("prompt selection analysis", () => {
       promptId: "prompt-12",
       source: "window",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: false,
       isBeforeCommitBoundary: false,
       hasAdjacentNonExcludedPrompt: true,
@@ -62,7 +62,6 @@ describe("prompt selection analysis", () => {
       turn: 4,
       source: "tail",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: true,
       isBeforeCommitBoundary: true,
       hasAdjacentNonExcludedPrompt: true,
@@ -88,7 +87,6 @@ describe("prompt selection analysis", () => {
       turn: 5,
       source: "window",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: false,
       isBeforeCommitBoundary: false,
       hasAdjacentNonExcludedPrompt: true,
@@ -110,7 +108,6 @@ describe("prompt selection analysis", () => {
       turn: 6,
       source: "window",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: false,
       isBeforeCommitBoundary: false,
       hasAdjacentNonExcludedPrompt: true,
@@ -132,7 +129,6 @@ describe("prompt selection analysis", () => {
       turn: 6,
       source: "window",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: false,
       isBeforeCommitBoundary: false,
       hasAdjacentNonExcludedPrompt: true,
@@ -153,7 +149,6 @@ describe("prompt selection analysis", () => {
       turn: 7,
       source: "window",
       isPrimaryTurn: false,
-      isEditTurn: false,
       isTail: false,
       isBeforeCommitBoundary: false,
       hasAdjacentNonExcludedPrompt: true,

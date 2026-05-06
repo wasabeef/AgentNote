@@ -1,13 +1,13 @@
 import { gitSafe } from "../git.js";
 import { NOTES_REF } from "./constants.js";
 
-/** Write a agentnote entry as a git note on a commit. */
+/** Write an Agent Note entry as a git note on a commit. */
 export async function writeNote(commitSha: string, data: Record<string, unknown>): Promise<void> {
   const body = JSON.stringify(data, null, 2);
   await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
 }
 
-/** Read a agentnote entry from a git note. Returns null if no note exists. */
+/** Read an Agent Note entry from a git note, returning null when none exists. */
 export async function readNote(commitSha: string): Promise<Record<string, unknown> | null> {
   const { stdout, exitCode } = await gitSafe(["notes", `--ref=${NOTES_REF}`, "show", commitSha]);
   if (exitCode !== 0 || !stdout.trim()) return null;

@@ -1933,6 +1933,13 @@ function shouldRenderInteractionByPromptDetail(interaction, detail) {
   if (detail === "full") return true;
   return runtime.level !== "low";
 }
+function filterInteractionsByPromptDetail(interactions, detail) {
+  if (detail === "full") return interactions;
+  return interactions.filter((interaction, index) => {
+    if (!shouldRenderInteractionByPromptDetail(interaction, detail)) return false;
+    return !isAbsorbedExternalReviewPrompt(interaction, interactions.slice(index + 1));
+  });
+}
 function resolvePromptRuntimeSelection(selection, interaction) {
   if (!selection) return { score: 100, role: "primary", level: "high" };
   const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
@@ -2073,6 +2080,29 @@ function runtimePromptSelectionSignals(signals, prompt) {
     return signals;
   }
   return [...signals, "substantive_prompt_shape"];
+}
+function isAbsorbedExternalReviewPrompt(interaction, laterInteractions) {
+  const selection = interaction.selection;
+  if (!selection || selection.source !== "window") return false;
+  if ((interaction.files_touched?.length ?? 0) > 0) return false;
+  if (!hasExternalWorkReference(interaction.prompt)) return false;
+  if (!hasResponseAnchorSignal(selection.signals)) return false;
+  if (hasCurrentPromptAnchorSignal(selection.signals)) return false;
+  return laterInteractions.some(hasPrimaryEditInteraction);
+}
+function hasExternalWorkReference(prompt) {
+  return /https?:\/\/\S+\/(?:pull|issues)\/\d+\b/i.test(prompt);
+}
+function hasResponseAnchorSignal(signals) {
+  return signals.includes("response_exact_commit_path") || signals.includes("response_basename_or_identifier");
+}
+function hasCurrentPromptAnchorSignal(signals) {
+  return signals.includes("primary_edit_turn") || signals.includes("exact_commit_path") || signals.includes("commit_file_basename") || signals.includes("diff_identifier") || signals.includes("list_or_checklist_shape") || signals.includes("multi_line_instruction") || signals.includes("inline_code_or_path_shape");
+}
+function hasPrimaryEditInteraction(interaction) {
+  if ((interaction.files_touched?.length ?? 0) > 0) return true;
+  const selection = interaction.selection;
+  return selection?.source === "primary" || selection?.signals.includes("primary_edit_turn") === true;
 }
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
@@ -2614,6 +2644,468 @@ var init_jsonl = __esm({
   }
 });
 
+// src/core/prompt-window.ts
+function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, currentTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn) {
+  if (primaryTurns.size === 0) return emptyPromptWindowSelection();
+  const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
+  if (orderedPrimaryTurns.length === 0) return emptyPromptWindowSelection();
+  return selectCommitPromptWindow(
+    promptEntries,
+    maxConsumedTurn,
+    orderedPrimaryTurns[orderedPrimaryTurns.length - 1] ?? 0,
+    currentTurn,
+    primaryTurns,
+    editTurns,
+    commitFiles,
+    commitSubject,
+    contextSignature,
+    consumedPromptState,
+    responsesByTurn,
+    "window"
+  );
+}
+function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, currentTurn = Number.POSITIVE_INFINITY) {
+  const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
+  const latestPromptTurn = promptEntries.reduce((latest, entry) => {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (turn > upperTurn) return latest;
+    return turn > latest ? turn : latest;
+  }, 0);
+  if (latestPromptTurn <= maxConsumedTurn) return emptyPromptWindowSelection();
+  return selectCommitPromptWindow(
+    promptEntries,
+    maxConsumedTurn,
+    latestPromptTurn,
+    latestPromptTurn,
+    /* @__PURE__ */ new Set(),
+    /* @__PURE__ */ new Set(),
+    commitFiles,
+    commitSubject,
+    contextSignature,
+    consumedPromptState,
+    responsesByTurn,
+    "fallback"
+  );
+}
+function attachInteractionSelections(promptEntries, interactions, signature, commitSubject) {
+  const candidates = interactions.map((interaction, index) => {
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) return null;
+    return buildPromptSelectionCandidate(interaction, promptEntry, false, signature, commitSubject);
+  });
+  const nonExcludedIndexes = /* @__PURE__ */ new Set();
+  candidates.forEach((candidate, index) => {
+    if (candidate && !analyzePromptSelection(candidate).hardExcluded) {
+      nonExcludedIndexes.add(index);
+    }
+  });
+  for (let index = 0; index < interactions.length; index++) {
+    const interaction = interactions[index];
+    const promptEntry = promptEntries[index];
+    if (!interaction || !promptEntry) continue;
+    const candidate = buildPromptSelectionCandidate(
+      interaction,
+      promptEntry,
+      hasAdjacentNonExcludedInteraction(index, nonExcludedIndexes),
+      signature,
+      commitSubject
+    );
+    const analysis = analyzePromptSelection(candidate);
+    const selection = toPersistedSelection(analysis);
+    if (selection) interaction.selection = selection;
+  }
+}
+function analyzePromptSelection(candidate) {
+  const hardExcluded = isHardExcludedPromptSelection(candidate);
+  if (hardExcluded) {
+    return {
+      runtime: { score: 0, role: "background", level: "low" },
+      source: candidate.source,
+      signals: [],
+      hardExcluded: true
+    };
+  }
+  const signals = collectPromptSelectionSignals(candidate);
+  const role = resolvePromptRuntimeRole(candidate.source, signals, candidate.prompt);
+  const score = scorePromptRuntime({ role, signals });
+  return {
+    runtime: { score, role, level: resolvePromptRuntimeLevel({ score, role }) },
+    source: candidate.source,
+    signals,
+    hardExcluded: false
+  };
+}
+function toPersistedSelection(analysis) {
+  if (analysis.hardExcluded) return null;
+  return {
+    schema: PROMPT_SELECTION_SCHEMA,
+    source: analysis.source,
+    signals: analysis.signals
+  };
+}
+function readPromptSelectionSource(entry) {
+  return entry?.[PROMPT_SELECTION_SOURCE] ?? "window";
+}
+function emptyPromptWindowSelection() {
+  return { selected: [], consumed: [] };
+}
+function buildPromptSelectionCandidate(interaction, promptEntry, hasAdjacentNonExcludedPrompt, signature, commitSubject) {
+  const source = readPromptSelectionSource(promptEntry);
+  const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
+  const promptId = typeof promptEntry.prompt_id === "string" ? promptEntry.prompt_id : void 0;
+  return {
+    prompt: interaction.prompt,
+    response: interaction.response,
+    turn,
+    promptId,
+    source,
+    isPrimaryTurn: source === "primary",
+    isTail: source === "tail",
+    isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),
+    hasAdjacentNonExcludedPrompt,
+    commitFiles: signature.changedFiles,
+    commitSubject,
+    diffIdentifiers: signature.codeIdentifiers
+  };
+}
+function hasAdjacentNonExcludedInteraction(index, nonExcludedIndexes) {
+  return nonExcludedIndexes.has(index - 1) || nonExcludedIndexes.has(index + 1);
+}
+function isHardExcludedPromptSelection(candidate) {
+  if (candidate.isPrimaryTurn) return false;
+  return isQuotedPromptHistory(candidate.prompt) || isStructurallyTinyPrompt(candidate.prompt);
+}
+function collectPromptSelectionSignals(candidate) {
+  const signals = [];
+  const prompt = candidate.prompt;
+  const response = candidate.response ?? "";
+  const basenames = candidate.commitFiles.map((file) => fileBasename(file)).filter(Boolean);
+  if (candidate.isPrimaryTurn) signals.push("primary_edit_turn");
+  if (hasExactCommitPath(prompt, candidate.commitFiles)) signals.push("exact_commit_path");
+  if (hasCommitFileBasename(prompt, basenames)) signals.push("commit_file_basename");
+  if (hasDiffIdentifier(prompt, candidate.diffIdentifiers)) signals.push("diff_identifier");
+  if (response && hasExactCommitPath(response, candidate.commitFiles)) {
+    signals.push("response_exact_commit_path");
+  }
+  if (response && (hasCommitFileBasename(response, basenames) || hasDiffIdentifier(response, candidate.diffIdentifiers))) {
+    signals.push("response_basename_or_identifier");
+  }
+  if (hasCommitSubjectOverlap(prompt, candidate.commitSubject)) {
+    signals.push("commit_subject_overlap");
+  }
+  if (hasListOrChecklistShape(prompt)) signals.push("list_or_checklist_shape");
+  if (hasMultiLineInstruction(prompt)) signals.push("multi_line_instruction");
+  if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
+  if (hasSubstantivePromptShape(prompt)) signals.push("substantive_prompt_shape");
+  if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
+  if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
+    signals.push("between_non_excluded_prompts");
+  }
+  return [...new Set(signals)];
+}
+function hasExactCommitPath(text, commitFiles) {
+  const lower = text.toLowerCase();
+  return commitFiles.some((file) => lower.includes(file.toLowerCase()));
+}
+function hasCommitFileBasename(text, basenames) {
+  const lower = text.toLowerCase();
+  return basenames.some(
+    (basename3) => basename3.length > 0 && lower.includes(basename3.toLowerCase())
+  );
+}
+function fileBasename(path) {
+  return path.split("/").pop() ?? path;
+}
+function hasDiffIdentifier(text, identifiers) {
+  for (const identifier of identifiers) {
+    if (new RegExp(`\\b${escapeRegExp2(identifier)}\\b`).test(text)) return true;
+  }
+  return false;
+}
+function escapeRegExp2(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function hasCommitSubjectOverlap(prompt, commitSubject) {
+  const promptTokens = tokenizePromptSelectionText(prompt);
+  const subjectTokens = tokenizePromptSelectionText(commitSubject);
+  for (const token of promptTokens) {
+    if (subjectTokens.has(token)) return true;
+  }
+  return false;
+}
+function hasListOrChecklistShape(text) {
+  return /^\s*(?:[-*]|\d+\.)\s/m.test(text);
+}
+function hasMultiLineInstruction(text) {
+  return text.trim().split("\n").filter((line) => line.trim().length > 0).length >= 2;
+}
+function hasInlineCodeOrPathShape(text) {
+  return /`[^`]+`/.test(text) || /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) || /--[a-z0-9-]+/i.test(text);
+}
+function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
+  if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
+  const rows = promptEntries.filter((entry) => {
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    return turn > lowerTurn && turn <= upperTurn || primaryTurns.has(turn);
+  }).sort((left, right) => {
+    const leftTurn = typeof left.turn === "number" ? left.turn : 0;
+    const rightTurn = typeof right.turn === "number" ? right.turn : 0;
+    return leftTurn - rightTurn;
+  }).map(
+    (entry) => buildPromptWindowRow(
+      entry,
+      primaryTurns,
+      editTurns,
+      lowerTurn,
+      latestPrimaryTurn,
+      upperTurn,
+      commitFiles,
+      commitSubject,
+      contextSignature,
+      consumedPromptState,
+      responsesByTurn,
+      defaultSource
+    )
+  );
+  const hasCurrentWindowExplanation = rows.some(
+    (row) => row.isWithinCommitWindow && isPromptWindowAnchor(row)
+  );
+  const hadStalePrimaryBeforeWindow = rows.some(
+    (row) => row.isPrimaryTurn && !row.isWithinCommitWindow
+  );
+  const boundedRows = rows.filter(
+    (row) => shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation)
+  );
+  const taskBoundedRows = hadStalePrimaryBeforeWindow && hasCurrentWindowExplanation ? trimLeadingStaleWindowRows(boundedRows) : boundedRows;
+  markPostPrimaryEditBarriers(taskBoundedRows);
+  if (taskBoundedRows.length === 0) return emptyPromptWindowSelection();
+  let hardStartIndex = 0;
+  while (hardStartIndex < taskBoundedRows.length - 1 && isHardTrimPromptRow(taskBoundedRows[hardStartIndex])) {
+    hardStartIndex += 1;
+  }
+  const hardTrimmedRows = taskBoundedRows.slice(0, hardStartIndex);
+  const hasQuotedHardTrim = hardTrimmedRows.some((row) => row.isQuotedHistory);
+  const firstAnchorIndex = taskBoundedRows.findIndex(
+    (row, index) => index >= hardStartIndex && isPromptWindowAnchor(row)
+  );
+  let startIndex = firstAnchorIndex >= 0 ? firstAnchorIndex : hardStartIndex;
+  const softLeadingRows = firstAnchorIndex >= 0 ? taskBoundedRows.slice(hardStartIndex, firstAnchorIndex) : [];
+  const preserveShortLeadingContext = firstAnchorIndex >= 0 && !hasQuotedHardTrim && firstAnchorIndex - hardStartIndex <= 2 && softLeadingRows.every(isLowShapePromptRow);
+  if (preserveShortLeadingContext) {
+    startIndex = hardStartIndex;
+  }
+  const consumed = taskBoundedRows.map((row) => attachPromptSelectionMetadata(row));
+  const selectedRows = taskBoundedRows.slice(startIndex).filter(shouldKeepPromptWindowRow);
+  const selected = selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES ? trimLongPromptWindow(selectedRows).map(attachPromptSelectionMetadata) : selectedRows.map(attachPromptSelectionMetadata);
+  return { selected, consumed };
+}
+function trimLeadingStaleWindowRows(rows) {
+  const taskStartIndex = rows.findIndex(isCurrentTaskBoundaryRow);
+  return taskStartIndex > 0 ? rows.slice(taskStartIndex) : rows;
+}
+function isCurrentTaskBoundaryRow(row) {
+  return row.isPrimaryTurn || row.windowShapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+function shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation) {
+  if (row.isWithinCommitWindow) return true;
+  if (!row.isPrimaryTurn) return false;
+  return !hasCurrentWindowExplanation;
+}
+function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestPrimaryTurn, upperTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
+  const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
+  const turn = typeof entry.turn === "number" ? entry.turn : 0;
+  const response = responsesByTurn.get(turn) ?? null;
+  const isQuotedHistory = isQuotedPromptHistory(prompt);
+  const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
+  const isPrimaryTurn = primaryTurns.has(turn);
+  const isTail = defaultSource !== "fallback" && !isPrimaryTurn && turn > latestPrimaryTurn;
+  const source = resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail);
+  const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+  const hasConsumedTailPrompt = !!promptId && consumedPromptState.tailPromptIds.has(promptId);
+  const analysis = analyzePromptSelection({
+    prompt,
+    response,
+    turn,
+    promptId,
+    source,
+    isPrimaryTurn,
+    isTail,
+    isBeforeCommitBoundary: turn === upperTurn,
+    hasAdjacentNonExcludedPrompt: false,
+    commitFiles,
+    commitSubject,
+    diffIdentifiers: contextSignature.codeIdentifiers
+  });
+  return {
+    entry,
+    source,
+    windowFileRefScore: scorePromptFileRefs(prompt, commitFiles),
+    windowShapeScore: scoreTextShape(prompt),
+    windowTextScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
+    hasResponseAnchor: !!response && hasResponsePromptWindowAnchor(response, commitFiles, contextSignature),
+    isQuotedHistory,
+    isTinyPrompt: analysis.hardExcluded,
+    isPrimaryTurn,
+    isTail,
+    isWithinCommitWindow: turn > lowerTurn && turn <= upperTurn,
+    isBeforeCommitBoundary: turn === upperTurn,
+    isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
+    // A tail marker is only a display dedupe marker, not edit ownership.
+    // Re-evaluate it if the same prompt later owns a committed edit or if
+    // Codex needs the prompt-only fallback path. For ordinary prompt windows,
+    // do not let an old commit/PR boundary prompt come back as context for a
+    // later primary turn.
+    isConsumedTailPrompt: defaultSource !== "fallback" && hasConsumedTailPrompt && !isPrimaryTurn,
+    hasPostPrimaryEditBarrier: false
+  };
+}
+function markPostPrimaryEditBarriers(rows) {
+  let seenNonPrimaryTailEdit = false;
+  for (const row of rows) {
+    if (row.isTail) row.hasPostPrimaryEditBarrier = seenNonPrimaryTailEdit;
+    if (row.isTail && row.isNonPrimaryEditTurn) seenNonPrimaryTailEdit = true;
+  }
+}
+function shouldKeepPromptWindowRow(row) {
+  if (row.isPrimaryTurn) return true;
+  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
+  if (row.isConsumedTailPrompt) return false;
+  if (row.isTail) return shouldKeepTailPromptWindowRow(row);
+  return true;
+}
+function shouldKeepTailPromptWindowRow(row) {
+  if (row.hasResponseAnchor) return true;
+  if (row.hasPostPrimaryEditBarrier) {
+    return row.windowFileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.windowTextScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE;
+  }
+  return row.isBeforeCommitBoundary || row.windowFileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.windowTextScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.windowShapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+function isPromptWindowAnchor(row) {
+  if (row.isPrimaryTurn) return true;
+  if (!shouldKeepPromptWindowRow(row)) return false;
+  if (row.hasResponseAnchor) return true;
+  return row.windowTextScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.windowFileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.windowShapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
+}
+function hasResponsePromptWindowAnchor(response, commitFiles, contextSignature) {
+  const basenames = commitFiles.map(fileBasename).filter(Boolean);
+  return hasExactCommitPath(response, commitFiles) || hasCommitFileBasename(response, basenames) || hasDiffIdentifier(response, contextSignature.codeIdentifiers);
+}
+function resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail) {
+  if (defaultSource === "fallback") return "fallback";
+  if (isPrimaryTurn) return "primary";
+  if (isTail) return "tail";
+  return "window";
+}
+function attachPromptSelectionMetadata(row) {
+  const entry = row.entry;
+  entry[PROMPT_SELECTION_SOURCE] = row.source;
+  entry[PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY] = row.isBeforeCommitBoundary;
+  return row.entry;
+}
+function readPromptSelectionBeforeCommitBoundary(entry) {
+  return !!entry?.[PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY];
+}
+function isHardTrimPromptRow(row) {
+  if (row.isPrimaryTurn) return false;
+  return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn || row.isConsumedTailPrompt;
+}
+function isLowShapePromptRow(row) {
+  return row.windowTextScore < 2 && row.windowFileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE && row.windowShapeScore < 20;
+}
+function trimLongPromptWindow(rows) {
+  const first = rows[0];
+  const selected = /* @__PURE__ */ new Map();
+  if (first) selected.set(promptRowTurn(first), first);
+  for (const row of rows) {
+    if (row.isPrimaryTurn) selected.set(promptRowTurn(row), row);
+  }
+  const remainingSlots = Math.max(PROMPT_WINDOW_MAX_ENTRIES - selected.size, 0);
+  const tail = remainingSlots > 0 ? rows.filter((row) => !selected.has(promptRowTurn(row))).slice(-remainingSlots) : [];
+  for (const row of tail) selected.set(promptRowTurn(row), row);
+  return [...selected.values()].sort((left, right) => promptRowTurn(left) - promptRowTurn(right));
+}
+function promptRowTurn(row) {
+  return typeof row.entry.turn === "number" ? row.entry.turn : 0;
+}
+function isStructurallyTinyPrompt(prompt) {
+  return prompt.trim().length <= 1;
+}
+function isQuotedPromptHistory(prompt) {
+  if (/🧑\s*Prompt/.test(prompt) && /🤖\s*Response/.test(prompt)) return true;
+  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > QUOTED_HISTORY_MIN_PROMPT_CHARS)
+    return true;
+  const indentedQuoteLines = prompt.match(/^\s{2,}\S/gm)?.length ?? 0;
+  return prompt.length > QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS && indentedQuoteLines >= QUOTED_HISTORY_MIN_INDENTED_LINES;
+}
+function scoreTextShape(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  let score = Math.min(Math.floor(trimmed.length / 4), 24);
+  const newlines = (trimmed.match(/\n/g) ?? []).length;
+  score += Math.min(newlines * 10, 30);
+  if (/`[^`]+`/.test(trimmed)) score += 18;
+  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) score += 16;
+  if (/--[a-z0-9-]+/i.test(trimmed)) score += 14;
+  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += 20;
+  return score;
+}
+function scorePromptTextOverlap(prompt, commitFiles, commitSubject) {
+  const promptTokens = tokenizePromptSelectionText(prompt);
+  const commitTokens = tokenizePromptSelectionText(`${commitSubject}
+${commitFiles.join("\n")}`);
+  let score = 0;
+  for (const token of promptTokens) {
+    if (commitTokens.has(token)) score += token.includes("/") || token.includes(".") ? 4 : 1;
+  }
+  return score;
+}
+function scorePromptFileRefs(prompt, commitFiles) {
+  const lowerPrompt = prompt.toLowerCase();
+  let score = 0;
+  for (const file of commitFiles) {
+    const lowerFile = file.toLowerCase();
+    if (lowerPrompt.includes(lowerFile)) score += 80;
+    const segments = file.split(/[/.]/).filter((segment) => segment.length >= 4);
+    for (const segment of segments) {
+      if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
+    }
+    const basename3 = file.split("/").pop();
+    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += 20;
+  }
+  return score;
+}
+function tokenizePromptSelectionText(text) {
+  const tokens = /* @__PURE__ */ new Set();
+  const normalized = text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^\p{L}\p{N}_\-./]+/gu, " ").toLowerCase();
+  for (const raw of normalized.split(/\s+/)) {
+    if (!raw || raw.length < 2) continue;
+    tokens.add(raw);
+    for (const part of raw.split(/[./_-]/)) {
+      if (part.length >= 3) tokens.add(part);
+    }
+  }
+  return tokens;
+}
+var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS;
+var init_prompt_window = __esm({
+  "src/core/prompt-window.ts"() {
+    "use strict";
+    init_entry();
+    PROMPT_SELECTION_SOURCE = /* @__PURE__ */ Symbol("agentnotePromptSelectionSource");
+    PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY = /* @__PURE__ */ Symbol(
+      "agentnotePromptSelectionBeforeCommitBoundary"
+    );
+    PROMPT_WINDOW_MAX_ENTRIES = 24;
+    PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
+    PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
+    PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
+    PROMPT_SELECTION_SCHEMA = 1;
+    QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
+    QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
+    QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
+  }
+});
+
 // src/core/session.ts
 import { existsSync as existsSync6 } from "node:fs";
 import { readFile as readFile6, writeFile as writeFile5 } from "node:fs/promises";
@@ -2670,9 +3162,7 @@ var init_storage = __esm({
 // src/core/record.ts
 var record_exports = {};
 __export(record_exports, {
-  analyzePromptSelection: () => analyzePromptSelection,
-  recordCommitEntry: () => recordCommitEntry,
-  toPersistedSelection: () => toPersistedSelection
+  recordCommitEntry: () => recordCommitEntry
 });
 import { spawn } from "node:child_process";
 import { existsSync as existsSync7 } from "node:fs";
@@ -2900,7 +3390,7 @@ async function recordCommitEntry(opts) {
       attributionCommitFileSet
     );
     const transcriptEditTurns = collectTranscriptEditTurns(allInteractions, promptEntries);
-    let promptWindow = emptyPromptWindowSelection();
+    let promptWindow = { selected: [], consumed: [] };
     let useSelectableTranscriptAttribution = false;
     if (transcriptPrimaryTurns.size > 0) {
       promptWindow = selectPromptWindowEntries(
@@ -3173,57 +3663,6 @@ async function attachInteractionContexts(sessionDir, allPromptEntries, promptEnt
     }
   }
 }
-function attachInteractionSelections(promptEntries, interactions, signature, commitSubject) {
-  const candidates = interactions.map((interaction, index) => {
-    const promptEntry = promptEntries[index];
-    if (!interaction || !promptEntry) return null;
-    return buildPromptSelectionCandidate(interaction, promptEntry, false, signature, commitSubject);
-  });
-  const nonExcludedIndexes = /* @__PURE__ */ new Set();
-  candidates.forEach((candidate, index) => {
-    if (candidate && !analyzePromptSelection(candidate).hardExcluded) {
-      nonExcludedIndexes.add(index);
-    }
-  });
-  for (let index = 0; index < interactions.length; index++) {
-    const interaction = interactions[index];
-    const promptEntry = promptEntries[index];
-    if (!interaction || !promptEntry) continue;
-    const candidate = buildPromptSelectionCandidate(
-      interaction,
-      promptEntry,
-      hasAdjacentNonExcludedInteraction(index, nonExcludedIndexes),
-      signature,
-      commitSubject
-    );
-    const analysis = analyzePromptSelection(candidate);
-    const selection = toPersistedSelection(analysis);
-    if (selection) interaction.selection = selection;
-  }
-}
-function buildPromptSelectionCandidate(interaction, promptEntry, hasAdjacentNonExcludedPrompt, signature, commitSubject) {
-  const source = readPromptSelectionSource(promptEntry);
-  const turn = typeof promptEntry.turn === "number" ? promptEntry.turn : 0;
-  const promptId = typeof promptEntry.prompt_id === "string" ? promptEntry.prompt_id : void 0;
-  return {
-    prompt: interaction.prompt,
-    response: interaction.response,
-    turn,
-    promptId,
-    source,
-    isPrimaryTurn: source === "primary",
-    isEditTurn: (interaction.files_touched?.length ?? 0) > 0,
-    isTail: source === "tail",
-    isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),
-    hasAdjacentNonExcludedPrompt,
-    commitFiles: signature.changedFiles,
-    commitSubject,
-    diffIdentifiers: signature.codeIdentifiers
-  };
-}
-function hasAdjacentNonExcludedInteraction(index, nonExcludedIndexes) {
-  return nonExcludedIndexes.has(index - 1) || nonExcludedIndexes.has(index + 1);
-}
 async function resolveTranscriptLineCounts(commitFileSet, interactions, consumedPromptState) {
   const transcriptStats = /* @__PURE__ */ new Map();
   for (const interaction of interactions) {
@@ -3417,398 +3856,6 @@ function collectConsumedTranscriptPromptFiles(interactions, promptEntries, commi
     }
   }
   return consumed;
-}
-function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, currentTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn) {
-  if (primaryTurns.size === 0) return emptyPromptWindowSelection();
-  const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
-  if (orderedPrimaryTurns.length === 0) return emptyPromptWindowSelection();
-  return selectCommitPromptWindow(
-    promptEntries,
-    maxConsumedTurn,
-    orderedPrimaryTurns[orderedPrimaryTurns.length - 1] ?? 0,
-    currentTurn,
-    primaryTurns,
-    editTurns,
-    commitFiles,
-    commitSubject,
-    contextSignature,
-    consumedPromptState,
-    responsesByTurn,
-    "window"
-  );
-}
-function selectPromptOnlyFallbackEntries(promptEntries, maxConsumedTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, currentTurn = Number.POSITIVE_INFINITY) {
-  const upperTurn = currentTurn > 0 ? currentTurn : Number.POSITIVE_INFINITY;
-  const latestPromptTurn = promptEntries.reduce((latest, entry) => {
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    if (turn > upperTurn) return latest;
-    return turn > latest ? turn : latest;
-  }, 0);
-  if (latestPromptTurn <= maxConsumedTurn) return emptyPromptWindowSelection();
-  return selectCommitPromptWindow(
-    promptEntries,
-    maxConsumedTurn,
-    latestPromptTurn,
-    latestPromptTurn,
-    /* @__PURE__ */ new Set(),
-    /* @__PURE__ */ new Set(),
-    commitFiles,
-    commitSubject,
-    contextSignature,
-    consumedPromptState,
-    responsesByTurn,
-    "fallback"
-  );
-}
-function emptyPromptWindowSelection() {
-  return { selected: [], consumed: [] };
-}
-function analyzePromptSelection(candidate) {
-  const hardExcluded = isHardExcludedPromptSelection(candidate);
-  if (hardExcluded) {
-    return {
-      runtime: { score: 0, role: "background", level: "low" },
-      source: candidate.source,
-      signals: [],
-      hardExcluded: true
-    };
-  }
-  const signals = collectPromptSelectionSignals(candidate);
-  const role = resolvePromptRuntimeRole(candidate.source, signals, candidate.prompt);
-  const score = scorePromptRuntime({ role, signals });
-  return {
-    runtime: { score, role, level: resolvePromptRuntimeLevel({ score, role }) },
-    source: candidate.source,
-    signals,
-    hardExcluded: false
-  };
-}
-function toPersistedSelection(analysis) {
-  if (analysis.hardExcluded) return null;
-  return {
-    schema: PROMPT_SELECTION_SCHEMA,
-    source: analysis.source,
-    signals: analysis.signals
-  };
-}
-function isHardExcludedPromptSelection(candidate) {
-  if (candidate.isPrimaryTurn) return false;
-  return isQuotedPromptHistory(candidate.prompt) || isStructurallyTinyPrompt(candidate.prompt);
-}
-function collectPromptSelectionSignals(candidate) {
-  const signals = [];
-  const prompt = candidate.prompt;
-  const response = candidate.response ?? "";
-  const basenames = candidate.commitFiles.map((file) => fileBasename(file)).filter(Boolean);
-  if (candidate.isPrimaryTurn) signals.push("primary_edit_turn");
-  if (hasExactCommitPath(prompt, candidate.commitFiles)) signals.push("exact_commit_path");
-  if (hasCommitFileBasename(prompt, basenames)) signals.push("commit_file_basename");
-  if (hasDiffIdentifier(prompt, candidate.diffIdentifiers)) signals.push("diff_identifier");
-  if (response && hasExactCommitPath(response, candidate.commitFiles)) {
-    signals.push("response_exact_commit_path");
-  }
-  if (response && (hasCommitFileBasename(response, basenames) || hasDiffIdentifier(response, candidate.diffIdentifiers))) {
-    signals.push("response_basename_or_identifier");
-  }
-  if (hasCommitSubjectOverlap(prompt, candidate.commitSubject)) {
-    signals.push("commit_subject_overlap");
-  }
-  if (hasListOrChecklistShape(prompt)) signals.push("list_or_checklist_shape");
-  if (hasMultiLineInstruction(prompt)) signals.push("multi_line_instruction");
-  if (hasInlineCodeOrPathShape(prompt)) signals.push("inline_code_or_path_shape");
-  if (hasSubstantivePromptShape(prompt)) signals.push("substantive_prompt_shape");
-  if (candidate.isBeforeCommitBoundary) signals.push("before_commit_boundary");
-  if (isShortSelectionPrompt(prompt) && candidate.hasAdjacentNonExcludedPrompt) {
-    signals.push("between_non_excluded_prompts");
-  }
-  return [...new Set(signals)];
-}
-function hasExactCommitPath(text, commitFiles) {
-  const lower = text.toLowerCase();
-  return commitFiles.some((file) => lower.includes(file.toLowerCase()));
-}
-function hasCommitFileBasename(text, basenames) {
-  const lower = text.toLowerCase();
-  return basenames.some(
-    (basename3) => basename3.length > 0 && lower.includes(basename3.toLowerCase())
-  );
-}
-function fileBasename(path) {
-  return path.split("/").pop() ?? path;
-}
-function hasDiffIdentifier(text, identifiers) {
-  for (const identifier of identifiers) {
-    if (new RegExp(`\\b${escapeRegExp2(identifier)}\\b`).test(text)) return true;
-  }
-  return false;
-}
-function escapeRegExp2(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function hasCommitSubjectOverlap(prompt, commitSubject) {
-  const promptTokens = tokenizePromptSelectionText(prompt);
-  const subjectTokens = tokenizePromptSelectionText(commitSubject);
-  for (const token of promptTokens) {
-    if (subjectTokens.has(token)) return true;
-  }
-  return false;
-}
-function hasListOrChecklistShape(text) {
-  return /^\s*(?:[-*]|\d+\.)\s/m.test(text);
-}
-function hasMultiLineInstruction(text) {
-  return text.trim().split("\n").filter((line) => line.trim().length > 0).length >= 2;
-}
-function hasInlineCodeOrPathShape(text) {
-  return /`[^`]+`/.test(text) || /(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(text) || /--[a-z0-9-]+/i.test(text);
-}
-function selectCommitPromptWindow(promptEntries, lowerTurn, latestPrimaryTurn, upperTurn, primaryTurns, editTurns, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
-  if (upperTurn <= lowerTurn && primaryTurns.size === 0) return emptyPromptWindowSelection();
-  const rows = promptEntries.filter((entry) => {
-    const turn = typeof entry.turn === "number" ? entry.turn : 0;
-    return turn > lowerTurn && turn <= upperTurn || primaryTurns.has(turn);
-  }).sort((left, right) => {
-    const leftTurn = typeof left.turn === "number" ? left.turn : 0;
-    const rightTurn = typeof right.turn === "number" ? right.turn : 0;
-    return leftTurn - rightTurn;
-  }).map(
-    (entry) => buildPromptWindowRow(
-      entry,
-      primaryTurns,
-      editTurns,
-      lowerTurn,
-      latestPrimaryTurn,
-      upperTurn,
-      commitFiles,
-      commitSubject,
-      contextSignature,
-      consumedPromptState,
-      responsesByTurn,
-      defaultSource
-    )
-  );
-  const hasCurrentWindowExplanation = rows.some(
-    (row) => row.isWithinCommitWindow && isPromptWindowAnchor(row)
-  );
-  const hadStalePrimaryBeforeWindow = rows.some(
-    (row) => row.isPrimaryTurn && !row.isWithinCommitWindow
-  );
-  const boundedRows = rows.filter(
-    (row) => shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation)
-  );
-  const taskBoundedRows = hadStalePrimaryBeforeWindow && hasCurrentWindowExplanation ? trimLeadingStaleWindowRows(boundedRows) : boundedRows;
-  markPostPrimaryEditBarriers(taskBoundedRows);
-  if (taskBoundedRows.length === 0) return emptyPromptWindowSelection();
-  let hardStartIndex = 0;
-  while (hardStartIndex < taskBoundedRows.length - 1 && isHardTrimPromptRow(taskBoundedRows[hardStartIndex])) {
-    hardStartIndex += 1;
-  }
-  const hardTrimmedRows = taskBoundedRows.slice(0, hardStartIndex);
-  const hasQuotedHardTrim = hardTrimmedRows.some((row) => row.isQuotedHistory);
-  const firstAnchorIndex = taskBoundedRows.findIndex(
-    (row, index) => index >= hardStartIndex && isPromptWindowAnchor(row)
-  );
-  let startIndex = firstAnchorIndex >= 0 ? firstAnchorIndex : hardStartIndex;
-  const softLeadingRows = firstAnchorIndex >= 0 ? taskBoundedRows.slice(hardStartIndex, firstAnchorIndex) : [];
-  const preserveShortLeadingContext = firstAnchorIndex >= 0 && !hasQuotedHardTrim && firstAnchorIndex - hardStartIndex <= 2 && softLeadingRows.every(isLowShapePromptRow);
-  if (preserveShortLeadingContext) {
-    startIndex = hardStartIndex;
-  }
-  const consumed = taskBoundedRows.map((row) => attachPromptSelectionMetadata(row));
-  const selectedRows = taskBoundedRows.slice(startIndex).filter(shouldKeepPromptWindowRow);
-  const selected = selectedRows.length > PROMPT_WINDOW_MAX_ENTRIES ? trimLongPromptWindow(selectedRows).map(attachPromptSelectionMetadata) : selectedRows.map(attachPromptSelectionMetadata);
-  return { selected, consumed };
-}
-function trimLeadingStaleWindowRows(rows) {
-  const taskStartIndex = rows.findIndex(isCurrentTaskBoundaryRow);
-  return taskStartIndex > 0 ? rows.slice(taskStartIndex) : rows;
-}
-function isCurrentTaskBoundaryRow(row) {
-  return row.isPrimaryTurn || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
-}
-function shouldKeepTaskBoundaryPromptRow(row, hasCurrentWindowExplanation) {
-  if (row.isWithinCommitWindow) return true;
-  if (!row.isPrimaryTurn) return false;
-  return !hasCurrentWindowExplanation;
-}
-function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestPrimaryTurn, upperTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn, defaultSource) {
-  const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
-  const turn = typeof entry.turn === "number" ? entry.turn : 0;
-  const response = responsesByTurn.get(turn) ?? null;
-  const isQuotedHistory = isQuotedPromptHistory(prompt);
-  const rawTextScore = scorePromptTextOverlap(prompt, commitFiles, commitSubject);
-  const isPrimaryTurn = primaryTurns.has(turn);
-  const isTail = defaultSource !== "fallback" && !isPrimaryTurn && turn > latestPrimaryTurn;
-  const source = resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail);
-  const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
-  const hasConsumedTailPrompt = !!promptId && consumedPromptState.tailPromptIds.has(promptId);
-  const analysis = analyzePromptSelection({
-    prompt,
-    response,
-    turn,
-    promptId,
-    source,
-    isPrimaryTurn,
-    isEditTurn: editTurns.has(turn),
-    isTail,
-    isBeforeCommitBoundary: turn === upperTurn,
-    hasAdjacentNonExcludedPrompt: false,
-    commitFiles,
-    commitSubject,
-    diffIdentifiers: contextSignature.codeIdentifiers
-  });
-  return {
-    entry,
-    source,
-    fileRefScore: scorePromptFileRefs(prompt, commitFiles),
-    shapeScore: scoreTextShape(prompt),
-    textScore: isQuotedHistory ? Math.floor(rawTextScore * 0.25) : rawTextScore,
-    hasResponseAnchor: !!response && hasResponsePromptWindowAnchor(response, commitFiles, contextSignature),
-    isQuotedHistory,
-    isTinyPrompt: analysis.hardExcluded,
-    isPrimaryTurn,
-    isTail,
-    isWithinCommitWindow: turn > lowerTurn && turn <= upperTurn,
-    isBeforeCommitBoundary: turn === upperTurn,
-    isNonPrimaryEditTurn: editTurns.has(turn) && !isPrimaryTurn,
-    // A tail marker is only a display dedupe marker, not edit ownership.
-    // Re-evaluate it if the same prompt later owns a committed edit or if
-    // Codex needs the prompt-only fallback path. For ordinary prompt windows,
-    // do not let an old commit/PR boundary prompt come back as context for a
-    // later primary turn.
-    isConsumedTailPrompt: defaultSource !== "fallback" && hasConsumedTailPrompt && !isPrimaryTurn,
-    hasPostPrimaryEditBarrier: false
-  };
-}
-function markPostPrimaryEditBarriers(rows) {
-  let seenNonPrimaryTailEdit = false;
-  for (const row of rows) {
-    if (row.isTail) row.hasPostPrimaryEditBarrier = seenNonPrimaryTailEdit;
-    if (row.isTail && row.isNonPrimaryEditTurn) seenNonPrimaryTailEdit = true;
-  }
-}
-function shouldKeepPromptWindowRow(row) {
-  if (row.isPrimaryTurn) return true;
-  if (row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn) return false;
-  if (row.isConsumedTailPrompt) return false;
-  if (row.isTail) return shouldKeepTailPromptWindowRow(row);
-  return true;
-}
-function shouldKeepTailPromptWindowRow(row) {
-  if (row.hasResponseAnchor) return true;
-  if (row.hasPostPrimaryEditBarrier) {
-    return row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE;
-  }
-  return row.isBeforeCommitBoundary || row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
-}
-function isPromptWindowAnchor(row) {
-  if (row.isPrimaryTurn) return true;
-  if (!shouldKeepPromptWindowRow(row)) return false;
-  if (row.hasResponseAnchor) return true;
-  return row.textScore >= PROMPT_WINDOW_ANCHOR_TEXT_SCORE || row.fileRefScore >= PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE || row.shapeScore >= PROMPT_WINDOW_ANCHOR_SHAPE_SCORE;
-}
-function hasResponsePromptWindowAnchor(response, commitFiles, contextSignature) {
-  const basenames = commitFiles.map(fileBasename).filter(Boolean);
-  return hasExactCommitPath(response, commitFiles) || hasCommitFileBasename(response, basenames) || hasDiffIdentifier(response, contextSignature.codeIdentifiers);
-}
-function resolvePromptSelectionSource(defaultSource, isPrimaryTurn, isTail) {
-  if (defaultSource === "fallback") return "fallback";
-  if (isPrimaryTurn) return "primary";
-  if (isTail) return "tail";
-  return "window";
-}
-function attachPromptSelectionMetadata(row) {
-  const entry = row.entry;
-  entry[PROMPT_SELECTION_SOURCE] = row.source;
-  entry[PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY] = row.isBeforeCommitBoundary;
-  return row.entry;
-}
-function readPromptSelectionSource(entry) {
-  return entry?.[PROMPT_SELECTION_SOURCE] ?? "window";
-}
-function readPromptSelectionBeforeCommitBoundary(entry) {
-  return !!entry?.[PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY];
-}
-function isHardTrimPromptRow(row) {
-  if (row.isPrimaryTurn) return false;
-  return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn || row.isConsumedTailPrompt;
-}
-function isLowShapePromptRow(row) {
-  return row.textScore < 2 && row.fileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE && row.shapeScore < 20;
-}
-function trimLongPromptWindow(rows) {
-  const first = rows[0];
-  const selected = /* @__PURE__ */ new Map();
-  if (first) selected.set(promptRowTurn(first), first);
-  for (const row of rows) {
-    if (row.isPrimaryTurn) selected.set(promptRowTurn(row), row);
-  }
-  const remainingSlots = Math.max(PROMPT_WINDOW_MAX_ENTRIES - selected.size, 0);
-  const tail = remainingSlots > 0 ? rows.filter((row) => !selected.has(promptRowTurn(row))).slice(-remainingSlots) : [];
-  for (const row of tail) selected.set(promptRowTurn(row), row);
-  return [...selected.values()].sort((left, right) => promptRowTurn(left) - promptRowTurn(right));
-}
-function promptRowTurn(row) {
-  return typeof row.entry.turn === "number" ? row.entry.turn : 0;
-}
-function isStructurallyTinyPrompt(prompt) {
-  return prompt.trim().length <= 1;
-}
-function isQuotedPromptHistory(prompt) {
-  if (/🧑\s*Prompt/.test(prompt) && /🤖\s*Response/.test(prompt)) return true;
-  if (/\bPrompt:\s/.test(prompt) && /\bResponse:\s/.test(prompt) && prompt.length > QUOTED_HISTORY_MIN_PROMPT_CHARS)
-    return true;
-  const indentedQuoteLines = prompt.match(/^\s{2,}\S/gm)?.length ?? 0;
-  return prompt.length > QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS && indentedQuoteLines >= QUOTED_HISTORY_MIN_INDENTED_LINES;
-}
-function scoreTextShape(text) {
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  let score = Math.min(Math.floor(trimmed.length / 4), 24);
-  const newlines = (trimmed.match(/\n/g) ?? []).length;
-  score += Math.min(newlines * 10, 30);
-  if (/`[^`]+`/.test(trimmed)) score += 18;
-  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) score += 16;
-  if (/--[a-z0-9-]+/i.test(trimmed)) score += 14;
-  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += 20;
-  return score;
-}
-function scorePromptTextOverlap(prompt, commitFiles, commitSubject) {
-  const promptTokens = tokenizePromptSelectionText(prompt);
-  const commitTokens = tokenizePromptSelectionText(`${commitSubject}
-${commitFiles.join("\n")}`);
-  let score = 0;
-  for (const token of promptTokens) {
-    if (commitTokens.has(token)) score += token.includes("/") || token.includes(".") ? 4 : 1;
-  }
-  return score;
-}
-function scorePromptFileRefs(prompt, commitFiles) {
-  const lowerPrompt = prompt.toLowerCase();
-  let score = 0;
-  for (const file of commitFiles) {
-    const lowerFile = file.toLowerCase();
-    if (lowerPrompt.includes(lowerFile)) score += 80;
-    const segments = file.split(/[/.]/).filter((segment) => segment.length >= 4);
-    for (const segment of segments) {
-      if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
-    }
-    const basename3 = file.split("/").pop();
-    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += 20;
-  }
-  return score;
-}
-function tokenizePromptSelectionText(text) {
-  const tokens = /* @__PURE__ */ new Set();
-  const normalized = text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^\p{L}\p{N}_\-./]+/gu, " ").toLowerCase();
-  for (const raw of normalized.split(/\s+/)) {
-    if (!raw || raw.length < 2) continue;
-    tokens.add(raw);
-    for (const part of raw.split(/[./_-]/)) {
-      if (part.length >= 3) tokens.add(part);
-    }
-  }
-  return tokens;
 }
 async function selectTranscriptPrimaryTurns(transcriptMatched, promptEntries, commitFileSet) {
   const promptTurnById = buildPromptTurnById(promptEntries);
@@ -4321,7 +4368,6 @@ async function ensureEmptyBlobInStore() {
     }
   }
 }
-var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS;
 var init_record = __esm({
   "src/core/record.ts"() {
     "use strict";
@@ -4332,20 +4378,9 @@ var init_record = __esm({
     init_entry();
     init_interaction_context();
     init_jsonl();
+    init_prompt_window();
     init_session();
     init_storage();
-    PROMPT_SELECTION_SOURCE = /* @__PURE__ */ Symbol("agentnotePromptSelectionSource");
-    PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY = /* @__PURE__ */ Symbol(
-      "agentnotePromptSelectionBeforeCommitBoundary"
-    );
-    PROMPT_WINDOW_MAX_ENTRIES = 24;
-    PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
-    PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
-    PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
-    PROMPT_SELECTION_SCHEMA = 1;
-    QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
-    QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
-    QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
   }
 });
 
@@ -5596,8 +5631,9 @@ function renderMarkdown(report, opts = {}) {
   const visibleInteractionsBySha = /* @__PURE__ */ new Map();
   let visiblePromptCount = 0;
   for (const commit2 of report.commits) {
-    const interactions = mergePromptOnlyDisplayInteractions(commit2.interactions).filter(
-      (interaction) => shouldRenderInteractionByPromptDetail(interaction, promptDetail)
+    const interactions = filterInteractionsByPromptDetail(
+      mergePromptOnlyDisplayInteractions(commit2.interactions),
+      promptDetail
     );
     visibleInteractionsBySha.set(commit2.sha, interactions);
     visiblePromptCount += interactions.length;

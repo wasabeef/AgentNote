@@ -1,16 +1,19 @@
 import type { InteractionContext } from "./entry.js";
 
+/** Candidate data for reference context from the immediately previous response. */
 export type ContextCandidate = {
   prompt: string;
   previousResponse: string | null;
   previousTurnSelected: boolean;
 };
 
+/** Candidate data for scope context extracted from the current response. */
 export type ScopeContextCandidate = {
   prompt: string;
   response: string | null;
 };
 
+/** Commit-level structural anchors used by display-only context selection. */
 export type CommitContextSignature = {
   changedFiles: string[];
   changedFileBasenames: string[];
@@ -91,10 +94,12 @@ type ScopeScore = {
   index: number;
 };
 
+/** Context plus priority used while composing the final display block. */
 export type RankedInteractionContext = InteractionContext & {
   rank: number;
 };
 
+/** Build a compact signature from commit files, diff identifiers, and subject tokens. */
 export function buildCommitContextSignature(opts: {
   changedFiles: string[];
   diffText: string;
@@ -110,6 +115,7 @@ export function buildCommitContextSignature(opts: {
   };
 }
 
+/** Extract code-like identifiers from a diff without keeping the raw diff text. */
 export function extractCodeIdentifiers(diffText: string): Set<string> {
   const identifiers = new Set<string>();
   for (const pattern of [CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER]) {
@@ -122,6 +128,12 @@ export function extractCodeIdentifiers(diffText: string): Set<string> {
   return identifiers;
 }
 
+/**
+ * Select reference context from the previous response for a short current prompt.
+ *
+ * The result is display-only: it must not influence attribution, prompt
+ * ownership, or consumed prompt state.
+ */
 export function selectInteractionContext(
   candidate: ContextCandidate,
   signature: CommitContextSignature,
@@ -153,6 +165,7 @@ export function selectInteractionContext(
   return output.length > 0 ? output.join("\n\n") : undefined;
 }
 
+/** Convert selected reference text into a ranked display context. */
 export function toReferenceContext(
   context: string | undefined,
 ): RankedInteractionContext | undefined {
@@ -166,6 +179,12 @@ export function toReferenceContext(
   };
 }
 
+/**
+ * Select current-response scope context for a short prompt.
+ *
+ * Scope context uses broad structural anchors, such as scoped titles or issue
+ * references with titles, so it can explain what a short go-ahead continues.
+ */
 export function selectInteractionScopeContext(
   candidate: ScopeContextCandidate,
   signature: CommitContextSignature,
@@ -186,6 +205,7 @@ export function selectInteractionScopeContext(
   return scored[0]?.context;
 }
 
+/** Compose reference and scope contexts under a shared display length limit. */
 export function composeInteractionContexts(
   contexts: Array<RankedInteractionContext | undefined>,
   maxChars = MAX_CONTEXT_CHARS,

@@ -11,6 +11,7 @@ const AGENTS = new Map<string, AgentAdapter>([
   [gemini.name, gemini],
 ]);
 
+/** Return the adapter implementation for a supported coding agent. */
 export function getAgent(name: string): AgentAdapter {
   const agent = AGENTS.get(name);
   if (!agent) {
@@ -19,10 +20,12 @@ export function getAgent(name: string): AgentAdapter {
   return agent;
 }
 
+/** Return whether an agent name is registered and supported by this build. */
 export function hasAgent(name: string): boolean {
   return AGENTS.has(name);
 }
 
+/** List supported agent names in registry order. */
 export function listAgents(): string[] {
   return [...AGENTS.keys()];
 }

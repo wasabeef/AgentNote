@@ -3,6 +3,7 @@ import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
 
+/** Print recent commits with their Agent Note session and AI ratio summary. */
 export async function log(count: number = 10): Promise<void> {
   const raw = await git([
     "log",

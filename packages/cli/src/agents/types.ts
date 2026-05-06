@@ -1,3 +1,4 @@
+/** Raw hook input plus sync/async execution metadata from the CLI wrapper. */
 export interface HookInput {
   /** Raw stdin JSON from the agent. */
   raw: string;
@@ -5,6 +6,7 @@ export interface HookInput {
   sync: boolean;
 }
 
+/** Prompt/response pair recovered from an agent transcript. */
 export interface TranscriptInteraction {
   prompt: string;
   response: string | null;
@@ -26,6 +28,7 @@ export interface TranscriptInteraction {
   tools?: string[] | null;
 }
 
+/** Agent-agnostic event shape consumed by the hook command. */
 export interface NormalizedEvent {
   kind:
     | "session_start"
@@ -53,6 +56,7 @@ export interface NormalizedEvent {
   model?: string;
 }
 
+/** Adapter contract for installing hooks and normalizing agent-specific events. */
 export interface AgentAdapter {
   /** Agent identifier (e.g., "claude", "cursor"). */
   name: string;

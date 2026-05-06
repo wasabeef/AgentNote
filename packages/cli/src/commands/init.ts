@@ -14,7 +14,9 @@ import {
 import { git, gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
 
+/** Default workflow filename generated for PR Report mode. */
 export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
+/** Default workflow filename generated for Dashboard mode. */
 export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 
 const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
@@ -87,6 +89,7 @@ jobs:
         uses: actions/deploy-pages@v4
 `;
 
+/** Parse `--agent claude cursor` style arguments into unique agent names. */
 export function parseAgentArgs(args: string[]): string[] {
   const agentFlagIndexes = args.reduce<number[]>((indexes, arg, index) => {
     if (arg === "--agent") indexes.push(index);
@@ -180,6 +183,7 @@ elif command -v agent-note >/dev/null 2>&1; then
 fi
 `;
 
+/** Install Agent Note git hooks, agent hooks, and optional GitHub workflows. */
 export async function init(args: string[]): Promise<void> {
   let agents: string[] = [];
   try {
@@ -368,6 +372,7 @@ export async function init(args: string[]): Promise<void> {
 // ─── Git hook helpers ───
 
 /** Resolve the git hooks directory (respects core.hooksPath). */
+/** Resolve the effective git hooks directory, respecting `core.hooksPath`. */
 export async function resolveHookDir(repoRoot: string): Promise<string> {
   try {
     const hooksPath = await git(["config", "--get", "core.hooksPath"]);
