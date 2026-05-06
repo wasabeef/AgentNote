@@ -620,6 +620,13 @@ function correlatePromptIds(
   }
 }
 
+/**
+ * Choose transcript indices for one prompt text without mixing old resumed runs.
+ *
+ * Timestamped current-session matches are preferred. Fully untimestamped data
+ * keeps legacy behavior, while mixed partial data is considered ambiguous and
+ * skipped to avoid pairing a prompt with the wrong response.
+ */
 function selectTranscriptIndicesForText(
   timestampedIndices: number[],
   untimestampedIndices: number[],
@@ -632,6 +639,7 @@ function selectTranscriptIndicesForText(
   return [];
 }
 
+/** Return whether the transcript has any timestamped candidate in this session. */
 function hasTranscriptCandidateAtOrAfter(
   interactions: TranscriptInteraction[],
   transcriptCorrelationStartMs: number | null,
@@ -643,6 +651,7 @@ function hasTranscriptCandidateAtOrAfter(
   });
 }
 
+/** Filter transcript rows against the current session lower bound when known. */
 function isTranscriptCorrelationCandidate(
   interaction: TranscriptInteraction,
   transcriptCorrelationStartMs: number | null,
@@ -659,6 +668,12 @@ function parseTimestampMs(value: unknown): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Convert an agent transcript row into the persisted interaction shape.
+ *
+ * File touches are filtered to the current commit and consumed prompt/file
+ * pairs so split commits do not re-attribute the same AI edit.
+ */
 function toRecordedInteraction(
   interaction: TranscriptInteraction,
   commitFileSet: Set<string>,
@@ -698,6 +713,12 @@ function filterInteractionCommitFiles(
   );
 }
 
+/**
+ * Pick the safest transcript fallback when no exact commit-file match exists.
+ *
+ * Tool-backed rows are preferred because they still provide observable agent
+ * activity without guessing file authorship from shell-only output.
+ */
 function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
@@ -708,6 +729,7 @@ function selectTranscriptFallbackInteractions(
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
 }
 
+/** Fill missing responses from hook events for agents without transcript rows. */
 async function fillInteractionResponsesFromEvents(
   sessionDir: string,
   promptEntries: Record<string, unknown>[],
@@ -731,6 +753,12 @@ async function fillInteractionResponsesFromEvents(
   }
 }
 
+/**
+ * Attach display-only Context blocks after prompt selection is complete.
+ *
+ * Context never changes attribution, prompt ownership, or AI ratio; it only
+ * makes short prompts readable in PR reports and the Dashboard.
+ */
 async function attachInteractionContexts(
   sessionDir: string,
   allPromptEntries: Record<string, unknown>[],
@@ -790,6 +818,12 @@ async function attachInteractionContexts(
   }
 }
 
+/**
+ * Promote transcript-based attribution to line-level only on exact line counts.
+ *
+ * If transcript patch stats do not match the committed diff, the caller falls
+ * back to file-level attribution rather than guessing.
+ */
 async function resolveTranscriptLineCounts(
   commitFileSet: Set<string>,
   interactions: TranscriptInteraction[],
@@ -835,6 +869,7 @@ async function resolveTranscriptLineCounts(
   return { aiAddedLines, totalAddedLines, deletedLines };
 }
 
+/** Read added/deleted line counts for each committed file from `git diff-tree`. */
 async function readCommittedDiffCounts(
   commitFileSet: Set<string>,
 ): Promise<Map<string, { added: number; deleted: number }>> {
@@ -890,6 +925,7 @@ function attachFilesTouched(
   }
 }
 
+/** Collect prompt turns that touched files present in the current commit. */
 function collectCommitFileTurns(
   changeEntries: Record<string, unknown>[],
   preBlobEntries: Record<string, unknown>[],
@@ -911,6 +947,12 @@ function collectCommitFileTurns(
   return turns;
 }
 
+/**
+ * Select the latest touch turn per committed file for file-level fallback.
+ *
+ * This keeps attribution conservative when line-level evidence is unavailable:
+ * older same-file edits are treated as context, not primary authorship.
+ */
 function selectFileFallbackPrimaryTurns(commitFileTurns: Map<number, Set<string>>): Set<number> {
   if (commitFileTurns.size === 0) return new Set<number>();
 
@@ -967,6 +1009,12 @@ function promptFilePairKey(promptId: string, file: string): string {
   return `${promptId}\0${file}`;
 }
 
+/**
+ * Keep transcript rows that can still contribute to the current commit.
+ *
+ * The filter removes already-consumed prompt/file pairs while preserving
+ * unconsumed split-commit rows for other files.
+ */
 function filterSelectableTranscriptInteractions(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],
@@ -1010,6 +1058,13 @@ function isTranscriptPromptConsumedForCommit(
   );
 }
 
+/**
+ * Detect synthetic or unlinked transcript edits inside the current prompt window.
+ *
+ * This guards Codex-like transcripts where file edits can be observed without a
+ * stable prompt id, allowing fallback only when the edit appears after a current
+ * session prompt.
+ */
 function hasUnlinkedCurrentTranscriptEdit(
   allInteractions: TranscriptInteraction[],
   interactions: TranscriptInteraction[],
@@ -1040,6 +1095,7 @@ function hasUnlinkedCurrentTranscriptEdit(
   return false;
 }
 
+/** Build prompt/file consumption records for transcript-backed interactions. */
 function collectConsumedTranscriptPromptFiles(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],
@@ -1067,6 +1123,12 @@ function collectConsumedTranscriptPromptFiles(
   return consumed;
 }
 
+/**
+ * Select the prompt turns that causally explain transcript-backed commit files.
+ *
+ * When cumulative transcript line stats exactly match the commit diff suffix,
+ * only that suffix is primary; otherwise every matched turn remains primary.
+ */
 async function selectTranscriptPrimaryTurns(
   transcriptMatched: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],
@@ -1114,6 +1176,7 @@ async function selectTranscriptPrimaryTurns(
   return matchedTurns;
 }
 
+/** Compare cumulative transcript line counts with committed diff counts. */
 function matchesDiffCounts(
   actual: Map<string, { added: number; deleted: number }>,
   expected: Map<string, { added: number; deleted: number }>,
@@ -1132,6 +1195,7 @@ function matchesDiffCounts(
   return true;
 }
 
+/** Detect generated artifacts so they do not distort AI ratio denominators. */
 async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): Promise<string[]> {
   const generated = new Set<string>();
 
@@ -1150,6 +1214,12 @@ async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): P
   return [...generated];
 }
 
+/**
+ * Read a small committed-file prefix for generated marker detection.
+ *
+ * The stream stops early and returns null for binary data so large or binary
+ * files do not need to be loaded into memory.
+ */
 async function readCommittedFilePrefix(
   commitSha: string,
   file: string,
@@ -1538,6 +1608,7 @@ async function readMaxConsumedTurn(sessionDir: string): Promise<number> {
   return max;
 }
 
+/** Read the latest prompt turn for the active hook session. */
 async function readCurrentTurn(sessionDir: string): Promise<number> {
   const file = join(sessionDir, TURN_FILE);
   if (!existsSync(file)) return 0;
@@ -1567,6 +1638,12 @@ async function readConsumedPairs(sessionDir: string): Promise<Set<string>> {
   return set;
 }
 
+/**
+ * Read prompt consumption state used to prevent stale prompt revival.
+ *
+ * Legacy entries are treated conservatively as fully consumed because older
+ * Agent Note versions did not record prompt/file scope.
+ */
 async function readConsumedPromptState(sessionDir: string): Promise<ConsumedPromptState> {
   const file = join(sessionDir, COMMITTED_PAIRS_FILE);
   const state: ConsumedPromptState = {
@@ -1677,6 +1754,7 @@ async function recordConsumedPairs(
   }
 }
 
+/** Read the latest response text per turn from session event logs. */
 async function readResponsesByTurn(sessionDir: string): Promise<Map<number, string>> {
   const eventsFile = join(sessionDir, EVENTS_FILE);
   if (!existsSync(eventsFile)) return new Map();

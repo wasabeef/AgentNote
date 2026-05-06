@@ -5,6 +5,7 @@ import { git, repoRoot } from "./git.js";
 let _root: string | null = null;
 let _gitDir: string | null = null;
 
+/** Resolve and cache the repository root, exiting for non-git directories. */
 async function root(): Promise<string> {
   if (!_root) {
     try {
@@ -39,7 +40,7 @@ export async function sessionFile(): Promise<string> {
   return join(await agentnoteDir(), SESSION_FILE);
 }
 
-/** .claude/settings.json */
+/** Legacy Claude settings path kept for older command callers. */
 export async function settingsFile(): Promise<string> {
   return join(await root(), ".claude", "settings.json");
 }

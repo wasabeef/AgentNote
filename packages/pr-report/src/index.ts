@@ -21,6 +21,7 @@ const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 1000;
 
+/** Wait before retrying a notes fetch without blocking the Action event loop. */
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -41,6 +42,12 @@ function fetchAgentnoteNotes(): void {
 	}
 }
 
+/**
+ * Write the rendered report to the configured PR surface.
+ *
+ * The function keeps GitHub API side effects isolated from report collection so
+ * retries and rendering can stay deterministic and easy to test.
+ */
 async function postPrReport(
 	outputMode: PrOutputMode,
 	markdown: string,

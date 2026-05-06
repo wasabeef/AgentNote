@@ -11,6 +11,7 @@ export interface DiffHunk {
   newCount: number;
 }
 
+/** Blob pair captured around one AI edit turn for a single file. */
 export interface AttributionTurnPair {
   preBlob: string;
   postBlob: string;

@@ -271,6 +271,7 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
   return null;
 }
 
+/** Gemini CLI adapter for BeforeTool/AfterTool hooks and JSONL transcript recovery. */
 export const gemini: AgentAdapter = {
   name: "gemini",
   settingsRelPath: SETTINGS_REL_PATH,

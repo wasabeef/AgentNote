@@ -84,6 +84,7 @@ function isGitCommit(cmd: string): boolean {
   return findGitCommitCommand(cmd) !== null;
 }
 
+/** Claude Code adapter for hook installation, event parsing, and transcript recovery. */
 export const claude: AgentAdapter = {
   name: "claude",
   settingsRelPath: ".claude/settings.json",

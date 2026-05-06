@@ -373,6 +373,7 @@ function mergeHooksConfig(existing: CursorHooksConfig): CursorHooksConfig {
   };
 }
 
+/** Cursor adapter for Preview hooks plus local transcript/response recovery. */
 export const cursor: AgentAdapter = {
   name: "cursor",
   settingsRelPath: HOOKS_REL_PATH,

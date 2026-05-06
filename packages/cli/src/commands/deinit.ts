@@ -53,6 +53,7 @@ async function removeGitHook(hookDir: string, name: string): Promise<boolean> {
   return true;
 }
 
+/** Remove Agent Note agent hooks, managed git hooks, and optional workflow state. */
 export async function deinit(args: string[]): Promise<void> {
   let agents: string[] = [];
   try {

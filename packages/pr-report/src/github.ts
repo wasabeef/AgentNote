@@ -1,8 +1,11 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+/** Hidden marker used to find and update the managed PR comment. */
 export const COMMENT_MARKER = "<!-- agentnote-pr-report -->";
+/** Hidden marker that starts the managed PR description section. */
 export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
+/** Hidden marker that ends the managed PR description section. */
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
 const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
@@ -96,6 +99,12 @@ export function inferDashboardUrl(
 	return appendPrNumber(dashboardUrl, prNumber);
 }
 
+/**
+ * Add a PR query parameter to a Dashboard URL when the caller has a valid PR.
+ *
+ * Invalid values are ignored so non-PR runs still link to the team-level
+ * Dashboard home instead of producing broken URLs.
+ */
 function appendPrNumber(
 	dashboardUrl: string,
 	prNumber?: number | string | null,
@@ -131,9 +140,7 @@ export function hasDeploymentBranchProtection(
 	);
 }
 
-/**
- * Update a PR description with the current Agent Note report.
- */
+/** Update a PR description with the current Agent Note report. */
 export async function updatePrDescription(
 	prNumber: string,
 	markdown: string,
@@ -145,9 +152,7 @@ export async function updatePrDescription(
 	});
 }
 
-/**
- * Maintain a single Agent Note PR comment.
- */
+/** Create or update the single managed Agent Note PR comment. */
 export async function postPrComment(
 	prNumber: string,
 	content: string,
@@ -193,10 +198,12 @@ export async function postPrComment(
 	});
 }
 
+/** Wrap generated markdown in description markers for idempotent replacement. */
 function wrapWithMarkers(content: string): string {
 	return `${DESCRIPTION_BEGIN}\n${content}\n${DESCRIPTION_END}`;
 }
 
+/** Read only the PR body through the GitHub CLI fallback path. */
 async function readPrBody(prNumber: string): Promise<string> {
 	const { stdout } = await execFileAsync(
 		"gh",

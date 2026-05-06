@@ -16,6 +16,7 @@ import { normalizeEntry } from "./normalize.js";
 
 const COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
 
+/** Print the Agent Note details attached to one commit. */
 export async function show(commitRef?: string): Promise<void> {
   if (commitRef && !COMMIT_REF_PATTERN.test(commitRef)) {
     console.error("usage: agent-note show [commit]");

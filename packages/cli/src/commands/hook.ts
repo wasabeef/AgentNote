@@ -30,6 +30,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Detect agent hook events that must respond synchronously on stdout. */
 export function isSynchronousHookEvent(value: unknown): boolean {
   if (!isRecord(value) || typeof value.hook_event_name !== "string") return false;
   return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution", "BeforeTool"].includes(
@@ -102,6 +103,7 @@ async function readCurrentHead(): Promise<string | null> {
   }
 }
 
+/** Handle one normalized agent hook event from stdin. */
 export async function hook(args: string[] = []): Promise<void> {
   const raw = await readStdin();
 

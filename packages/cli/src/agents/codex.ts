@@ -343,6 +343,7 @@ function appendInteractionTool(
   interaction.tools = [...tools, toolName];
 }
 
+/** Codex CLI adapter for transcript-driven prompt, patch, and attribution recovery. */
 export const codex: AgentAdapter = {
   name: "codex",
   settingsRelPath: CONFIG_REL_PATH,

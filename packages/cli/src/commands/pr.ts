@@ -2,6 +2,7 @@ import { postPrComment, updatePrDescription } from "agent-note-pr-report/github"
 import { collectReport, detectBaseBranch, renderMarkdown } from "agent-note-pr-report/report";
 import { parsePromptDetail } from "../core/entry.js";
 
+/** Preview or update the Agent Note PR Report for a branch range. */
 export async function pr(args: string[]): Promise<void> {
   const isJson = args.includes("--json");
   const outputIdx = args.indexOf("--output");
