@@ -1,0 +1,226 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-06T02:13:43.049Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "---\n  PR #54 再レビュー\n\n  ---\n  発見: isEditTurn が dead field\n\n  packages/cli/src/core/prompt-window.ts の PromptSelectionCandidate 型に isEditTurn: boolean が宣言されているが、analyzePromptSelection\n  の処理パスで一度も参照されていない。\n\n  確認経路：\n  - isHardExcludedPromptSelection → isPrimaryTurn と prompt のみ参照\n  - collectPromptSelectionSignals → isPrimaryTurn, commitFiles, diffIdentifiers, isBeforeCommitBoundary, hasAdjacentNonExcludedPrompt,\n  commitSubject, prompt, response のみ参照\n  - resolvePromptRuntimeRole → source, signals, prompt のみ\n  - isEditTurn はどこでも消費されない\n\n  これに連動して record.ts:489 で attachInteractionSelections が attachFilesTouched（:492）より前に呼ばれる順序がある。セッション駆動パスでは\n  files_touched がこの時点で未セットのため isEditTurn の計算が不正確になるが、field が dead なので実害はない。\n\n  // record.ts:489\n  attachInteractionSelections(relevantPromptEntries, interactions, contextSignature, commitSubject);\n  // ↑ isEditTurn は false (files_touched 未セット)\n  // record.ts:492-494\n  if (hasTurnData) {\n    attachFilesTouched(changeEntries, relevantPromptEntries, interactions, commitFileSet);\n  }\n  // ↑ ここで初めて files_touched がセットされる\n\n  🟢 low.nits. dead field の削除 + 呼び出し順の一貫性確保の候補:\n  // prompt-window.ts — PromptSelectionCandidate から削除\n  - isEditTurn: boolean;\n\n  ---\n  前回からの変更点なし\n\n  その他の観点（正確性・アーキテクチャ・TSDoc・docs整合性）は前回レビューの評価を維持。\n\n  ┌─────────────────────────────────────────┬────────────────────────┐\n  │                  観点                   │          評価          │\n  ├─────────────────────────────────────────┼────────────────────────┤\n  │ 動作変更                                │ なし（387 tests pass） │\n  ├─────────────────────────────────────────┼────────────────────────┤\n  │ PROMPT_SELECTION_SOURCE Symbol パターン │ 正しい                 │\n  ├─────────────────────────────────────────┼────────────────────────┤\n  │ import 循環                             │ なし                   │\n  ├─────────────────────────────────────────┼────────────────────────┤\n  │ PromptWindowSelection.consumed の使用   │ 適切                   │\n  ├─────────────────────────────────────────┼────────────────────────┤\n  │ TSDoc の意図記述                        │ 良質                   │\n  └─────────────────────────────────────────┴────────────────────────┘\n\n  ---\n  総評\n\n  ブロッカーなし。 isEditTurn の dead field は後続 PR で整理できる範囲。今回の refactoring 目的（record.ts の責務分離 + prompt-window.ts\n  の独立した testable domain 化）は達成されている。",
+      "response": "レビュー指摘の `isEditTurn` は dead field で、残す意味がないのでこの PR 内で削ります。あわせて参照漏れがないか検索し、focused test を回します。\n指摘どおり `isEditTurn` は型・生成・テスト fixture にだけ残っていて、判定では使われていません。dead field なので削除し、`attachInteractionSelections` の順序問題に見える余地も消します。\n`isEditTurn` は完全に消えました。型からも fixture からも消したので、次に typecheck / focused test / build を回します。\ndead field 削除後も focused 96 tests / typecheck / lint は通りました。dist を再生成して、差分と whitespace を最終確認します。",
+      "files_touched": [
+        "packages/cli/src/core/prompt-window.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "バグ、レグれっしょんが起こってないか入念に5回以上レビューしておいて",
+      "response": "dead field 削除は小さいですが、prompt selection の境界なので油断せず 5 観点で見ます。まず差分を読み直し、その後 full test で agent 横断の regression も確認します。\n差分は `isEditTurn` の削除だけで、生成済み bundle も同じ削除のみです。検索でも残存参照はありません。次は full regression を走らせます。\nReview 1/5 と 2/5 は完了です。差分は dead field 削除のみ、PR Report 側の既存 regression は 36/36 pass。CLI full test は agent adapter まで通過して、今から integration / record 側を見ています。\nReview 3/5 進行中です。Codex transcript path と commit hook integration は通過しました。`isEditTurn` 削除が record の causal window に副作用を出していないか、recordCommitEntry まで見ます。\nReview 4/5 まで問題なしです。Claude / Codex / Cursor / Gemini、CLI commands、prompt detail、prompt window simulation は通過済み。最後に record の残りと hygiene を見ます。\nFull CLI test は 389/389 pass しました。Review 5/5 として、build artifact / diff hygiene / PR 出力の再確認をします。\nReview の続きから入ります。すでに full CLI test まで通っているので、最後に diff hygiene と実際の PR report 出力を見て、「テストは通るが表示や artifact がズレる」系のレグレッションを潰します。\nHygiene は問題なしです。`isEditTurn` は src と dist から完全に消えていて、差分も dead field 削除だけに閉じています。最後に実際の report 生成を通して compact 表示が崩れていないか見ます。\n5 回以上の観点で確認しました。現時点でバグ / レグレッションは見つかっていません。\n\n確認結果:\n- Diff review: 変更は dead field `isEditTurn` の削除だけ。動作ロジックには未使用だったため影響なし。\n- Static check: `isEditTurn` は `src` / `dist` から完全に消えています。\n- Focused regression: `entry.test.ts` + `record.test.ts` は `96/96 pass`。\n- PR Report regression: `packages/pr-report` は `36/36 pass`。\n- Full CLI regression: `packages/cli` は `389/389 pass`。\n- Build / lint / typecheck: CLI / PR Report ともに build pass、lint / typecheck pass。\n- Output simulation: `agent-note pr` の compact 出力も確認済み。前回修正した「過去 PR review prompt の抑制」は維持されています。\n\n未コミット変更は以下だけです:\n- `packages/cli/src/core/prompt-window.ts`\n- `packages/cli/src/core/record.test.ts`\n- `packages/cli/dist/cli.js`\n\n必要なら次にこの cleanup を `commit push` します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "dead field 削除は小さいですが、prompt selection の境界なので油断せず 5 観点で見ます。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/prompt-window.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "96793acd6fbbda225d9f6391e6bebc582f35e09f",
+    "short_sha": "96793ac",
+    "message": "refactor(record): remove dead prompt selection field",
+    "date": "2026-05-06T11:13:41+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 14fb85e..866c8b0 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -2760,7 +2760,6 @@ function buildPromptSelectionCandidate(interaction, promptEntry, hasAdjacentNonE",
+          "     promptId,",
+          "     source,",
+          "     isPrimaryTurn: source === \"primary\",",
+          "-    isEditTurn: (interaction.files_touched?.length ?? 0) > 0,",
+          "     isTail: source === \"tail\",",
+          "     isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),",
+          "     hasAdjacentNonExcludedPrompt,",
+          "@@ -2930,7 +2929,6 @@ function buildPromptWindowRow(entry, primaryTurns, editTurns, lowerTurn, latestP",
+          "     promptId,",
+          "     source,",
+          "     isPrimaryTurn,",
+          "-    isEditTurn: editTurns.has(turn),",
+          "     isTail,",
+          "     isBeforeCommitBoundary: turn === upperTurn,",
+          "     hasAdjacentNonExcludedPrompt: false,"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/prompt-window.ts",
+        "lines": [
+          "index ebfb872..32b0029 100644",
+          "--- a/packages/cli/src/core/prompt-window.ts",
+          "+++ b/packages/cli/src/core/prompt-window.ts",
+          "@@ -34,7 +34,6 @@ export type PromptSelectionCandidate = {",
+          "   promptId?: string;",
+          "   source: InteractionSelection[\"source\"];",
+          "   isPrimaryTurn: boolean;",
+          "-  isEditTurn: boolean;",
+          "   isTail: boolean;",
+          "   isBeforeCommitBoundary: boolean;",
+          "   hasAdjacentNonExcludedPrompt: boolean;",
+          "@@ -274,7 +273,6 @@ function buildPromptSelectionCandidate(",
+          "     promptId,",
+          "     source,",
+          "     isPrimaryTurn: source === \"primary\",",
+          "-    isEditTurn: (interaction.files_touched?.length ?? 0) > 0,",
+          "     isTail: source === \"tail\",",
+          "     isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),",
+          "     hasAdjacentNonExcludedPrompt,",
+          "@@ -566,7 +564,6 @@ function buildPromptWindowRow(",
+          "     promptId,",
+          "     source,",
+          "     isPrimaryTurn,",
+          "-    isEditTurn: editTurns.has(turn),",
+          "     isTail,",
+          "     isBeforeCommitBoundary: turn === upperTurn,",
+          "     hasAdjacentNonExcludedPrompt: false,"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.test.ts",
+        "lines": [
+          "index 48c9421..0398cf3 100644",
+          "--- a/packages/cli/src/core/record.test.ts",
+          "+++ b/packages/cli/src/core/record.test.ts",
+          "@@ -30,7 +30,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       promptId: \"prompt-12\",",
+          "       source: \"window\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: false,",
+          "       isBeforeCommitBoundary: false,",
+          "       hasAdjacentNonExcludedPrompt: true,",
+          "@@ -63,7 +62,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       turn: 4,",
+          "       source: \"tail\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: true,",
+          "       isBeforeCommitBoundary: true,",
+          "       hasAdjacentNonExcludedPrompt: true,",
+          "@@ -89,7 +87,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       turn: 5,",
+          "       source: \"window\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: false,",
+          "       isBeforeCommitBoundary: false,",
+          "       hasAdjacentNonExcludedPrompt: true,",
+          "@@ -111,7 +108,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       turn: 6,",
+          "       source: \"window\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: false,",
+          "       isBeforeCommitBoundary: false,",
+          "       hasAdjacentNonExcludedPrompt: true,",
+          "@@ -133,7 +129,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       turn: 6,",
+          "       source: \"window\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: false,",
+          "       isBeforeCommitBoundary: false,",
+          "       hasAdjacentNonExcludedPrompt: true,",
+          "@@ -154,7 +149,6 @@ describe(\"prompt selection analysis\", () => {",
+          "       turn: 7,",
+          "       source: \"window\",",
+          "       isPrimaryTurn: false,",
+          "-      isEditTurn: false,",
+          "       isTail: false,",
+          "       isBeforeCommitBoundary: false,",
+          "       hasAdjacentNonExcludedPrompt: true,"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 54,
+    "title": "refactor: extract prompt window policy",
+    "state": "open"
+  }
+}
