@@ -1,0 +1,401 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-06T02:53:24.019Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "プロンプト出力を確認し、妥当性チェックして",
+      "response": "PR body に実際に出ている prompt と、ローカルで再生成した compact / full の差分を見ます。特に今回の dead field cleanup が prompt selection に影響していないか、過去 PR の review prompt がまた混入していないかを確認します。\nPR body と local compact は一致していて、最新 commit `96793ac` も反映済みです。いま `full` の出力だけまだ流れているので、compact で隠れている prompt が「隠れてよいもの」かを確認します。\nPR #54 の prompt 出力を確認しました。妥当です。\n\n確認ポイント:\n- PR body は最新 commit `96793ac` まで反映済みです。\n- `compact` 表示は `13 shown / 23 total` で、`commit push` や過去 PR 参照だけの prompt は隠れています。\n- `https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして` は `full` には残り、`compact` では出ていません。今回の意図どおりです。\n- 最新 commit の `isEditTurn` cleanup は、レビュー指摘 prompt と 5 回 regression review prompt が表示されていて、なぜ変更したか追えます。\n- PR body の Dashboard link は `?pr=54` 付き、ローカル再生成では GitHub Actions context がないため `?pr=` なしです。これは正常です。\n\n今の出力で追加修正は不要だと思います。  \nMay the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "マージしました",
+      "response": "マージ確認しました。次に作業するものがあれば、main に戻して最新化してから進めます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "push",
+      "response": "push 完了しました。\n\n- `main`: `53424a0..4721896`\n- Tag: `v0.2.3` pushed\n- Release workflow: 起動済み、現在 `in_progress`\n- CI / Dashboard も push に反応して走っています\n\nMay the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/releases/tag/v0.2.3 リリースノートをもっといいものにしたいので\nコミットルールをもっと良くしたい。\n\nAI Agent にコミットしてもらうので CLAUDE.md AGENTS.md などでの工夫を考えてほしい",
+      "response": "リリースノートの質は「生成時に必要な材料が commit subject/body に入っているか」でほぼ決まるので、まず現状の release note と commit / changelog 周り、`AGENTS.md` / `CLAUDE.md` の指示を確認します。その上で、AI Agent が迷わず良い commit を作れるルールに落とします。\nv0.2.3 の release note は、`Added/Changed/Fixed` に大量の細かい commit と `Merge pull request` が混ざっていて、読む人向けというより git log の生出しに近い状態です。原因は commit subject が「何がユーザーに効くか」より「作業したこと」寄りで、かつ merge commit が changelog 対象に残っている点が大きそうです。\nv0.2.3 の release note を見る限り、問題は commit 量よりも「release note に出してよい commit」と「内部作業 commit」の境界が弱いことです。`Merge pull request...`、`address refactor review notes`、`sync generated bundle`、`bump version` まで同列に出ていて、ユーザーが読む文章ではなく作業ログになっています。\n\nまず改善するならこの 3 点が効きます。\n\n1. `AGENTS.md` / `CLAUDE.md` の commit rule を強化  \n   今の [AGENTS.md](/Users/a12622/git/context-history/AGENTS.md:138) / [CLAUDE.md](/Users/a12622/git/context-history/CLAUDE.md:138) は Conventional Commits だけなので、AI Agent が「release note に出る subject」を意識できません。  \n   追加したいルールは「subject は作業内容ではなく user-facing outcome を書く」「`chore/build/test/refactor/docs` は原則 release note に出ない前提で書く」「出したい内部変更は body に `Release-Note:` を書く」です。\n\n2. commit body template を入れる  \n   AI Agent に commit させるなら、subject だけでは限界があります。commit body に以下を必須化すると release note の材料が安定します。\n\n   ```text\n   Why:\n   User impact:\n   Verification:\n   Release-Note: <public-facing one-line summary | skip>\n   ```\n\n   例: `Release-Note: PR reports now hide absorbed external review prompts in compact mode.`  \n   例: `Release-Note: skip`\n\n3. `.github/cliff.toml` も合わせて改善  \n   今の [.github/cliff.toml](/Users/a12622/git/context-history/.github/cliff.toml:20) は `filter_unconventional = false` かつ fallback があるので、merge commit や version bump まで拾います。  \n   ここは `Merge pull request`、`chore: bump version`、`build: sync generated bundle`、`test:`、通常の `docs:` を除外し、`Release-Note:` があるものだけ優先して出す設計にしたいです。\n\n私なら方針はこうします。\n\n- `feat/fix/perf`: 原則 release note 対象。ただし subject はユーザー価値で書く。\n- `refactor`: 通常は非表示。ユーザー影響があるときだけ `Release-Note:` を書く。\n- `docs/test/chore/build/ci`: 原則 `Release-Note: skip`。\n- `Merge pull request`: 常に除外。\n- version bump: 常に除外。\n- generated bundle sync: 常に除外。\n- AI Agent には commit 前に「この commit は release note に出るべきか？」を自己判定させる。\n\n次にやるなら、branch を切って `AGENTS.md` / `CLAUDE.md` / `docs/engineering.md` / `.github/cliff.toml` をまとめて更新するのが良いです。ここは小さく見えて release 品質に直結するので、ちゃんとルール化したほうがいいです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "ブランチきって更新して",
+      "response": "release note 品質改善用の branch を切って、AI Agent 向け commit rule と git-cliff 側の除外ルールをセットで更新します。まず main が clean か確認してから作業ブランチを作ります。\n未追跡の `.DS_Store` だけありますが、今回の作業とは無関係なので触らずに進めます。branch を切って docs / release 設定だけ更新します。\nbranch を切りました。次に git-cliff のテンプレート仕様を軽く確認しつつ、現行 config で何を拾っているかに合わせて除外ルールと commit guidelines を入れます。\n現状の `cliff.toml` は fallback が広すぎて、merge commit / docs / chore / build まで全部 `Changed` に流れています。ここを「通常は public な `feat/fix/perf` だけ」「内部変更は `Release-Note:` がある場合だけ出す」方向に寄せます。\n`Release note:` は conventional footer ではなく body の短い行として扱う設計にします。git-cliff が body parser で拾えるので、`docs/refactor/ci/chore` でも public に出したい場合だけ明示できます。\ncommit rule と release workflow docs も更新しました。ここから実際に新しい `cliff.toml` で v0.2.3 相当の出力がどう変わるか確認します。\n検証でひとつ重要な落とし穴を見つけました。commit body に `Why:` のような conventional footer っぽい行を書くと、git-cliff が body ではなく footer として扱ってしまい、`Release note:` 抽出が不安定になります。なので body template は `Why` / `User impact` / `Verification` の見出しにして、コロンを避ける形に調整します。\n`CONTRIBUTING.md` にも contributor 向けの短い説明を足しました。これで AI Agent 向け (`AGENTS` / `CLAUDE`)、maintainer 向け (`docs/engineering` / `architecture`)、外部 contributor 向け (`CONTRIBUTING`) の三層が揃いました。 final check に入ります。\n`docs/release-note-commit-rules` branch を切って更新しました。\n\n主な変更:\n- `.github/cliff.toml`: merge commit / version bump / generated bundle / internal commit を release note から除外。`Release note:` がある内部 commit だけ `Changed` に出せるようにしました。\n- `AGENTS.md` / `CLAUDE.md`: AI Agent 向けに、release note 前提の commit subject / body ルールを追加しました。\n- `docs/engineering.md` / `docs/architecture.md` / `CONTRIBUTING.md`: maintainer / contributor 向けにも同じ方針を整理しました。\n\n確認済み:\n- `git diff --check`\n- `git-cliff --config .github/cliff.toml v0.2.2..v0.2.3 --strip header`\n- `Release note:` / `Release note: skip` の擬似 commit 出力確認\n\n未追跡の `website/public/.DS_Store` は元からあり、今回触っていません。まだ commit はしていません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "未追跡の `.DS_Store` だけありますが、今回の作業とは無関係なので触らずに進めます。 branch を切って docs / release 設定だけ更新します。"
+        }
+      ],
+      "files_touched": [
+        ".github/cliff.toml",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/engineering.md",
+        "docs/architecture.md",
+        "CONTRIBUTING.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "0.2.3 だとどういう出力になる？",
+      "response": "新しい `.github/cliff.toml` で `v0.2.2..v0.2.3` を生成すると、出力はこうなります。前より `Merge pull request`、`docs/refactor/chore/build/test/ci`、`bump version` は消えています。\n\n```md\n## [0.2.3] - 2026-05-06\n\n### Added\n- include full conversation context in commit notes (Option B)\n- preserve multi-line prompts in PR report\n- chat viewer prototype under /view/\n- chat viewer — sidebar, search, diff tab, URL state\n- markdown rendering + richer UI for chat viewer\n- extract pages dashboard package\n- sync Pages data from notes\n- add shared model icons\n- render ai ratio bars first\n- split GitHub docs setup\n- bold model label in reports\n- add dashboard links to report headers\n- move dashboard link below tables\n- route dashboard through root action\n- add prompt context display\n- add scoped prompt contexts\n- auto-detect dashboard pages target\n- persist prompt selection evidence\n- add prompt detail filtering\n\n### Fixed\n- recover responses for cross-turn bundled commits\n- harden cross-turn transcript error handling\n- trim Option B prompt window so prior commits' prompts don't leak\n- close two Option B leak paths discovered in review\n- correlatePromptIds skips missing transcript prompts\n- close two Codex review Medium findings on prompt_id pairing\n- advance maxConsumedTurn for transcript-driven agents (Codex)\n- close final dual-review follow-ups on prompt_id pairing\n- harden dashboard note sync\n- move synced notes to public root\n- exclude synthetic PR merge commits\n- load notes index from public dir\n- use PR head for rendered reports\n- use causal prompt windows\n- harden note recording\n- use generic deploy defaults\n- tighten file-level prompt windows\n- tighten file-level prompt context\n- use raw model icon urls\n- keep PR model labels text-only\n- improve docs table layout\n- tighten init workflow setup\n- restore normalize type guard\n- hide dashboard package paths\n- render dashboard links as HTML\n- publish shared pages for PRs\n- upload pages artifacts before persist\n- use workspace paths for pages artifacts\n- restore commit metadata in notes\n- gate PR preview notice\n- keep Codex prompt-only notes\n- compress prompt episode selection\n- populate note diffs\n- select prompts from commit windows\n- generalize diff truncation label\n- persist notes without switching workspace\n- detect newly persisted notes\n- harden prompt selection consumption\n- preserve primary prompt rows\n- preserve truncated diff entries\n- bound transcript prompt pairing\n- avoid generic generated directory exclusions\n- harden shell commit detection\n- render markdown without cdn imports\n- refine prompt context display\n- harden dashboard pages target detection\n- harden package metadata\n- handle fully filtered prompt details\n- tighten tail prompt detail scoring\n- tune prompt detail scoring\n- clarify bridge prompt scoring\n- avoid zero line attribution labels\n- keep substantive short prompts visible\n- simplify prompt detail presets\n- open dashboard link in new tab\n- preserve persisted PR notes\n- restore persisted notes before build\n- deep link PR reports without root redirect\n- trim stale task prompts\n- keep response-anchored review prompts\n- suppress absorbed external reviews\n```\n\nかなりマシにはなりましたが、まだ `close two Codex review Medium findings...` や `tighten...` みたいな内部寄り subject が残ります。これは過去 commit に `Release note:` がないためで、今後は今回追加した commit rule で改善される想定です。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "ではPRでまで作成して",
+      "response": "PR 作成まで進めます。まず差分をもう一度確認して、`website/public/.DS_Store` は含めず、今回の release note rule 変更だけ commit します。\n差分は期待どおり release note 生成と commit rule の更新だけです。commit して push し、Draft PR を作成します。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/cliff.toml",
+      "by_ai": true
+    },
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/engineering.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "0b5542cbdac33ee0a5aab11d4d0480acbd4dcc06",
+    "short_sha": "0b5542c",
+    "message": "docs: define release note commit rules",
+    "date": "2026-05-06T11:53:22+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": ".github/cliff.toml",
+        "lines": [
+          "index 27a19bf..76fbcdf 100644",
+          "--- a/.github/cliff.toml",
+          "+++ b/.github/cliff.toml",
+          "@@ -9,21 +9,46 @@ body = \"\"\"",
+          "     ## [Unreleased]",
+          " {% endif -%}",
+          " {% for group, commits in commits | group_by(attribute=\"group\") %}",
+          "-    ### {{ group | upper_first }}",
+          "-    {% for commit in commits -%}",
+          "-        - {{ commit.message | split(pat=\"\\n\") | first | trim }}",
+          "+    {% set_global visible_commits = 0 %}",
+          "+    {% for commit in commits %}",
+          "+        {% if group != \"Changed\" or (commit.body and \"Release note:\" in commit.body) %}",
+          "+            {% set_global visible_commits = visible_commits + 1 %}",
+          "+        {% endif %}",
+          "     {% endfor %}",
+          "+    {% if visible_commits > 0 %}",
+          "+        ### {{ group | upper_first }}",
+          "+        {% for commit in commits %}",
+          "+            {% if group != \"Changed\" or (commit.body and \"Release note:\" in commit.body) %}",
+          "+                {% if commit.body and \"Release note:\" in commit.body -%}",
+          "+                    - {{ commit.body | split(pat=\"Release note:\") | last | split(pat=\"\\n\") | first | trim }}",
+          "+                {% else -%}",
+          "+                    - {{ commit.message | split(pat=\"\\n\") | first | trim }}",
+          "+                {% endif %}",
+          "+            {% endif %}",
+          "+        {% endfor %}",
+          "+    {% endif %}",
+          " {% endfor %}\\n",
+          " \"\"\"",
+          " trim = true",
+          "+postprocessors = [",
+          "+    { pattern = '\\n{3,}', replace = \"\\n\\n\" },",
+          "+    { pattern = '\\n\\n-', replace = \"\\n-\" },",
+          "+]",
+          " ",
+          " [git]",
+          " conventional_commits = true",
+          "-filter_unconventional = false",
+          "+filter_unconventional = true",
+          " commit_parsers = [",
+          "+    # `Release note:` lives in the commit body. `Release note: skip` lets a",
+          "+    # public-looking fix/feat stay out of the generated GitHub Release.",
+          "+    { body = \"Release note: skip\", skip = true },",
+          "+    # Release plumbing should never become user-facing release copy.",
+          "+    { message = \"^chore: bump version\", skip = true },",
+          "+    { message = \"^build\\\\(cli\\\\): sync generated bundle\", skip = true },",
+          "     { message = \"^feat\", group = \"Added\" },",
+          "     { message = \"^fix\", group = \"Fixed\" },",
+          "     { message = \"^perf\", group = \"Fixed\" },",
+          "+    # Internal commit types are only rendered when the body has `Release note:`.",
+          "     { message = \"^refactor\", group = \"Changed\" },",
+          "     { message = \"^test\", group = \"Changed\" },",
+          "     { message = \"^docs\", group = \"Changed\" },",
+          "@@ -32,7 +57,6 @@ commit_parsers = [",
+          "     { message = \"^build\", group = \"Changed\" },",
+          "     { message = \".*deprecated\", group = \"Deprecated\" },",
+          "     { message = \".*security\", group = \"Security\" },",
+          "-    { message = \"^.*\", group = \"Changed\" },",
+          " ]",
+          "-filter_commits = false",
+          "+filter_commits = true",
+          " sort_commits = \"oldest\""
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index 44fcb96..1718278 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -137,6 +137,10 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " ",
+          " - **Conventional Commits** required. Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`, `perf:`, `build:`. Used by git-cliff for changelog generation.",
+          " - **Scope is optional** but encouraged for targeted changes: `feat(website):`, `fix(action):`.",
+          "+- **Write commit subjects for release notes.** The subject should describe the user-facing outcome, not the mechanical edit. Prefer `fix(report): hide absorbed external review prompts` over `fix: address review comments`.",
+          "+- **Use the body when the subject is not enough.** Good AI-generated commits should include `Why`, `User impact`, `Verification`, and `Release note:` sections. Do not write `Why:`, `User impact:`, or `Verification:` with colons because git-cliff may parse them as commit footers instead of body text.",
+          "+- **Release note rules.** `feat:`, `fix:`, and `perf:` commits are included by default. `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, and `build:` commits are omitted unless the body contains `Release note:` with a value other than `skip`.",
+          "+- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.",
+          " - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.",
+          " - **Before committing**, all four checks must pass (run from `packages/cli/`):",
+          "   1. `npm run build` — esbuild bundle"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index 79f9344..fb9799a 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -137,6 +137,10 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " ",
+          " - **Conventional Commits** required. Prefix: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`, `perf:`, `build:`. Used by git-cliff for changelog generation.",
+          " - **Scope is optional** but encouraged for targeted changes: `feat(website):`, `fix(action):`.",
+          "+- **Write commit subjects for release notes.** The subject should describe the user-facing outcome, not the mechanical edit. Prefer `fix(report): hide absorbed external review prompts` over `fix: address review comments`.",
+          "+- **Use the body when the subject is not enough.** Good AI-generated commits should include `Why`, `User impact`, `Verification`, and `Release note:` sections. Do not write `Why:`, `User impact:`, or `Verification:` with colons because git-cliff may parse them as commit footers instead of body text.",
+          "+- **Release note rules.** `feat:`, `fix:`, and `perf:` commits are included by default. `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, and `build:` commits are omitted unless the body contains `Release note:` with a value other than `skip`.",
+          "+- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.",
+          " - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.",
+          " - **Before committing**, all four checks must pass (run from `packages/cli/`):",
+          "   1. `npm run build` — esbuild bundle"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CONTRIBUTING.md",
+        "lines": [
+          "index 64bf5bb..6173347 100644",
+          "--- a/CONTRIBUTING.md",
+          "+++ b/CONTRIBUTING.md",
+          "@@ -212,6 +212,18 @@ test(init): add legacy hook migration test",
+          " docs(readme): add example output section",
+          " ```",
+          " ",
+          "+Release notes are generated from commit messages. If a change should appear",
+          "+in the next release, prefer a user-facing `feat:`, `fix:`, or `perf:` subject.",
+          "+Internal commits (`docs:`, `test:`, `refactor:`, `ci:`, `chore:`, `build:`)",
+          "+are hidden from release notes unless their body includes a public summary:",
+          "+",
+          "+```",
+          "+Release note: Compact PR reports now hide absorbed external review prompts.",
+          "+```",
+          "+",
+          "+Use `Release note: skip` when a public-looking commit should stay out of the",
+          "+release notes.",
+          "+",
+          " ## Testing Guidelines",
+          " ",
+          " ### Running Tests"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index c740ff3..39ad1fc 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -541,6 +541,13 @@ Action: uses: wasabeef/AgentNote@v0             (Marketplace)",
+          " ",
+          " `release.yml` is triggered by pushing a tag that matches `v*.*.*`. It does **not** rewrite package versions from the tag name. The npm publish job publishes whatever version is already committed in `packages/cli/package.json`.",
+          " ",
+          "+The GitHub Release body is generated by `git-cliff` from commits since the",
+          "+previous tag. Release notes include `feat:`, `fix:`, and `perf:` commits by",
+          "+default. Internal commit types (`docs:`, `test:`, `refactor:`, `ci:`, `chore:`,",
+          "+and `build:`) stay out of release notes unless their body contains a",
+          "+`Release note:` line. `Release note: skip` hides an otherwise public-looking",
+          "+commit.",
+          "+",
+          " The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.",
+          " ",
+          " Release steps:",
+          "@@ -550,8 +557,10 @@ Release steps:",
+          " 3. Run the release checks locally:",
+          "    - `npm -w packages/cli run build`",
+          "    - `npm -w packages/cli test`",
+          "-4. Commit the version bump to `main`.",
+          "-5. Create and push the matching git tag, for example `v0.1.11`.",
+          "+4. Review the generated release note locally before tagging:",
+          "+   - `git-cliff --config .github/cliff.toml --latest --strip header`",
+          "+5. Commit the version bump to `main`.",
+          "+6. Create and push the matching git tag, for example `v0.1.11`.",
+          " ",
+          " Important:",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/engineering.md",
+        "lines": [
+          "index 16b9b90..dbf40ce 100644",
+          "--- a/docs/engineering.md",
+          "+++ b/docs/engineering.md",
+          "@@ -82,3 +82,35 @@ rmSync(path, { force: true });",
+          " - Dashboard workflow を触ったら `packages/dashboard` の test / build を確認する。",
+          " - PR Report rendering や Action input を触ったら `packages/pr-report` の test / build を確認する。",
+          " - CLI core / agent adapter を触ったら `packages/cli` の build、typecheck、lint、test を確認する。",
+          "+",
+          "+## Commit messages and release notes",
+          "+",
+          "+Release notes are generated from commits by `git-cliff`. Treat every commit",
+          "+subject as public copy unless the commit type is intentionally internal.",
+          "+",
+          "+- Use `feat:`, `fix:`, or `perf:` when users should see the change in the next release note.",
+          "+- Use `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, or `build:` for internal work that should normally stay out of release notes.",
+          "+- If an internal-looking commit has public impact, add a body line: `Release note: <one clear user-facing sentence>`.",
+          "+- If a public-looking commit should be hidden, add `Release note: skip`.",
+          "+- Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.",
+          "+- Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.",
+          "+",
+          "+Good commit body shape:",
+          "+",
+          "+```text",
+          "+Why",
+          "+The PR report showed absorbed external review prompts in compact mode.",
+          "+",
+          "+User impact",
+          "+Compact PR reports now focus on prompts that directly explain the current change.",
+          "+",
+          "+Verification",
+          "+- npm -w packages/cli test",
+          "+- npm -w packages/pr-report test",
+          "+",
+          "+Release note: Compact PR reports now hide absorbed external review prompts.",
+          "+```",
+          "+",
+          "+Use `Release note: skip` for commits like version bumps, generated bundles,",
+          "+test-only coverage, local refactors without behavior changes, and docs-only",
+          "+maintenance that does not change user-facing guidance."
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 55,
+    "title": "docs: define release note commit rules",
+    "state": "open"
+  }
+}
