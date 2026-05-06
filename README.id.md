@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="Agent Note — AI conversations saved to git" width="720">
+  <img src="docs/assets/hero.png" alt="Agent Note — percakapan AI disimpan ke Git" width="720">
 </p>
 
 <p align="center">
@@ -17,11 +17,11 @@
 <p align="center"><strong>Ketahui <em>mengapa</em> kode berubah, bukan hanya <em>apa</em> yang berubah.</strong></p>
 
 <p align="center">
-Agent Note merekam setiap prompt, response, dan AI-attributed file, lalu menautkan context itu ke git commit Anda. Saat agent menyediakan edit history yang cukup, Agent Note dapat mencapai line-level attribution.
+Agent Note menyimpan percakapan dengan AI dan file yang berubah untuk setiap Commit. Jika datanya cukup, Agent Note juga menampilkan perkiraan praktis seberapa besar perubahan yang dibuat dengan bantuan AI.
 </p>
 
 <p align="center">
-Anggap saja sebagai <code>git log</code> ditambah AI conversation di balik perubahan.
+Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubahan.
 </p>
 
 <p align="center">
@@ -34,29 +34,29 @@ Anggap saja sebagai <code>git log</code> ditambah AI conversation di balik perub
 
 ## Mengapa Agent Note
 
-- Lihat prompt dan response di balik setiap AI-assisted commit.
-- Review AI-authored files dan AI ratio langsung di Pull Request.
-- Buka shared Dashboard yang mengubah commit history menjadi story yang mudah dibaca.
-- Simpan data secara git-native di `refs/notes/agentnote` — tanpa hosted service, tanpa telemetry.
+- Lihat percakapan AI di balik setiap Commit yang dibantu AI.
+- Tinjau file yang ikut diedit AI dan perkiraan porsi AI langsung di Pull Request.
+- Buka Dashboard bersama yang mengubah Commit History menjadi cerita yang mudah dibaca.
+- Simpan data secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
 
 ## Persyaratan
 
 - Git
 - Node.js 20 atau lebih baru
-- Coding agent yang didukung, sudah terpasang dan terautentikasi
+- Coding Agent yang didukung, sudah terpasang dan terautentikasi
 
 ## Quick Start
 
-1. Aktifkan Agent Note untuk coding agent Anda.
+1. Aktifkan Agent Note untuk Coding Agent Anda.
 
 ```bash
 npx agent-note init --agent claude
 # atau: codex / cursor / gemini
 ```
 
-Setiap developer harus menjalankannya sekali secara lokal setelah clone.
+Setiap pengembang harus menjalankannya sekali secara lokal setelah Clone.
 
-Anda dapat mengaktifkan lebih dari satu agent dalam repository yang sama:
+Anda dapat mengaktifkan lebih dari satu Agent dalam Repository yang sama:
 
 ```bash
 npx agent-note init --agent claude cursor
@@ -68,7 +68,7 @@ Jika juga ingin shared Dashboard di GitHub Pages:
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Commit file yang dibuat dan push.
+2. Commit file yang dibuat dan Push.
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .claude/settings.json
@@ -78,39 +78,39 @@ git commit -m "chore: enable agent-note"
 git push
 ```
 
-- Claude Code: commit `.claude/settings.json`
-- Codex CLI: commit `.codex/config.toml` dan `.codex/hooks.json`
-- Cursor: commit `.cursor/hooks.json`
-- Gemini CLI: commit `.gemini/settings.json`
+- Claude Code: Commit `.claude/settings.json`
+- Codex CLI: Commit `.codex/config.toml` dan `.codex/hooks.json`
+- Cursor: Commit `.cursor/hooks.json`
+- Gemini CLI: Commit `.gemini/settings.json`
 
-3. Terus gunakan workflow `git commit` normal.
+3. Terus gunakan Workflow `git commit` normal.
 
-Dengan git hooks yang dibuat, Agent Note merekam commit secara otomatis. Gunakan `agent-note commit -m "..."` hanya sebagai fallback saat git hooks tidak tersedia.
+Dengan Git Hooks yang dibuat, Agent Note merekam Commit secara otomatis. Gunakan `agent-note commit -m "..."` hanya sebagai Fallback saat Git Hooks tidak tersedia.
 
 ## Data yang disimpan
 
-Agent Note menyimpan cerita commit:
+Agent Note menyimpan cerita Commit:
 
-- `prompt` / `response`: percakapan di balik perubahan
-- `contexts[]`: petunjuk display-only yang tampil sebagai `📝 Context` saat prompt terlalu pendek
+- Percakapan: permintaan dan jawaban AI yang mengarah ke perubahan
+- Context: catatan singkat yang tampil sebagai `📝 Context` saat permintaan saja terlalu pendek
 
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
-- `files`: file yang berubah dan apakah AI menyentuhnya
-- `attribution`: AI ratio, method, dan line counts jika tersedia
+- File: file yang berubah dan apakah AI ikut mengeditnya
+- Porsi AI: perkiraan persentase keseluruhan, plus jumlah baris jika Agent Note dapat memperkirakannya
 
-Temporary session data berada di `.git/agentnote/`. Permanent record berada di `refs/notes/agentnote` dan dibagikan melalui `git push`.
+Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `refs/notes/agentnote` dan dibagikan melalui `git push`.
 
 ## Agent Support
 
-| Agent | Status | Attribution | Notes |
+| Agent | Status | Detail | Notes |
 | --- | --- | --- | --- |
-| Claude Code | Full support | Line-level secara default | Hook-native prompt / response recovery |
-| Codex CLI | Preview | File-level secara default | Transcript-driven. Line-level hanya dinaikkan saat count `apply_patch` transcript cocok dengan final commit diff. Jika transcript tidak dapat dibaca, Agent Note melewati pembuatan note alih-alih menulis data yang tidak pasti. |
-| Cursor | Supported | File-level secara default | Menggunakan hooks `afterFileEdit` / `afterTabFileEdit`. Line-level hanya dinaikkan saat committed blob masih cocok dengan latest AI edit. |
-| Gemini CLI | Preview | File-level | Hook-based capture dengan dukungan `git commit` normal melalui git hooks yang dibuat |
+| Claude Code | Full support | Perkiraan per baris secara default | Menggunakan Native Hooks untuk memulihkan percakapan. |
+| Codex CLI | Preview | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |
+| Cursor | Supported | Biasanya per file | Menggunakan Cursor Edit Hooks. Dapat memperkirakan baris yang ditulis AI hanya saat file dalam Commit masih cocok dengan Edit AI terakhir. |
+| Gemini CLI | Preview | Per file | Menggunakan Generated Hooks untuk mencatat percakapan dan `git commit` normal. |
 
-## Periksa setup
+## Periksa Setup
 
 ```bash
 npx agent-note status
@@ -128,11 +128,11 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` menunjukkan agent adapters yang aktif. `capture:` merangkum apa yang dikumpulkan active agent hooks. `git:` menunjukkan apakah managed repository-local git hooks sudah terpasang. `commit:` memberi tahu primary tracking path: `git commit` normal saat git hooks aktif, atau fallback mode saat sebaiknya memakai `agent-note commit`.
+`agent:` menunjukkan Agent Adapters yang aktif. `capture:` merangkum apa yang dikumpulkan Active Agent Hooks. `git:` menunjukkan apakah Managed Repository-Local Git Hooks sudah terpasang. `commit:` memberi tahu Primary Tracking Path: `git commit` normal saat Git Hooks aktif, atau Fallback Mode saat sebaiknya memakai `agent-note commit`.
 
 ## Yang Anda dapatkan
 
-### Setiap commit punya story
+### Setiap Commit punya Story
 
 ```
 $ npx agent-note show
@@ -173,7 +173,7 @@ ba091be fix: update dependencies
 $ npx agent-note pr --output description --update 42
 ```
 
-Ini memposting AI session report ke PR description:
+Ini memposting AI Session Report ke PR Description:
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -191,44 +191,44 @@ Ini memposting AI session report ke PR description:
 ## Cara kerja
 
 ```
-Anda mengirim prompt ke coding agent
+Anda mengirim Prompt ke Coding Agent
         │
         ▼
-hooks menangkap prompt dan session metadata
+Hooks menyimpan percakapan dan informasi Session
         │
         ▼
-agent mengedit files
+Agent mengedit file
         │
         ▼
-hooks atau local transcripts mencatat touched files dan attribution signals
+Hooks atau Local Transcripts mencatat file yang berubah
         │
         ▼
 Anda menjalankan `git commit`
         │
         ▼
-Agent Note menulis git note untuk commit itu
+Agent Note menulis Git Note untuk Commit itu
         │
         ▼
 Anda menjalankan `git push`
         │
         ▼
-`refs/notes/agentnote` ikut di-push bersama branch
+`refs/notes/agentnote` ikut di-push bersama Branch
 ```
 
-Untuk flow detail, attribution rules, dan schema, lihat [Cara kerja](https://wasabeef.github.io/AgentNote/id/how-it-works/).
+Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan Schema yang disimpan, lihat [Cara kerja](https://wasabeef.github.io/AgentNote/id/how-it-works/).
 
 ## Commands
 
 | Command | Fungsi |
 | --- | --- |
-| `agent-note init` | Menyiapkan hooks, workflow, git hooks, dan notes auto-fetch |
-| `agent-note deinit` | Menghapus hooks dan config untuk agent |
-| `agent-note show [commit]` | Menampilkan AI session di balik `HEAD` atau commit SHA |
-| `agent-note log [n]` | Mendaftar recent commits dengan AI ratio |
-| `agent-note pr [base]` | Membuat PR Report (markdown atau JSON) |
-| `agent-note session <id>` | Menampilkan semua commits yang terkait dengan satu session |
-| `agent-note commit [args]` | Fallback wrapper untuk `git commit` saat git hooks tidak tersedia |
-| `agent-note status` | Menampilkan tracking state |
+| `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
+| `agent-note deinit` | Menghapus Hooks dan Config untuk Agent |
+| `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |
+| `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
+| `agent-note pr [base]` | Membuat PR Report (Markdown atau JSON) |
+| `agent-note session <id>` | Menampilkan semua Commits yang terkait dengan satu Session |
+| `agent-note commit [args]` | Fallback wrapper untuk `git commit` saat Git Hooks tidak tersedia |
+| `agent-note status` | Menampilkan Tracking state |
 
 ## GitHub Action
 
@@ -245,7 +245,7 @@ PR Report Mode adalah default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Atur `prompt_detail` ke `compact` atau `full` jika ingin riwayat prompt yang fokus atau lengkap. Default-nya adalah `compact`: preset ini menjaga laporan tetap mudah dibaca dengan menampilkan prompt yang menjelaskan commit, sedangkan `full` menampilkan semua prompt yang tersimpan.
+Atur `prompt_detail` ke `compact` atau `full` jika ingin riwayat Prompt yang fokus atau lengkap. Default-nya adalah `compact`: preset ini menjaga laporan tetap mudah dibaca dengan menampilkan Prompt yang menjelaskan Commit, sedangkan `full` menampilkan semua Prompt yang tersimpan.
 
 Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
@@ -258,15 +258,15 @@ Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
 ### Data Dashboard
 
-Untuk sebagian besar repositori, Anda tidak perlu menulis workflow manual. Generate dengan `init`:
+Untuk sebagian besar repositori, Anda tidak perlu menulis Workflow manual. Generate dengan `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-Lalu commit `.github/workflows/agentnote-pr-report.yml` dan `.github/workflows/agentnote-dashboard.yml`, aktifkan GitHub Pages dengan source `GitHub Actions`, dan buka `/dashboard/`.
+Lalu Commit `.github/workflows/agentnote-pr-report.yml` dan `.github/workflows/agentnote-dashboard.yml`, aktifkan GitHub Pages dengan Source `GitHub Actions`, dan buka `/dashboard/`.
 
-Jika Anda sudah punya GitHub Pages site, lihat [Dashboard docs](https://wasabeef.github.io/AgentNote/id/dashboard/) untuk setup gabungan yang aman.
+Jika Anda sudah punya GitHub Pages Site, lihat [Dashboard Docs](https://wasabeef.github.io/AgentNote/id/dashboard/) untuk Setup gabungan yang aman.
 
 <details>
 <summary>Full example with outputs</summary>
@@ -333,16 +333,16 @@ $ git notes --ref=agentnote show ce941f7
 
 ## Security & Privacy
 
-- Agent Note local-first. Core CLI bekerja tanpa hosted service.
-- Temporary session data disimpan di `.git/agentnote/` dalam repositori Anda.
-- Permanent record disimpan di `refs/notes/agentnote`, bukan di tracked source files.
-- Untuk transcript-driven agents, Agent Note membaca local transcript files dari data directory milik agent.
-- CLI tidak mengirim telemetry.
-- Commit tracking bersifat best-effort. Jika Agent Note gagal saat hook, `git commit` Anda tetap berhasil.
+- Agent Note Local-first. Core CLI bekerja tanpa Hosted Service.
+- Temporary Session Data disimpan di `.git/agentnote/` dalam repositori Anda.
+- Permanent Record disimpan di `refs/notes/agentnote`, bukan di Tracked Source Files.
+- Untuk Agents yang menyimpan log percakapan lokal, Agent Note membaca file tersebut dari Data Directory milik Agent.
+- CLI tidak mengirim Telemetry.
+- Commit Tracking bersifat Best-effort. Jika Agent Note gagal saat Hook, `git commit` Anda tetap berhasil.
 
 ## Design
 
-Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
+Zero runtime dependencies · Git notes storage · Never breaks `git commit` · No telemetry · Agent-agnostic architecture
 
 [Detail arsitektur →](docs/architecture.md)
 

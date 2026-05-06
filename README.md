@@ -17,7 +17,7 @@
 <p align="center"><strong>Know <em>why</em> your code changed, not just <em>what</em> changed.</strong></p>
 
 <p align="center">
-Agent Note records each prompt, response, and AI-attributed file, then attaches that context to your git commits. It reaches line-level attribution when the agent exposes enough edit history.
+Agent Note saves the AI conversation and changed files for each commit. When enough detail is available, it also shows a practical estimate of how much of the change came from AI.
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@ Think of it as <code>git log</code> plus the AI conversation behind the change.
 
 ## Why Agent Note
 
-- See the prompt and response behind every AI-assisted commit.
-- Review AI-authored files and AI ratio directly in the Pull Request.
+- See the AI conversation behind every assisted commit.
+- Review the files AI helped edit and the estimated AI share directly in the Pull Request.
 - Open a shared Dashboard that turns commit history into a readable story.
 - Keep the data git-native with `refs/notes/agentnote` — no hosted service, no telemetry.
 
@@ -91,24 +91,24 @@ With the generated git hooks installed, Agent Note records commits automatically
 
 Agent Note stores the commit story:
 
-- `prompt` / `response`: the conversation behind the change
-- `contexts[]`: display-only hints shown as `📝 Context` when a prompt is too short
+- Conversation: the request and AI answer that led to the change
+- Context hints: short notes shown as `📝 Context` when the request alone is too short
 
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
-- `files`: changed files and whether AI touched them
-- `attribution`: AI ratio, method, and line counts when available
+- Files: changed files and whether AI helped edit them
+- AI share: an overall percentage, plus the likely AI-written lines when Agent Note can estimate them
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
 ## Agent Support
 
-| Agent | Status | Attribution | Notes |
+| Agent | Status | Detail | Notes |
 | --- | --- | --- | --- |
-| Claude Code | Full support | Line-level by default | Hook-native prompt / response recovery |
-| Codex CLI | Preview | File-level by default | Transcript-driven. Line-level is upgraded only when transcript `apply_patch` counts match the final commit diff. If the transcript cannot be read, Agent Note skips note creation instead of writing uncertain data. |
-| Cursor | Supported | File-level by default | Uses `afterFileEdit` / `afterTabFileEdit` hooks. Line-level is upgraded only when the committed blob still matches the latest AI edit. |
-| Gemini CLI | Preview | File-level | Hook-based capture with normal `git commit` support through the generated git hooks |
+| Claude Code | Full support | Line estimates by default | Uses native hooks to recover the conversation. |
+| Codex CLI | Preview | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |
+| Cursor | Supported | Changed files by default | Uses Cursor edit hooks. Can estimate AI-written lines only when the committed file still matches the last AI edit. |
+| Gemini CLI | Preview | Changed files | Uses generated hooks to capture conversations and normal `git commit` runs. |
 
 ## Check Your Setup
 
@@ -194,13 +194,13 @@ This posts an AI session report to the PR description:
 You prompt your coding agent
         │
         ▼
-Hooks capture the prompt and session metadata
+Hooks save the conversation and session info
         │
         ▼
 The agent edits files
         │
         ▼
-Hooks or local transcripts record files touched and attribution signals
+Hooks or local transcripts record which files changed
         │
         ▼
 You run `git commit`
@@ -215,7 +215,7 @@ You run `git push`
 `refs/notes/agentnote` is pushed alongside your branch
 ```
 
-For the detailed flow, attribution rules, and schema, see [How it works](https://wasabeef.github.io/AgentNote/how-it-works/).
+For the detailed flow, how Agent Note estimates AI-written work, and the stored schema, see [How it works](https://wasabeef.github.io/AgentNote/how-it-works/).
 
 ## Commands
 
@@ -336,13 +336,13 @@ $ git notes --ref=agentnote show ce941f7
 - Agent Note is local-first. The core CLI works without a hosted service.
 - Temporary session data is stored under `.git/agentnote/` inside your repository.
 - The permanent record is stored in `refs/notes/agentnote`, not in tracked source files.
-- For transcript-driven agents, Agent Note reads local transcript files from the agent's own data directory.
+- For agents that keep local conversation logs, Agent Note reads those files from the agent's own data directory.
 - The CLI does not send telemetry.
 - Commit tracking is best-effort. If Agent Note fails during a hook, your `git commit` still succeeds.
 
 ## Design
 
-Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
+Zero runtime dependencies · Git notes storage · Never breaks `git commit` · No telemetry · Agent-agnostic architecture
 
 [Architecture details →](docs/architecture.md)
 

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="Agent Note — AI conversations saved to git" width="720">
+  <img src="docs/assets/hero.png" alt="Agent Note — AI との会話を Git に保存" width="720">
 </p>
 
 <p align="center">
@@ -17,11 +17,11 @@
 <p align="center"><strong>コードが<em>何に</em>変わったかだけでなく、<em>なぜ</em>変わったかを残します。</strong></p>
 
 <p align="center">
-Agent Note は prompt、response、AI が触ったファイルを記録し、その文脈を git commit に紐づけます。agent が十分な edit history を出せる場合は line-level attribution まで行います。
+Agent Note は、AI との会話と変更されたファイルを Commit ごとに残します。対応している Agent では、AI が書いた行の目安も表示できます。
 </p>
 
 <p align="center">
-<code>git log</code> に、その変更の裏側にある AI conversation を足すものだと考えてください。
+<code>git log</code> に、その変更の裏側にある AI との会話を足すものだと考えてください。
 </p>
 
 <p align="center">
@@ -34,29 +34,29 @@ Agent Note は prompt、response、AI が触ったファイルを記録し、そ
 
 ## なぜ Agent Note か
 
-- AI-assisted commit の prompt と response を後から確認できます。
-- AI-authored files と AI ratio を Pull Request 上で確認できます。
-- 共有 Dashboard で commit 履歴を読みやすい流れとして開けます。
-- データは `refs/notes/agentnote` に残る git-native 方式です。hosted service も telemetry もありません。
+- AI が関わった Commit で、どんな会話があったかを後から確認できます。
+- Pull Request 上で、AI が編集を手伝ったファイルと AI の関与度の目安を確認できます。
+- 共有 Dashboard で Commit 履歴を読みやすい流れとして開けます。
+- データは `refs/notes/agentnote` に残る Git-native 方式です。Hosted Service も Telemetry もありません。
 
 ## 要件
 
 - Git
 - Node.js 20 以上
-- 対応している coding agent のインストールと認証
+- 対応している Coding Agent のインストールと認証
 
 ## Quick Start
 
-1. coding agent に Agent Note を有効化します。
+1. Coding Agent に Agent Note を有効化します。
 
 ```bash
 npx agent-note init --agent claude
 # または: codex / cursor / gemini
 ```
 
-clone 後に各 developer が一度だけ実行してください。
+Clone 後に各開発者が一度だけ実行してください。
 
-同じリポジトリで複数 agent を有効化できます。
+同じリポジトリで複数 Agent を有効化できます。
 
 ```bash
 npx agent-note init --agent claude cursor
@@ -68,7 +68,7 @@ GitHub Pages の共有 Dashboard も使う場合:
 npx agent-note init --agent claude --dashboard
 ```
 
-2. 生成されたファイルを commit して push します。
+2. 生成されたファイルを Commit して Push します。
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .claude/settings.json
@@ -78,37 +78,37 @@ git commit -m "chore: enable agent-note"
 git push
 ```
 
-- Claude Code: `.claude/settings.json` を commit
-- Codex CLI: `.codex/config.toml` と `.codex/hooks.json` を commit
-- Cursor: `.cursor/hooks.json` を commit
-- Gemini CLI: `.gemini/settings.json` を commit
+- Claude Code: `.claude/settings.json` を Commit
+- Codex CLI: `.codex/config.toml` と `.codex/hooks.json` を Commit
+- Cursor: `.cursor/hooks.json` を Commit
+- Gemini CLI: `.gemini/settings.json` を Commit
 
 3. いつもの `git commit` の流れをそのまま使います。
 
-生成された git hooks が入っていれば、Agent Note は commit を自動記録します。git hooks が使えない場合だけ、代替手段として `agent-note commit -m "..."` を使ってください。
+生成された Git Hooks が入っていれば、Agent Note は Commit を自動記録します。Git Hooks が使えない場合だけ、代替手段として `agent-note commit -m "..."` を使ってください。
 
 ## 保存するもの
 
-Agent Note は commit の文脈を保存します。
+Agent Note は Commit の文脈を保存します。
 
-- `prompt` / `response`: 変更に至った会話
-- `contexts[]`: prompt が短すぎるときに `📝 Context` として表示される display-only な補足
+- 会話: 変更につながった依頼と AI の返答
+- Context: 依頼だけでは短すぎるときに `📝 Context` として表示される補足
 
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
-- `files`: 変更されたファイルと AI が触ったかどうか
-- `attribution`: AI ratio、method、取得できる場合は line counts
+- ファイル: 変更されたファイルと、AI が編集に関わったかどうか
+- AI の割合: Commit 全体の目安。推定できる場合は行数も表示
 
-一時的な session data は `.git/agentnote/` に置かれます。永続的な record は `refs/notes/agentnote` に保存され、`git push` で共有されます。
+一時的な Session Data は `.git/agentnote/` に置かれます。永続的な Record は `refs/notes/agentnote` に保存され、`git push` で共有されます。
 
 ## Agent Support
 
-| Agent | Status | Attribution | Notes |
+| Agent | Status | 表示できる粒度 | Notes |
 | --- | --- | --- | --- |
-| Claude Code | Full support | Line-level by default | Hook-native prompt / response recovery |
-| Codex CLI | Preview | File-level by default | Transcript-driven。transcript の `apply_patch` count が final commit diff と一致した場合だけ line-level に昇格します。transcript を読めない場合は、不確かな data を書く代わりに note 作成を skip します。 |
-| Cursor | Supported | File-level by default | `afterFileEdit` / `afterTabFileEdit` hooks を使います。committed blob が latest AI edit と一致している場合だけ line-level に昇格します。 |
-| Gemini CLI | Preview | File-level | generated git hooks により、hook-based capture と通常の `git commit` をサポートします。 |
+| Claude Code | Full support | AI が書いた行の目安まで表示 | Native Hooks で会話を復元します。 |
+| Codex CLI | Preview | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |
+| Cursor | Supported | 通常は変更ファイルまで表示 | Cursor の Edit Hooks を使います。Commit に入ったファイルが最後の AI 編集と一致する場合だけ、AI が書いた行の目安も表示できます。 |
+| Gemini CLI | Preview | 変更ファイルまで表示 | Generated Hooks で会話と通常の `git commit` を記録します。 |
 
 ## Setup を確認する
 
@@ -128,11 +128,11 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` は有効な agent adapters を示します。`capture:` は active agent hooks が何を収集するかを要約します。`git:` は managed repository-local git hooks が入っているかを示します。`commit:` は primary tracking path を示します。git hooks が active なら通常の `git commit`、fallback mode なら `agent-note commit` を優先します。
+`agent:` は有効な Agent Adapters を示します。`capture:` は Active Agent Hooks が何を収集するかを要約します。`git:` は Managed Repository-Local Git Hooks が入っているかを示します。`commit:` は Primary Tracking Path を示します。Git Hooks が Active なら通常の `git commit`、Fallback Mode なら `agent-note commit` を優先します。
 
 ## 得られるもの
 
-### すべての commit に文脈が残る
+### すべての Commit に文脈が残る
 
 ```
 $ npx agent-note show
@@ -173,7 +173,7 @@ ba091be fix: update dependencies
 $ npx agent-note pr --output description --update 42
 ```
 
-これは AI session report を PR description に投稿します。
+これは AI Session Report を PR Description に投稿します。
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -191,44 +191,44 @@ $ npx agent-note pr --output description --update 42
 ## 仕組み
 
 ```
-coding agent に prompt を送る
+Coding Agent に Prompt を送る
         │
         ▼
-hooks が prompt と session metadata を記録する
+Hooks が会話と Session 情報を記録する
         │
         ▼
-agent がファイルを編集する
+Agent がファイルを編集する
         │
         ▼
-hooks または local transcripts が touched files と attribution signals を記録する
+Hooks または Local Transcripts が変更されたファイルを記録する
         │
         ▼
 `git commit` を実行する
         │
         ▼
-Agent Note がその commit に git note を書く
+Agent Note がその Commit に Git Note を書く
         │
         ▼
 `git push` を実行する
         │
         ▼
-`refs/notes/agentnote` が branch と一緒に push される
+`refs/notes/agentnote` が Branch と一緒に push される
 ```
 
-詳しい flow、attribution rules、schema は [仕組み](https://wasabeef.github.io/AgentNote/ja/how-it-works/) を参照してください。
+詳しい Flow、AI が関わった割合の出し方、保存形式は [仕組み](https://wasabeef.github.io/AgentNote/ja/how-it-works/) を参照してください。
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `agent-note init` | hooks、workflow、git hooks、notes auto-fetch を設定します |
-| `agent-note deinit` | agent の hooks と config を削除します |
-| `agent-note show [commit]` | `HEAD` または commit SHA の AI session を表示します |
-| `agent-note log [n]` | recent commits と AI ratio を一覧します |
-| `agent-note pr [base]` | PR Report を生成します (markdown または JSON) |
-| `agent-note session <id>` | 1 つの session に紐づく全 commit を表示します |
-| `agent-note commit [args]` | git hooks が使えない場合の `git commit` fallback wrapper |
-| `agent-note status` | tracking state を表示します |
+| `agent-note init` | Hooks、Workflow、Git Hooks、Notes auto-fetch を設定します |
+| `agent-note deinit` | Agent の Hooks と Config を削除します |
+| `agent-note show [commit]` | `HEAD` または Commit SHA の AI Session を表示します |
+| `agent-note log [n]` | Recent Commits と AI Ratio を一覧します |
+| `agent-note pr [base]` | PR Report を生成します (Markdown または JSON) |
+| `agent-note session <id>` | 1 つの Session に紐づく全 Commit を表示します |
+| `agent-note commit [args]` | Git Hooks が使えない場合の `git commit` Fallback wrapper |
+| `agent-note status` | Tracking state を表示します |
 
 ## GitHub Action
 
@@ -245,7 +245,7 @@ PR Report Mode が既定です。
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-prompt 履歴を絞る、または全件表示する場合は `prompt_detail` に `compact` / `full` を指定できます。既定は `compact` です。`compact` は commit の説明に必要な prompt を中心に表示し、`full` は保存された prompt をすべて表示します。
+Prompt 履歴を絞る、または全件表示する場合は `prompt_detail` に `compact` / `full` を指定できます。既定は `compact` です。`compact` は Commit の説明に必要な Prompt を中心に表示し、`full` は保存された Prompt をすべて表示します。
 
 Dashboard Mode は同じ action に `dashboard: true` を渡します。
 
@@ -258,15 +258,15 @@ Dashboard Mode は同じ action に `dashboard: true` を渡します。
 
 ### Dashboard データ
 
-ほとんどのリポジトリでは workflow を手書きする必要はありません。`init` で生成できます。
+ほとんどのリポジトリでは Workflow を手書きする必要はありません。`init` で生成できます。
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-`.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` を commit し、GitHub Pages の source に `GitHub Actions` を選んでから `/dashboard/` を開きます。
+`.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` を Commit し、GitHub Pages の Source に `GitHub Actions` を選んでから `/dashboard/` を開きます。
 
-既存の GitHub Pages site がある場合は、安全に同居させる方法を [Dashboard docs](https://wasabeef.github.io/AgentNote/ja/dashboard/) で確認してください。
+既存の GitHub Pages Site がある場合は、安全に同居させる方法を [Dashboard Docs](https://wasabeef.github.io/AgentNote/ja/dashboard/) で確認してください。
 
 <details>
 <summary>Full example with outputs</summary>
@@ -333,16 +333,16 @@ $ git notes --ref=agentnote show ce941f7
 
 ## Security & Privacy
 
-- Agent Note は local-first です。core CLI は hosted service なしで動作します。
-- 一時的な session data はリポジトリ内の `.git/agentnote/` に保存されます。
-- 永続的な record は tracked source files ではなく `refs/notes/agentnote` に保存されます。
-- Transcript-driven agents の場合、Agent Note は agent 自身の data directory にある local transcript files を読みます。
-- CLI は telemetry を送信しません。
-- Commit tracking は best-effort です。hook 中に Agent Note が失敗しても `git commit` は成功します。
+- Agent Note は Local-first です。Core CLI は Hosted Service なしで動作します。
+- 一時的な Session Data はリポジトリ内の `.git/agentnote/` に保存されます。
+- 永続的な Record は Tracked Source Files ではなく `refs/notes/agentnote` に保存されます。
+- Local Transcript を保存する Agent の場合、Agent Note は Agent 自身の Data Directory にあるファイルを読みます。
+- CLI は Telemetry を送信しません。
+- Commit Tracking は Best-effort です。Hook 中に Agent Note が失敗しても `git commit` は成功します。
 
 ## Design
 
-Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
+Zero runtime dependencies · Git notes storage · Never breaks `git commit` · No telemetry · Agent-agnostic architecture
 
 [アーキテクチャ詳細 →](docs/architecture.md)
 
