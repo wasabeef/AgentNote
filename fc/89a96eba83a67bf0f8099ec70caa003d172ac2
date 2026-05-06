@@ -1,0 +1,157 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-06T01:38:51.589Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "PR 作成して",
+      "response": "Draft PR 作成しました。\n\nhttps://github.com/wasabeef/AgentNote/pull/54\n\n`docs/prompt-window-policy-follow-up` → `main`、タイトルは `refactor: extract prompt window policy` です。May the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "プロンプト出力を確認し、妥当性チェックして",
+      "response": "PR #54 に出ている Agent Note の prompt 履歴を確認して、今回の作業範囲に対して「古いタスク混入」「重要な指示の欠落」「compact filtering の過剰さ」がないか見ます。まず PR body / comment の実出力を取得します。\nPR body とローカル再生成の両方を見ました。実 PR body 側の Dashboard link は `?pr=54` 付きで正しく、ローカル CLI 再生成では Action context がないため `?pr=` なしになっています。次に `full` で hidden prompt も含めて過剰/欠落を確認します。\n`full` では `commit push` などの操作プロンプトも見えますが、PR body の `compact` では落ちています。表示されている PR #53 系の prompt がなぜ残ったかを、note 内の selection evidence でも確認します。\nPR #54 の prompt 出力を確認しました。結論、**今回の出力は概ね妥当で、今すぐ修正が必要な混入はありません**。\n\n見たポイントです。\n\n- `fd1e05e refactor: document TypeScript boundaries` は妥当です。`TSDoc がしっかり整備されていない他のts...` が主 prompt で、Context も「どこを調べたか」「検証済み」が出ていて読みやすいです。\n- `fb2283c refactor(record): extract prompt window policy` に PR #53 系の prompt が出ていますが、これは完全な無関係ではありません。PR #53 のレビューで `selectCommitPromptWindow()` の保守性 follow-up が発見され、それを `docs/knowledge/investigations.md` に残し、今回の `prompt-window.ts` 抽出に繋がっているため、因果としては妥当です。\n- `PRの出力確認して` や `commit push` は `full` では出ますが、PR body の `compact` では落ちています。これは期待通りです。\n- `ちゃんと、TSdoc 忘れずに...` が 2 回出ていますが、1 回目は docs / architecture / prompt-window の TSDoc、2 回目は内部 helper まで厚めに見直した流れなので、重複というより追加指示として自然です。\n- PR body は `9 shown / 12 total` で、操作系・低情報 prompt を隠せています。過剰フィルターにも見えません。\n\n気になる点をあえて言うなら、`https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして` は初見だと「前 PR の話では？」と見えます。ただ、その response が今回の follow-up の根拠になっているので、現状の Context / prompt selection としては許容範囲です。\n\nMay the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューしてはどうなの？",
+      "response": "これは **compact に出る prompt としては微妙、むしろ出さないほうが自然** だと思います。\n\n理由はこうです。\n\n`https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして` は、今回の PR #54 の直接作業ではなく、前段の調査・レビューです。response の中で `prompt-window.ts` へ切り出す follow-up が出ているので因果はありますが、ユーザーが PR #54 を読むと「なぜ PR #53 レビューの prompt がここに？」となりやすいです。\n\nいま表示されている理由は、response 側に `docs/knowledge/investigations.md` や `prompt-window.ts` につながる structural anchor があり、compact の medium/high 判定に乗っているためです。ただしこれは **response が有用な背景を含む** だけで、prompt 自体は **今回の作業指示ではない**。\n\n理想はたぶんこうです。\n\n- `full`: 表示してよい\n- `compact`: 非表示、または後続 prompt の `📝 Context` に吸収\n- 表示すべき本筋: `docs/knowledge/investigations.md に残しといて`、`作業を開始してテスト・レビューして`、`TSDoc...`\n\nつまり今回のケースは、**「前段調査 prompt が main prompt として昇格しすぎている」false positive** です。修正するなら、`source=window` かつ `files_touched` なしで、後続 primary prompt に同じ作業 anchor がある場合は compact では落として Context に寄せる、という方向が良さそうです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "それは可能なの？",
+      "response": "可能です。しかも **git note の schema や attribution を変えずに、render-time の compact filter だけで対応できる** ので、比較的安全です。\n\nやるなら方針はこれがよさそうです。\n\n`compact` では、次の条件を満たす window prompt を落とす。\n\n- `source: \"window\"`\n- `files_touched` がない\n- `primary_edit_turn` / `exact_commit_path` がない\n- 表示理由が主に `response_exact_commit_path` / `response_basename_or_identifier`\n- 後続に、同じ commit 内で実際に file touch した primary prompt がある\n- その後続 primary prompt が同じ file / identifier / docs anchor を持っている\n\nこの場合、前段の `https://github.com/.../pull/53 を5回はレビューして` は「作業そのもの」ではなく「後続作業の背景調査」なので、`compact` では隠す。`full` では残す。\n\nただし、いきなり Context に自動吸収するのは少し危ないです。Context として出すには「どの後続 prompt にぶら下げるか」を決める必要があり、ここで間違えるとまた別の違和感が出ます。まずは **compact で非表示、full では表示** が一番クリーンです。\n\n実装難易度は中くらいです。`report.ts` だけでやるより、`entry.ts` 側の runtime selection / render decision に「later primary absorbs this background window」みたいな判定を足すのがよいです。テストは PR #54 の実例を fixture 化して、`PR #53 を5回レビューして` が compact で落ち、full で残ることを確認できます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "他に影響は？",
+      "response": "影響はあります。ただし **render-time filter に閉じれば、AI ratio / attribution / git note 保存 / Agent 別 record 処理には影響させずに済みます**。\n\n主な影響はこのあたりです。\n\n- `compact` の表示件数が少し減ります。今回の `PR #53 を5回はレビューして` のような「前段調査だけど、response に後続作業の anchor がある prompt」が隠れやすくなります。\n- `full` は変わりません。調査履歴を全部見たい人は引き続き見られます。\n- git note の `interactions[]` 自体は変えないので、過去データ migration は不要です。\n- Codex / Claude / Cursor / Gemini の hook / record には直接影響しません。全 Agent 共通の PR Report / Dashboard 表示ロジックだけの変更にできます。\n- Dashboard も同じ filter を使っているなら同様に compact 表示が変わります。PR Report だけに入れると表示差分が出るので、共通化するほうがよいです。\n\nリスクもあります。\n\n- 前段調査が本当に重要な場合に compact から落ちる可能性があります。たとえば「この設計でいこう」と決めた review prompt が files_touched なしでも、後続実装の根拠として大事なことがあります。\n- `response_*` anchor だけで救っていた短い prompt が落ちすぎる可能性があります。特に「レビューして」「調査して」系は prompt 自体が薄く、response にしか意味がないことが多いです。\n- 「後続 primary に吸収された」と判定するには順序と anchor の一致を見る必要があり、雑にやるとまた heuristic が増えます。\n\nなので実装するなら、かなり保守的にしたいです。\n\n`compact` で落とす対象は、`source=window` かつ `files_touched` なし、さらに `selection.signals` が response anchor 中心で、後続に同じ anchor を持つ primary edit prompt がある場合だけ。`primary_edit_turn` や `exact_commit_path` を持つものは落とさない。\n\nこの方針なら、今回の違和感は減らせて、過剰 filter のリスクもかなり抑えられます。やる前に PR #54 / #53 / #52 あたりの実データで compact 差分を出して確認するのが安全です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "以前、3回レビューしてを出すような変更加えてるけど、その塩梅は？",
+      "response": "塩梅としては、**「レビューして」系を全部出す / 全部消す、どちらも違う**です。\n\n以前の変更で出したかったのは、たとえば以下のような prompt です。\n\n`自己レビューを5回やって`  \n`3回観点を変えてレビューして`  \n`PR 全体をレビュー・修正して`\n\nこれは、その commit の品質担保・修正方針に直接つながるので、compact でも残る価値があります。特に response に「何を確認して、何を直したか」が入っている場合、PR を読む人にとって有用です。\n\n一方で今回のこれは少し違います。\n\n`https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして`\n\nこれは **PR #54 の作業そのものではなく、前 PR のレビュー**です。後続の `docs/knowledge/investigations.md に残しといて` や `作業を開始してテスト・レビューして` によって、PR #54 の作業へ変換されています。なので main prompt として出るより、後続 prompt の Context に吸収されるか、compact では落ちるほうが自然です。\n\nつまり基準はこうです。\n\n- 残す: 現在の commit / PR の変更をレビューして、そのまま修正や検証につながった review prompt\n- 落とす: 過去 PR / 前段調査 / 別タスクの review prompt で、後続の primary prompt が作業内容を十分に説明しているもの\n- full: どちらも残す\n- compact: 「今回の commit を理解するのに直接必要なもの」だけ残す\n\n今回のケースで言うと、`3回レビューして` 系を救う設計は維持しつつ、**過去 PR review が current commit の主 prompt として昇格しすぎるケースだけ抑える**のがよさそうです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "よさそう、修正して",
+      "response": "`compact` で「過去 PR の review prompt が主 prompt として出すぎる」ケースだけを抑える方向で実装します。まず現在の prompt detail 判定がどこで共通化されているかを確認し、PR Report と Dashboard の表示差が出ないようにします。\n今回の塩梅は「レビューして」そのものは残す、ただし `https://.../pull/53` のような外部 / 過去 PR 参照だけが根拠になっている window prompt は compact で抑える、にします。これなら以前入れた「自己レビューを出す」挙動を壊さず、今回の違和感だけを狙えます。\n実装は render-time の compact filter に閉じました。git note 保存・AI ratio・agent adapter には触れていません。これから focused tests を回して、PR #54 型の prompt が compact で落ち、current review は残ることを確認します。\nPR Report の focused test は pass しました。CLI 側は test command の都合で全体が走り始めているので、そのまま完走させて副作用がないか確認します。\n全 Agent 経路を含む CLI full test は 388/388 pass しました。次に lint / build と bundle 再生成をして、実際の PR 出力がどう変わるかをローカルで確認します。\nローカル再生成では `https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして` が compact から消え、`8 shown / 12 total` になりました。一方で current work review と TSDoc 指示は残っています。最後に差分を自己レビューします。\n自己レビューで、`#123` のような短い Issue 参照まで隠すと「Fix #123」系の本題 prompt を落とすリスクがあると判断しました。今回の対象は URL 付きの外部 PR review なので、filter は GitHub PR / Issue URL に限定して安全側に寄せます。\nURL 限定にして、`Fix #123` のような current issue prompt は compact に残る regression も追加しました。focused test を再実行します。\n修正しました。`compact` では、`https://github.com/.../pull/53` のような外部 PR / Issue URL review prompt が、後続の primary edit prompt に吸収されている場合だけ非表示にします。`3 回レビューして` のような current work review prompt は残るようにしています。\n\nローカルで PR #54 出力を再生成した結果、`https://github.com/wasabeef/AgentNote/pull/53 を5回はレビューして` は消え、`9 shown / 12 total` から `8 shown / 12 total` になりました。`full` では引き続き保存済み prompt として見られます。\n\n確認済みです。\n\n- `node --import tsx/esm --test packages/cli/src/core/entry.test.ts`: pass\n- `npm -w packages/pr-report test`: 36/36 pass\n- `npm -w packages/cli run typecheck`: pass\n- `npm -w packages/cli run lint`: pass\n- `npm -w packages/cli run build`: pass\n- `npm -w packages/pr-report run build`: pass\n- `git diff --check`: pass\n\n未コミットです。commit / push するなら指示ください。May the Force be with you.",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/pr-report/src/report.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/pr-report/src/report.test.ts",
+        "docs/knowledge/prompt-selection.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "commit push",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/prompt-selection.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  }
+}
