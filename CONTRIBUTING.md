@@ -212,6 +212,18 @@ test(init): add legacy hook migration test
 docs(readme): add example output section
 ```
 
+Release notes are generated from commit messages. If a change should appear
+in the next release, prefer a user-facing `feat:`, `fix:`, or `perf:` subject.
+Internal commits (`docs:`, `test:`, `refactor:`, `ci:`, `chore:`, `build:`)
+are hidden from release notes unless their body includes a public summary:
+
+```
+Release note: Compact PR reports now hide absorbed external review prompts.
+```
+
+Use `Release note: skip` when a public-looking commit should stay out of the
+release notes.
+
 ## Testing Guidelines
 
 ### Running Tests

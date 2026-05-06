@@ -9,21 +9,46 @@ body = """
     ## [Unreleased]
 {% endif -%}
 {% for group, commits in commits | group_by(attribute="group") %}
-    ### {{ group | upper_first }}
-    {% for commit in commits -%}
-        - {{ commit.message | split(pat="\n") | first | trim }}
+    {% set_global visible_commits = 0 %}
+    {% for commit in commits %}
+        {% if group != "Changed" or (commit.body and "Release note:" in commit.body) %}
+            {% set_global visible_commits = visible_commits + 1 %}
+        {% endif %}
     {% endfor %}
+    {% if visible_commits > 0 %}
+        ### {{ group | upper_first }}
+        {% for commit in commits %}
+            {% if group != "Changed" or (commit.body and "Release note:" in commit.body) %}
+                {% if commit.body and "Release note:" in commit.body -%}
+                    - {{ commit.body | split(pat="Release note:") | last | split(pat="\n") | first | trim }}
+                {% else -%}
+                    - {{ commit.message | split(pat="\n") | first | trim }}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 {% endfor %}\n
 """
 trim = true
+postprocessors = [
+    { pattern = '\n{3,}', replace = "\n\n" },
+    { pattern = '\n\n-', replace = "\n-" },
+]
 
 [git]
 conventional_commits = true
-filter_unconventional = false
+filter_unconventional = true
 commit_parsers = [
+    # `Release note:` lives in the commit body. `Release note: skip` lets a
+    # public-looking fix/feat stay out of the generated GitHub Release.
+    { body = "Release note: skip", skip = true },
+    # Release plumbing should never become user-facing release copy.
+    { message = "^chore: bump version", skip = true },
+    { message = "^build\\(cli\\): sync generated bundle", skip = true },
     { message = "^feat", group = "Added" },
     { message = "^fix", group = "Fixed" },
     { message = "^perf", group = "Fixed" },
+    # Internal commit types are only rendered when the body has `Release note:`.
     { message = "^refactor", group = "Changed" },
     { message = "^test", group = "Changed" },
     { message = "^docs", group = "Changed" },
@@ -32,7 +57,6 @@ commit_parsers = [
     { message = "^build", group = "Changed" },
     { message = ".*deprecated", group = "Deprecated" },
     { message = ".*security", group = "Security" },
-    { message = "^.*", group = "Changed" },
 ]
-filter_commits = false
+filter_commits = true
 sort_commits = "oldest"

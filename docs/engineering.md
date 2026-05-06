@@ -82,3 +82,35 @@ rmSync(path, { force: true });
 - Dashboard workflow を触ったら `packages/dashboard` の test / build を確認する。
 - PR Report rendering や Action input を触ったら `packages/pr-report` の test / build を確認する。
 - CLI core / agent adapter を触ったら `packages/cli` の build、typecheck、lint、test を確認する。
+
+## Commit messages and release notes
+
+Release notes are generated from commits by `git-cliff`. Treat every commit
+subject as public copy unless the commit type is intentionally internal.
+
+- Use `feat:`, `fix:`, or `perf:` when users should see the change in the next release note.
+- Use `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, or `build:` for internal work that should normally stay out of release notes.
+- If an internal-looking commit has public impact, add a body line: `Release note: <one clear user-facing sentence>`.
+- If a public-looking commit should be hidden, add `Release note: skip`.
+- Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.
+- Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.
+
+Good commit body shape:
+
+```text
+Why
+The PR report showed absorbed external review prompts in compact mode.
+
+User impact
+Compact PR reports now focus on prompts that directly explain the current change.
+
+Verification
+- npm -w packages/cli test
+- npm -w packages/pr-report test
+
+Release note: Compact PR reports now hide absorbed external review prompts.
+```
+
+Use `Release note: skip` for commits like version bumps, generated bundles,
+test-only coverage, local refactors without behavior changes, and docs-only
+maintenance that does not change user-facing guidance.
