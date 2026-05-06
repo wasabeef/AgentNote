@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="Agent Note — AI conversations saved to git" width="720">
+  <img src="docs/assets/hero.png" alt="Agent Note — conversas com AI salvas no Git" width="720">
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 <p align="center"><strong>Saiba <em>por que</em> seu código mudou, não apenas <em>o que</em> mudou.</strong></p>
 
 <p align="center">
-Agent Note registra cada prompt, response e arquivo atribuído à AI, e então anexa esse contexto aos seus commits git. Ele alcança line-level attribution quando o agent expõe histórico de edição suficiente.
+Agent Note salva a conversa com a AI e os arquivos alterados em cada Commit. Quando há detalhes suficientes, ele também mostra uma estimativa prática de quanto da mudança veio da AI.
 </p>
 
 <p align="center">
@@ -34,29 +34,29 @@ Pense nele como <code>git log</code> mais a conversa de AI por trás da mudança
 
 ## Por que Agent Note
 
-- Veja o prompt e a response por trás de cada commit assistido por AI.
-- Revise AI-authored files e AI ratio diretamente na Pull Request.
-- Abra um Dashboard compartilhado que transforma o histórico de commits em uma story legível.
-- Mantenha os dados git-native em `refs/notes/agentnote` — sem hosted service, sem telemetry.
+- Veja a conversa com a AI por trás de cada Commit assistido.
+- Revise na Pull Request os arquivos que a AI ajudou a editar e a participação estimada da AI.
+- Abra um Dashboard compartilhado que transforma o histórico de Commits em uma história legível.
+- Mantenha os dados Git-native em `refs/notes/agentnote` — sem Hosted Service, sem Telemetry.
 
 ## Requisitos
 
 - Git
 - Node.js 20 ou mais recente
-- Um coding agent compatível, instalado e autenticado
+- Um Coding Agent compatível, instalado e autenticado
 
 ## Quick Start
 
-1. Habilite Agent Note para seu coding agent.
+1. Habilite Agent Note para seu Coding Agent.
 
 ```bash
 npx agent-note init --agent claude
 # ou: codex / cursor / gemini
 ```
 
-Cada developer deve executar isso uma vez localmente após clonar.
+Cada desenvolvedor deve executar isso uma vez localmente após clonar.
 
-Você pode habilitar mais de um agent no mesmo repository:
+Você pode habilitar mais de um Agent no mesmo Repository:
 
 ```bash
 npx agent-note init --agent claude cursor
@@ -68,7 +68,7 @@ Se também quiser o shared Dashboard no GitHub Pages:
 npx agent-note init --agent claude --dashboard
 ```
 
-2. Faça commit dos arquivos gerados e push.
+2. Faça Commit dos arquivos gerados e Push.
 
 ```bash
 git add .github/workflows/agentnote-pr-report.yml .claude/settings.json
@@ -78,39 +78,39 @@ git commit -m "chore: enable agent-note"
 git push
 ```
 
-- Claude Code: commit `.claude/settings.json`
-- Codex CLI: commit `.codex/config.toml` e `.codex/hooks.json`
-- Cursor: commit `.cursor/hooks.json`
-- Gemini CLI: commit `.gemini/settings.json`
+- Claude Code: Commit `.claude/settings.json`
+- Codex CLI: Commit `.codex/config.toml` e `.codex/hooks.json`
+- Cursor: Commit `.cursor/hooks.json`
+- Gemini CLI: Commit `.gemini/settings.json`
 
-3. Continue usando seu workflow normal de `git commit`.
+3. Continue usando seu Workflow normal de `git commit`.
 
-Com os git hooks gerados instalados, Agent Note registra commits automaticamente. Use `agent-note commit -m "..."` apenas como fallback quando os git hooks não estiverem disponíveis.
+Com os Git Hooks gerados instalados, Agent Note registra Commits automaticamente. Use `agent-note commit -m "..."` apenas como Fallback quando os Git Hooks não estiverem disponíveis.
 
 ## Dados salvos
 
-Agent Note salva a história do commit:
+Agent Note salva a história do Commit:
 
-- `prompt` / `response`: a conversa por trás da mudança
-- `contexts[]`: dicas display-only mostradas como `📝 Context` quando um prompt é curto demais
+- Conversa: o pedido e a resposta da AI que levaram à mudança
+- Contexto: notas curtas mostradas como `📝 Context` quando o pedido sozinho é curto demais
 
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
-- `files`: arquivos modificados e se a AI tocou neles
-- `attribution`: AI ratio, método e line counts quando disponíveis
+- Arquivos: arquivos modificados e se a AI ajudou a Editá-los
+- Participação da AI: uma porcentagem geral, mais contagem de linhas quando Agent Note consegue estimar
 
-Temporary session data ficam em `.git/agentnote/`. O permanent record fica em `refs/notes/agentnote` e é compartilhado com `git push`.
+Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `refs/notes/agentnote` e é compartilhado com `git push`.
 
 ## Agent Support
 
-| Agent | Status | Attribution | Notes |
+| Agent | Status | Detalhe | Notes |
 | --- | --- | --- | --- |
-| Claude Code | Full support | Line-level por padrão | Hook-native prompt / response recovery |
-| Codex CLI | Preview | File-level por padrão | Transcript-driven. Line-level só é promovido quando os counts de `apply_patch` do transcript batem com o final commit diff. Se o transcript não puder ser lido, Agent Note pula a criação da note em vez de gravar dados incertos. |
-| Cursor | Supported | File-level por padrão | Usa hooks `afterFileEdit` / `afterTabFileEdit`. Line-level só é promovido quando o committed blob ainda corresponde ao latest AI edit. |
-| Gemini CLI | Preview | File-level | Hook-based capture com suporte a `git commit` normal por meio dos git hooks gerados |
+| Claude Code | Full support | Estimativa por linha por padrão | Usa Native Hooks para recuperar a conversa. |
+| Codex CLI | Preview | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |
+| Cursor | Supported | Por arquivo por padrão | Usa Cursor Edit Hooks. Pode estimar linhas escritas pela AI apenas quando o arquivo no Commit ainda corresponde ao último Edit da AI. |
+| Gemini CLI | Preview | Por arquivo | Usa Generated Hooks para registrar conversas e execuções normais de `git commit`. |
 
-## Verifique o setup
+## Verifique o Setup
 
 ```bash
 npx agent-note status
@@ -128,11 +128,11 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` mostra quais agent adapters estão habilitados. `capture:` resume o que os active agent hooks coletam. `git:` mostra se os managed repository-local git hooks estão instalados. `commit:` indica o primary tracking path: `git commit` normal quando git hooks estão ativos, ou fallback mode quando você deve preferir `agent-note commit`.
+`agent:` mostra quais Agent Adapters estão habilitados. `capture:` resume o que os Active Agent Hooks coletam. `git:` mostra se os Managed Repository-Local Git Hooks estão instalados. `commit:` indica o Primary Tracking Path: `git commit` normal quando Git Hooks estão ativos, ou Fallback Mode quando você deve preferir `agent-note commit`.
 
 ## O que você recebe
 
-### Todo commit conta sua story
+### Todo Commit conta sua Story
 
 ```
 $ npx agent-note show
@@ -173,7 +173,7 @@ ba091be fix: update dependencies
 $ npx agent-note pr --output description --update 42
 ```
 
-Isso publica um AI session report na PR description:
+Isso publica um AI Session Report na PR Description:
 
 ```
 ## 🧑💬🤖 Agent Note
@@ -191,44 +191,44 @@ Isso publica um AI session report na PR description:
 ## Como funciona
 
 ```
-Você envia um prompt ao coding agent
+Você envia um Prompt ao Coding Agent
         │
         ▼
-hooks capturam o prompt e session metadata
+Hooks salvam a conversa e as informações de Session
         │
         ▼
-O agent edita files
+O Agent edita arquivos
         │
         ▼
-hooks ou local transcripts registram touched files e attribution signals
+Hooks ou Local Transcripts registram quais arquivos mudaram
         │
         ▼
 Você executa `git commit`
         │
         ▼
-Agent Note grava uma git note para esse commit
+Agent Note grava uma Git Note para esse Commit
         │
         ▼
 Você executa `git push`
         │
         ▼
-`refs/notes/agentnote` é enviado junto com a branch
+`refs/notes/agentnote` é enviado junto com a Branch
 ```
 
-Para o flow detalhado, as attribution rules e o schema, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
+Para o Flow detalhado, como Agent Note estima o trabalho escrito pela AI e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
 
 ## Commands
 
 | Command | O que faz |
 | --- | --- |
-| `agent-note init` | Configura hooks, workflow, git hooks e notes auto-fetch |
-| `agent-note deinit` | Remove hooks e config de um agent |
-| `agent-note show [commit]` | Mostra a AI session por trás de `HEAD` ou de um commit SHA |
-| `agent-note log [n]` | Lista recent commits com AI ratio |
-| `agent-note pr [base]` | Gera PR Report (markdown ou JSON) |
-| `agent-note session <id>` | Mostra todos os commits vinculados a uma session |
-| `agent-note commit [args]` | Fallback wrapper em torno de `git commit` quando git hooks não estão disponíveis |
-| `agent-note status` | Mostra o tracking state |
+| `agent-note init` | Configura Hooks, Workflow, Git Hooks e Notes auto-fetch |
+| `agent-note deinit` | Remove Hooks e Config de um Agent |
+| `agent-note show [commit]` | Mostra a AI Session por trás de `HEAD` ou de um Commit SHA |
+| `agent-note log [n]` | Lista Recent Commits com AI Ratio |
+| `agent-note pr [base]` | Gera PR Report (Markdown ou JSON) |
+| `agent-note session <id>` | Mostra todos os Commits vinculados a uma Session |
+| `agent-note commit [args]` | Fallback wrapper em torno de `git commit` quando Git Hooks não estão disponíveis |
+| `agent-note status` | Mostra o Tracking state |
 
 ## GitHub Action
 
@@ -245,7 +245,7 @@ PR Report Mode é o default:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-Defina `prompt_detail` como `compact` ou `full` quando quiser um histórico de prompts focado ou completo. O padrão é `compact`: ele mantém o relatório legível mostrando os prompts que explicam o commit, enquanto `full` mostra todos os prompts salvos.
+Defina `prompt_detail` como `compact` ou `full` quando quiser um histórico de Prompts focado ou completo. O padrão é `compact`: ele mantém o relatório legível mostrando os Prompts que explicam o Commit, enquanto `full` mostra todos os Prompts salvos.
 
 Dashboard Mode usa a mesma action com `dashboard: true`:
 
@@ -258,15 +258,15 @@ Dashboard Mode usa a mesma action com `dashboard: true`:
 
 ### Dados do Dashboard
 
-Na maioria dos repositórios, você não precisa escrever o workflow manualmente. Gere com `init`:
+Na maioria dos repositórios, você não precisa escrever o Workflow manualmente. Gere com `init`:
 
 ```bash
 npx agent-note init --agent claude --dashboard
 ```
 
-Depois faça commit de `.github/workflows/agentnote-pr-report.yml` e `.github/workflows/agentnote-dashboard.yml`, habilite GitHub Pages com `GitHub Actions` como source e abra `/dashboard/`.
+Depois faça Commit de `.github/workflows/agentnote-pr-report.yml` e `.github/workflows/agentnote-dashboard.yml`, habilite GitHub Pages com `GitHub Actions` como Source e abra `/dashboard/`.
 
-Se você já tem um site GitHub Pages, veja a configuração combinada segura nas [Dashboard docs](https://wasabeef.github.io/AgentNote/pt-br/dashboard/).
+Se você já tem um Site GitHub Pages, veja a configuração combinada segura nas [Dashboard Docs](https://wasabeef.github.io/AgentNote/pt-br/dashboard/).
 
 <details>
 <summary>Full example with outputs</summary>
@@ -333,16 +333,16 @@ $ git notes --ref=agentnote show ce941f7
 
 ## Security & Privacy
 
-- Agent Note é local-first. O core CLI funciona sem hosted service.
-- Temporary session data são armazenados em `.git/agentnote/` dentro do seu repositório.
-- O permanent record é armazenado em `refs/notes/agentnote`, não em tracked source files.
-- Para transcript-driven agents, Agent Note lê local transcript files do data directory do próprio agent.
-- O CLI não envia telemetry.
-- Commit tracking é best-effort. Se Agent Note falhar durante um hook, seu `git commit` ainda será bem-sucedido.
+- Agent Note é Local-first. O Core CLI funciona sem Hosted Service.
+- Temporary Session Data são armazenados em `.git/agentnote/` dentro do seu repositório.
+- O Permanent Record é armazenado em `refs/notes/agentnote`, não em Tracked Source Files.
+- Para Agents que mantêm logs locais da conversa, Agent Note lê esses arquivos do Data Directory do próprio Agent.
+- O CLI não envia Telemetry.
+- Commit Tracking é Best-effort. Se Agent Note falhar durante um Hook, seu `git commit` ainda será bem-sucedido.
 
 ## Design
 
-Zero runtime dependencies · Git notes storage · Never breaks git commit · No telemetry · Agent-agnostic architecture
+Zero runtime dependencies · Git notes storage · Never breaks `git commit` · No telemetry · Agent-agnostic architecture
 
 [Detalhes da arquitetura →](docs/architecture.md)
 
