@@ -34,7 +34,6 @@ export type PromptSelectionCandidate = {
   promptId?: string;
   source: InteractionSelection["source"];
   isPrimaryTurn: boolean;
-  isEditTurn: boolean;
   isTail: boolean;
   isBeforeCommitBoundary: boolean;
   hasAdjacentNonExcludedPrompt: boolean;
@@ -274,7 +273,6 @@ function buildPromptSelectionCandidate(
     promptId,
     source,
     isPrimaryTurn: source === "primary",
-    isEditTurn: (interaction.files_touched?.length ?? 0) > 0,
     isTail: source === "tail",
     isBeforeCommitBoundary: readPromptSelectionBeforeCommitBoundary(promptEntry),
     hasAdjacentNonExcludedPrompt,
@@ -566,7 +564,6 @@ function buildPromptWindowRow(
     promptId,
     source,
     isPrimaryTurn,
-    isEditTurn: editTurns.has(turn),
     isTail,
     isBeforeCommitBoundary: turn === upperTurn,
     hasAdjacentNonExcludedPrompt: false,
