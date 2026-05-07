@@ -223,7 +223,7 @@ describe("renderMarkdown", () => {
           prompts_count: 0,
           files_total: 0,
           files_ai: 0,
-          files: [],
+          files: [{ path: "untracked-human-only.ts", by_ai: false }],
           interactions: [],
           attribution: null,
         },
@@ -235,6 +235,7 @@ describe("renderMarkdown", () => {
     const reviewerContext = extractReviewerContext(markdown);
 
     assert.ok(!reviewerContext.includes("chore: unrelated human-only commit"));
+    assert.ok(!reviewerContext.includes("untracked-human-only.ts"));
     assert.ok(reviewerContext.includes("Commit: fix: preserve prompt context"));
   });
 

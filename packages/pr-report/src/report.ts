@@ -589,6 +589,8 @@ function collectReviewerChangedAreas(report: PrReport): ReviewerChangedArea[] {
   const areaFiles = new Map<ReviewerAreaId, Set<string>>();
 
   for (const commit of report.commits) {
+    if (commit.session_id === null) continue;
+
     for (const file of commit.files) {
       const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.matches(file.path));
       const id = rule?.id ?? "source";
