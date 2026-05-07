@@ -23,6 +23,8 @@ const REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
 const REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
 const REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
 const REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
+const REVIEWER_CONTEXT_COMMENT_BEGIN = "<!-- agentnote-reviewer-context";
+const REVIEWER_CONTEXT_COMMENT_END = "-->";
 
 type ReviewerAreaId =
   | "pr-report"
@@ -457,11 +459,12 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
 }
 
 /**
- * Build a deterministic reviewer-facing context from stored Agent Note data.
+ * Build deterministic reviewer context as a hidden PR body comment.
  *
- * This is intentionally evidence-oriented rather than a natural-language
- * summary. External review tools can use it as review input, while humans can
- * still inspect the raw prompts and responses in the details section below.
+ * The context is evidence-oriented rather than a natural-language summary.
+ * Keeping it inside an HTML comment avoids adding visual noise for human
+ * reviewers while still making the raw PR body useful to review tools that read
+ * Markdown source.
  */
 function renderReviewerContext(
   report: PrReport,
@@ -477,38 +480,41 @@ function renderReviewerContext(
     return [];
   }
 
-  const lines = [
-    "### Reviewer Context",
-    "",
+  const body = [
     "Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.",
     "",
   ];
 
   if (changedAreas.length > 0) {
-    lines.push("**Changed areas**", "");
+    body.push("Changed areas:", "");
     for (const area of changedAreas) {
-      lines.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
+      body.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
     }
-    lines.push("");
+    body.push("");
   }
 
   if (reviewFocus.length > 0) {
-    lines.push("**Review focus**", "");
+    body.push("Review focus:", "");
     for (const focus of reviewFocus) {
-      lines.push(`- ${focus}`);
+      body.push(`- ${focus}`);
     }
-    lines.push("");
+    body.push("");
   }
 
   if (intentSignals.length > 0) {
-    lines.push("**Author intent signals**", "");
+    body.push("Author intent signals:", "");
     for (const signal of intentSignals) {
-      lines.push(`- ${signal}`);
+      body.push(`- ${signal}`);
     }
-    lines.push("");
+    body.push("");
   }
 
-  return lines;
+  return [
+    REVIEWER_CONTEXT_COMMENT_BEGIN,
+    ...body.map(sanitizeReviewerCommentLine),
+    REVIEWER_CONTEXT_COMMENT_END,
+    "",
+  ];
 }
 
 function collectReviewerChangedAreas(report: PrReport): ReviewerChangedArea[] {
@@ -609,6 +615,10 @@ function formatReviewerSnippet(value: string): string {
 
 function escapeInlineText(value: string): string {
   return value.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function sanitizeReviewerCommentLine(value: string): string {
+  return escapeInlineText(value).replaceAll("--", "- -");
 }
 
 function formatInlineCode(value: string): string {

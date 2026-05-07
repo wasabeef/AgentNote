@@ -181,17 +181,18 @@ This posts an AI session report to the PR description:
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
 
-### Reviewer Context
+<!-- agentnote-reviewer-context
 
 Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.
 
-**Changed areas**
+Changed areas:
 
 - PR Report: `packages/pr-report/src/report.ts`
 
-**Review focus**
+Review focus:
 
 - Check that the PR Report stays readable in the Pull Request description and still preserves the raw evidence below.
+-->
 
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
