@@ -181,6 +181,18 @@ PR Description 에 AI Session Report 를 게시합니다.
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
 
+### Reviewer Context
+
+Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.
+
+**Changed areas**
+
+- PR Report: `packages/pr-report/src/report.ts`
+
+**Review focus**
+
+- Check that the PR Report stays readable in the Pull Request description and still preserves the raw evidence below.
+
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |

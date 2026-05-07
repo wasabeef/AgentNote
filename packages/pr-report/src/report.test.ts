@@ -47,6 +47,139 @@ function baseReport(overrides: Partial<PrReport> = {}): PrReport {
 }
 
 describe("renderMarkdown", () => {
+  it("renders reviewer context before the commit table", () => {
+    const base = baseReport();
+    const markdown = renderMarkdown(
+      baseReport({
+        commits: [
+          {
+            ...base.commits[0],
+            files: [{ path: "packages/cli/src/core/record.ts", by_ai: true }],
+          },
+        ],
+      }),
+    );
+
+    const reviewerIndex = markdown.indexOf("### Reviewer Context");
+    const tableIndex = markdown.indexOf("| Commit | AI Ratio | Prompts | Files |");
+
+    assert.ok(reviewerIndex > -1, "reviewer context should be rendered");
+    assert.ok(tableIndex > reviewerIndex, "commit table should appear after reviewer context");
+    assert.ok(markdown.includes("Generated from Agent Note data."));
+    assert.ok(markdown.includes("**Changed areas**"));
+    assert.ok(markdown.includes("- CLI recording: `packages/cli/src/core/record.ts`"));
+    assert.ok(markdown.includes("**Review focus**"));
+    assert.ok(markdown.includes("commit recording, prompt selection, git notes"));
+    assert.ok(markdown.includes("**Author intent signals**"));
+    assert.ok(markdown.includes("Commit: fix: preserve prompt context"));
+    assert.ok(markdown.includes("Prompt: Can this really improve the fix?"));
+  });
+
+  it("uses visible prompt detail when building reviewer intent signals", () => {
+    const report = baseReport({
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 2,
+          interactions: [
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+            {
+              prompt: "Update packages/pr-report/src/report.ts for reviewer context",
+              response: "I will keep this in the PR description.",
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report, { promptDetail: "compact" });
+    const reviewerContext = markdown.slice(
+      markdown.indexOf("### Reviewer Context"),
+      markdown.indexOf("| Commit | AI Ratio | Prompts | Files |"),
+    );
+
+    assert.ok(reviewerContext.includes("Update packages/pr-report/src/report.ts"));
+    assert.ok(!reviewerContext.includes("Prompt: continue"));
+  });
+
+  it("does not use untracked commit messages as reviewer intent signals", () => {
+    const tracked = baseReport().commits[0];
+    const report = baseReport({
+      total_commits: 2,
+      commits: [
+        {
+          sha: "def456789012",
+          short: "def4567",
+          message: "chore: unrelated human-only commit",
+          session_id: null,
+          model: null,
+          ai_ratio: null,
+          attribution_method: null,
+          prompts_count: 0,
+          files_total: 0,
+          files_ai: 0,
+          files: [],
+          interactions: [],
+          attribution: null,
+        },
+        tracked,
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const reviewerContext = markdown.slice(
+      markdown.indexOf("### Reviewer Context"),
+      markdown.indexOf("| Commit | AI Ratio | Prompts | Files |"),
+    );
+
+    assert.ok(!reviewerContext.includes("chore: unrelated human-only commit"));
+    assert.ok(reviewerContext.includes("Commit: fix: preserve prompt context"));
+  });
+
+  it("escapes reviewer intent snippets before rendering them as bullets", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              prompt: "Check <script>alert(1)</script> in reviewer context",
+              response: null,
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const reviewerContext = markdown.slice(
+      markdown.indexOf("### Reviewer Context"),
+      markdown.indexOf("| Commit | AI Ratio | Prompts | Files |"),
+    );
+
+    assert.ok(reviewerContext.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
+    assert.ok(!reviewerContext.includes("<script>alert(1)</script>"));
+  });
+
   it("renders interaction context before the prompt", () => {
     const markdown = renderMarkdown(baseReport());
 
@@ -121,7 +254,8 @@ describe("renderMarkdown", () => {
     });
 
     const markdown = renderMarkdown(report);
-    assert.equal(markdown.match(/same context/g)?.length, 1);
+    const promptDetails = markdown.slice(markdown.indexOf("<details>"));
+    assert.equal(promptDetails.match(/same context/g)?.length, 1);
   });
 
   it("omits blank interaction context", () => {

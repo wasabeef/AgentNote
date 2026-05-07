@@ -18,6 +18,113 @@ import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
 import { inferDashboardUrl } from "./github.js";
 
+const REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
+const REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
+const REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
+const REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
+const REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
+
+type ReviewerAreaId =
+  | "pr-report"
+  | "dashboard"
+  | "cli-recording"
+  | "agent-adapter"
+  | "docs"
+  | "tests"
+  | "workflow"
+  | "release"
+  | "source";
+
+type ReviewerAreaRule = {
+  id: ReviewerAreaId;
+  label: string;
+  matches: (path: string) => boolean;
+};
+
+type ReviewerChangedArea = {
+  id: ReviewerAreaId;
+  label: string;
+  files: string[];
+  moreCount: number;
+};
+
+const REVIEWER_AREA_RULES: ReviewerAreaRule[] = [
+  {
+    id: "tests",
+    label: "Tests",
+    matches: (path) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) || path.includes("/test/"),
+  },
+  {
+    id: "pr-report",
+    label: "PR Report",
+    matches: (path) =>
+      path === "action.yml" ||
+      path.startsWith("packages/pr-report/") ||
+      path.startsWith("packages/cli/src/commands/pr"),
+  },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    matches: (path) => path.startsWith("packages/dashboard/"),
+  },
+  {
+    id: "cli-recording",
+    label: "CLI recording",
+    matches: (path) =>
+      path.startsWith("packages/cli/src/core/") ||
+      path.startsWith("packages/cli/src/commands/hook") ||
+      path.startsWith("packages/cli/src/commands/record") ||
+      path.startsWith("packages/cli/src/commands/commit"),
+  },
+  {
+    id: "agent-adapter",
+    label: "Agent adapters",
+    matches: (path) => path.startsWith("packages/cli/src/agents/"),
+  },
+  {
+    id: "workflow",
+    label: "GitHub workflows",
+    matches: (path) => path.startsWith(".github/workflows/"),
+  },
+  {
+    id: "docs",
+    label: "Documentation",
+    matches: (path) =>
+      path === "README.md" ||
+      /^README\.[a-z-]+\.md$/i.test(path) ||
+      path.startsWith("docs/") ||
+      path.startsWith("website/"),
+  },
+  {
+    id: "release",
+    label: "Release metadata",
+    matches: (path) =>
+      path === "package.json" ||
+      path === "package-lock.json" ||
+      path.endsWith("/package.json") ||
+      path.endsWith("/package-lock.json") ||
+      path.includes("git-cliff"),
+  },
+];
+
+const REVIEW_FOCUS_BY_AREA: Record<ReviewerAreaId, string> = {
+  "pr-report":
+    "Check that the PR Report stays readable in the Pull Request description and still preserves the raw evidence below.",
+  dashboard:
+    "Check that Dashboard links, PR deep links, and persisted history still point to the expected data.",
+  "cli-recording":
+    "Check that commit recording, prompt selection, git notes, and attribution remain best-effort and do not break `git commit`.",
+  "agent-adapter":
+    "Check that agent-specific hooks or transcript parsing remain conservative and do not infer missing data.",
+  docs: "Check that docs and examples match the implemented behavior without exposing internal development terminology.",
+  tests: "Check that tests cover behavior, edge cases, and regression risks rather than only snapshots.",
+  workflow:
+    "Check that GitHub Actions behavior is safe for forks, retries, permissions, and existing Pages workflows.",
+  release:
+    "Check that release metadata, package entry points, generated bundles, and versioned outputs stay consistent.",
+  source: "Compare the stated intent with the changed files and the prompt evidence below.",
+};
+
 /** Prompt/response pair rendered in the PR Report prompt details. */
 export interface Interaction {
   prompt: string;
@@ -262,6 +369,10 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   lines.push("");
   lines.push(...renderHeader(report));
   lines.push("");
+  const reviewerContext = renderReviewerContext(report, visibleInteractionsBySha);
+  if (reviewerContext.length > 0) {
+    lines.push(...reviewerContext);
+  }
 
   lines.push("| Commit | AI Ratio | Prompts | Files |");
   lines.push("|---|---|---|---|");
@@ -343,6 +454,173 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Build a deterministic reviewer-facing context from stored Agent Note data.
+ *
+ * This is intentionally evidence-oriented rather than a natural-language
+ * summary. External review tools can use it as review input, while humans can
+ * still inspect the raw prompts and responses in the details section below.
+ */
+function renderReviewerContext(
+  report: PrReport,
+  visibleInteractionsBySha: Map<string, Interaction[]>,
+): string[] {
+  if (report.tracked_commits === 0) return [];
+
+  const changedAreas = collectReviewerChangedAreas(report);
+  const reviewFocus = collectReviewerFocus(changedAreas);
+  const intentSignals = collectReviewerIntentSignals(report, visibleInteractionsBySha);
+
+  if (changedAreas.length === 0 && reviewFocus.length === 0 && intentSignals.length === 0) {
+    return [];
+  }
+
+  const lines = [
+    "### Reviewer Context",
+    "",
+    "Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.",
+    "",
+  ];
+
+  if (changedAreas.length > 0) {
+    lines.push("**Changed areas**", "");
+    for (const area of changedAreas) {
+      lines.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
+    }
+    lines.push("");
+  }
+
+  if (reviewFocus.length > 0) {
+    lines.push("**Review focus**", "");
+    for (const focus of reviewFocus) {
+      lines.push(`- ${focus}`);
+    }
+    lines.push("");
+  }
+
+  if (intentSignals.length > 0) {
+    lines.push("**Author intent signals**", "");
+    for (const signal of intentSignals) {
+      lines.push(`- ${signal}`);
+    }
+    lines.push("");
+  }
+
+  return lines;
+}
+
+function collectReviewerChangedAreas(report: PrReport): ReviewerChangedArea[] {
+  const areaFiles = new Map<ReviewerAreaId, Set<string>>();
+
+  for (const commit of report.commits) {
+    for (const file of commit.files) {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.matches(file.path));
+      const id = rule?.id ?? "source";
+      const files = areaFiles.get(id) ?? new Set<string>();
+      files.add(file.path);
+      areaFiles.set(id, files);
+    }
+  }
+
+  return [...areaFiles]
+    .map(([id, files]) => {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.id === id);
+      return {
+        id,
+        label: rule?.label ?? "Source",
+        files: [...files].sort().slice(0, REVIEWER_CONTEXT_MAX_AREA_FILES),
+        totalFiles: files.size,
+      };
+    })
+    .sort((left, right) => right.totalFiles - left.totalFiles || left.label.localeCompare(right.label))
+    .slice(0, REVIEWER_CONTEXT_MAX_CHANGED_AREAS)
+    .map(({ id, label, files, totalFiles }) => ({
+      id,
+      label,
+      files,
+      moreCount: Math.max(0, totalFiles - files.length),
+    }));
+}
+
+function collectReviewerFocus(areas: ReviewerChangedArea[]): string[] {
+  const focus: string[] = [];
+  const seen = new Set<string>();
+
+  for (const area of areas) {
+    const text = REVIEW_FOCUS_BY_AREA[area.id];
+    if (!seen.has(text)) {
+      focus.push(text);
+      seen.add(text);
+    }
+    if (focus.length >= REVIEWER_CONTEXT_MAX_REVIEW_FOCUS) break;
+  }
+
+  return focus;
+}
+
+function collectReviewerIntentSignals(
+  report: PrReport,
+  visibleInteractionsBySha: Map<string, Interaction[]>,
+): string[] {
+  const signals: string[] = [];
+  const seen = new Set<string>();
+
+  for (const commit of report.commits) {
+    if (commit.session_id === null) continue;
+
+    pushReviewerSignal(signals, seen, `Commit: ${commit.message}`);
+    for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
+      const context = renderInteractionContext(interaction);
+      if (context) {
+        pushReviewerSignal(signals, seen, `Context: ${context}`);
+      }
+      pushReviewerSignal(signals, seen, `Prompt: ${interaction.prompt}`);
+      if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+    }
+    if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+  }
+
+  return signals;
+}
+
+function pushReviewerSignal(signals: string[], seen: Set<string>, rawSignal: string): void {
+  const signal = formatReviewerSnippet(rawSignal);
+  if (!signal || seen.has(signal)) return;
+  signals.push(signal);
+  seen.add(signal);
+}
+
+function formatReviewerSnippet(value: string): string {
+  const compact = value
+    .replaceAll("\n", " ")
+    .replace(/\s+/g, " ")
+    .replace(/^#+\s*/, "")
+    .trim();
+  if (!compact) return "";
+
+  const clipped =
+    compact.length > REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH
+      ? `${compact.slice(0, REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH)}…`
+      : compact;
+  return escapeInlineText(clipped);
+}
+
+function escapeInlineText(value: string): string {
+  return value.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function formatInlineCode(value: string): string {
+  return `\`${value.replaceAll("`", "\\`")}\``;
+}
+
+function formatReviewerAreaFiles(area: ReviewerChangedArea): string {
+  const files = area.files.map(formatInlineCode);
+  if (area.moreCount > 0) {
+    files.push(`${area.moreCount} more`);
+  }
+  return files.join(", ");
 }
 
 /**

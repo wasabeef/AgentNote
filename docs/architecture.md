@@ -447,7 +447,13 @@ Output: table format with summary header, per-commit rows, and collapsible `📝
 
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
+
+### Reviewer Context
+
+Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.
 ```
+
+The Reviewer Context block is deterministic. It groups changed areas, review focus, and author intent signals from commit messages, stored prompts, display-only context, and changed files. It does not use an AI model and must not claim that the implementation is correct.
 
 Commit hashes are linked to the GitHub commit page. Context, prompts, and responses are in a collapsible `<details>` section.
 
