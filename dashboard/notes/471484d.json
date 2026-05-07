@@ -1,0 +1,271 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-07T08:42:27.522Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージした",
+      "response": "main に戻して最新化しました。作業ツリーは clean です。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "README 全言語のユーザー向け表現を見直し、Draft PR を作成しました。\n\n内部用語っぽい `line-level attribution` / `edit history` / `AI-attributed file` などは README から外し、非英語 README の `Commit` / `Agent` / `Dashboard` なども先頭大文字に揃えています。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "このリポジトリに nix を導入する余地ってあるっけ？",
+      "response": "Nix 導入の余地は、実際の Node / npm / GitHub Action / website build の構成を見て判断するのがよさそうです。まずリポジトリの runtime version 管理と CI 周りを確認して、導入するならどの粒度が自然か整理します。\n確認しました。Nix は「ユーザーに使わせる」より「このリポジトリの開発環境を固定する」用途なら相性があります。Node 22、npm workspace、website / dashboard の 3 つの build が分かれているので、Nix で dev shell を作る価値はあります。\n導入余地はあります。ただし **ユーザー向け機能ではなく、このリポジトリの開発環境固定用** が一番よさそうです。\n\n見た感じ、今は [package.json](/Users/a12622/git/context-history/package.json:1) で `node >=22.12.0` / `npm@11.13.0`、CI は [.github/workflows/ci.yml](/Users/a12622/git/context-history/.github/workflows/ci.yml:18) で `actions/setup-node@v6` + Node 22 に寄せています。なので Nix を入れるなら、まずはこの程度が安全です。\n\n- `flake.nix` を追加して `nodejs_22`、`git`、`gh`、必要なら `git-cliff` を dev shell に入れる\n- `package-lock.json` / `website/package-lock.json` / `packages/dashboard/package-lock.json` は引き続き npm の source of truth にする\n- CI / release は当面そのまま `setup-node` を使う\n- `README` ではなく `CONTRIBUTING.md` や `docs/engineering.md` に optional setup として書く\n\n逆に、最初から Nix で npm dependencies まで完全固定する、`nix build` で npm package を作る、CI / release を Nix に置き換える、みたいなのは今は重いです。`packages/cli`、`packages/pr-report`、`packages/dashboard`、`website` で lockfile と install path が分かれているので、導入コストに対して得るものが少なめです。\n\nおすすめは **Phase 1: optional dev shell only** です。開発者は `nix develop` で Node / GitHub CLI / git-cliff が揃う。でも npm install と publish の流れは今まで通り。これなら壊すリスクが低く、将来必要なら `nix flake check` を足せます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "ふむ、まあいいややらないでいい。\n\n他に作業あるっけ",
+      "response": "今のところこちらで抱えている未完了作業はありません。\n\n状態としては、PR #56 までマージ済みで main も最新化済み、作業ツリーも clean でした。Nix は今回は見送りで問題なさそうです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "では、次は考えてほしいことある。\nPRにAgentNoteがでるようになって、これらを Devin Review, Greptile, Copilot, Code Rabbit などの AI Review ツールに適切に読み込ませる方法を考えたい。\n\nそうしないとこのプロンプトは意味がないものとなってします。\nアイデア出ししてくれないか",
+      "response": "これはかなり重要な設計ポイントですね。AgentNote の PR Description は人間には見えても、AI Review ツールが「レビュー判断に使う情報」として拾える形にしないと価値が半減します。各ツールがどこを読むかは変わりやすいので、まず公式情報ベースで読み込み口を確認しつつ、AgentNote 側の出し方アイデアに落とします。\nこれは AgentNote の次の大きい価値になりそうです。結論から言うと、**PR Description に人間向け表を出すだけでは足りない**ので、AI Review ツール向けに **短く、構造化され、レビュー観点に変換済みの “Reviewer Context” を別枠で出す**のがよさそうです。\n\n**前提**\n各 AI Review ツールは読む場所が微妙に違います。\n\n- Copilot Code Review は `.github/copilot-instructions.md` や `.github/instructions/**/*.instructions.md` の custom instructions を使えます。ただし review 用 instruction file は先頭 4,000 文字制限があり、base branch 側の内容を読む点に注意が必要です。  \n  https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review\n- CodeRabbit は PR コメントや description 内の `@coderabbitai review` などで trigger でき、Custom Checks では PR title / description / linked issues / review discussion などを参照できるようです。  \n  https://docs.coderabbit.ai/reference/review-commands  \n  https://docs.coderabbit.ai/pr-reviews/custom-checks\n- Devin Review は `REVIEW.md` を repo 内の任意階層に置けて、`**/REVIEW.md` を自動で拾う設計です。PR が draft の間は auto-review を skip し、ready 化や reviewer / assignee 追加で走るようです。  \n  https://docs.devin.ai/work-with-devin/devin-review\n- Greptile は `.greptile/` directory、`rules.md`、`files.json`、`config.json` で reviewer context / rules / referenced files を持てます。PR title / description keyword filter もあります。  \n  https://www.greptile.com/docs/code-review/greptile-config  \n  https://www.greptile.com/docs/code-review/greptile-config-reference\n\n**一番良さそうな方向**\nPR Description の AgentNote セクションを 2 層に分けるのが良いです。\n\n```md\n🧑💬🤖 Agent Note\nTotal AI Ratio: ████████ 97%\nModel: `gpt-5.4`\n\nOpen Dashboard ↗\n\n### Reviewer Context\nThis PR appears to be about:\n- Making README language more user-facing across all locales.\n- Replacing internal terms such as line-level attribution with reader-friendly wording.\n- Keeping localized READMEs structurally aligned.\n\nReview focus:\n- Check whether the wording is accurate for end users.\n- Check whether non-English README files keep equivalent meaning.\n- Check whether technical terms remain consistent across locales.\n\nRelevant conversation:\n- User asked to make README language less internal and more understandable.\n- User asked to review every non-Japanese language too.\n```\n\nその下に今までの Table を置く。  \nつまり、**raw prompt を AI reviewer に読ませるのではなく、AgentNote 側で “レビューに使える文脈” に変換する**。\n\n**なぜこれが必要か**\nPrompt はそのままだと review tool にとって曖昧です。\n\n- 「c」「y」「修正して」だけだと意味がない\n- 「これでいい？」は前段がないと読めない\n- prompt list は時系列ログであって review checklist ではない\n- AI reviewer が見るべきなのは “なぜこの変更になったか” と “何を重点確認すべきか”\n\nなので AgentNote が出すべきなのは `Prompt History` だけでなく、**Review Intent / Review Focus / Relevant Context** です。\n\n**具体アイデア**\n1. `review_context` セクションを PR Description に追加する  \n   デフォルトは `true` でもよさそうです。短く、表の上に置く。\n\n2. `prompt_detail` とは別に `review_context_detail` を作る  \n   例: `compact | full`。通常は `compact` で十分。\n\n3. Dashboard link だけに頼らない  \n   多くの review bot は外部 Pages を読めない、または読まない可能性があります。重要な context は PR Description 内に残すべきです。\n\n4. 各 reviewer 用の instruction scaffold を用意する  \n   例えば `agent-note init --reviewers` で以下を生成する案です。\n\n```text\n.github/copilot-instructions.md\nREVIEW.md\n.coderabbit.yaml\n.greptile/rules.md\n.greptile/files.json\n```\n\n中身は共通してこういうルールにする。\n\n```md\nWhen reviewing a PR, read the \"Agent Note / Reviewer Context\" section in the PR description.\nUse it as intent and review focus, not as proof that the implementation is correct.\nIf the diff contradicts the stated intent, flag it.\nIf the PR claims multi-language documentation updates, check representative locales.\nDo not treat AI ratio as quality evidence.\n```\n\n5. Review tool の起動順を制御する  \n   ここがかなり大事です。PR を開いた瞬間に CodeRabbit / Greptile / Devin / Copilot が走ると、AgentNote が PR Description を更新する前に review が始まる可能性があります。\n\n   対策案:\n   - Draft PR で作成する\n   - AgentNote が PR Description を更新する\n   - その後 Ready for review にする\n   - もしくは AgentNote 更新後に `@coderabbitai review` / `@greptileai` / `@copilot` reviewer 追加を行う\n\n6. `AI ratio` は reviewer には補助情報として扱わせる  \n   `AI ratio 100%` は「危険」ではなく「人間がまだ手を入れていない可能性が高い」くらいの signal。  \n   なので reviewer context にはこう書くのが良いです。\n\n```md\nAI ratio is not a quality score. Use it only to prioritize scrutiny when the change is large or lightly edited by humans.\n```\n\n**AgentNote 側の理想形**\n将来的には PR Report にこの 3 つを出せると強いです。\n\n- `Author Intent`: この PR は何を達成しようとしているか\n- `Review Focus`: reviewer が重点的に見るべきこと\n- `Conversation Evidence`: その判断に使った prompt / response の短い根拠\n\n今の Prompt History は「証跡」。  \nReviewer Context は「レビュー入力」。  \nこの 2 つを分けるのがたぶん最良です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape"
+        ]
+      }
+    },
+    {
+      "prompt": "Reviewer Context って定型文？",
+      "response": "今のサンプルでは **半分は定型、半分は生成対象** です。\n\n固定でよさそうなのは見出しと枠組みです。\n\n```md\n### Reviewer Context\n\n**Review focus**\n\n**Author intent signals**\n```\n\n中身は定型文ではなく、Agent Note の保存データから作る想定です。\n\n- Commit message\n- 変更ファイル\n- 選択された Prompt / Response\n- `📝 Context`\n- AI Ratio などの metadata\n\nただし、完全な要約を AI に任せるのは避けたいです。Agent Note 本体だけで deterministic に作るなら、最初は「自然文 summary」よりも、次のような **構造化された抽出** のほうが安全です。\n\n```md\n### Reviewer Context\n\n**Intent signals**\n\n- Prompt: PR description を AI Review tool が読める形にしたい\n- Prompt: AI Ratio を品質スコアに見せたくない\n- Commit: feat(report): add reviewer context\n\n**Review focus**\n\n- PR Report rendering changed\n- Dashboard link behavior should remain unchanged\n- Prompt / Response details should still be available below\n```\n\nつまり `Reviewer Context` は「定型の箱」だけ固定で、中身は commit / prompt / file から抽出するのが良さそうです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "それは可能なのか？",
+      "response": "可能かどうかを、今の保存 schema と PR Report の入力データから切り分けて確認します。ここは「きれいな要約ができるか」ではなく「嘘を混ぜず deterministic に reviewer が使える情報を出せるか」が肝なので、実装可能範囲をコード側で見ます。\n可能です。ただし、**「自然な要約を作る」ではなく「reviewer が読むべき手がかりを構造化して出す」** なら、かなり安全にできます。\n\n今の `PrReport` にはすでに材料があります。\n\n- `commit.message`\n- `files`\n- `interactions[].prompt`\n- `interactions[].response`\n- `interactions[].contexts`\n- `interactions[].tools`\n- `selection.signals`\n- `AI Ratio`\n\nなので、例えばこれは deterministic に出せます。\n\n```md\n### Reviewer Context\n\n**Changed areas**\n\n- PR Report rendering\n- GitHub Action output\n- Documentation\n\n**Author intent signals**\n\n- PR description を AI Review tool が読める形にしたい\n- AI Ratio を品質スコアとして扱わせたくない\n- Dashboard は人間向け drill-down として残す\n\n**Review focus**\n\n- PR body が review tool に読める位置に必要情報を出しているか\n- Prompt / Response の raw evidence が失われていないか\n- AI Ratio が correctness の根拠として扱われない表現になっているか\n```\n\n逆に、これは危険です。\n\n```md\nThis PR correctly implements reviewer integration.\n```\n\nこれは実装の正しさを断言してしまうので Agent Note がやるべきではないです。\n\n一番良い落とし所は、`Reviewer Context` を **summary ではなく evidence-oriented hints** にすることだと思います。つまり「この PR はこういう意図っぽい」「ここを見てほしい」は出すけど、「正しく実装された」は言わない。\n\n実装難易度は中くらいです。PR Report の render 前に `buildReviewerContext(report)` を追加して、commit / file / prompt / context から抽出すればできます。LLM 不要でいけます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "試しに実装してみて、PRまで作成してみて",
+      "response": "`common:pr-create` skill を使います。まず専用ブランチを切って、PR Report の既存レンダリングに「deterministic な Reviewer Context」を差し込む形で小さく試作し、テストと docs 更新まで通して PR にします。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "Total AI Ratio: ░░░░░░░░ 0%\n\nってなって壊れていないか？",
+      "response": "PR #57 の表示が本当に 0% になっているなら、まず「今回の実装で ratio 計算が壊れた」のか「この commit の Agent Note が取れていないだけ」なのかを切り分けます。PR body、対象 commit の git note、今回触った ratio 周辺の差分を順に確認します。\n切り分け結果としては、ratio 計算が 0% を返しているというより、PR #57 の commit `b28d52f` に Agent Note の git note が存在していません。次に commit message trailer と hook/session 状態を見て、なぜ note が作られなかったかを確認します。\nPR #57 の表示が「本当に AI 0%」なのか「Agent Note data が取れていない」のかを切り分けます。まず PR body と git note / commit trailer / hook 状態を突き合わせて、壊れている箇所が記録側か表示側かまで見ます。\n見えてきました。PR #57 の commit は PR table でも `—` になっていて、`git notes --ref=agentnote` に note がありません。つまり「AI が 0% と判定された」のではなく、「この commit の Agent Note data が取れていないのに、ヘッダーだけ 0% と出ていて紛らわしい」状態です。\n壊れている可能性は低いです。今回の `0%` は「AI 判定が 0%」ではなく、PR #57 の commit `b28d52f` に Agent Note の git note が存在しないためです。\n\n確認結果:\n\n- PR body の table も `AI Ratio / Prompts / Files` が全部 `—`\n- `git notes --ref=agentnote show HEAD` は `no note found`\n- commit message に `Agentnote-Session` trailer が入っていない\n- `post-commit` は trailer がないと note 作成を skip する\n\nなので原因は Reviewer Context 実装ではなく、この commit が Agent Note に tracking されていないことです。\n\nただし表示としては良くないです。`tracked commit = 0` のときに `Total AI Ratio: ░░░░░░░░ 0%` と出ると「人間 100%」みたいに見えるので、ここは `Total AI Ratio: —` や `No Agent Note data` のように出すべきです。これは PR Report 側の UX bug として直したほうがいいです。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "実装内容は、PR Report の header 直下に deterministic な `Reviewer Context` を追加し、changed areas / review focus / author intent signals を既存 Agent Note data から生成する形です。README 全言語、website 全言語の GitHub Action ページ、`docs/architecture.md` も更新済みです。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "今回の変更が問題だったのか？以前のPRが問題だったのか？",
+      "response": "ここは履歴を少し掘る必要があります。PR #57 の今回変更で「note が作られなくなった」のか、以前からあった未 tracking commit が今回たまたま 0% 表示で目立ったのかを、直近 PR の note/trailer 状態と PR Report の表示ロジックで切り分けます。\n今回の Reviewer Context 変更そのものが壊したわけではないです。\n\n切り分けるとこうです。\n\n- PR #55 / #56 は commit に `Agentnote-Session` trailer があり、git note も作られていて、PR Report は正常に `100%` 表示でした。\n- 今回の PR #57 の commit `b28d52f` には `Agentnote-Session` trailer がなく、`git notes --ref=agentnote show HEAD` も `no note found` です。\n- つまり今回の commit 作成時に Agent Note の記録が走っていません。おそらく commit 時点で session heartbeat が無い / fresh ではない状態で、`prepare-commit-msg` が trailer 注入を skip したのが原因です。\n\nなので分類すると:\n\n- **今回の変更が原因ではない**: Reviewer Context 実装は PR Report の表示追加で、record / hook / trailer 注入には触っていません。\n- **今回の PR の commit 作成状態が問題**: この commit だけ Agent Note data が無い。\n- **以前からある表示 UX の問題**: tracked commit が 0 件なのに `Total AI Ratio: 0%` と出るので、「本当に 0%」に見えてしまう。\n\n直すなら、PR Report 側で `tracked_commits === 0 && total_commits > 0` のときは `Total AI Ratio: —` や `No Agent Note data` に変えるのが自然です。これは今回の PR で露見した既存の表示問題ですね。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "どういうこと？\n\nhttps://github.com/wasabeef/AgentNote/pull/56\n\nこれは正常だよね？なんで 57 はコミットしているのにログがない？",
+      "response": "PR #56 と #57 の違いを、commit message の trailer と git note の有無で並べて確認します。ここが Agent Note の「commit はあるのにログがない」問題の分岐点です。\nPR #56 は commit message に `Agentnote-Session` があり、git note もあります。一方 PR #57 は commit message が subject だけで trailer が空なので、Agent Note の記録入口に乗っていません。ここから「commit は成功したが Agent Note の post-commit record 対象にならなかった」という説明になります。\nPR #56 は正常です。違いはここです。\n\nPR #56 の commit:\n\n```text\ndocs: make README language more user-facing\n\nAgentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada\n```\n\nPR #57 の commit:\n\n```text\nfeat(report): add reviewer context\n```\n\nPR #57 には `Agentnote-Session` trailer が入っていません。Agent Note は `git commit` しただけではログを作らず、次の流れで記録します。\n\n```text\nprepare-commit-msg\n  -> commit message に Agentnote-Session trailer を入れる\n\npost-commit\n  -> HEAD の Agentnote-Session trailer を読む\n  -> agent-note record <session_id>\n  -> refs/notes/agentnote に git note を書く\n```\n\nなので PR #57 は commit 自体は存在しますが、trailer がないため `post-commit` が session を特定できず、git note が作られていません。\n\n今回なぜ trailer が入らなかったかというと、かなり濃厚なのは **heartbeat stale** です。PR #57 の作業は、最後の prompt が `2026-05-06 12:52 JST` で、commit が `2026-05-07 17:13 JST` です。`prepare-commit-msg` は heartbeat が 1 時間より古いと安全側で trailer 注入を skip します。\n\nつまり:\n\n- PR #56: prompt / session が新鮮な状態で commit されたので記録された\n- PR #57: 長い single turn / 再開後の作業で heartbeat が古くなり、commit 時に trailer 注入が skip された\n- その結果、commit はあるが Agent Note log はない\n\nこれは Reviewer Context の実装が壊したというより、**長時間の Agent 作業で heartbeat が stale になると commit が未 tracking になる既存設計の穴**です。加えて、未 tracking のときに PR Report が `Total AI Ratio: 0%` と出す表示も紛らわしいです。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "docs/knowledge/investigations.md に記載しといてほしい。対応を考えたい",
+      "response": "`docs/knowledge/investigations.md` に、PR #57 で見えた「commit はあるが git note がない」ケースを調査項目として残します。対応方針を後で考えやすいように、原因仮説・影響・検討案まで短く整理します。\n今回は未解決の設計検討なので `Open Follow-ups` に追加します。PR #56 との比較を入れて、「なぜ commit があるのに note がないか」と「直すならどこか」を後で追える形にします。\n[docs/knowledge/investigations.md](/Users/a12622/git/context-history/docs/knowledge/investigations.md:8) に `Long-running session で commit note が作成されない` として追記しました。\n\n内容は、PR #56 は正常に `Agentnote-Session` trailer / git note がある一方、PR #57 は trailer がなく `post-commit` が record できなかったこと、heartbeat stale が有力な原因仮説であること、PR Report の `0%` 表示が missing data と true 0% を混同していること、今後の検討案までまとめています。\n\n未コミットの変更は `docs/knowledge/investigations.md` だけです。",
+      "files_touched": [
+        "docs/knowledge/investigations.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "うーん、今回プロンプトがないから何も出てない",
+      "response": "そうです。#57 は **commit note が無いので Reviewer Context の材料がゼロ** になっていて、今回の新機能が見えない状態です。\n\n今の PR body はこういう状態です。\n\n```md\n**Total AI Ratio:** ░░░░░░░░ 0%\n\n| Commit | AI Ratio | Prompts | Files |\n|---|---|---|---|\n| b28d52f feat(report): add reviewer context | — | — | — |\n```\n\nReviewer Context は以下から作る設計です。\n\n- tracked commit の changed files\n- tracked commit の prompt / response\n- `contexts[]`\n- tracked commit message\n\nでも #57 は `b28d52f` に git note がないので、PR Report から見ると:\n\n```text\ntracked_commits = 0\nfiles = none\nprompts = none\ncontexts = none\n```\n\nになっています。だから何も出せません。\n\nここで考えるべき対応は 2 つあります。\n\n1. **missing data の表示改善**\n   `Total AI Ratio: 0%` ではなく、`Agent Note data unavailable` のように出す。これは絶対やったほうがいいです。\n\n2. **Reviewer Context の fallback**\n   prompt が無い場合でも、PR commit message / PR title / changed files だけから最低限の Context を出すかどうか。\n   例えば:\n\n```md\n### Reviewer Context\n\n**Changed areas**\n- PR Report\n- Documentation\n\n**Review focus**\n- Check that PR Description rendering still works when Agent Note data is missing.\n- Check that Reviewer Context does not claim correctness.\n\n**Note**\n- Agent Note data was not found for this commit, so author intent signals are unavailable.\n```\n\nただしこれは「Agent Note の保存データ」ではなく GitHub PR diff からの fallback になるので、設計として入れるかは少し考えどころです。AI Review tool に読ませる目的なら、fallback はあった方が実用的です。",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 16,
+      "total_added": 16,
+      "deleted": 0
+    }
+  },
+  "commit": {
+    "sha": "471484d1ae451dab78dd363866668eb4f851806b",
+    "short_sha": "471484d",
+    "message": "docs: record missing agent note follow-up",
+    "date": "2026-05-07T17:42:26+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/investigations.md",
+        "lines": [
+          "index 0055c79..9531bf2 100644",
+          "--- a/docs/knowledge/investigations.md",
+          "+++ b/docs/knowledge/investigations.md",
+          "@@ -6,6 +6,22 @@",
+          " ",
+          " ## Open Follow-ups",
+          " ",
+          "+### Long-running session で commit note が作成されない",
+          "+",
+          "+- 対象 PR: `#57`",
+          "+- 対象 commit: `b28d52f feat(report): add reviewer context`",
+          "+- 観測結果: PR body の Agent Note が `Total AI Ratio: ░░░░░░░░ 0%` になり、commit table も `AI Ratio` / `Prompts` / `Files` がすべて `—` でした。`git notes --ref=agentnote show b28d52f` も `no note found` です。",
+          "+- 正常例: PR `#56` の commit `dfd82eb docs: make README language more user-facing` は commit message に `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` を持ち、git note も正常に作成されています。",
+          "+- 差分: PR `#57` の commit message には `Agentnote-Session` trailer がありません。`post-commit` hook は HEAD の trailer を source of truth として `agent-note record <session_id>` を呼ぶため、trailer がない commit は記録対象になりません。",
+          "+- 有力な原因仮説: `prepare-commit-msg` hook は `.git/agentnote/session` と heartbeat を確認し、heartbeat が 1 時間より古い場合は安全側で trailer 注入を skip します。PR `#57` は長い single turn / session 再開後の作業になっており、commit 時点で heartbeat freshness の前提を満たせなかった可能性があります。",
+          "+- 問題: commit 自体は成功するため、ユーザーには「commit したのに Agent Note log がない」ように見えます。また PR Report が `tracked_commits = 0` を `Total AI Ratio: 0%` と表示するため、「本当に AI ratio が 0%」と誤解されます。",
+          "+- 検討案:",
+          "+  - `tracked_commits === 0 && total_commits > 0` の PR Report は `Total AI Ratio: —` や `No Agent Note data` のように表示し、true 0% と missing data を分離します。",
+          "+  - `prepare-commit-msg` が heartbeat stale で skip した場合に、debug / status で理由を確認できる signal を残すか検討します。",
+          "+  - long-running session の heartbeat 更新方針を見直します。たとえば prompt / stop / tool event のどれで heartbeat を更新すべきか、Stop を session end と扱わない既存設計と矛盾しないかを確認します。",
+          "+  - trailer がない場合に `post-commit` が `.git/agentnote/session` を fallback として読む案は TOCTOU risk があるため、採用するなら session freshness / commit time / current HEAD との対応を慎重に検証します。",
+          "+- Regression 方針: PR `#56` 型の正常記録、PR `#57` 型の stale heartbeat skip、true 0% attribution commit、note missing commit を分けた fixture を用意し、PR Report 表示と hook behavior の両方を検証します。",
+          "+",
+          " ### CLI dist tracking",
+          " ",
+          " - 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 57,
+    "title": "feat(report): add reviewer context",
+    "state": "open"
+  }
+}
