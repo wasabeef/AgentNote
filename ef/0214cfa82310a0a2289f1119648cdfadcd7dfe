@@ -1,0 +1,57 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-07T09:42:10.153Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "---\n  PR #57 レビュー: feat(report): add reviewer context\n\n  CI: build / Lint / Test / PR Report / Website / Dashboard — 全 ✅\n\n  ---\n  概要\n\n  PR Description 内に <!-- agentnote-reviewer-context ... --> として deterministic な Reviewer Context\n  を埋め込む機能。AI review ツール (Devin / Greptile / Copilot / Code Rabbit) が raw PR body\n  を読む際に、変更エリア・review focus・author intent を構造化テキストで渡す設計。\n\n  ---\n  ✅ 正しく実装されている点\n\n  HTML comment injection の sanitization が適切\n\n  sanitizeReviewerCommentLine の処理順:\n  function sanitizeReviewerCommentLine(value: string): string {\n    return escapeInlineText(value).replaceAll(\"--\", \"- -\");\n  }\n  // \"Keep --> ...\"\n  // → escapeInlineText → \"Keep --&gt; ...\"\n  // → replaceAll(\"--\", \"- -\") → \"Keep - -&gt; ...\"\n\n  < と > を先に escape してから -- を壊すので --> を HTML comment の終端として悪用できない。テストも通過確認済み。\n\n  intentSignals の二重エスケープが起きない\n\n  formatReviewerSnippet が escapeInlineText を通した文字列を signals に格納。その後 sanitizeReviewerCommentLine\n  が再度 escapeInlineText を呼ぶが、&lt; / &gt; に < / > は含まれないため二重エスケープなし。\n\n  テストカバレッジが十分\n\n  - visible prompt のみ選択されること\n  - 未追跡 commit がシグナル対象外\n  - <script> XSS エスケープ\n  - --> injection 防止\n  - commit table より前に配置されること\n\n  ---\n  🟡 high.imo: REVIEWER_AREA_RULES が AgentNote 固有パスにハードコード\n\n  packages/pr-report は GitHub Action 経由で 他プロジェクトが使うライブラリのはずだが、ルールは AgentNote\n  のディレクトリ構成に完全依存している:\n\n  // packages/pr-report/src/report.ts:33-90\n  const REVIEWER_AREA_RULES: ReviewerAreaRule[] = [\n    { id: \"pr-report\",     matches: (path) => path.startsWith(\"packages/pr-report/\") },\n    { id: \"cli-recording\", matches: (path) => path.startsWith(\"packages/cli/src/core/\") },\n    { id: \"dashboard\",     matches: (path) => path.startsWith(\"packages/dashboard/\") },\n    ...\n  ];\n\n  AgentNote 以外のプロジェクトでは全ファイルが source フォールバックに落ちる。ランタイムエラーにはならず \"Compare\n  the stated intent with the changed files...\" という汎用テキストが入るので\n  壊れてはいないが、機能の主目的である「AI reviewer への的確な分類」が機能しない。\n\n  検討案:\n  - action.yml inputs で外部注入できるようにする（大掛かり）\n  - docs / README に「AgentNote 専用分類 / 他プロジェクトでは Source に統一される」と明記する（最小コスト）\n  - source フォールバック率が高い場合は Changed areas セクションを省略する\n\n  ---\n  🟢 medium.imo: source エリアのみルールオブジェクトが存在しない\n\n  source は REVIEWER_AREA_RULES に含まれないため、後続の .find が必ず undefined になり label\n  を二段階のフォールバックで取得する冗長なパス。REVIEWER_AREA_RULES に明示的なエントリを追加するか id === \"source\"\n  の分岐を作ると意図が明確になる。\n\n  ---\n  🔵 info.q: collectReviewerChangedAreas は未追跡 commit のファイルも含む?\n\n  function collectReviewerChangedAreas(report: PrReport): ReviewerChangedArea[] {\n    for (const commit of report.commits) {       // session_id チェックなし\n      for (const file of commit.files) {\n\n  collectReviewerIntentSignals は session_id === null をスキップするが、こちらはスキップしない。未追跡 commit でも\n  files: [] がデフォルト値なので実害はないと思われるが、意図が揃っているか確認したい。未追跡 commit\n  のファイルも「変更エリア」に含めるのは意図的?\n\n  ---\n  low.nits\n\n  - formatInlineCode のバッククォートエスケープは HTML comment 内では未レンダリングなので ```\n  が生テキストとして出る（AI tool の parser への影響は軽微）\n  - renderInteractionContext の戻り値が Markdown を含む場合、\\n → \" \" で潰されるが不自然な中途半端な文になりうる\n\n  ---\n  総評: sanitization・テスト・コード構造は問題なし。REVIEWER_AREA_RULES のスコープ（AgentNote 専用 vs\n  汎用）についての設計判断 or ドキュメント整備が固まれば LGTM。",
+      "response": "レビュー内容を現行差分に照らして、まだ残っている論点だけ確認します。特に `collectReviewerChangedAreas` が未追跡 commit を含むかどうかは仕様として明確にしておいた方がよさそうなので、実装とテストを見て必要なら小さく直します。\n確認したところ、通常の `collectReport()` では未追跡 commit は `files: []` なので実害はありません。ただし `Reviewer Context` は「Agent Note data 由来」と説明しているので、将来の変更やテスト fixture でもズレないよう、`session_id === null` の commit は changed areas からも明示的に除外します。ここは小さいけど、設計の芯を揃えるやつです。\n追加で `info.q` の未追跡 commit についても仕様をコード化しました。通常は空 files なので表面化しませんが、Reviewer Context は Agent Note の tracked data に限定する方が一貫するため、changed areas も `session_id` なし commit を無視するようにしています。",
+      "files_touched": [
+        "packages/pr-report/src/report.ts",
+        "packages/pr-report/src/report.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "exact_commit_path",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 67,
+    "method": "file"
+  }
+}
