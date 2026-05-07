@@ -1,0 +1,181 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-07T08:43:12.598Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "そうしてほしい",
+      "response": "Reviewer Context を人間向けの visible section から、PR body 内の `<!-- agentnote-reviewer-context ... -->` comment に移します。AI reviewer が raw PR body を読む場合の材料は残しつつ、通常の PR 画面では邪魔にならない形に寄せます。\n実装方針はシンプルにします。今の `renderReviewerContext()` が返す Markdown section を、同じ情報量の HTML comment に変えます。`Prompts & Responses` は従来通り visible details のままなので、人間向けには増やさず、AI tool が raw body を読む場合だけ拾える形です。\nREADME と website の説明も合わせます。サンプルでは hidden comment 自体を code block に載せ、「実際の PR 画面では表示されない reviewer tool 向け context」という意味が伝わるようにします。\nコードと docs を hidden comment 前提に揃えました。次は PR Report の unit test を回して、コメントが閉じ壊れしないこと、`prompt_detail` filter がそのまま効くことを確認します。\nテストで良い拾い漏れが出ました。hidden comment 内は閉じ壊れしていませんが、visible prompt details 側には元の `-->` がそのまま出るので、テストの数え方が広すぎました。comment 内だけを検証するように直します。\nPR Report test は通りました。次に dist bundle を再生成し、website build まで通して README / website のサンプル変更も壊れていないか確認します。\n`ncc` generated dist にいつもの trailing whitespace が出たので、生成物だけ whitespace cleanup します。source 側には `### Reviewer Context` の visible heading が残っていないことも確認できています。\n実装しました。Reviewer Context は visible section ではなく、PR body の raw Markdown にだけ残る hidden comment になります。\n\n```md\n<!-- agentnote-reviewer-context\nGenerated from Agent Note data...\n\nChanged areas:\n- ...\n\nReview focus:\n- ...\n\nAuthor intent signals:\n- ...\n-->\n```\n\n変更内容:\n- `### Reviewer Context` の visible heading は廃止\n- hidden comment 内に同じ deterministic context を出力\n- `-->` や `<script>` が prompt に入っても comment が壊れないよう sanitize\n- README 全言語、website 全言語、`docs/architecture.md` も hidden comment 前提に更新\n- 先ほどの `docs/knowledge/investigations.md` の調査メモも未コミット差分として残っています\n\n確認済み:\n- `npm test --prefix packages/pr-report`\n- `../../node_modules/.bin/tsc --noEmit`\n- `npm run build --prefix packages/pr-report`\n- `npm run build --prefix website`\n- `git diff --check`\n\nまだ commit / push はしていません。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "Reviewer Context を人間向けの visible section から、PR body 内の `<!-- agentnote-reviewer-context ... -->` comment に移します。"
+        }
+      ],
+      "files_touched": [
+        "packages/pr-report/src/report.ts",
+        "packages/pr-report/src/report.test.ts",
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/github-action.mdx",
+        "website/src/content/docs/ja/github-action.mdx",
+        "website/src/content/docs/fr/github-action.mdx",
+        "website/src/content/docs/de/github-action.mdx",
+        "website/src/content/docs/it/github-action.mdx",
+        "website/src/content/docs/es/github-action.mdx",
+        "website/src/content/docs/ko/github-action.mdx",
+        "website/src/content/docs/zh-cn/github-action.mdx",
+        "website/src/content/docs/zh-tw/github-action.mdx",
+        "website/src/content/docs/ru/github-action.mdx",
+        "website/src/content/docs/id/github-action.mdx",
+        "website/src/content/docs/pt-br/github-action.mdx",
+        "docs/architecture.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false
+    },
+    {
+      "path": "packages/pr-report/src/report.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/github-action.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 96,
+    "method": "file"
+  }
+}
