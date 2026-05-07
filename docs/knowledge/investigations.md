@@ -6,6 +6,22 @@
 
 ## Open Follow-ups
 
+### Long-running session で commit note が作成されない
+
+- 対象 PR: `#57`
+- 対象 commit: `b28d52f feat(report): add reviewer context`
+- 観測結果: PR body の Agent Note が `Total AI Ratio: ░░░░░░░░ 0%` になり、commit table も `AI Ratio` / `Prompts` / `Files` がすべて `—` でした。`git notes --ref=agentnote show b28d52f` も `no note found` です。
+- 正常例: PR `#56` の commit `dfd82eb docs: make README language more user-facing` は commit message に `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` を持ち、git note も正常に作成されています。
+- 差分: PR `#57` の commit message には `Agentnote-Session` trailer がありません。`post-commit` hook は HEAD の trailer を source of truth として `agent-note record <session_id>` を呼ぶため、trailer がない commit は記録対象になりません。
+- 有力な原因仮説: `prepare-commit-msg` hook は `.git/agentnote/session` と heartbeat を確認し、heartbeat が 1 時間より古い場合は安全側で trailer 注入を skip します。PR `#57` は長い single turn / session 再開後の作業になっており、commit 時点で heartbeat freshness の前提を満たせなかった可能性があります。
+- 問題: commit 自体は成功するため、ユーザーには「commit したのに Agent Note log がない」ように見えます。また PR Report が `tracked_commits = 0` を `Total AI Ratio: 0%` と表示するため、「本当に AI ratio が 0%」と誤解されます。
+- 検討案:
+  - `tracked_commits === 0 && total_commits > 0` の PR Report は `Total AI Ratio: —` や `No Agent Note data` のように表示し、true 0% と missing data を分離します。
+  - `prepare-commit-msg` が heartbeat stale で skip した場合に、debug / status で理由を確認できる signal を残すか検討します。
+  - long-running session の heartbeat 更新方針を見直します。たとえば prompt / stop / tool event のどれで heartbeat を更新すべきか、Stop を session end と扱わない既存設計と矛盾しないかを確認します。
+  - trailer がない場合に `post-commit` が `.git/agentnote/session` を fallback として読む案は TOCTOU risk があるため、採用するなら session freshness / commit time / current HEAD との対応を慎重に検証します。
+- Regression 方針: PR `#56` 型の正常記録、PR `#57` 型の stale heartbeat skip、true 0% attribution commit、note missing commit を分けた fixture を用意し、PR Report 表示と hook behavior の両方を検証します。
+
 ### CLI dist tracking
 
 - 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。

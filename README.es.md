@@ -181,6 +181,27 @@ Esto publica un reporte de sesión AI en la PR Description:
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
 
+<!-- agentnote-reviewer-context
+
+Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.
+
+Changed areas:
+
+- Documentation: `README.md`, `docs/usage.md`
+- Source: `src/auth.ts`
+- Tests: `src/auth.test.ts`
+
+Review focus:
+
+- Check that docs and examples match the implemented behavior.
+- Compare the stated intent with the changed source files and prompt evidence.
+
+Author intent signals:
+
+- Commit: feat: add auth
+- Prompt: Add JWT authentication and update the PR docs
+-->
+
 | Commit | AI Ratio | Prompts | Files |
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |

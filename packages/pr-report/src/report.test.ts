@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { renderMarkdown, type PrReport } from "./report.js";
 
+const REVIEWER_CONTEXT_BEGIN = "<!-- agentnote-reviewer-context";
+const REVIEWER_CONTEXT_END = "-->";
+
 function baseReport(overrides: Partial<PrReport> = {}): PrReport {
   return {
     base: "main",
@@ -46,7 +49,250 @@ function baseReport(overrides: Partial<PrReport> = {}): PrReport {
   };
 }
 
+function extractReviewerContext(markdown: string): string {
+  const start = markdown.indexOf(REVIEWER_CONTEXT_BEGIN);
+  const end = markdown.indexOf(REVIEWER_CONTEXT_END, start);
+  assert.ok(start > -1, "reviewer context comment should exist");
+  assert.ok(end > start, "reviewer context comment should be closed");
+  return markdown.slice(start, end + REVIEWER_CONTEXT_END.length);
+}
+
 describe("renderMarkdown", () => {
+  it("renders hidden reviewer context before the commit table", () => {
+    const base = baseReport();
+    const markdown = renderMarkdown(
+      baseReport({
+        commits: [
+          {
+            ...base.commits[0],
+            files: [{ path: "packages/cli/src/core/record.ts", by_ai: true }],
+          },
+        ],
+      }),
+    );
+
+    const reviewerIndex = markdown.indexOf(REVIEWER_CONTEXT_BEGIN);
+    const tableIndex = markdown.indexOf("| Commit | AI Ratio | Prompts | Files |");
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(reviewerIndex > -1, "reviewer context should be rendered");
+    assert.ok(tableIndex > reviewerIndex, "commit table should appear after reviewer context");
+    assert.ok(!markdown.includes("### Reviewer Context"));
+    assert.ok(reviewerContext.includes("Generated from Agent Note data."));
+    assert.ok(reviewerContext.includes("Changed areas:"));
+    assert.ok(reviewerContext.includes("- Source: `packages/cli/src/core/record.ts`"));
+    assert.ok(reviewerContext.includes("Review focus:"));
+    assert.ok(reviewerContext.includes("changed source files and the prompt evidence"));
+    assert.ok(reviewerContext.includes("Author intent signals:"));
+    assert.ok(reviewerContext.includes("Commit: fix: preserve prompt context"));
+    assert.ok(reviewerContext.includes("Prompt: Can this really improve the fix?"));
+  });
+
+  it("uses visible prompt detail when building reviewer intent signals", () => {
+    const report = baseReport({
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          prompts_count: 2,
+          interactions: [
+            {
+              prompt: "continue",
+              response: "Continuing.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+            {
+              prompt: "Update packages/pr-report/src/report.ts for reviewer context",
+              response: "I will keep this in the PR description.",
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report, { promptDetail: "compact" });
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(reviewerContext.includes("Update packages/pr-report/src/report.ts"));
+    assert.ok(!reviewerContext.includes("Prompt: continue"));
+  });
+
+  it("uses generic changed-area labels instead of repository-specific package names", () => {
+    const markdown = renderMarkdown(
+      baseReport({
+        commits: [
+          {
+            ...baseReport().commits[0],
+            files: [
+              { path: ".github/workflows/ci.yml", by_ai: true },
+              { path: "docs/guide.md", by_ai: true },
+              { path: "packages/pr-report/src/report.ts", by_ai: true },
+              { path: "package-lock.json", by_ai: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(reviewerContext.includes("- Source: `packages/pr-report/src/report.ts`"));
+    assert.ok(reviewerContext.includes("- Documentation: `docs/guide.md`"));
+    assert.ok(reviewerContext.includes("- Workflows: `.github/workflows/ci.yml`"));
+    assert.ok(reviewerContext.includes("- Dependencies: `package-lock.json`"));
+    assert.ok(!reviewerContext.includes("PR Report:"));
+    assert.ok(!reviewerContext.includes("CLI recording:"));
+  });
+
+  it("prioritizes primary intent over older window prompts", () => {
+    const report = baseReport({
+      total_commits: 2,
+      total_prompts: 2,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          sha: "old123456789",
+          short: "old1234",
+          message: "docs: record missing agent note follow-up",
+          prompts_count: 1,
+          interactions: [
+            {
+              prompt: "Should this repository adopt Nix?",
+              response: "This is background discussion and should not drive reviewer context.",
+              selection: {
+                schema: 1,
+                source: "window",
+                signals: ["between_non_excluded_prompts"],
+              },
+            },
+          ],
+        },
+        {
+          ...baseReport().commits[0],
+          sha: "new123456789",
+          short: "new1234",
+          message: "fix: hide reviewer context in PR body",
+          prompts_count: 1,
+          interactions: [
+            {
+              context:
+                "Move Reviewer Context into a hidden PR body comment for AI review tools.",
+              prompt: "Please hide Reviewer Context from the visible PR description.",
+              response: "I will render it as a hidden Markdown comment.",
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const reviewerContext = extractReviewerContext(renderMarkdown(report));
+
+    assert.ok(reviewerContext.includes("Commit: docs: record missing agent note follow-up"));
+    assert.ok(reviewerContext.includes("Commit: fix: hide reviewer context in PR body"));
+    assert.ok(reviewerContext.includes("Context: Move Reviewer Context into a hidden PR body"));
+    assert.ok(reviewerContext.includes("Prompt: Please hide Reviewer Context"));
+    assert.ok(!reviewerContext.includes("Should this repository adopt Nix?"));
+  });
+
+  it("does not use untracked commit messages as reviewer intent signals", () => {
+    const tracked = baseReport().commits[0];
+    const report = baseReport({
+      total_commits: 2,
+      commits: [
+        {
+          sha: "def456789012",
+          short: "def4567",
+          message: "chore: unrelated human-only commit",
+          session_id: null,
+          model: null,
+          ai_ratio: null,
+          attribution_method: null,
+          prompts_count: 0,
+          files_total: 0,
+          files_ai: 0,
+          files: [{ path: "untracked-human-only.ts", by_ai: false }],
+          interactions: [],
+          attribution: null,
+        },
+        tracked,
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(!reviewerContext.includes("chore: unrelated human-only commit"));
+    assert.ok(!reviewerContext.includes("untracked-human-only.ts"));
+    assert.ok(reviewerContext.includes("Commit: fix: preserve prompt context"));
+  });
+
+  it("escapes reviewer intent snippets before rendering them as bullets", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              prompt: "Check <script>alert(1)</script> in reviewer context",
+              response: null,
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(reviewerContext.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
+    assert.ok(!reviewerContext.includes("<script>alert(1)</script>"));
+  });
+
+  it("keeps reviewer context prompts from closing the hidden comment", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          interactions: [
+            {
+              prompt: "Keep --> inside reviewer context harmless",
+              response: null,
+              selection: {
+                schema: 1,
+                source: "primary",
+                signals: ["primary_edit_turn"],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const markdown = renderMarkdown(report);
+    const reviewerContext = extractReviewerContext(markdown);
+
+    assert.ok(reviewerContext.includes("Keep - -&gt; inside reviewer context harmless"));
+    assert.equal(reviewerContext.slice(0, -REVIEWER_CONTEXT_END.length).includes("-->"), false);
+  });
+
   it("renders interaction context before the prompt", () => {
     const markdown = renderMarkdown(baseReport());
 
@@ -121,7 +367,8 @@ describe("renderMarkdown", () => {
     });
 
     const markdown = renderMarkdown(report);
-    assert.equal(markdown.match(/same context/g)?.length, 1);
+    const promptDetails = markdown.slice(markdown.indexOf("<details>"));
+    assert.equal(promptDetails.match(/same context/g)?.length, 1);
   });
 
   it("omits blank interaction context", () => {

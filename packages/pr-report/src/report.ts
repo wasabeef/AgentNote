@@ -18,6 +18,183 @@ import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
 import { inferDashboardUrl } from "./github.js";
 
+const REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
+const REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
+const REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
+const REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
+const REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
+const REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
+const REVIEWER_CONTEXT_COMMENT_BEGIN = "<!-- agentnote-reviewer-context";
+const REVIEWER_CONTEXT_COMMENT_END = "-->";
+
+type ReviewerAreaId =
+  | "docs"
+  | "tests"
+  | "workflow"
+  | "dependencies"
+  | "config"
+  | "generated"
+  | "scripts"
+  | "frontend"
+  | "backend"
+  | "source";
+
+type ReviewerAreaRule = {
+  id: ReviewerAreaId;
+  label: string;
+  matches: (path: string) => boolean;
+};
+
+type ReviewerChangedArea = {
+  id: ReviewerAreaId;
+  label: string;
+  files: string[];
+  moreCount: number;
+};
+
+const REVIEWER_AREA_RULES: ReviewerAreaRule[] = [
+  {
+    id: "tests",
+    label: "Tests",
+    matches: (path) =>
+      /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) ||
+      path.includes("/__tests__/") ||
+      path.includes("/test/") ||
+      path.includes("/tests/") ||
+      path.startsWith("test/") ||
+      path.startsWith("tests/"),
+  },
+  {
+    id: "workflow",
+    label: "Workflows",
+    matches: (path) =>
+      path === "action.yml" ||
+      path === "action.yaml" ||
+      path.startsWith(".github/workflows/") ||
+      path.startsWith(".github/actions/") ||
+      path === ".github/dependabot.yml",
+  },
+  {
+    id: "docs",
+    label: "Documentation",
+    matches: (path) =>
+      path === "README.md" ||
+      /^README\.[a-z-]+\.md$/i.test(path) ||
+      path.startsWith("docs/") ||
+      path.startsWith("website/src/content/docs/") ||
+      /\.(md|mdx|rst|adoc)$/i.test(path),
+  },
+  {
+    id: "dependencies",
+    label: "Dependencies",
+    matches: (path) =>
+      path === "package.json" ||
+      path === "package-lock.json" ||
+      path === "pnpm-lock.yaml" ||
+      path === "yarn.lock" ||
+      path === "bun.lock" ||
+      path === "Cargo.toml" ||
+      path === "Cargo.lock" ||
+      path === "go.mod" ||
+      path === "go.sum" ||
+      path === "Gemfile" ||
+      path === "Gemfile.lock" ||
+      path === "pyproject.toml" ||
+      path === "poetry.lock" ||
+      path.endsWith("/package.json") ||
+      path.endsWith("/package-lock.json"),
+  },
+  {
+    id: "config",
+    label: "Configuration",
+    matches: (path) =>
+      /(^|\/)(tsconfig|jsconfig|eslint|prettier|biome|vite|webpack|rollup|astro|next|nuxt|tailwind|postcss|babel|jest|vitest|playwright|cypress|docker-compose)(\.|$)/i.test(
+        path,
+      ) ||
+      path === "Dockerfile" ||
+      path.endsWith(".config.js") ||
+      path.endsWith(".config.ts") ||
+      path.endsWith(".config.mjs") ||
+      path.endsWith(".config.cjs"),
+  },
+  {
+    id: "generated",
+    label: "Generated outputs",
+    matches: (path) =>
+      path.includes("/dist/") ||
+      path.startsWith("dist/") ||
+      path.includes("/build/") ||
+      path.startsWith("build/") ||
+      path.endsWith(".generated.ts") ||
+      path.endsWith(".generated.js") ||
+      path.includes("/generated/"),
+  },
+  {
+    id: "scripts",
+    label: "Scripts",
+    matches: (path) =>
+      path.startsWith("scripts/") ||
+      path.startsWith("tools/") ||
+      path.startsWith("bin/") ||
+      path.includes("/scripts/"),
+  },
+  {
+    id: "frontend",
+    label: "Frontend",
+    matches: (path) =>
+      path.startsWith("src/components/") ||
+      path.startsWith("src/pages/") ||
+      path.startsWith("src/app/") ||
+      path.startsWith("src/styles/") ||
+      path.startsWith("public/") ||
+      path.includes("/components/") ||
+      path.includes("/pages/") ||
+      path.includes("/app/") ||
+      path.includes("/styles/") ||
+      /\.(css|scss|sass|less|astro|svelte|vue)$/i.test(path),
+  },
+  {
+    id: "backend",
+    label: "Backend",
+    matches: (path) =>
+      path.startsWith("api/") ||
+      path.startsWith("server/") ||
+      path.startsWith("routes/") ||
+      path.startsWith("controllers/") ||
+      path.startsWith("models/") ||
+      path.includes("/api/") ||
+      path.includes("/server/") ||
+      path.includes("/routes/") ||
+      path.includes("/controllers/") ||
+      path.includes("/models/"),
+  },
+  {
+    id: "source",
+    label: "Source",
+    matches: () => true,
+  },
+];
+
+const REVIEW_FOCUS_BY_AREA: Record<ReviewerAreaId, string> = {
+  docs: "Check that docs and examples match the implemented behavior without exposing internal development terminology.",
+  tests: "Check that tests cover behavior, edge cases, and regression risks rather than only snapshots.",
+  workflow:
+    "Check that automation is safe for forks, retries, permissions, and existing deployment workflows.",
+  dependencies:
+    "Check that dependency or package metadata changes are intentional and compatible with release expectations.",
+  config:
+    "Check that configuration changes are scoped, documented, and consistent with the affected tooling.",
+  generated:
+    "Check that generated outputs are consistent with source changes and were not hand-edited accidentally.",
+  scripts:
+    "Check that scripts remain safe, idempotent, and clear about the files or services they touch.",
+  frontend:
+    "Check user-facing behavior, accessibility, layout, and build output for the changed UI paths.",
+  backend:
+    "Check API or server behavior, data handling, error paths, and compatibility with existing clients.",
+  source: "Compare the stated intent with the changed source files and the prompt evidence below.",
+};
+
 /** Prompt/response pair rendered in the PR Report prompt details. */
 export interface Interaction {
   prompt: string;
@@ -262,6 +439,10 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   lines.push("");
   lines.push(...renderHeader(report));
   lines.push("");
+  const reviewerContext = renderReviewerContext(report, visibleInteractionsBySha);
+  if (reviewerContext.length > 0) {
+    lines.push(...reviewerContext);
+  }
 
   lines.push("| Commit | AI Ratio | Prompts | Files |");
   lines.push("|---|---|---|---|");
@@ -343,6 +524,208 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Build deterministic reviewer context as a hidden PR body comment.
+ *
+ * The context is evidence-oriented rather than a natural-language summary.
+ * Keeping it inside an HTML comment avoids adding visual noise for human
+ * reviewers while still making the raw PR body useful to review tools that read
+ * Markdown source.
+ */
+function renderReviewerContext(
+  report: PrReport,
+  visibleInteractionsBySha: Map<string, Interaction[]>,
+): string[] {
+  if (report.tracked_commits === 0) return [];
+
+  const changedAreas = collectReviewerChangedAreas(report);
+  const reviewFocus = collectReviewerFocus(changedAreas);
+  const intentSignals = collectReviewerIntentSignals(report, visibleInteractionsBySha);
+
+  if (changedAreas.length === 0 && reviewFocus.length === 0 && intentSignals.length === 0) {
+    return [];
+  }
+
+  const body = [
+    "Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.",
+    "",
+  ];
+
+  if (changedAreas.length > 0) {
+    body.push("Changed areas:", "");
+    for (const area of changedAreas) {
+      body.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
+    }
+    body.push("");
+  }
+
+  if (reviewFocus.length > 0) {
+    body.push("Review focus:", "");
+    for (const focus of reviewFocus) {
+      body.push(`- ${focus}`);
+    }
+    body.push("");
+  }
+
+  if (intentSignals.length > 0) {
+    body.push("Author intent signals:", "");
+    for (const signal of intentSignals) {
+      body.push(`- ${signal}`);
+    }
+    body.push("");
+  }
+
+  return [
+    REVIEWER_CONTEXT_COMMENT_BEGIN,
+    ...body.map(sanitizeReviewerCommentLine),
+    REVIEWER_CONTEXT_COMMENT_END,
+    "",
+  ];
+}
+
+function collectReviewerChangedAreas(report: PrReport): ReviewerChangedArea[] {
+  const areaFiles = new Map<ReviewerAreaId, Set<string>>();
+
+  for (const commit of report.commits) {
+    if (commit.session_id === null) continue;
+
+    for (const file of commit.files) {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.matches(file.path));
+      const id = rule?.id ?? "source";
+      const files = areaFiles.get(id) ?? new Set<string>();
+      files.add(file.path);
+      areaFiles.set(id, files);
+    }
+  }
+
+  return [...areaFiles]
+    .map(([id, files]) => {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.id === id);
+      return {
+        id,
+        label: rule?.label ?? "Source",
+        files: [...files].sort().slice(0, REVIEWER_CONTEXT_MAX_AREA_FILES),
+        totalFiles: files.size,
+      };
+    })
+    .sort((left, right) => right.totalFiles - left.totalFiles || left.label.localeCompare(right.label))
+    .slice(0, REVIEWER_CONTEXT_MAX_CHANGED_AREAS)
+    .map(({ id, label, files, totalFiles }) => ({
+      id,
+      label,
+      files,
+      moreCount: Math.max(0, totalFiles - files.length),
+    }));
+}
+
+function collectReviewerFocus(areas: ReviewerChangedArea[]): string[] {
+  const focus: string[] = [];
+  const seen = new Set<string>();
+
+  for (const area of areas) {
+    const text = REVIEW_FOCUS_BY_AREA[area.id];
+    if (!seen.has(text)) {
+      focus.push(text);
+      seen.add(text);
+    }
+    if (focus.length >= REVIEWER_CONTEXT_MAX_REVIEW_FOCUS) break;
+  }
+
+  return focus;
+}
+
+function collectReviewerIntentSignals(
+  report: PrReport,
+  visibleInteractionsBySha: Map<string, Interaction[]>,
+): string[] {
+  const signals: string[] = [];
+  const seen = new Set<string>();
+  const primarySignals: string[] = [];
+  const fallbackSignals: string[] = [];
+  let commitSignalCount = 0;
+  const trackedCommitsNewestFirst = report.commits
+    .filter((commit) => commit.session_id !== null)
+    .toReversed();
+
+  for (const commit of trackedCommitsNewestFirst) {
+    if (commitSignalCount < REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS) {
+      pushReviewerSignal(signals, seen, `Commit: ${commit.message}`);
+      commitSignalCount += 1;
+    }
+
+    // Review tools benefit most from the final task intent. Older commits are
+    // still visible in the report, but the hidden context budget is intentionally
+    // spent newest-first to avoid reviving stale task prompts.
+    for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
+      const target = isPrimaryReviewerInteraction(interaction) ? primarySignals : fallbackSignals;
+      const context = renderInteractionContext(interaction);
+      if (context) {
+        target.push(`Context: ${context}`);
+      }
+      target.push(`Prompt: ${interaction.prompt}`);
+    }
+  }
+
+  for (const signal of [...primarySignals, ...fallbackSignals]) {
+    pushReviewerSignal(signals, seen, signal);
+    if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+  }
+
+  return signals;
+}
+
+function isPrimaryReviewerInteraction(interaction: Interaction): boolean {
+  const signals = interaction.selection?.signals ?? [];
+  return (
+    interaction.selection?.source === "primary" ||
+    signals.includes("primary_edit_turn") ||
+    signals.includes("exact_commit_path") ||
+    signals.includes("diff_identifier")
+  );
+}
+
+function pushReviewerSignal(signals: string[], seen: Set<string>, rawSignal: string): void {
+  const signal = formatReviewerSnippet(rawSignal);
+  if (!signal || seen.has(signal)) return;
+  signals.push(signal);
+  seen.add(signal);
+}
+
+function formatReviewerSnippet(value: string): string {
+  const compact = value
+    .replaceAll("\n", " ")
+    .replace(/\s+/g, " ")
+    .replace(/^#+\s*/, "")
+    .trim();
+  if (!compact) return "";
+
+  const clipped =
+    compact.length > REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH
+      ? `${compact.slice(0, REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH)}…`
+      : compact;
+  return escapeInlineText(clipped);
+}
+
+function escapeInlineText(value: string): string {
+  return value.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function sanitizeReviewerCommentLine(value: string): string {
+  return escapeInlineText(value).replaceAll("--", "- -");
+}
+
+function formatInlineCode(value: string): string {
+  return `\`${value.replaceAll("`", "\\`")}\``;
+}
+
+function formatReviewerAreaFiles(area: ReviewerChangedArea): string {
+  const files = area.files.map(formatInlineCode);
+  if (area.moreCount > 0) {
+    files.push(`${area.moreCount} more`);
+  }
+  return files.join(", ");
 }
 
 /**

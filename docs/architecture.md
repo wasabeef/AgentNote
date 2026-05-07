@@ -440,14 +440,21 @@ agent-note pr --output description --update 42  # upsert into PR description
 agent-note pr --output comment --update 42      # post as PR comment
 ```
 
-Output: table format with summary header, per-commit rows, and collapsible `📝 Context` / `🧑 Prompt` / `🤖 Response` section.
+Output: table format with summary header, hidden reviewer context, per-commit rows, and collapsible `📝 Context` / `🧑 Prompt` / `🤖 Response` section.
 
 ```
 ## 🧑💬🤖 Agent Note
 
 **Total AI Ratio:** ████████ 73%
 **Model:** `claude-sonnet-4-20250514`
+
+<!-- agentnote-reviewer-context
+
+Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.
+-->
 ```
+
+The Reviewer Context comment is deterministic. It groups changed files into generic areas such as Documentation, Workflows, Dependencies, Tests, and Source, then adds review focus and author intent signals from commit messages, stored prompts, display-only context, and changed files. The intent signal budget is small and newest-first, and primary commit interactions are preferred over older window/background prompts so stale tasks do not dominate the hidden context. It does not use an AI model and must not claim that the implementation is correct. It is hidden from the rendered PR description to avoid visual noise for human reviewers, but remains available in the raw PR body for review tools that read Markdown source.
 
 Commit hashes are linked to the GitHub commit page. Context, prompts, and responses are in a collapsible `<details>` section.
 
