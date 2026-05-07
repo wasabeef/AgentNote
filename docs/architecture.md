@@ -454,7 +454,7 @@ Generated from Agent Note data. Use this as intent and review focus, not as proo
 -->
 ```
 
-The Reviewer Context comment is deterministic. It groups changed areas, review focus, and author intent signals from commit messages, stored prompts, display-only context, and changed files. It does not use an AI model and must not claim that the implementation is correct. It is hidden from the rendered PR description to avoid visual noise for human reviewers, but remains available in the raw PR body for review tools that read Markdown source.
+The Reviewer Context comment is deterministic. It groups changed files into generic areas such as Documentation, Workflows, Dependencies, Tests, and Source, then adds review focus and author intent signals from commit messages, stored prompts, display-only context, and changed files. The intent signal budget is small and newest-first, and primary commit interactions are preferred over older window/background prompts so stale tasks do not dominate the hidden context. It does not use an AI model and must not claim that the implementation is correct. It is hidden from the rendered PR description to avoid visual noise for human reviewers, but remains available in the raw PR body for review tools that read Markdown source.
 
 Commit hashes are linked to the GitHub commit page. Context, prompts, and responses are in a collapsible `<details>` section.
 

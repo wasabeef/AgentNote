@@ -187,11 +187,19 @@ Generated from Agent Note data. Use this as intent and review focus, not as proo
 
 Changed areas:
 
-- PR Report: `packages/pr-report/src/report.ts`
+- Documentation: `README.md`, `docs/usage.md`
+- Source: `src/auth.ts`
+- Tests: `src/auth.test.ts`
 
 Review focus:
 
-- Check that the PR Report stays readable in the Pull Request description and still preserves the raw evidence below.
+- Check that docs and examples match the implemented behavior.
+- Compare the stated intent with the changed source files and prompt evidence.
+
+Author intent signals:
+
+- Commit: feat: add auth
+- Prompt: Add JWT authentication and update the PR docs
 -->
 
 | Commit | AI Ratio | Prompts | Files |

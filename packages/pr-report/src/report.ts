@@ -20,6 +20,7 @@ import { inferDashboardUrl } from "./github.js";
 
 const REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
 const REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
+const REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
 const REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
 const REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
 const REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
@@ -27,14 +28,15 @@ const REVIEWER_CONTEXT_COMMENT_BEGIN = "<!-- agentnote-reviewer-context";
 const REVIEWER_CONTEXT_COMMENT_END = "-->";
 
 type ReviewerAreaId =
-  | "pr-report"
-  | "dashboard"
-  | "cli-recording"
-  | "agent-adapter"
   | "docs"
   | "tests"
   | "workflow"
-  | "release"
+  | "dependencies"
+  | "config"
+  | "generated"
+  | "scripts"
+  | "frontend"
+  | "backend"
   | "source";
 
 type ReviewerAreaRule = {
@@ -54,39 +56,23 @@ const REVIEWER_AREA_RULES: ReviewerAreaRule[] = [
   {
     id: "tests",
     label: "Tests",
-    matches: (path) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) || path.includes("/test/"),
-  },
-  {
-    id: "pr-report",
-    label: "PR Report",
     matches: (path) =>
-      path === "action.yml" ||
-      path.startsWith("packages/pr-report/") ||
-      path.startsWith("packages/cli/src/commands/pr"),
-  },
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    matches: (path) => path.startsWith("packages/dashboard/"),
-  },
-  {
-    id: "cli-recording",
-    label: "CLI recording",
-    matches: (path) =>
-      path.startsWith("packages/cli/src/core/") ||
-      path.startsWith("packages/cli/src/commands/hook") ||
-      path.startsWith("packages/cli/src/commands/record") ||
-      path.startsWith("packages/cli/src/commands/commit"),
-  },
-  {
-    id: "agent-adapter",
-    label: "Agent adapters",
-    matches: (path) => path.startsWith("packages/cli/src/agents/"),
+      /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) ||
+      path.includes("/__tests__/") ||
+      path.includes("/test/") ||
+      path.includes("/tests/") ||
+      path.startsWith("test/") ||
+      path.startsWith("tests/"),
   },
   {
     id: "workflow",
-    label: "GitHub workflows",
-    matches: (path) => path.startsWith(".github/workflows/"),
+    label: "Workflows",
+    matches: (path) =>
+      path === "action.yml" ||
+      path === "action.yaml" ||
+      path.startsWith(".github/workflows/") ||
+      path.startsWith(".github/actions/") ||
+      path === ".github/dependabot.yml",
   },
   {
     id: "docs",
@@ -95,36 +81,118 @@ const REVIEWER_AREA_RULES: ReviewerAreaRule[] = [
       path === "README.md" ||
       /^README\.[a-z-]+\.md$/i.test(path) ||
       path.startsWith("docs/") ||
-      path.startsWith("website/"),
+      path.startsWith("website/src/content/docs/") ||
+      /\.(md|mdx|rst|adoc)$/i.test(path),
   },
   {
-    id: "release",
-    label: "Release metadata",
+    id: "dependencies",
+    label: "Dependencies",
     matches: (path) =>
       path === "package.json" ||
       path === "package-lock.json" ||
+      path === "pnpm-lock.yaml" ||
+      path === "yarn.lock" ||
+      path === "bun.lock" ||
+      path === "Cargo.toml" ||
+      path === "Cargo.lock" ||
+      path === "go.mod" ||
+      path === "go.sum" ||
+      path === "Gemfile" ||
+      path === "Gemfile.lock" ||
+      path === "pyproject.toml" ||
+      path === "poetry.lock" ||
       path.endsWith("/package.json") ||
-      path.endsWith("/package-lock.json") ||
-      path.includes("git-cliff"),
+      path.endsWith("/package-lock.json"),
+  },
+  {
+    id: "config",
+    label: "Configuration",
+    matches: (path) =>
+      /(^|\/)(tsconfig|jsconfig|eslint|prettier|biome|vite|webpack|rollup|astro|next|nuxt|tailwind|postcss|babel|jest|vitest|playwright|cypress|docker-compose)(\.|$)/i.test(
+        path,
+      ) ||
+      path === "Dockerfile" ||
+      path.endsWith(".config.js") ||
+      path.endsWith(".config.ts") ||
+      path.endsWith(".config.mjs") ||
+      path.endsWith(".config.cjs"),
+  },
+  {
+    id: "generated",
+    label: "Generated outputs",
+    matches: (path) =>
+      path.includes("/dist/") ||
+      path.startsWith("dist/") ||
+      path.includes("/build/") ||
+      path.startsWith("build/") ||
+      path.endsWith(".generated.ts") ||
+      path.endsWith(".generated.js") ||
+      path.includes("/generated/"),
+  },
+  {
+    id: "scripts",
+    label: "Scripts",
+    matches: (path) =>
+      path.startsWith("scripts/") ||
+      path.startsWith("tools/") ||
+      path.startsWith("bin/") ||
+      path.includes("/scripts/"),
+  },
+  {
+    id: "frontend",
+    label: "Frontend",
+    matches: (path) =>
+      path.startsWith("src/components/") ||
+      path.startsWith("src/pages/") ||
+      path.startsWith("src/app/") ||
+      path.startsWith("src/styles/") ||
+      path.startsWith("public/") ||
+      path.includes("/components/") ||
+      path.includes("/pages/") ||
+      path.includes("/app/") ||
+      path.includes("/styles/") ||
+      /\.(css|scss|sass|less|astro|svelte|vue)$/i.test(path),
+  },
+  {
+    id: "backend",
+    label: "Backend",
+    matches: (path) =>
+      path.startsWith("api/") ||
+      path.startsWith("server/") ||
+      path.startsWith("routes/") ||
+      path.startsWith("controllers/") ||
+      path.startsWith("models/") ||
+      path.includes("/api/") ||
+      path.includes("/server/") ||
+      path.includes("/routes/") ||
+      path.includes("/controllers/") ||
+      path.includes("/models/"),
+  },
+  {
+    id: "source",
+    label: "Source",
+    matches: () => true,
   },
 ];
 
 const REVIEW_FOCUS_BY_AREA: Record<ReviewerAreaId, string> = {
-  "pr-report":
-    "Check that the PR Report stays readable in the Pull Request description and still preserves the raw evidence below.",
-  dashboard:
-    "Check that Dashboard links, PR deep links, and persisted history still point to the expected data.",
-  "cli-recording":
-    "Check that commit recording, prompt selection, git notes, and attribution remain best-effort and do not break `git commit`.",
-  "agent-adapter":
-    "Check that agent-specific hooks or transcript parsing remain conservative and do not infer missing data.",
   docs: "Check that docs and examples match the implemented behavior without exposing internal development terminology.",
   tests: "Check that tests cover behavior, edge cases, and regression risks rather than only snapshots.",
   workflow:
-    "Check that GitHub Actions behavior is safe for forks, retries, permissions, and existing Pages workflows.",
-  release:
-    "Check that release metadata, package entry points, generated bundles, and versioned outputs stay consistent.",
-  source: "Compare the stated intent with the changed files and the prompt evidence below.",
+    "Check that automation is safe for forks, retries, permissions, and existing deployment workflows.",
+  dependencies:
+    "Check that dependency or package metadata changes are intentional and compatible with release expectations.",
+  config:
+    "Check that configuration changes are scoped, documented, and consistent with the affected tooling.",
+  generated:
+    "Check that generated outputs are consistent with source changes and were not hand-edited accidentally.",
+  scripts:
+    "Check that scripts remain safe, idempotent, and clear about the files or services they touch.",
+  frontend:
+    "Check user-facing behavior, accessibility, layout, and build output for the changed UI paths.",
+  backend:
+    "Check API or server behavior, data handling, error paths, and compatibility with existing clients.",
+  source: "Compare the stated intent with the changed source files and the prompt evidence below.",
 };
 
 /** Prompt/response pair rendered in the PR Report prompt details. */
@@ -572,23 +640,48 @@ function collectReviewerIntentSignals(
 ): string[] {
   const signals: string[] = [];
   const seen = new Set<string>();
+  const primarySignals: string[] = [];
+  const fallbackSignals: string[] = [];
+  let commitSignalCount = 0;
+  const trackedCommitsNewestFirst = report.commits
+    .filter((commit) => commit.session_id !== null)
+    .toReversed();
 
-  for (const commit of report.commits) {
-    if (commit.session_id === null) continue;
+  for (const commit of trackedCommitsNewestFirst) {
+    if (commitSignalCount < REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS) {
+      pushReviewerSignal(signals, seen, `Commit: ${commit.message}`);
+      commitSignalCount += 1;
+    }
 
-    pushReviewerSignal(signals, seen, `Commit: ${commit.message}`);
+    // Review tools benefit most from the final task intent. Older commits are
+    // still visible in the report, but the hidden context budget is intentionally
+    // spent newest-first to avoid reviving stale task prompts.
     for (const interaction of visibleInteractionsBySha.get(commit.sha) ?? []) {
+      const target = isPrimaryReviewerInteraction(interaction) ? primarySignals : fallbackSignals;
       const context = renderInteractionContext(interaction);
       if (context) {
-        pushReviewerSignal(signals, seen, `Context: ${context}`);
+        target.push(`Context: ${context}`);
       }
-      pushReviewerSignal(signals, seen, `Prompt: ${interaction.prompt}`);
-      if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+      target.push(`Prompt: ${interaction.prompt}`);
     }
+  }
+
+  for (const signal of [...primarySignals, ...fallbackSignals]) {
+    pushReviewerSignal(signals, seen, signal);
     if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
   }
 
   return signals;
+}
+
+function isPrimaryReviewerInteraction(interaction: Interaction): boolean {
+  const signals = interaction.selection?.signals ?? [];
+  return (
+    interaction.selection?.source === "primary" ||
+    signals.includes("primary_edit_turn") ||
+    signals.includes("exact_commit_path") ||
+    signals.includes("diff_identifier")
+  );
 }
 
 function pushReviewerSignal(signals: string[], seen: Set<string>, rawSignal: string): void {
