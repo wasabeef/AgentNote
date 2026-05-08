@@ -1,0 +1,599 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T06:47:03.747Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "自己レビュー5回やって",
+      "response": "5 観点で自己レビューします。まず現在の PR 差分と CI 状態を取り直して、設計・Agent 横断・test・docs・運用互換の順に確認します。\nPR #58 の自己レビューを 5 観点でやり直します。まず最新の PR 状態・CI・差分を確認して、必要ならその場で修正まで進めます。\n`common:pr-review` skill を使って、PR レビュー観点で進めます。CI はすでに全 pass、PR は mergeable なので、ここからは「見落としがあるか」をコード差分側から潰します。\nレビュー対象は `heartbeat refresh` と `metadata-only session guard` の 2 層です。まず実装箇所を読み直して、entry point 間で挙動がズレていないか確認します。\n1 つ見つけました。コードではなく PR Description の Checks が古く、CLI test 数が `391` のままです。レビュー品質のため、実装確認と合わせて PR body も最新化します。\nCLI full test はまだ走っています。並行して PR body の古い test 数を直す準備をします。\n**Findings**\nブロッカーなしです。PR #58 は merge してよい状態です。\n\n5 観点で見直しました。\n\n- 正確性: `hasRecordableSessionData()` で metadata-only session を fail-closed にできており、dangling `Agentnote-Session` trailer を防げています。\n- Agent 影響: Claude / Codex / Cursor / Gemini の既存経路を確認。Codex の transcript-driven session だけ例外許可しているのも妥当です。\n- Hook 経路: `prepare-commit-msg` / `agent-note commit` / Claude-style `PreToolUse git commit` の判定が揃っています。Cursor / Gemini の pending-commit 経路にも新しい trailer バグは入っていません。\n- 表示: note missing は `Total AI Ratio: —`、本当に 0% の commit は `░░░░░░░░ 0%` のままで、意味が分離できています。\n- PR/CI: CI は全 pass、mergeable。PR Description の古い `391 tests` 表記だけ見つけたので `399 tests` に更新済みです。\n\n検証も再実行済みです。`packages/cli` は 399 tests pass、`packages/pr-report` は 44 tests pass、`git diff --check` も pass です。\n\n残る注意点は、既にインストール済みの git hook は再 `agent-note init` まで新しい `prepare-commit-msg` guard にならないことですが、今回の PR のブロッカーではありません。\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "まず現在の PR 差分と CI 状態を取り直して、設計・Agent 横断・test・docs・運用互換の順に確認します。 PR #58 の自己レビューを 5 観点でやり直します。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "このリポジトリでは agent-note init しなくていい？",
+      "response": "この repo で実際に現在の git hook が新しい内容になっているか確認します。`agent-note init` が必要かどうかは、`.git/hooks/prepare-commit-msg` が今回の metadata-only guard を含んでいるかで判断できます。\n確認できました。この repo の `prepare-commit-msg` はまだ旧版で、今回追加した `HAS_RECORDABLE_DATA` チェックが入っていません。つまり「この repo で次の commit から新 guard を使う」には再 `init` が必要です。\n必要です。確認したところ、この repo の `.git/hooks/prepare-commit-msg` はまだ旧版で、今回追加した metadata-only session guard が入っていません。\n\nつまり PR #58 を merge したあと、この repo でも一度 `agent-note init` を再実行した方がいいです。目的は tracked file の更新ではなく、ローカルの `.git/hooks/*` と `.git/agentnote/bin/agentnote` shim を最新化することです。\n\nこの repo なら多分これでよいです。\n\n```bash\nnode packages/cli/dist/cli.js init --agent claude codex cursor gemini --dashboard\n```\n\n既存 hook は `agentnote-managed` なので、基本は上書き更新されます。今のままだと次の commit でも旧 `prepare-commit-msg` が動くので、metadata-only session に trailer が付く再発余地があります。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "やっといて",
+      "response": "ローカル hook と shim を最新化します。作業後に `.git/hooks/prepare-commit-msg` に `HAS_RECORDABLE_DATA` が入ったことと、tracked files に余計な差分が出ていないことを確認します。\nHook は更新できました。ただし `init` が agent config を再生成して tracked files に差分を出しています。必要なければローカル hook 更新だけ残して、tracked config 差分は戻します。\n差分は想定通り不要な agent config 再生成でした。ローカル hook は `.git/` 内で更新済みなので、tracked file の差分だけ戻します。\nやっておきました。\n\n確認結果:\n\n- `.git/hooks/prepare-commit-msg` に `HAS_RECORDABLE_DATA` と metadata-only guard が入りました。\n- `.git/agentnote/bin/agentnote` は `agent-note v0.2.3` です。\n- `agent-note init` で一時的に `.claude` / `.codex` / `.cursor` / `.gemini` に差分が出ましたが、ローカル hook 更新だけ残して tracked file 差分は戻しました。\n- `git status --short` は clean です。\n\nMay the Force be with you.",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "metadata-only guard ってなに？これまでと何が違う？",
+      "response": "`metadata-only guard` は、「Agent が動いている形跡だけの session には `Agentnote-Session` trailer を付けない」ための安全弁です。\n\nこれまでは commit 時に見る条件がほぼ heartbeat だけでした。つまり `.git/agentnote/session` と fresh な `heartbeat` があれば、実際には prompt / file edit / pre-edit blob がなくても commit message に `Agentnote-Session: ...` が付きました。その後 `post-commit` が note 作成を試みても、保存できる中身が空なので git note は作られず、PR Report では「trailer はあるのに note がない」状態になっていました。\n\n今回からは heartbeat に加えて、session に以下のどれかがある場合だけ trailer を付けます。\n\n- `prompts.jsonl`: user prompt が記録されている\n- `changes.jsonl`: file change が記録されている\n- `pre_blobs.jsonl`: edit 前 blob が記録されている\n- Codex のみ: `transcript_path` がある場合も record 可能として扱う\n\n要するに、これまでは「Agent が起動していれば対象」寄りでした。今は「Agent Note として保存できる実データがある commit だけ対象」です。これで plain shell commit や session metadata だけの commit に、意味のない `Agentnote-Session` trailer が付くのを防ぎます。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "`metadata-only guard` は、「Agent が動いている形跡だけの session には `Agentnote-Session` trailer を付けない」ための安全弁です。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "website/ docs/ 関連の更新忘れずに",
+      "response": "了解です。今回の `metadata-only guard` は user-facing な挙動にも関わるので、`docs/`・`website/`・maintainer docs に説明漏れがないか確認して、不整合があればそのまま直します。\n漏れがありました。`docs/architecture.md` と各 locale の `how-it-works.mdx` がまだ「heartbeat は SessionStart と prompt で更新」と旧説明のままです。ここを、今回の実装に合わせて「record 可能な session data がある場合だけ trailer」と「heartbeat は hook event で延長」に直します。\nこれから docs と website の説明をまとめて直します。特に「すべての commit に trailer」ではなく「fresh で record 可能な session data がある commit だけ」と伝わるようにします。\n一通り置き換えました。次に古い説明が残っていないか grep で再確認し、website build で MDX が壊れていないことまで確認します。\ndocs / website の更新漏れを直しました。\n\n反映済み:\n- `docs/architecture.md`: trailer injection は heartbeat だけでなく recordable session data も必要、という説明に更新。\n- `AGENTS.md` / `CLAUDE.md`: `prepare-commit-msg` の説明を新 guard に合わせて更新。\n- `website` の `how-it-works` 全 locale: long turn 中の heartbeat refresh と metadata-only session skip を追記。\n- `installation` の英語 / 日本語: `git commit` が trailer を付ける条件を「Agent Note data がある場合」に修正。\n\n確認済み:\n- `git diff --check` pass\n- `npm run build --prefix website` pass\n\nまだ未コミットです。このまま PR #58 に入れるなら `y` で commit push します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "漏れがありました。 `docs/architecture.md` と各 locale の `how-it-works.mdx` がまだ「heartbeat は SessionStart と prompt で更新」と旧説明のままです。"
+        }
+      ],
+      "files_touched": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/architecture.md",
+        "website/src/content/docs/installation.mdx",
+        "website/src/content/docs/ja/installation.mdx",
+        "website/src/content/docs/how-it-works.mdx",
+        "website/src/content/docs/ja/how-it-works.mdx",
+        "website/src/content/docs/de/how-it-works.mdx",
+        "website/src/content/docs/es/how-it-works.mdx",
+        "website/src/content/docs/fr/how-it-works.mdx",
+        "website/src/content/docs/id/how-it-works.mdx",
+        "website/src/content/docs/it/how-it-works.mdx",
+        "website/src/content/docs/ko/how-it-works.mdx",
+        "website/src/content/docs/pt-br/how-it-works.mdx",
+        "website/src/content/docs/ru/how-it-works.mdx",
+        "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "website/src/content/docs/zh-tw/how-it-works.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "93ca805240e39f814f52ef613483d45de88a64f6",
+    "short_sha": "93ca805",
+    "message": "docs: clarify recordable session trailer guard",
+    "date": "2026-05-08T15:47:01+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index 1718278..6273a9e 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -53,7 +53,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.",
+          " ",
+          " ```",
+          " Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)",
+          "-git commit → prepare-commit-msg injects trailer → post-commit calls agent-note record → git note written",
+          "+git commit → prepare-commit-msg injects trailer when session data exists → post-commit calls agent-note record → git note written",
+          " git push → pre-push auto-pushes refs/notes/agentnote",
+          " agent-note show/log/session → reads git notes --ref=agentnote",
+          " ```",
+          "@@ -93,7 +93,7 @@ Gemini-specific event handling:",
+          " ",
+          " `agent-note init` installs three git hooks alongside the agent's hook config:",
+          " ",
+          "-- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour), injects `Agentnote-Session` trailer into commit message. Skips amends.",
+          "+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. Skips amends.",
+          " - **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.",
+          " - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index fb9799a..828dc58 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -53,7 +53,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.",
+          " ",
+          " ```",
+          " Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)",
+          "-git commit → prepare-commit-msg injects trailer → post-commit calls agent-note record → git note written",
+          "+git commit → prepare-commit-msg injects trailer when session data exists → post-commit calls agent-note record → git note written",
+          " git push → pre-push auto-pushes refs/notes/agentnote",
+          " agent-note show/log/session → reads git notes --ref=agentnote",
+          " ```",
+          "@@ -93,7 +93,7 @@ Gemini-specific event handling:",
+          " ",
+          " `agent-note init` installs three git hooks alongside the agent's hook config:",
+          " ",
+          "-- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour), injects `Agentnote-Session` trailer into commit message. Skips amends.",
+          "+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. Skips amends.",
+          " - **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.",
+          " - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index 7fb7f65..2de9d2e 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -364,7 +364,7 @@ Git notes are invisible to branch listings, GitHub UI, and CI — but still push",
+          " ",
+          " ### Commit trailer",
+          " ",
+          "-Every commit made during an AI session gets a trailer:",
+          "+Every recordable commit made during an AI session gets a trailer:",
+          " ",
+          " ```",
+          " feat: add auth middleware",
+          "@@ -373,10 +373,10 @@ Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333",
+          " ```",
+          " ",
+          " Injected via two parallel paths:",
+          "-1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session` and appends trailer to the commit message file.",
+          "-2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook rewrites the git commit command to inject `--trailer` directly.",
+          "+1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session`, verifies the session is fresh and has recordable data, then appends the trailer to the commit message file.",
+          "+2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook applies the same guard before rewriting the git commit command to inject `--trailer` directly.",
+          " ",
+          "-Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook still injects the trailer.",
+          "+Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook can still inject the trailer when the session has recordable data.",
+          " ",
+          " ### Git hooks for commit integration",
+          " ",
+          "@@ -384,11 +384,13 @@ Three git hooks handle commit integration and notes sharing:",
+          " ",
+          " | Git hook | When | What it does |",
+          " |---|---|---|",
+          "-| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness via heartbeat, appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |",
+          "+| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and recordable session data, then appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |",
+          " | `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. Idempotent — skips if note already exists. |",
+          " | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |",
+          " ",
+          "-Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is updated on `SessionStart` and `UserPromptSubmit`. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Missing heartbeat in git hooks = skip (fail closed).",
+          "+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in git hooks = skip (fail closed).",
+          "+",
+          "+Trailer injection also requires recordable session data. Prompts, file-change records, pre-edit blobs, or Codex transcript metadata count as recordable data. Heartbeat and `SessionStart` metadata alone do not, so plain shell commits and metadata-only sessions do not receive dangling `Agentnote-Session` trailers.",
+          " ",
+          " ### Git hook installation",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/how-it-works.mdx",
+        "lines": [
+          "index 7c3c35e..15dc423 100644",
+          "--- a/website/src/content/docs/de/how-it-works.mdx",
+          "+++ b/website/src/content/docs/de/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note und Entire lösen verwandte, aber unterschiedliche Probleme.",
+          " | **Stop** | Protokolliert das Stop-Ereignis (Heartbeat bleibt aktiv — Stop = Ende der Antwort, nicht Ende der Sitzung) |",
+          " ",
+          " <Aside>",
+          "-  Git-Hooks prüfen die Frische der Sitzung über den Heartbeat, bevor Trailer eingefügt oder Notes geschrieben werden. Der Heartbeat wird bei SessionStart und bei jedem Prompt aktualisiert.",
+          "+  Git-Hooks prüfen die Frische der Sitzung über den Heartbeat und verlangen aufzeichenbare Session-Daten, bevor Trailer eingefügt oder Notes geschrieben werden. Der Heartbeat wird während langer Turns durch Hook-Events aktualisiert; metadata-only Sessions werden übersprungen.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/how-it-works.mdx",
+        "lines": [
+          "index 6c3b5b7..58033cb 100644",
+          "--- a/website/src/content/docs/es/how-it-works.mdx",
+          "+++ b/website/src/content/docs/es/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note y Entire resuelven problemas relacionados, pero distintos.",
+          " | **Stop** | Registra el evento stop (el heartbeat sigue activo — Stop = fin de la respuesta, no fin de la sesión) |",
+          " ",
+          " <Aside>",
+          "-  Los git hooks verifican la frescura de la sesión mediante el heartbeat antes de inyectar trailers o registrar notes. El heartbeat se actualiza en SessionStart y en cada prompt.",
+          "+  Los git hooks verifican la frescura de la sesión mediante el heartbeat y exigen datos de sesión registrables antes de inyectar trailers o registrar notes. El heartbeat se actualiza con hook events durante turns largos; las sesiones metadata-only se omiten.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/how-it-works.mdx",
+        "lines": [
+          "index 9c02946..749c2c8 100644",
+          "--- a/website/src/content/docs/fr/how-it-works.mdx",
+          "+++ b/website/src/content/docs/fr/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note et Entire résolvent des problèmes proches, mais différents.",
+          " | **Stop** | Journalise l’événement stop (le heartbeat reste actif — Stop = fin de réponse, pas fin de session) |",
+          " ",
+          " <Aside>",
+          "-  Les git hooks vérifient la fraîcheur de la session via le heartbeat avant d’injecter les trailers ou d’enregistrer les notes. Le heartbeat est mis à jour à SessionStart et à chaque prompt.",
+          "+  Les git hooks vérifient la fraîcheur de la session via le heartbeat et exigent des données de session enregistrables avant d’injecter les trailers ou d’enregistrer les notes. Le heartbeat est rafraîchi par les hook events pendant les longs turns ; les sessions metadata-only sont ignorées.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/how-it-works.mdx",
+        "lines": [
+          "index bd17112..7137e2e 100644",
+          "--- a/website/src/content/docs/how-it-works.mdx",
+          "+++ b/website/src/content/docs/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note and Entire solve related but different problems.",
+          " | **Stop** | Logs stop event (heartbeat stays active — Stop = response end, not session end) |",
+          " ",
+          " <Aside>",
+          "-  Git hooks verify session freshness via heartbeat before injecting trailers or recording notes. Heartbeat is updated on SessionStart and each prompt.",
+          "+  Git hooks verify session freshness and recordable session data before injecting trailers or recording notes. Heartbeat is refreshed by hook events during long turns; metadata-only sessions are skipped.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/how-it-works.mdx",
+        "lines": [
+          "index 20670d1..53408a3 100644",
+          "--- a/website/src/content/docs/id/how-it-works.mdx",
+          "+++ b/website/src/content/docs/id/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.",
+          " | **Stop** | Mencatat event stop (heartbeat tetap aktif — Stop = akhir response, bukan akhir sesi) |",
+          " ",
+          " <Aside>",
+          "-  Git hook memverifikasi kesegaran sesi melalui heartbeat sebelum menyisipkan trailer atau merekam notes. Heartbeat diperbarui pada SessionStart dan setiap prompt.",
+          "+  Git hook memverifikasi kesegaran sesi melalui heartbeat dan memastikan ada data sesi yang dapat direkam sebelum menyisipkan trailer atau merekam notes. Heartbeat diperbarui oleh hook event selama turn yang panjang; sesi metadata-only dilewati.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/installation.mdx",
+        "lines": [
+          "index 4baa718..9112002 100644",
+          "--- a/website/src/content/docs/installation.mdx",
+          "+++ b/website/src/content/docs/installation.mdx",
+          "@@ -90,7 +90,7 @@ npx agent-note init --agent claude",
+          " ",
+          " ## What Happens Automatically",
+          " ",
+          "-After setup, plain `git commit` will:",
+          "+After setup, plain `git commit` will, when the current session has Agent Note data:",
+          " ",
+          " 1. **Inject** an `Agentnote-Session` trailer into the commit message",
+          " 2. **Record** prompts, responses, and file attribution as a git note",
+          "@@ -192,4 +192,3 @@ npx agent-note deinit --agent claude",
+          " ```",
+          " ",
+          " This removes agent hooks and git hooks. Add `--remove-workflow` to also delete `agentnote-pr-report.yml` and `agentnote-dashboard.yml`.",
+          "-"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/how-it-works.mdx",
+        "lines": [
+          "index 8341bfa..626de45 100644",
+          "--- a/website/src/content/docs/it/how-it-works.mdx",
+          "+++ b/website/src/content/docs/it/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note ed Entire risolvono problemi collegati, ma diversi.",
+          " | **Stop** | Registra l’evento stop (l’heartbeat resta attivo — Stop = fine della response, non fine della sessione) |",
+          " ",
+          " <Aside>",
+          "-  I git hook verificano la freschezza della sessione tramite heartbeat prima di inserire trailer o registrare notes. L’heartbeat viene aggiornato su SessionStart e a ogni prompt.",
+          "+  I git hook verificano la freschezza della sessione tramite heartbeat e richiedono dati di sessione registrabili prima di inserire trailer o registrare notes. L’heartbeat viene aggiornato dagli hook event durante turn lunghi; le sessioni metadata-only vengono ignorate.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/how-it-works.mdx",
+        "lines": [
+          "index 88aedee..f75eb14 100644",
+          "--- a/website/src/content/docs/ja/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ja/how-it-works.mdx",
+          "@@ -25,7 +25,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          "   <div class=\"agent-flow__step\">",
+          "     <span class=\"agent-flow__label\">3. Commit</span>",
+          "     <strong>note を記録する</strong>",
+          "-    <p><code>git commit</code> または <code>agent-note commit</code> で trailer を差し込み、git note を書き込みます。</p>",
+          "+    <p><code>git commit</code> または <code>agent-note commit</code> で、記録できる data がある session だけ trailer を差し込み、git note を書き込みます。</p>",
+          "   </div>",
+          "   <div class=\"agent-flow__arrow\" aria-hidden=\"true\">→</div>",
+          "   <div class=\"agent-flow__step\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/installation.mdx",
+        "lines": [
+          "index d49bf9a..3789e63 100644",
+          "--- a/website/src/content/docs/ja/installation.mdx",
+          "+++ b/website/src/content/docs/ja/installation.mdx",
+          "@@ -90,7 +90,7 @@ npx agent-note init --agent claude",
+          " ",
+          " ## 自動で行われること",
+          " ",
+          "-セットアップ後は、通常の `git commit` で次が行われます。",
+          "+セットアップ後は、現在の session に Agent Note data がある場合、通常の `git commit` で次が行われます。",
+          " ",
+          " 1. **追加** `Agentnote-Session` trailer を commit message に追加",
+          " 2. **記録** prompt、response、file attribution を git note として保存",
+          "@@ -192,4 +192,3 @@ npx agent-note deinit --agent claude",
+          " ```",
+          " ",
+          " agent hook と git hook を削除します。`--remove-workflow` を付けると `agentnote-pr-report.yml` と `agentnote-dashboard.yml` も削除します。",
+          "-"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/how-it-works.mdx",
+        "lines": [
+          "index f3c1e3d..26506d6 100644",
+          "--- a/website/src/content/docs/ko/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ko/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note 와 Entire 는 비슷한 문제를 다루지만 목표 workflow 가 ",
+          " | **Stop** | stop event 를 기록함 (heartbeat 는 계속 활성 상태 — Stop = response 끝, session 끝 아님) |",
+          " ",
+          " <Aside>",
+          "-  git hook 은 trailer 를 주입하거나 notes 를 기록하기 전에 heartbeat 로 세션 freshness 를 확인합니다. heartbeat 는 SessionStart 와 각 prompt 에서 업데이트됩니다.",
+          "+  git hook 은 trailer 를 주입하거나 notes 를 기록하기 전에 heartbeat 와 기록 가능한 session data 를 확인합니다. heartbeat 는 긴 turn 중 hook event 로도 갱신되며, metadata-only session 은 건너뜁니다.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+        "lines": [
+          "index 51e0b56..df8ed40 100644",
+          "--- a/website/src/content/docs/pt-br/how-it-works.mdx",
+          "+++ b/website/src/content/docs/pt-br/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note e Entire resolvem problemas relacionados, mas diferentes.",
+          " | **Stop** | Registra o evento stop (o heartbeat continua ativo — Stop = fim da response, não fim da sessão) |",
+          " ",
+          " <Aside>",
+          "-  Os git hooks verificam a atualidade da sessão pelo heartbeat antes de injetar trailers ou gravar notes. O heartbeat é atualizado em SessionStart e em cada prompt.",
+          "+  Os git hooks verificam a atualidade da sessão pelo heartbeat e exigem dados de sessão registráveis antes de injetar trailers ou gravar notes. O heartbeat é atualizado por hook events durante turns longos; sessões metadata-only são ignoradas.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/how-it-works.mdx",
+        "lines": [
+          "index 2ca71b2..ac1c803 100644",
+          "--- a/website/src/content/docs/ru/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ru/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note и Entire решают похожие, но разные задачи",
+          " | **Stop** | Логирует событие stop (heartbeat остаётся активным — Stop = конец response, а не конец сессии) |",
+          " ",
+          " <Aside>",
+          "-  Git hooks проверяют свежесть сессии по heartbeat перед вставкой trailers или записью notes. Heartbeat обновляется на SessionStart и при каждом prompt.",
+          "+  Git hooks проверяют свежесть сессии по heartbeat и наличие записываемых session data перед вставкой trailers или записью notes. Heartbeat обновляется hook events во время длинных turns; metadata-only sessions пропускаются.",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "lines": [
+          "index 4d95c0e..292f611 100644",
+          "--- a/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note 和 Entire 解决的是相关但不同的问题。",
+          " | **Stop** | 记录 stop 事件（heartbeat 保持活跃 —— Stop = response 结束，不是 session 结束） |",
+          " ",
+          " <Aside>",
+          "-  Git hooks 会在注入 trailers 或记录 notes 前，通过 heartbeat 验证 session 是否仍然新鲜。heartbeat 会在 SessionStart 和每个 prompt 时更新。",
+          "+  Git hooks 会在注入 trailers 或记录 notes 前，通过 heartbeat 验证 session 是否仍然新鲜，并确认存在可记录的 session data。heartbeat 会在较长 turn 中由 hook events 刷新；metadata-only session 会被跳过。",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "lines": [
+          "index 36fae23..cc254ed 100644",
+          "--- a/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "@@ -167,7 +167,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。",
+          " | **Stop** | 記錄 stop 事件（heartbeat 會保持有效 —— Stop = response 結束，不是 session 結束） |",
+          " ",
+          " <Aside>",
+          "-  Git hooks 在注入 trailers 或記錄 notes 之前，會透過 heartbeat 驗證 session 是否仍然新鮮。heartbeat 會在 SessionStart 與每次 prompt 時更新。",
+          "+  Git hooks 在注入 trailers 或記錄 notes 之前，會透過 heartbeat 驗證 session 是否仍然新鮮，並確認存在可記錄的 session data。heartbeat 會在較長 turn 中由 hook events 更新；metadata-only session 會被略過。",
+          " </Aside>",
+          " ",
+          " <Aside type=\"tip\">"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 58,
+    "title": "fix(hooks): refresh heartbeat during long turns",
+    "state": "open"
+  }
+}
