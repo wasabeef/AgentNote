@@ -90,7 +90,7 @@ npx agent-note init --agent claude
 
 ## 自動で行われること
 
-セットアップ後は、通常の `git commit` で次が行われます。
+セットアップ後は、現在の session に Agent Note data がある場合、通常の `git commit` で次が行われます。
 
 1. **追加** `Agentnote-Session` trailer を commit message に追加
 2. **記録** prompt、response、file attribution を git note として保存
@@ -192,4 +192,3 @@ npx agent-note deinit --agent claude
 ```
 
 agent hook と git hook を削除します。`--remove-workflow` を付けると `agentnote-pr-report.yml` と `agentnote-dashboard.yml` も削除します。
-

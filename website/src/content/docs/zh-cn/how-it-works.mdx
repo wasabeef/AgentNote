@@ -167,7 +167,7 @@ Agent Note 和 Entire 解决的是相关但不同的问题。
 | **Stop** | 记录 stop 事件（heartbeat 保持活跃 —— Stop = response 结束，不是 session 结束） |
 
 <Aside>
-  Git hooks 会在注入 trailers 或记录 notes 前，通过 heartbeat 验证 session 是否仍然新鲜。heartbeat 会在 SessionStart 和每个 prompt 时更新。
+  Git hooks 会在注入 trailers 或记录 notes 前，通过 heartbeat 验证 session 是否仍然新鲜，并确认存在可记录的 session data。heartbeat 会在较长 turn 中由 hook events 刷新；metadata-only session 会被跳过。
 </Aside>
 
 <Aside type="tip">

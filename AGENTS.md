@@ -53,7 +53,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ```
 Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
-git commit → prepare-commit-msg injects trailer → post-commit calls agent-note record → git note written
+git commit → prepare-commit-msg injects trailer when session data exists → post-commit calls agent-note record → git note written
 git push → pre-push auto-pushes refs/notes/agentnote
 agent-note show/log/session → reads git notes --ref=agentnote
 ```
@@ -93,7 +93,7 @@ Gemini-specific event handling:
 
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
-- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour), injects `Agentnote-Session` trailer into commit message. Skips amends.
+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. Skips amends.
 - **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 

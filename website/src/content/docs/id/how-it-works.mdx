@@ -167,7 +167,7 @@ Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.
 | **Stop** | Mencatat event stop (heartbeat tetap aktif — Stop = akhir response, bukan akhir sesi) |
 
 <Aside>
-  Git hook memverifikasi kesegaran sesi melalui heartbeat sebelum menyisipkan trailer atau merekam notes. Heartbeat diperbarui pada SessionStart dan setiap prompt.
+  Git hook memverifikasi kesegaran sesi melalui heartbeat dan memastikan ada data sesi yang dapat direkam sebelum menyisipkan trailer atau merekam notes. Heartbeat diperbarui oleh hook event selama turn yang panjang; sesi metadata-only dilewati.
 </Aside>
 
 <Aside type="tip">
