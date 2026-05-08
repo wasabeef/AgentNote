@@ -10,7 +10,7 @@ var __export = (target, all) => {
 };
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
+var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, DEFAULT_LOG_COUNT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
 var init_constants = __esm({
   "src/core/constants.ts"() {
     "use strict";
@@ -35,6 +35,7 @@ var init_constants = __esm({
     PENDING_COMMIT_FILE = "pending_commit.json";
     MAX_COMMITS = 500;
     RECENT_STATUS_COMMIT_LIMIT = 20;
+    DEFAULT_LOG_COUNT = 10;
     BAR_WIDTH_FULL = 20;
     TRUNCATE_PROMPT = 120;
     TRUNCATE_PROMPT_PR = 500;
@@ -57,9 +58,11 @@ var init_constants = __esm({
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 async function git(args2, options) {
-  const { stdout } = await execFileAsync("git", args2, {
+  const { stdout } = await execFileAsync(GIT_BINARY, args2, {
     cwd: options?.cwd,
-    encoding: TEXT_ENCODING
+    encoding: TEXT_ENCODING,
+    env: options?.env,
+    timeout: options?.timeout
   });
   return stdout.trim();
 }
@@ -81,9 +84,10 @@ async function repoRoot() {
 function isShellControlStart(command2, index) {
   const char = command2[index];
   const next = command2[index + 1];
-  if (char === "&" && next === "&") return 2;
-  if (char === "|" && next === "|") return 2;
-  if (char === ";" || char === "|" || char === "\n") return 1;
+  if (char === SHELL_AND_OPERATOR && next === SHELL_AND_OPERATOR) return 2;
+  if (char === SHELL_PIPE_OPERATOR && next === SHELL_PIPE_OPERATOR) return 2;
+  if (char === SHELL_SEMICOLON_OPERATOR || char === SHELL_PIPE_OPERATOR || char === SHELL_NEWLINE)
+    return 1;
   return 0;
 }
 function isEnvAssignment(value) {
@@ -116,7 +120,7 @@ function tokenizeShellCommand(command2) {
   for (let index = 0; index < command2.length; index += 1) {
     const char = command2[index];
     if (comment) {
-      if (char === "\n") {
+      if (char === SHELL_NEWLINE) {
         comment = false;
         finishSegment();
       }
@@ -133,29 +137,29 @@ function tokenizeShellCommand(command2) {
         markTokenEnd(index + 1);
         continue;
       }
-      if (quote === '"' && char === "\\") {
+      if (quote === SHELL_DOUBLE_QUOTE && char === SHELL_ESCAPE) {
         escaped = true;
         continue;
       }
       ensureToken(index).value += char;
       continue;
     }
-    if (char === "\\") {
+    if (char === SHELL_ESCAPE) {
       escaped = true;
       ensureToken(index);
       continue;
     }
-    if (char === "'" || char === '"') {
+    if (char === SHELL_SINGLE_QUOTE || char === SHELL_DOUBLE_QUOTE) {
       ensureToken(index);
       quote = char;
       continue;
     }
     if (/\s/.test(char)) {
       finishToken(index);
-      if (char === "\n") finishSegment();
+      if (char === SHELL_NEWLINE) finishSegment();
       continue;
     }
-    if (char === "#" && !token) {
+    if (char === SHELL_COMMENT && !token) {
       comment = true;
       continue;
     }
@@ -176,7 +180,7 @@ function findSimpleCommandIndex(tokens) {
   while (index < tokens.length && isEnvAssignment(tokens[index].value)) {
     index += 1;
   }
-  if (tokens[index]?.value === "env") {
+  if (tokens[index]?.value === GIT_COMMAND_ENV) {
     index += 1;
     while (index < tokens.length) {
       const value = tokens[index].value;
@@ -184,39 +188,39 @@ function findSimpleCommandIndex(tokens) {
         index += 1;
         continue;
       }
-      if (value === "-i" || value === "--ignore-environment") {
+      if (ENV_IGNORE_FLAGS.has(value)) {
         index += 1;
         continue;
       }
       break;
     }
   }
-  if (tokens[index]?.value === "command") {
+  if (tokens[index]?.value === GIT_COMMAND_WRAPPER) {
     index += 1;
   }
   return index;
 }
 function gitOptionConsumesValue(value) {
-  return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
+  return GIT_OPTIONS_WITH_VALUES.has(value);
 }
 function findGitCommitToken(tokens) {
   let index = findSimpleCommandIndex(tokens);
-  if (tokens[index]?.value !== "git") return null;
+  if (tokens[index]?.value !== GIT_BINARY) return null;
   index += 1;
   while (index < tokens.length) {
     const value = tokens[index].value;
-    if (value === "commit") {
+    if (value === GIT_COMMAND_COMMIT) {
       const hasAmend = tokens.slice(index + 1).some((token) => {
-        return token.value === "--amend" || token.value.startsWith("--amend=");
+        return token.value === GIT_AMEND_FLAG || token.value.startsWith(`${GIT_AMEND_FLAG}=`);
       });
       return hasAmend ? null : tokens[index];
     }
-    if (value === "--") return null;
+    if (value === GIT_END_OF_OPTIONS) return null;
     if (gitOptionConsumesValue(value)) {
       index += 2;
       continue;
     }
-    if (value.startsWith("--git-dir=") || value.startsWith("--work-tree=") || value.startsWith("--namespace=") || value.startsWith("-c=")) {
+    if (GIT_OPTIONS_WITH_INLINE_VALUES.some((prefix) => value.startsWith(prefix))) {
       index += 1;
       continue;
     }
@@ -240,12 +244,53 @@ function injectGitCommitTrailer(command2, trailer) {
   if (!match) return null;
   return `${command2.slice(0, match.insertAt)} ${trailer}${command2.slice(match.insertAt)}`;
 }
-var execFileAsync;
+var execFileAsync, GIT_BINARY, GIT_COMMAND_COMMIT, GIT_COMMAND_ENV, GIT_COMMAND_WRAPPER, GIT_AMEND_FLAG, GIT_END_OF_OPTIONS, SHELL_AND_OPERATOR, SHELL_PIPE_OPERATOR, SHELL_SEMICOLON_OPERATOR, SHELL_NEWLINE, SHELL_ESCAPE, SHELL_COMMENT, SHELL_SINGLE_QUOTE, SHELL_DOUBLE_QUOTE, ENV_IGNORE_FLAGS, GIT_OPTIONS_WITH_VALUES, GIT_OPTIONS_WITH_INLINE_VALUES;
 var init_git = __esm({
   "src/git.ts"() {
     "use strict";
     init_constants();
     execFileAsync = promisify(execFile);
+    GIT_BINARY = "git";
+    GIT_COMMAND_COMMIT = "commit";
+    GIT_COMMAND_ENV = "env";
+    GIT_COMMAND_WRAPPER = "command";
+    GIT_AMEND_FLAG = "--amend";
+    GIT_END_OF_OPTIONS = "--";
+    SHELL_AND_OPERATOR = "&";
+    SHELL_PIPE_OPERATOR = "|";
+    SHELL_SEMICOLON_OPERATOR = ";";
+    SHELL_NEWLINE = "\n";
+    SHELL_ESCAPE = "\\";
+    SHELL_COMMENT = "#";
+    SHELL_SINGLE_QUOTE = "'";
+    SHELL_DOUBLE_QUOTE = '"';
+    ENV_IGNORE_FLAGS = /* @__PURE__ */ new Set(["-i", "--ignore-environment"]);
+    GIT_OPTIONS_WITH_VALUES = /* @__PURE__ */ new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
+    GIT_OPTIONS_WITH_INLINE_VALUES = ["--git-dir=", "--work-tree=", "--namespace=", "-c="];
+  }
+});
+
+// src/agents/types.ts
+var AGENT_NAMES, NORMALIZED_EVENT_KINDS;
+var init_types = __esm({
+  "src/agents/types.ts"() {
+    "use strict";
+    AGENT_NAMES = {
+      claude: "claude",
+      codex: "codex",
+      cursor: "cursor",
+      gemini: "gemini"
+    };
+    NORMALIZED_EVENT_KINDS = {
+      sessionStart: "session_start",
+      stop: "stop",
+      response: "response",
+      prompt: "prompt",
+      preEdit: "pre_edit",
+      fileChange: "file_change",
+      preCommit: "pre_commit",
+      postCommit: "post_commit"
+    };
   }
 });
 
@@ -279,32 +324,62 @@ function isSystemInjectedPrompt(prompt) {
 function isGitCommit(cmd) {
   return findGitCommitCommand(cmd) !== null;
 }
-var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, ENV_AGENTNOTE_CLAUDE_HOME, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
+var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, ENV_AGENTNOTE_CLAUDE_HOME, CLAUDE_HOOK_EVENTS, CLAUDE_TOOLS, CLAUDE_EDIT_TOOLS, CLAUDE_EDIT_TOOL_MATCHER, CLAUDE_POST_TOOL_MATCHER, CLAUDE_GIT_COMMIT_FILTER, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
 var init_claude = __esm({
   "src/agents/claude.ts"() {
     "use strict";
     init_constants();
     init_git();
+    init_types();
     HOOK_COMMAND = "npx --yes agent-note hook";
-    CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
+    CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent ${AGENT_NAMES.claude}`;
     ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
+    CLAUDE_HOOK_EVENTS = {
+      sessionStart: "SessionStart",
+      stop: "Stop",
+      userPromptSubmit: "UserPromptSubmit",
+      preToolUse: "PreToolUse",
+      postToolUse: "PostToolUse"
+    };
+    CLAUDE_TOOLS = {
+      bash: "Bash",
+      edit: "Edit",
+      write: "Write",
+      multiEdit: "MultiEdit",
+      notebookEdit: "NotebookEdit"
+    };
+    CLAUDE_EDIT_TOOLS = /* @__PURE__ */ new Set([
+      CLAUDE_TOOLS.edit,
+      CLAUDE_TOOLS.write,
+      CLAUDE_TOOLS.multiEdit,
+      CLAUDE_TOOLS.notebookEdit
+    ]);
+    CLAUDE_EDIT_TOOL_MATCHER = "Edit|Write|MultiEdit|NotebookEdit";
+    CLAUDE_POST_TOOL_MATCHER = `${CLAUDE_EDIT_TOOL_MATCHER}|${CLAUDE_TOOLS.bash}`;
+    CLAUDE_GIT_COMMIT_FILTER = "Bash(*git commit*)";
     HOOKS_CONFIG = {
-      SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-      Stop: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-      UserPromptSubmit: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-      PreToolUse: [
+      [CLAUDE_HOOK_EVENTS.sessionStart]: [
+        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+      ],
+      [CLAUDE_HOOK_EVENTS.stop]: [
+        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+      ],
+      [CLAUDE_HOOK_EVENTS.userPromptSubmit]: [
+        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+      ],
+      [CLAUDE_HOOK_EVENTS.preToolUse]: [
         {
-          matcher: "Edit|Write|MultiEdit|NotebookEdit",
+          matcher: CLAUDE_EDIT_TOOL_MATCHER,
           hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND }]
         },
         {
-          matcher: "Bash",
-          hooks: [{ type: "command", if: "Bash(*git commit*)", command: CLAUDE_HOOK_COMMAND }]
+          matcher: CLAUDE_TOOLS.bash,
+          hooks: [{ type: "command", if: CLAUDE_GIT_COMMIT_FILTER, command: CLAUDE_HOOK_COMMAND }]
         }
       ],
-      PostToolUse: [
+      [CLAUDE_HOOK_EVENTS.postToolUse]: [
         {
-          matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
+          matcher: CLAUDE_POST_TOOL_MATCHER,
           hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }]
         }
       ]
@@ -312,7 +387,7 @@ var init_claude = __esm({
     UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
     claude = {
-      name: "claude",
+      name: AGENT_NAMES.claude,
       settingsRelPath: ".claude/settings.json",
       async managedPaths() {
         return [this.settingsRelPath];
@@ -385,27 +460,37 @@ var init_claude = __esm({
         if (!sid || !isValidSessionId(sid)) return null;
         const tp = e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : void 0;
         switch (e.hook_event_name) {
-          case "SessionStart":
+          case CLAUDE_HOOK_EVENTS.sessionStart:
             return {
-              kind: "session_start",
+              kind: NORMALIZED_EVENT_KINDS.sessionStart,
               sessionId: sid,
               timestamp: ts,
               model: e.model,
               transcriptPath: tp
             };
-          case "Stop":
-            return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
-          case "UserPromptSubmit":
+          case CLAUDE_HOOK_EVENTS.stop:
+            return {
+              kind: NORMALIZED_EVENT_KINDS.stop,
+              sessionId: sid,
+              timestamp: ts,
+              transcriptPath: tp
+            };
+          case CLAUDE_HOOK_EVENTS.userPromptSubmit:
             if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
               return null;
             }
-            return { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt };
-          case "PreToolUse": {
+            return {
+              kind: NORMALIZED_EVENT_KINDS.prompt,
+              sessionId: sid,
+              timestamp: ts,
+              prompt: e.prompt
+            };
+          case CLAUDE_HOOK_EVENTS.preToolUse: {
             const tool = e.tool_name;
             const cmd = e.tool_input?.command ?? "";
-            if ((tool === "Edit" || tool === "Write" || tool === "MultiEdit" || tool === "NotebookEdit") && e.tool_input?.file_path) {
+            if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
               return {
-                kind: "pre_edit",
+                kind: NORMALIZED_EVENT_KINDS.preEdit,
                 sessionId: sid,
                 timestamp: ts,
                 tool,
@@ -413,16 +498,21 @@ var init_claude = __esm({
                 toolUseId: e.tool_use_id
               };
             }
-            if (tool === "Bash" && isGitCommit(cmd)) {
-              return { kind: "pre_commit", sessionId: sid, timestamp: ts, commitCommand: cmd };
+            if (tool === CLAUDE_TOOLS.bash && isGitCommit(cmd)) {
+              return {
+                kind: NORMALIZED_EVENT_KINDS.preCommit,
+                sessionId: sid,
+                timestamp: ts,
+                commitCommand: cmd
+              };
             }
             return null;
           }
-          case "PostToolUse": {
+          case CLAUDE_HOOK_EVENTS.postToolUse: {
             const tool = e.tool_name;
-            if ((tool === "Edit" || tool === "Write" || tool === "MultiEdit" || tool === "NotebookEdit") && e.tool_input?.file_path) {
+            if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
               return {
-                kind: "file_change",
+                kind: NORMALIZED_EVENT_KINDS.fileChange,
                 sessionId: sid,
                 timestamp: ts,
                 tool,
@@ -430,8 +520,13 @@ var init_claude = __esm({
                 toolUseId: e.tool_use_id
               };
             }
-            if (tool === "Bash" && isGitCommit(e.tool_input?.command ?? "")) {
-              return { kind: "post_commit", sessionId: sid, timestamp: ts, transcriptPath: tp };
+            if (tool === CLAUDE_TOOLS.bash && isGitCommit(e.tool_input?.command ?? "")) {
+              return {
+                kind: NORMALIZED_EVENT_KINDS.postCommit,
+                sessionId: sid,
+                timestamp: ts,
+                transcriptPath: tp
+              };
             }
             return null;
           }
@@ -764,18 +859,24 @@ function appendInteractionTool(interaction, toolName) {
   if (tools.includes(toolName)) return;
   interaction.tools = [...tools, toolName];
 }
-var CONFIG_REL_PATH, ENV_CODEX_HOME, HOOKS_REL_PATH, HOOK_COMMAND2, TRANSCRIPT_PREVIEW_CHARS, codex;
+var CONFIG_REL_PATH, ENV_CODEX_HOME, HOOKS_REL_PATH, HOOK_COMMAND2, TRANSCRIPT_PREVIEW_CHARS, CODEX_HOOK_EVENTS, codex;
 var init_codex = __esm({
   "src/agents/codex.ts"() {
     "use strict";
     init_constants();
+    init_types();
     CONFIG_REL_PATH = ".codex/config.toml";
     ENV_CODEX_HOME = "CODEX_HOME";
     HOOKS_REL_PATH = ".codex/hooks.json";
-    HOOK_COMMAND2 = "npx --yes agent-note hook --agent codex";
+    HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
     TRANSCRIPT_PREVIEW_CHARS = 4096;
+    CODEX_HOOK_EVENTS = {
+      sessionStart: "SessionStart",
+      userPromptSubmit: "UserPromptSubmit",
+      stop: "Stop"
+    };
     codex = {
-      name: "codex",
+      name: AGENT_NAMES.codex,
       settingsRelPath: CONFIG_REL_PATH,
       async managedPaths() {
         return [CONFIG_REL_PATH, HOOKS_REL_PATH];
@@ -836,26 +937,26 @@ var init_codex = __esm({
         const timestamp = (/* @__PURE__ */ new Date()).toISOString();
         const transcriptPath = normalizeTranscriptPath(payload.transcript_path);
         switch (payload.hook_event_name) {
-          case "SessionStart":
+          case CODEX_HOOK_EVENTS.sessionStart:
             return {
-              kind: "session_start",
+              kind: NORMALIZED_EVENT_KINDS.sessionStart,
               sessionId,
               timestamp,
               model: payload.model,
               transcriptPath
             };
-          case "UserPromptSubmit":
+          case CODEX_HOOK_EVENTS.userPromptSubmit:
             return payload.prompt ? {
-              kind: "prompt",
+              kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
               prompt: payload.prompt,
               transcriptPath,
               model: payload.model
             } : null;
-          case "Stop":
+          case CODEX_HOOK_EVENTS.stop:
             return {
-              kind: "stop",
+              kind: NORMALIZED_EVENT_KINDS.stop,
               sessionId,
               timestamp,
               response: payload.last_assistant_message ?? void 0,
@@ -1183,13 +1284,13 @@ function buildHooksConfig2() {
   return {
     version: 1,
     hooks: {
-      beforeSubmitPrompt: [{ command: HOOK_COMMAND3 }],
-      beforeShellExecution: [{ command: HOOK_COMMAND3 }],
-      afterAgentResponse: [{ command: HOOK_COMMAND3 }],
-      afterFileEdit: [{ command: HOOK_COMMAND3 }],
-      afterTabFileEdit: [{ command: HOOK_COMMAND3 }],
-      afterShellExecution: [{ command: HOOK_COMMAND3 }],
-      stop: [{ command: HOOK_COMMAND3 }]
+      [CURSOR_HOOK_EVENTS.beforeSubmitPrompt]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.beforeShellExecution]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.afterAgentResponse]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.afterFileEdit]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.afterTabFileEdit]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.afterShellExecution]: [{ command: HOOK_COMMAND3 }],
+      [CURSOR_HOOK_EVENTS.stop]: [{ command: HOOK_COMMAND3 }]
     }
   };
 }
@@ -1220,20 +1321,30 @@ function mergeHooksConfig2(existing) {
     hooks: mergedHooks
   };
 }
-var HOOKS_REL_PATH2, HOOK_COMMAND3, CURSOR_PROJECTS_DIR, CURSOR_TRANSCRIPTS_DIR_ENV, TRANSCRIPT_WAIT_MS, TRANSCRIPT_POLL_MS, cursor;
+var HOOKS_REL_PATH2, HOOK_COMMAND3, CURSOR_PROJECTS_DIR, CURSOR_TRANSCRIPTS_DIR_ENV, TRANSCRIPT_WAIT_MS, TRANSCRIPT_POLL_MS, CURSOR_HOOK_EVENTS, cursor;
 var init_cursor = __esm({
   "src/agents/cursor.ts"() {
     "use strict";
     init_constants();
     init_git();
+    init_types();
     HOOKS_REL_PATH2 = ".cursor/hooks.json";
-    HOOK_COMMAND3 = "npx --yes agent-note hook --agent cursor";
+    HOOK_COMMAND3 = `npx --yes agent-note hook --agent ${AGENT_NAMES.cursor}`;
     CURSOR_PROJECTS_DIR = join3(homedir3(), ".cursor", "projects");
     CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
     TRANSCRIPT_WAIT_MS = 1500;
     TRANSCRIPT_POLL_MS = 50;
+    CURSOR_HOOK_EVENTS = {
+      beforeSubmitPrompt: "beforeSubmitPrompt",
+      afterAgentResponse: "afterAgentResponse",
+      beforeShellExecution: "beforeShellExecution",
+      afterFileEdit: "afterFileEdit",
+      afterTabFileEdit: "afterTabFileEdit",
+      afterShellExecution: "afterShellExecution",
+      stop: "stop"
+    };
     cursor = {
-      name: "cursor",
+      name: AGENT_NAMES.cursor,
       settingsRelPath: HOOKS_REL_PATH2,
       async managedPaths() {
         return [HOOKS_REL_PATH2];
@@ -1284,38 +1395,38 @@ var init_cursor = __esm({
         if (!sessionId) return null;
         const timestamp = (/* @__PURE__ */ new Date()).toISOString();
         switch (payload.hook_event_name) {
-          case "beforeSubmitPrompt":
+          case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
             return payload.prompt ? {
-              kind: "prompt",
+              kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
               prompt: payload.prompt,
               model: payload.model
             } : null;
-          case "afterAgentResponse": {
+          case CURSOR_HOOK_EVENTS.afterAgentResponse: {
             const response = collectMessageText2(
               payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
             ).join("\n").trim();
             return response ? {
-              kind: "response",
+              kind: NORMALIZED_EVENT_KINDS.response,
               sessionId,
               timestamp,
               response
             } : null;
           }
-          case "beforeShellExecution":
+          case CURSOR_HOOK_EVENTS.beforeShellExecution:
             return payload.command && isGitCommit2(payload.command) ? {
-              kind: "pre_commit",
+              kind: NORMALIZED_EVENT_KINDS.preCommit,
               sessionId,
               timestamp,
               commitCommand: payload.command
             } : null;
-          case "afterFileEdit":
-          case "afterTabFileEdit": {
+          case CURSOR_HOOK_EVENTS.afterFileEdit:
+          case CURSOR_HOOK_EVENTS.afterTabFileEdit: {
             const filePath = payload.file_path ?? payload.filePath;
             const editStats = extractEditStats(payload.edits);
             return filePath ? {
-              kind: "file_change",
+              kind: NORMALIZED_EVENT_KINDS.fileChange,
               sessionId,
               timestamp,
               file: filePath,
@@ -1323,18 +1434,18 @@ var init_cursor = __esm({
               ...editStats ? { editStats } : {}
             } : null;
           }
-          case "afterShellExecution":
+          case CURSOR_HOOK_EVENTS.afterShellExecution:
             return payload.command && isGitCommit2(payload.command) ? {
-              kind: "post_commit",
+              kind: NORMALIZED_EVENT_KINDS.postCommit,
               sessionId,
               timestamp
             } : null;
-          case "stop": {
+          case CURSOR_HOOK_EVENTS.stop: {
             const response = collectMessageText2(
               payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
             ).join("\n").trim();
             return {
-              kind: "stop",
+              kind: NORMALIZED_EVENT_KINDS.stop,
               sessionId,
               timestamp,
               response: response || void 0
@@ -1442,28 +1553,42 @@ function findTranscriptCandidate2(rootDir, sessionId) {
   }
   return null;
 }
-var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
+var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, GEMINI_TRANSCRIPT_MESSAGE_TYPE, GEMINI_HOOK_EVENTS, GEMINI_EDIT_TOOL_NAMES, GEMINI_SHELL_TOOL_NAMES, GEMINI_EDIT_TOOL_MATCHER, GEMINI_SHELL_TOOL_MATCHER, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
 var init_gemini = __esm({
   "src/agents/gemini.ts"() {
     "use strict";
     init_constants();
     init_git();
-    HOOK_COMMAND4 = "npx --yes agent-note hook --agent gemini";
+    init_types();
+    HOOK_COMMAND4 = `npx --yes agent-note hook --agent ${AGENT_NAMES.gemini}`;
     ENV_GEMINI_HOME = "GEMINI_HOME";
     HOOK_TIMEOUT_MS = 1e4;
     SETTINGS_REL_PATH = ".gemini/settings.json";
     TRANSCRIPT_PREVIEW_CHARS2 = 4096;
-    EDIT_TOOLS = /* @__PURE__ */ new Set(["write_file", "replace"]);
-    SHELL_TOOLS = /* @__PURE__ */ new Set([
+    GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
+    GEMINI_HOOK_EVENTS = {
+      sessionStart: "SessionStart",
+      sessionEnd: "SessionEnd",
+      beforeAgent: "BeforeAgent",
+      afterAgent: "AfterAgent",
+      beforeTool: "BeforeTool",
+      afterTool: "AfterTool"
+    };
+    GEMINI_EDIT_TOOL_NAMES = ["write_file", "replace"];
+    GEMINI_SHELL_TOOL_NAMES = [
       "run_shell_command",
       "shell",
       "bash",
       "run_command",
       "execute_command"
-    ]);
+    ];
+    GEMINI_EDIT_TOOL_MATCHER = GEMINI_EDIT_TOOL_NAMES.join("|");
+    GEMINI_SHELL_TOOL_MATCHER = GEMINI_SHELL_TOOL_NAMES.join("|");
+    EDIT_TOOLS = new Set(GEMINI_EDIT_TOOL_NAMES);
+    SHELL_TOOLS = new Set(GEMINI_SHELL_TOOL_NAMES);
     UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     HOOKS_CONFIG2 = {
-      SessionStart: [
+      [GEMINI_HOOK_EVENTS.sessionStart]: [
         {
           matcher: "*",
           hooks: [
@@ -1476,7 +1601,7 @@ var init_gemini = __esm({
           ]
         }
       ],
-      SessionEnd: [
+      [GEMINI_HOOK_EVENTS.sessionEnd]: [
         {
           matcher: "*",
           hooks: [
@@ -1489,7 +1614,7 @@ var init_gemini = __esm({
           ]
         }
       ],
-      BeforeAgent: [
+      [GEMINI_HOOK_EVENTS.beforeAgent]: [
         {
           matcher: "*",
           hooks: [
@@ -1502,7 +1627,7 @@ var init_gemini = __esm({
           ]
         }
       ],
-      AfterAgent: [
+      [GEMINI_HOOK_EVENTS.afterAgent]: [
         {
           matcher: "*",
           hooks: [
@@ -1515,9 +1640,9 @@ var init_gemini = __esm({
           ]
         }
       ],
-      BeforeTool: [
+      [GEMINI_HOOK_EVENTS.beforeTool]: [
         {
-          matcher: "write_file|replace",
+          matcher: GEMINI_EDIT_TOOL_MATCHER,
           hooks: [
             {
               name: "agentnote-before-edit",
@@ -1528,7 +1653,7 @@ var init_gemini = __esm({
           ]
         },
         {
-          matcher: "run_shell_command|shell|bash|run_command|execute_command",
+          matcher: GEMINI_SHELL_TOOL_MATCHER,
           hooks: [
             {
               name: "agentnote-before-shell",
@@ -1539,9 +1664,9 @@ var init_gemini = __esm({
           ]
         }
       ],
-      AfterTool: [
+      [GEMINI_HOOK_EVENTS.afterTool]: [
         {
-          matcher: "write_file|replace",
+          matcher: GEMINI_EDIT_TOOL_MATCHER,
           hooks: [
             {
               name: "agentnote-after-edit",
@@ -1552,7 +1677,7 @@ var init_gemini = __esm({
           ]
         },
         {
-          matcher: "run_shell_command|shell|bash|run_command|execute_command",
+          matcher: GEMINI_SHELL_TOOL_MATCHER,
           hooks: [
             {
               name: "agentnote-after-shell",
@@ -1565,7 +1690,7 @@ var init_gemini = __esm({
       ]
     };
     gemini = {
-      name: "gemini",
+      name: AGENT_NAMES.gemini,
       settingsRelPath: SETTINGS_REL_PATH,
       async managedPaths() {
         return [SETTINGS_REL_PATH];
@@ -1633,27 +1758,43 @@ var init_gemini = __esm({
         if (!sid || !isValidSessionId2(sid)) return null;
         const tp = e.transcript_path && isValidTranscriptPath4(e.transcript_path) ? e.transcript_path : void 0;
         switch (e.hook_event_name) {
-          case "SessionStart":
+          case GEMINI_HOOK_EVENTS.sessionStart:
             return {
-              kind: "session_start",
+              kind: NORMALIZED_EVENT_KINDS.sessionStart,
               sessionId: sid,
               timestamp: ts,
               model: e.model,
               transcriptPath: tp
             };
-          case "SessionEnd":
-            return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
-          case "BeforeAgent":
-            return e.prompt ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt, model: e.model } : null;
-          case "AfterAgent":
-            return e.prompt_response ? { kind: "response", sessionId: sid, timestamp: ts, response: e.prompt_response } : null;
-          case "BeforeTool": {
+          case GEMINI_HOOK_EVENTS.sessionEnd:
+            return {
+              kind: NORMALIZED_EVENT_KINDS.stop,
+              sessionId: sid,
+              timestamp: ts,
+              transcriptPath: tp
+            };
+          case GEMINI_HOOK_EVENTS.beforeAgent:
+            return e.prompt ? {
+              kind: NORMALIZED_EVENT_KINDS.prompt,
+              sessionId: sid,
+              timestamp: ts,
+              prompt: e.prompt,
+              model: e.model
+            } : null;
+          case GEMINI_HOOK_EVENTS.afterAgent:
+            return e.prompt_response ? {
+              kind: NORMALIZED_EVENT_KINDS.response,
+              sessionId: sid,
+              timestamp: ts,
+              response: e.prompt_response
+            } : null;
+          case GEMINI_HOOK_EVENTS.beforeTool: {
             const toolName = e.tool_name?.toLowerCase() ?? "";
             const filePath = e.tool_input?.file_path;
             const cmd = e.tool_input?.command ?? "";
             if (EDIT_TOOLS.has(toolName) && filePath) {
               return {
-                kind: "pre_edit",
+                kind: NORMALIZED_EVENT_KINDS.preEdit,
                 sessionId: sid,
                 timestamp: ts,
                 tool: e.tool_name,
@@ -1661,17 +1802,22 @@ var init_gemini = __esm({
               };
             }
             if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
-              return { kind: "pre_commit", sessionId: sid, timestamp: ts, commitCommand: cmd };
+              return {
+                kind: NORMALIZED_EVENT_KINDS.preCommit,
+                sessionId: sid,
+                timestamp: ts,
+                commitCommand: cmd
+              };
             }
             return null;
           }
-          case "AfterTool": {
+          case GEMINI_HOOK_EVENTS.afterTool: {
             const toolName = e.tool_name?.toLowerCase() ?? "";
             const filePath = e.tool_input?.file_path;
             const cmd = e.tool_input?.command ?? "";
             if (EDIT_TOOLS.has(toolName) && filePath) {
               return {
-                kind: "file_change",
+                kind: NORMALIZED_EVENT_KINDS.fileChange,
                 sessionId: sid,
                 timestamp: ts,
                 tool: e.tool_name,
@@ -1679,7 +1825,12 @@ var init_gemini = __esm({
               };
             }
             if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
-              return { kind: "post_commit", sessionId: sid, timestamp: ts, transcriptPath: tp };
+              return {
+                kind: NORMALIZED_EVENT_KINDS.postCommit,
+                sessionId: sid,
+                timestamp: ts,
+                transcriptPath: tp
+              };
             }
             return null;
           }
@@ -1722,7 +1873,7 @@ var init_gemini = __esm({
             if (typeof record.timestamp === "string") current.timestamp = record.timestamp;
             continue;
           }
-          if (type === "gemini" && current) {
+          if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
             const response = extractPartText(record.content);
             if (response) {
               current.response = current.response ? `${current.response}
@@ -1942,7 +2093,7 @@ function filterInteractionsByPromptDetail(interactions, detail) {
   });
 }
 function resolvePromptRuntimeSelection(selection, interaction) {
-  if (!selection) return { score: 100, role: "primary", level: "high" };
+  if (!selection) return { score: LEGACY_PROMPT_SCORE, role: "primary", level: "high" };
   const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
   const role = resolvePromptRuntimeRole(selection.source, signals, interaction.prompt);
   const score = scorePromptRuntime({ role, signals });
@@ -1968,89 +2119,35 @@ function scorePromptRuntime(opts) {
   for (const signal of opts.signals) score += signalScore(signal);
   const [min, max] = roleScoreClamp(opts.role);
   score = Math.max(min, Math.min(score, max));
-  if (opts.role === "primary") return Math.max(score, 80);
+  if (opts.role === "primary") return Math.max(score, PRIMARY_SCORE_FLOOR);
   if (opts.role === "bridge") {
-    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE : BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE;
     return Math.min(score, maxBridgeScore);
   }
-  if (opts.role === "anchored_bridge") return Math.min(score, 65);
+  if (opts.role === "anchored_bridge") return Math.min(score, ANCHORED_BRIDGE_SCORE_MAX);
   if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
-    return Math.min(score, 44);
+    return Math.min(score, UNANCHORED_TAIL_SCORE_MAX);
   }
   return score;
 }
 function resolvePromptRuntimeLevel(runtime) {
   if (runtime.role === "primary") return "high";
-  if (runtime.role === "bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.role === "anchored_bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.score >= 75) return "high";
-  if (runtime.score >= 45) return "medium";
+  if (runtime.role === "bridge") return runtime.score >= MEDIUM_SCORE_THRESHOLD ? "medium" : "low";
+  if (runtime.role === "anchored_bridge") {
+    return runtime.score >= MEDIUM_SCORE_THRESHOLD ? "medium" : "low";
+  }
+  if (runtime.score >= HIGH_SCORE_THRESHOLD) return "high";
+  if (runtime.score >= MEDIUM_SCORE_THRESHOLD) return "medium";
   return "low";
 }
 function roleBaseScore(role) {
-  switch (role) {
-    case "primary":
-      return 90;
-    case "direct_anchor":
-      return 75;
-    case "scope":
-      return 60;
-    case "tail":
-    case "anchored_bridge":
-      return 45;
-    case "bridge":
-      return 25;
-    case "background":
-      return 15;
-  }
+  return PROMPT_ROLE_BASE_SCORES[role];
 }
 function roleScoreClamp(role) {
-  switch (role) {
-    case "primary":
-      return [80, 100];
-    case "direct_anchor":
-      return [65, 95];
-    case "scope":
-      return [50, 80];
-    case "tail":
-      return [35, 70];
-    case "anchored_bridge":
-      return [40, 65];
-    case "bridge":
-      return [20, 55];
-    case "background":
-      return [0, 30];
-  }
+  return [...PROMPT_ROLE_SCORE_CLAMPS[role]];
 }
 function signalScore(signal) {
-  switch (signal) {
-    case "primary_edit_turn":
-      return 0;
-    case "exact_commit_path":
-      return 30;
-    case "commit_file_basename":
-      return 10;
-    case "diff_identifier":
-      return 20;
-    case "response_exact_commit_path":
-      return 18;
-    case "response_basename_or_identifier":
-      return 10;
-    case "commit_subject_overlap":
-      return 4;
-    case "list_or_checklist_shape":
-      return 10;
-    case "multi_line_instruction":
-      return 6;
-    case "inline_code_or_path_shape":
-      return 6;
-    case "substantive_prompt_shape":
-      return 12;
-    case "before_commit_boundary":
-      return 5;
-    case "between_non_excluded_prompts":
-      return 8;
-  }
+  return PROMPT_SIGNAL_SCORES[signal];
 }
 function hasBridgeAnchorSignal(signals) {
   return signals.includes("exact_commit_path") || signals.includes("diff_identifier") || signals.includes("commit_file_basename");
@@ -2064,7 +2161,7 @@ function hasScopeSignal(signals) {
 function isShortSelectionPrompt(prompt) {
   const trimmed = prompt.trim();
   if (!trimmed) return true;
-  return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+  return trimmed.length <= SHORT_PROMPT_MAX_CHARS && trimmed.split(/\s+/).length <= SHORT_PROMPT_MAX_WORDS;
 }
 function hasSubstantivePromptShape(text) {
   const trimmed = text.trim();
@@ -2107,11 +2204,11 @@ function hasPrimaryEditInteraction(interaction) {
 }
 function calcAiRatio(files, lineCounts) {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
-    return Math.round(lineCounts.aiAddedLines / lineCounts.totalAddedLines * 100);
+    return Math.round(lineCounts.aiAddedLines / lineCounts.totalAddedLines * PERCENT_DENOMINATOR);
   }
   const eligible = countAiRatioEligibleFiles(files);
   if (eligible.total === 0) return 0;
-  return Math.round(eligible.ai / eligible.total * 100);
+  return Math.round(eligible.ai / eligible.total * PERCENT_DENOMINATOR);
 }
 function resolveMethod(lineCounts) {
   if (!lineCounts) return "file";
@@ -2169,12 +2266,56 @@ function buildEntry(opts) {
     attribution
   };
 }
-var DEFAULT_PROMPT_DETAIL, GENERATED_DIR_SEGMENTS, GENERATED_FILE_NAMES, GENERATED_FILE_SUFFIXES, GENERATED_CONTENT_PATTERNS;
+var DEFAULT_PROMPT_DETAIL, LEGACY_PROMPT_SCORE, PERCENT_DENOMINATOR, PRIMARY_SCORE_FLOOR, HIGH_SCORE_THRESHOLD, MEDIUM_SCORE_THRESHOLD, BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE, BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE, ANCHORED_BRIDGE_SCORE_MAX, UNANCHORED_TAIL_SCORE_MAX, SHORT_PROMPT_MAX_CHARS, SHORT_PROMPT_MAX_WORDS, PROMPT_ROLE_BASE_SCORES, PROMPT_ROLE_SCORE_CLAMPS, PROMPT_SIGNAL_SCORES, GENERATED_DIR_SEGMENTS, GENERATED_FILE_NAMES, GENERATED_FILE_SUFFIXES, GENERATED_CONTENT_PATTERNS;
 var init_entry = __esm({
   "src/core/entry.ts"() {
     "use strict";
     init_constants();
     DEFAULT_PROMPT_DETAIL = "compact";
+    LEGACY_PROMPT_SCORE = 100;
+    PERCENT_DENOMINATOR = 100;
+    PRIMARY_SCORE_FLOOR = 80;
+    HIGH_SCORE_THRESHOLD = 75;
+    MEDIUM_SCORE_THRESHOLD = 45;
+    BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE = 55;
+    BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE = 44;
+    ANCHORED_BRIDGE_SCORE_MAX = 65;
+    UNANCHORED_TAIL_SCORE_MAX = 44;
+    SHORT_PROMPT_MAX_CHARS = 120;
+    SHORT_PROMPT_MAX_WORDS = 12;
+    PROMPT_ROLE_BASE_SCORES = {
+      primary: 90,
+      direct_anchor: 75,
+      scope: 60,
+      tail: 45,
+      anchored_bridge: 45,
+      bridge: 25,
+      background: 15
+    };
+    PROMPT_ROLE_SCORE_CLAMPS = {
+      primary: [80, 100],
+      direct_anchor: [65, 95],
+      scope: [50, 80],
+      tail: [35, 70],
+      anchored_bridge: [40, 65],
+      bridge: [20, 55],
+      background: [0, 30]
+    };
+    PROMPT_SIGNAL_SCORES = {
+      primary_edit_turn: 0,
+      exact_commit_path: 30,
+      commit_file_basename: 10,
+      diff_identifier: 20,
+      response_exact_commit_path: 18,
+      response_basename_or_identifier: 10,
+      commit_subject_overlap: 4,
+      list_or_checklist_shape: 10,
+      multi_line_instruction: 6,
+      inline_code_or_path_shape: 6,
+      substantive_prompt_shape: 12,
+      before_commit_boundary: 5,
+      between_non_excluded_prompts: 8
+    };
     GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([
       // Web / JS / TS build outputs
       ".next",
@@ -2283,11 +2424,11 @@ function selectInteractionContext(candidate, signature) {
   const scored = splitParagraphs(candidate.previousResponse).filter((paragraph) => !isRejectedParagraph(paragraph)).map((paragraph, index) => scoreParagraph(paragraph, index, signature)).filter((score) => hasStrongParagraphAnchor(score)).sort(compareParagraphScores);
   if (scored.length === 0) return void 0;
   const maxChars = Math.min(MAX_CONTEXT_CHARS, candidate.previousResponse.length);
-  const selected = scored.slice(0, 2).sort((a, b) => a.index - b.index);
+  const selected = scored.slice(0, MAX_REFERENCE_PARAGRAPHS).sort((a, b) => a.index - b.index);
   const output = [];
   let length = 0;
   for (const item of selected) {
-    const nextLength = length + item.paragraph.length + (output.length > 0 ? 2 : 0);
+    const nextLength = length + item.paragraph.length + (output.length > 0 ? CONTEXT_SEPARATOR_CHARS : 0);
     if (nextLength > maxChars) continue;
     output.push(item.paragraph);
     length = nextLength;
@@ -2301,7 +2442,7 @@ function toReferenceContext(context) {
     kind: "reference",
     source: "previous_response",
     text,
-    rank: 3
+    rank: REFERENCE_CONTEXT_RANK
   };
 }
 function selectInteractionScopeContext(candidate, signature) {
@@ -2350,7 +2491,7 @@ function hasStrongAnchor(text, signature) {
 }
 function isShortPrompt(prompt) {
   const lines = prompt.trim().split("\n").map((line) => line.trim()).filter(Boolean);
-  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= 3;
+  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= MAX_SCOPE_PROMPT_LINES;
 }
 function splitScopeSentences(response) {
   const lines = response.split("\n").map((line) => stripListOrQuoteMarker(line.trim())).filter(Boolean).slice(0, MAX_SCOPE_LINES);
@@ -2397,7 +2538,7 @@ function isSentenceBoundary(text, index) {
 }
 function isLikelyFileOrDomainDot(text, index) {
   const before = text.slice(Math.max(0, index - 32), index);
-  const after = text.slice(index + 1, index + 16);
+  const after = text.slice(index + 1, index + SENTENCE_LOOKAHEAD_CHARS);
   return /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(`${before}.${after}`) && /\w/.test(after);
 }
 function scoreScopeSentence(sentence, index, signature) {
@@ -2405,10 +2546,10 @@ function scoreScopeSentence(sentence, index, signature) {
   const codeIdentifierHits = countIdentifierHits(sentence, signature.codeIdentifiers);
   const subjectTokenHits = countSubjectTokenHits(sentence, signature.commitSubjectTokens);
   const issueRefHits = ISSUE_OR_PR_REFERENCE.test(sentence) ? 1 : 0;
-  const scopedTitleHits = subjectTokenHits >= 2 ? 1 : 0;
+  const scopedTitleHits = subjectTokenHits >= SUBJECT_TOKEN_SCOPE_THRESHOLD ? 1 : 0;
   const issueScopedTitleHits = issueRefHits > 0 && subjectTokenHits > 0 ? 1 : 0;
   const markdownIssueHits = issueRefHits > 0 && MARKDOWN_FILE_REFERENCE.test(sentence) ? 1 : 0;
-  const structuralScore = codeIdentifierHits * 2 + scopedTitleHits * 2 + issueScopedTitleHits * 2 + markdownIssueHits * 2 + fileHits;
+  const structuralScore = codeIdentifierHits * STRUCTURAL_SCOPE_WEIGHT + scopedTitleHits * STRUCTURAL_SCOPE_WEIGHT + issueScopedTitleHits * STRUCTURAL_SCOPE_WEIGHT + markdownIssueHits * STRUCTURAL_SCOPE_WEIGHT + fileHits;
   return {
     context: {
       kind: "scope",
@@ -2508,7 +2649,9 @@ function countSubjectTokenHits(text, tokens) {
   return tokens.filter((token) => textTokens.has(token)).length;
 }
 function tokenizeSubject(text) {
-  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}_-]+/u).map((token) => token.trim()).filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token));
+  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}_-]+/u).map((token) => token.trim()).filter(
+    (token) => token.length >= GENERIC_SUBJECT_TOKEN_MIN_CHARS && !GENERIC_TOKENS.has(token)
+  );
   return unique(tokens);
 }
 function isGenericIdentifier(identifier) {
@@ -2541,7 +2684,7 @@ function dedupeContexts(contexts) {
 }
 function contextBlockLength(contexts) {
   return contexts.reduce((length, context, index) => {
-    return length + context.text.length + (index > 0 ? 2 : 0);
+    return length + context.text.length + (index > 0 ? CONTEXT_SEPARATOR_CHARS : 0);
   }, 0);
 }
 function compareContextRanks(a, b) {
@@ -2553,7 +2696,7 @@ function sortContextsForDisplay(contexts) {
   );
 }
 function contextKindOrder(kind) {
-  return kind === "reference" ? 0 : 1;
+  return CONTEXT_KIND_ORDER[kind];
 }
 function stripRank(context) {
   return {
@@ -2562,7 +2705,7 @@ function stripRank(context) {
     text: context.text
   };
 }
-var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MAX_SCOPE_SENTENCES, MIN_SCOPE_SCORE, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
+var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MAX_SCOPE_SENTENCES, MAX_REFERENCE_PARAGRAPHS, MAX_SCOPE_PROMPT_LINES, MIN_SCOPE_SCORE, REFERENCE_CONTEXT_RANK, CONTEXT_SEPARATOR_CHARS, SENTENCE_LOOKAHEAD_CHARS, SUBJECT_TOKEN_SCOPE_THRESHOLD, STRUCTURAL_SCOPE_WEIGHT, GENERIC_SUBJECT_TOKEN_MIN_CHARS, CONTEXT_KIND_ORDER, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
 var init_interaction_context = __esm({
   "src/core/interaction-context.ts"() {
     "use strict";
@@ -2570,7 +2713,19 @@ var init_interaction_context = __esm({
     MAX_SCOPE_PROMPT_CHARS = 120;
     MAX_SCOPE_LINES = 10;
     MAX_SCOPE_SENTENCES = 4;
+    MAX_REFERENCE_PARAGRAPHS = 2;
+    MAX_SCOPE_PROMPT_LINES = 3;
     MIN_SCOPE_SCORE = 2;
+    REFERENCE_CONTEXT_RANK = 3;
+    CONTEXT_SEPARATOR_CHARS = 2;
+    SENTENCE_LOOKAHEAD_CHARS = 16;
+    SUBJECT_TOKEN_SCOPE_THRESHOLD = 2;
+    STRUCTURAL_SCOPE_WEIGHT = 2;
+    GENERIC_SUBJECT_TOKEN_MIN_CHARS = 3;
+    CONTEXT_KIND_ORDER = {
+      reference: 0,
+      scope: 1
+    };
     GENERIC_TOKENS = /* @__PURE__ */ new Set([
       "agent",
       "agentnote",
@@ -3011,7 +3166,7 @@ function isHardTrimPromptRow(row) {
   return row.isQuotedHistory || row.isTinyPrompt || row.isNonPrimaryEditTurn || row.isConsumedTailPrompt;
 }
 function isLowShapePromptRow(row) {
-  return row.windowTextScore < 2 && row.windowFileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE && row.windowShapeScore < 20;
+  return row.windowTextScore < LOW_SHAPE_WINDOW_TEXT_SCORE_MAX && row.windowFileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE && row.windowShapeScore < LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX;
 }
 function trimLongPromptWindow(rows) {
   const first = rows[0];
@@ -3041,13 +3196,18 @@ function isQuotedPromptHistory(prompt) {
 function scoreTextShape(text) {
   const trimmed = text.trim();
   if (!trimmed) return 0;
-  let score = Math.min(Math.floor(trimmed.length / 4), 24);
+  let score = Math.min(
+    Math.floor(trimmed.length / TEXT_SHAPE_LENGTH_DIVISOR),
+    TEXT_SHAPE_LENGTH_SCORE_MAX
+  );
   const newlines = (trimmed.match(/\n/g) ?? []).length;
-  score += Math.min(newlines * 10, 30);
-  if (/`[^`]+`/.test(trimmed)) score += 18;
-  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) score += 16;
-  if (/--[a-z0-9-]+/i.test(trimmed)) score += 14;
-  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += 20;
+  score += Math.min(newlines * TEXT_SHAPE_NEWLINE_WEIGHT, TEXT_SHAPE_NEWLINE_SCORE_MAX);
+  if (/`[^`]+`/.test(trimmed)) score += TEXT_SHAPE_INLINE_CODE_SCORE;
+  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) {
+    score += TEXT_SHAPE_PATH_SCORE;
+  }
+  if (/--[a-z0-9-]+/i.test(trimmed)) score += TEXT_SHAPE_FLAG_SCORE;
+  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += TEXT_SHAPE_LIST_SCORE;
   return score;
 }
 function scorePromptTextOverlap(prompt, commitFiles, commitSubject) {
@@ -3056,7 +3216,9 @@ function scorePromptTextOverlap(prompt, commitFiles, commitSubject) {
 ${commitFiles.join("\n")}`);
   let score = 0;
   for (const token of promptTokens) {
-    if (commitTokens.has(token)) score += token.includes("/") || token.includes(".") ? 4 : 1;
+    if (commitTokens.has(token)) {
+      score += token.includes("/") || token.includes(".") ? TEXT_OVERLAP_PATH_TOKEN_SCORE : TEXT_OVERLAP_WORD_TOKEN_SCORE;
+    }
   }
   return score;
 }
@@ -3065,13 +3227,13 @@ function scorePromptFileRefs(prompt, commitFiles) {
   let score = 0;
   for (const file of commitFiles) {
     const lowerFile = file.toLowerCase();
-    if (lowerPrompt.includes(lowerFile)) score += 80;
-    const segments = file.split(/[/.]/).filter((segment) => segment.length >= 4);
+    if (lowerPrompt.includes(lowerFile)) score += FILE_REF_EXACT_PATH_SCORE;
+    const segments = file.split(/[/.]/).filter((segment) => segment.length >= FILE_REF_SEGMENT_MIN_CHARS);
     for (const segment of segments) {
-      if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
+      if (lowerPrompt.includes(segment.toLowerCase())) score += FILE_REF_SEGMENT_SCORE;
     }
     const basename3 = file.split("/").pop();
-    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += 20;
+    if (basename3 && lowerPrompt.includes(basename3.toLowerCase())) score += FILE_REF_BASENAME_SCORE;
   }
   return score;
 }
@@ -3079,15 +3241,15 @@ function tokenizePromptSelectionText(text) {
   const tokens = /* @__PURE__ */ new Set();
   const normalized = text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^\p{L}\p{N}_\-./]+/gu, " ").toLowerCase();
   for (const raw of normalized.split(/\s+/)) {
-    if (!raw || raw.length < 2) continue;
+    if (!raw || raw.length < TOKEN_MIN_CHARS) continue;
     tokens.add(raw);
     for (const part of raw.split(/[./_-]/)) {
-      if (part.length >= 3) tokens.add(part);
+      if (part.length >= TOKEN_PART_MIN_CHARS) tokens.add(part);
     }
   }
   return tokens;
 }
-var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS;
+var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, LOW_SHAPE_WINDOW_TEXT_SCORE_MAX, LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS, TEXT_SHAPE_LENGTH_DIVISOR, TEXT_SHAPE_LENGTH_SCORE_MAX, TEXT_SHAPE_NEWLINE_WEIGHT, TEXT_SHAPE_NEWLINE_SCORE_MAX, TEXT_SHAPE_INLINE_CODE_SCORE, TEXT_SHAPE_PATH_SCORE, TEXT_SHAPE_FLAG_SCORE, TEXT_SHAPE_LIST_SCORE, FILE_REF_EXACT_PATH_SCORE, FILE_REF_SEGMENT_MIN_CHARS, FILE_REF_SEGMENT_SCORE, FILE_REF_BASENAME_SCORE, TEXT_OVERLAP_PATH_TOKEN_SCORE, TEXT_OVERLAP_WORD_TOKEN_SCORE, TOKEN_MIN_CHARS, TOKEN_PART_MIN_CHARS;
 var init_prompt_window = __esm({
   "src/core/prompt-window.ts"() {
     "use strict";
@@ -3100,10 +3262,28 @@ var init_prompt_window = __esm({
     PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
     PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
     PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
+    LOW_SHAPE_WINDOW_TEXT_SCORE_MAX = 2;
+    LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX = 20;
     PROMPT_SELECTION_SCHEMA = 1;
     QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
     QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
     QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
+    TEXT_SHAPE_LENGTH_DIVISOR = 4;
+    TEXT_SHAPE_LENGTH_SCORE_MAX = 24;
+    TEXT_SHAPE_NEWLINE_WEIGHT = 10;
+    TEXT_SHAPE_NEWLINE_SCORE_MAX = 30;
+    TEXT_SHAPE_INLINE_CODE_SCORE = 18;
+    TEXT_SHAPE_PATH_SCORE = 16;
+    TEXT_SHAPE_FLAG_SCORE = 14;
+    TEXT_SHAPE_LIST_SCORE = 20;
+    FILE_REF_EXACT_PATH_SCORE = 80;
+    FILE_REF_SEGMENT_MIN_CHARS = 4;
+    FILE_REF_SEGMENT_SCORE = 5;
+    FILE_REF_BASENAME_SCORE = 20;
+    TEXT_OVERLAP_PATH_TOKEN_SCORE = 4;
+    TEXT_OVERLAP_WORD_TOKEN_SCORE = 1;
+    TOKEN_MIN_CHARS = 2;
+    TOKEN_PART_MIN_CHARS = 3;
   }
 });
 
@@ -3181,9 +3361,9 @@ import { readdir, readFile as readFile7, unlink, writeFile as writeFile6 } from 
 import { tmpdir } from "node:os";
 import { join as join6 } from "node:path";
 async function recordCommitEntry(opts) {
-  const sessionDir = join6(opts.agentnoteDirPath, "sessions", opts.sessionId);
+  const sessionDir = join6(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
-  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : "claude";
+  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : AGENT_NAMES.claude;
   const adapter = getAgent(agentName);
   const commitSha = await git(["rev-parse", "HEAD"]);
   const existingNote = await readNote(commitSha);
@@ -3336,7 +3516,7 @@ async function recordCommitEntry(opts) {
     const touched = i.files_touched ?? [];
     return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
   });
-  const promptOnlyFallbackEntries = agentName === "codex" && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(
+  const promptOnlyFallbackEntries = agentName === AGENT_NAMES.codex && hasTurnData && aiFiles.length === 0 && relevantPromptEntries.length === 0 && maxConsumedTurn > 0 && !transcriptEditsCommit && transcriptEditsOthers ? selectPromptOnlyFallbackEntries(
     promptEntries,
     maxConsumedTurn,
     commitFiles,
@@ -4335,11 +4515,12 @@ async function readResponsesByTurn(sessionDir) {
   const entries = await readJsonlEntries(eventsFile);
   const responsesByTurn = /* @__PURE__ */ new Map();
   for (const entry of entries) {
-    if (entry.event !== "response" && entry.event !== "stop") continue;
+    if (entry.event !== NORMALIZED_EVENT_KINDS.response && entry.event !== NORMALIZED_EVENT_KINDS.stop)
+      continue;
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
     const response = typeof entry.response === "string" ? entry.response.trim() : "";
     if (!turn || !response) continue;
-    const priority = entry.event === "response" ? 2 : 1;
+    const priority = entry.event === NORMALIZED_EVENT_KINDS.response ? 2 : 1;
     const current = responsesByTurn.get(turn);
     if (current && current.priority > priority) continue;
     responsesByTurn.set(turn, { response, priority });
@@ -4352,7 +4533,7 @@ async function readTranscriptCorrelationStartMs(sessionDir) {
   const entries = await readJsonlEntries(eventsFile);
   let latestSessionStartMs = null;
   for (const entry of entries) {
-    if (entry.event !== "session_start") continue;
+    if (entry.event !== NORMALIZED_EVENT_KINDS.sessionStart) continue;
     const timestampMs = parseTimestampMs(entry.timestamp);
     if (timestampMs === null) continue;
     if (latestSessionStartMs === null || timestampMs > latestSessionStartMs) {
@@ -4367,7 +4548,7 @@ async function readSessionModel(sessionDir) {
   const entries = await readJsonlEntries(eventsFile);
   let fallbackModel = null;
   for (const e of entries) {
-    if (e.event === "session_start" && typeof e.model === "string" && e.model) {
+    if (e.event === NORMALIZED_EVENT_KINDS.sessionStart && typeof e.model === "string" && e.model) {
       return e.model;
     }
     if (fallbackModel === null && typeof e.model === "string" && e.model) {
@@ -4415,6 +4596,7 @@ var init_record = __esm({
   "src/core/record.ts"() {
     "use strict";
     init_agents();
+    init_types();
     init_git();
     init_attribution();
     init_constants();
@@ -4546,6 +4728,7 @@ import { join as join10 } from "node:path";
 
 // src/commands/init.ts
 init_agents();
+init_types();
 init_constants();
 init_git();
 init_paths();
@@ -4856,7 +5039,7 @@ async function init(args2) {
     if (dashboard) {
       console.log("    # then enable GitHub Pages for this repository");
     }
-    if (agents.includes("cursor")) {
+    if (agents.includes(AGENT_NAMES.cursor)) {
       console.log("");
       console.log("  Cursor note");
       console.log("    With the default git hooks, plain `git commit` is tracked normally.");
@@ -5029,6 +5212,7 @@ async function deinit(args2) {
 
 // src/commands/hook.ts
 init_agents();
+init_types();
 init_constants();
 init_jsonl();
 init_record();
@@ -5056,14 +5240,25 @@ async function rotateLogs(sessionDir, rotateId, fileNames = [PROMPTS_FILE, CHANG
 init_session();
 init_git();
 init_paths();
+var CLAUDE_PRE_TOOL_USE_EVENT = "PreToolUse";
+var CURSOR_BEFORE_SUBMIT_PROMPT_EVENT = "beforeSubmitPrompt";
+var CURSOR_BEFORE_SHELL_EXECUTION_EVENT = "beforeShellExecution";
+var GEMINI_BEFORE_TOOL_EVENT = "BeforeTool";
+var GEMINI_ALLOW_DECISION = "allow";
+var JSON_INDENT_SPACES = 2;
+var PRE_BLOB_EVENT = "pre_blob";
+var SYNCHRONOUS_HOOK_EVENTS = /* @__PURE__ */ new Set([
+  CLAUDE_PRE_TOOL_USE_EVENT,
+  CURSOR_BEFORE_SUBMIT_PROMPT_EVENT,
+  CURSOR_BEFORE_SHELL_EXECUTION_EVENT,
+  GEMINI_BEFORE_TOOL_EVENT
+]);
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSynchronousHookEvent(value) {
   if (!isRecord4(value) || typeof value.hook_event_name !== "string") return false;
-  return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution", "BeforeTool"].includes(
-    value.hook_event_name
-  );
+  return SYNCHRONOUS_HOOK_EVENTS.has(value.hook_event_name);
 }
 async function normalizeToRepoRelative(filePath) {
   if (!isAbsolute3(filePath)) return filePath;
@@ -5145,9 +5340,9 @@ async function hook(args2 = []) {
       } catch {
       }
     }
-    if (adapter.name === "gemini" && input.sync) {
-      if (isRecord4(peek) && peek.hook_event_name === "BeforeTool") {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+    if (adapter.name === AGENT_NAMES.gemini && input.sync) {
+      if (isRecord4(peek) && peek.hook_event_name === GEMINI_BEFORE_TOOL_EVENT) {
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
     }
     return;
@@ -5155,18 +5350,18 @@ async function hook(args2 = []) {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join12(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir6(sessionDir, { recursive: true });
-  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+  if (!(adapter.name === AGENT_NAMES.gemini && event.kind === NORMALIZED_EVENT_KINDS.stop)) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
   switch (event.kind) {
-    case "session_start": {
+    case NORMALIZED_EVENT_KINDS.sessionStart: {
       await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       await appendJsonl(join12(sessionDir, EVENTS_FILE), {
-        event: "session_start",
+        event: NORMALIZED_EVENT_KINDS.sessionStart,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         agent: adapter.name,
@@ -5174,20 +5369,20 @@ async function hook(args2 = []) {
       });
       break;
     }
-    case "stop": {
+    case NORMALIZED_EVENT_KINDS.stop: {
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       const turn = await readCurrentTurn2(sessionDir);
       await appendJsonl(join12(sessionDir, EVENTS_FILE), {
-        event: "stop",
+        event: NORMALIZED_EVENT_KINDS.stop,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         turn,
         response: event.response ?? null
       });
-      if (adapter.name === "gemini") {
+      if (adapter.name === AGENT_NAMES.gemini) {
         try {
           await unlink3(join12(sessionDir, HEARTBEAT_FILE));
         } catch {
@@ -5195,7 +5390,7 @@ async function hook(args2 = []) {
       }
       break;
     }
-    case "prompt": {
+    case NORMALIZED_EVENT_KINDS.prompt: {
       await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
@@ -5204,7 +5399,7 @@ async function hook(args2 = []) {
       const eventsPath = join12(sessionDir, EVENTS_FILE);
       if (!existsSync12(eventsPath)) {
         await appendJsonl(eventsPath, {
-          event: "session_start",
+          event: NORMALIZED_EVENT_KINDS.sessionStart,
           session_id: event.sessionId,
           timestamp: event.timestamp,
           agent: adapter.name,
@@ -5220,29 +5415,29 @@ async function hook(args2 = []) {
       const promptId = randomUUID();
       await writeFile8(join12(sessionDir, PROMPT_ID_FILE), promptId);
       await appendJsonl(join12(sessionDir, PROMPTS_FILE), {
-        event: "prompt",
+        event: NORMALIZED_EVENT_KINDS.prompt,
         timestamp: event.timestamp,
         prompt: event.prompt,
         prompt_id: promptId,
         turn
       });
       await appendJsonl(eventsPath, {
-        event: "prompt",
+        event: NORMALIZED_EVENT_KINDS.prompt,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         prompt_id: promptId,
         turn,
         model: event.model ?? null
       });
-      if (adapter.name === "cursor") {
+      if (adapter.name === AGENT_NAMES.cursor) {
         process.stdout.write(JSON.stringify({ continue: true }));
       }
       break;
     }
-    case "response": {
+    case NORMALIZED_EVENT_KINDS.response: {
       const turn = await readCurrentTurn2(sessionDir);
       await appendJsonl(join12(sessionDir, EVENTS_FILE), {
-        event: "response",
+        event: NORMALIZED_EVENT_KINDS.response,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         turn,
@@ -5250,14 +5445,14 @@ async function hook(args2 = []) {
       });
       break;
     }
-    case "pre_edit": {
+    case NORMALIZED_EVENT_KINDS.preEdit: {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
       const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
       const preBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       await appendJsonl(join12(sessionDir, PRE_BLOBS_FILE), {
-        event: "pre_blob",
+        event: PRE_BLOB_EVENT,
         turn,
         prompt_id: promptId,
         file: filePath,
@@ -5266,20 +5461,20 @@ async function hook(args2 = []) {
         // enabling correct pairing even when async hooks fire out of order.
         tool_use_id: event.toolUseId ?? null
       });
-      if (adapter.name === "gemini") {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+      if (adapter.name === AGENT_NAMES.gemini) {
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
       break;
     }
-    case "file_change": {
+    case NORMALIZED_EVENT_KINDS.fileChange: {
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
       const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
       const postBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
-      const changeId = adapter.name === "cursor" ? `${event.timestamp}:${event.tool ?? "file_change"}:${filePath}:${postBlob}` : null;
+      const changeId = adapter.name === AGENT_NAMES.cursor ? `${event.timestamp}:${event.tool ?? NORMALIZED_EVENT_KINDS.fileChange}:${filePath}:${postBlob}` : null;
       await appendJsonl(join12(sessionDir, CHANGES_FILE), {
-        event: "file_change",
+        event: NORMALIZED_EVENT_KINDS.fileChange,
         timestamp: event.timestamp,
         tool: event.tool,
         file: filePath,
@@ -5296,8 +5491,8 @@ async function hook(args2 = []) {
       });
       break;
     }
-    case "pre_commit": {
-      if (adapter.name === "gemini") {
+    case NORMALIZED_EVENT_KINDS.preCommit: {
+      if (adapter.name === AGENT_NAMES.gemini) {
         const headBefore = await readCurrentHead();
         await writeFile8(
           join12(sessionDir, PENDING_COMMIT_FILE),
@@ -5308,14 +5503,14 @@ async function hook(args2 = []) {
               timestamp: event.timestamp
             },
             null,
-            2
+            JSON_INDENT_SPACES
           )}
 `
         );
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
         break;
       }
-      if (adapter.name === "cursor") {
+      if (adapter.name === AGENT_NAMES.cursor) {
         const headBefore = await readCurrentHead();
         await writeFile8(
           join12(sessionDir, PENDING_COMMIT_FILE),
@@ -5326,7 +5521,7 @@ async function hook(args2 = []) {
               timestamp: event.timestamp
             },
             null,
-            2
+            JSON_INDENT_SPACES
           )}
 `
         );
@@ -5341,7 +5536,7 @@ async function hook(args2 = []) {
           process.stdout.write(
             JSON.stringify({
               hookSpecificOutput: {
-                hookEventName: "PreToolUse",
+                hookEventName: CLAUDE_PRE_TOOL_USE_EVENT,
                 updatedInput: {
                   command: updatedCmd
                 }
@@ -5352,8 +5547,8 @@ async function hook(args2 = []) {
       }
       break;
     }
-    case "post_commit": {
-      if (adapter.name === "cursor" || adapter.name === "gemini") {
+    case NORMALIZED_EVENT_KINDS.postCommit: {
+      if (adapter.name === AGENT_NAMES.cursor || adapter.name === AGENT_NAMES.gemini) {
         const pendingPath = join12(sessionDir, PENDING_COMMIT_FILE);
         if (!existsSync12(pendingPath)) break;
         let headBefore = null;
@@ -5402,7 +5597,7 @@ function normalizeEntry(raw) {
 }
 
 // src/commands/log.ts
-async function log(count = 10) {
+async function log(count = DEFAULT_LOG_COUNT) {
   const raw = await git([
     "log",
     `-${count}`,
@@ -5448,6 +5643,13 @@ var COMMENT_MARKER = "<!-- agentnote-pr-report -->";
 var DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 var DESCRIPTION_END = "<!-- agentnote-end -->";
 var GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+var GITHUB_CLI_BINARY = "gh";
+var GITHUB_CLI_API_COMMAND = "api";
+var GITHUB_CLI_PR_COMMAND = "pr";
+var GITHUB_CLI_PR_COMMENT_COMMAND = "comment";
+var GITHUB_CLI_PR_VIEW_COMMAND = "view";
+var GITHUB_CLI_JSON_FLAG = "--json";
+var GITHUB_CLI_BODY_FLAG = "--body";
 var PR_QUERY_PARAM = "pr";
 var TEXT_ENCODING2 = "utf-8";
 var execFileAsync2 = promisify2(execFile2);
@@ -5516,9 +5718,9 @@ ${content}`;
     const commentId = stdout.trim().split("\n")[0];
     if (commentId) {
       await execFileAsync2(
-        "gh",
+        GITHUB_CLI_BINARY,
         [
-          "api",
+          GITHUB_CLI_API_COMMAND,
           "-X",
           "PATCH",
           `/repos/{owner}/{repo}/issues/comments/${commentId}`,
@@ -5531,14 +5733,18 @@ ${content}`;
     }
   } catch {
   }
-  await execFileAsync2("gh", ["pr", "comment", prNumber, "--body", body], {
-    encoding: TEXT_ENCODING2
-  });
+  await execFileAsync2(
+    GITHUB_CLI_BINARY,
+    [GITHUB_CLI_PR_COMMAND, GITHUB_CLI_PR_COMMENT_COMMAND, prNumber, GITHUB_CLI_BODY_FLAG, body],
+    {
+      encoding: TEXT_ENCODING2
+    }
+  );
 }
 async function readPrBody(prNumber) {
   const { stdout } = await execFileAsync2(
-    "gh",
-    ["pr", "view", prNumber, "--json", "body"],
+    GITHUB_CLI_BINARY,
+    [GITHUB_CLI_PR_COMMAND, GITHUB_CLI_PR_VIEW_COMMAND, prNumber, GITHUB_CLI_JSON_FLAG, "body"],
     { encoding: TEXT_ENCODING2 }
   );
   return JSON.parse(stdout).body ?? "";
@@ -5551,6 +5757,22 @@ init_storage();
 init_git();
 import { existsSync as existsSync13 } from "node:fs";
 import { join as join13 } from "node:path";
+var AI_RATIO_HEADER_BAR_WIDTH = 8;
+var AI_RATIO_TABLE_BAR_WIDTH = 5;
+var PERCENT_DENOMINATOR2 = 100;
+var DEFAULT_PROGRESS_BAR_WIDTH = AI_RATIO_HEADER_BAR_WIDTH;
+var DEFAULT_BASE_BRANCH_CANDIDATES = ["main", "master", "develop"];
+var OVERALL_METHODS = {
+  line: "line",
+  file: "file",
+  mixed: "mixed",
+  none: "none"
+};
+var CONTEXT_KIND_ORDER2 = {
+  reference: 0,
+  scope: 1
+};
+var MIN_PROMPT_BODY_LINE_CHARS = 10;
 var REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
 var REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
 var REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
@@ -5674,25 +5896,25 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
   const totalFiles = tracked.reduce((sum, commit2) => sum + commit2.files_total, 0);
   const totalFilesAi = tracked.reduce((sum, commit2) => sum + commit2.files_ai, 0);
   const lineEligible = tracked.filter(
-    (commit2) => commit2.attribution?.method === "line" && commit2.attribution.lines && commit2.attribution.lines.total_added > 0
+    (commit2) => commit2.attribution?.method === OVERALL_METHODS.line && commit2.attribution.lines && commit2.attribution.lines.total_added > 0
   );
-  const fileOnly = tracked.filter((commit2) => commit2.attribution?.method === "file");
-  const excluded = tracked.filter((commit2) => commit2.attribution?.method === "none");
+  const fileOnly = tracked.filter((commit2) => commit2.attribution?.method === OVERALL_METHODS.file);
+  const excluded = tracked.filter((commit2) => commit2.attribution?.method === OVERALL_METHODS.none);
   const eligible = [...lineEligible, ...fileOnly];
   let overallMethod;
   if (tracked.length > 0 && excluded.length === tracked.length) {
-    overallMethod = "none";
+    overallMethod = OVERALL_METHODS.none;
   } else if (eligible.length === 0) {
-    overallMethod = "none";
+    overallMethod = OVERALL_METHODS.none;
   } else if (fileOnly.length === 0 && lineEligible.length > 0) {
-    overallMethod = "line";
+    overallMethod = OVERALL_METHODS.line;
   } else if (lineEligible.length === 0) {
-    overallMethod = "file";
+    overallMethod = OVERALL_METHODS.file;
   } else {
-    overallMethod = "mixed";
+    overallMethod = OVERALL_METHODS.mixed;
   }
   let overallAiRatio;
-  if (overallMethod === "line") {
+  if (overallMethod === OVERALL_METHODS.line) {
     const aiAdded = lineEligible.reduce(
       (sum, commit2) => sum + (commit2.attribution?.lines?.ai_added ?? 0),
       0
@@ -5701,12 +5923,12 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
       (sum, commit2) => sum + (commit2.attribution?.lines?.total_added ?? 0),
       0
     );
-    overallAiRatio = totalAdded > 0 ? Math.round(aiAdded / totalAdded * 100) : 0;
-  } else if (overallMethod === "file") {
+    overallAiRatio = totalAdded > 0 ? Math.round(aiAdded / totalAdded * PERCENT_DENOMINATOR2) : 0;
+  } else if (overallMethod === OVERALL_METHODS.file) {
     const eligibleFiles = eligible.reduce((sum, commit2) => sum + commit2.files_total, 0);
     const eligibleFilesAi = eligible.reduce((sum, commit2) => sum + commit2.files_ai, 0);
-    overallAiRatio = eligibleFiles > 0 ? Math.round(eligibleFilesAi / eligibleFiles * 100) : 0;
-  } else if (overallMethod === "mixed") {
+    overallAiRatio = eligibleFiles > 0 ? Math.round(eligibleFilesAi / eligibleFiles * PERCENT_DENOMINATOR2) : 0;
+  } else if (overallMethod === OVERALL_METHODS.mixed) {
     const weightedSum = eligible.reduce(
       (sum, commit2) => sum + (commit2.ai_ratio ?? 0) * commit2.files_total,
       0
@@ -5744,8 +5966,9 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
     commits
   };
 }
-function renderProgressBar(ratio, width = 8) {
-  const filled = Math.round(ratio / 100 * width);
+function renderProgressBar(ratio, width = DEFAULT_PROGRESS_BAR_WIDTH) {
+  const normalizedRatio = Math.min(PERCENT_DENOMINATOR2, Math.max(0, ratio));
+  const filled = Math.round(normalizedRatio / PERCENT_DENOMINATOR2 * width);
   return "\u2588".repeat(filled) + "\u2591".repeat(width - filled);
 }
 function renderRatioWithBar(ratio, width) {
@@ -5755,7 +5978,10 @@ function renderHeader(report) {
   if (report.total_commits > 0 && report.tracked_commits === 0) {
     return ["**Total AI Ratio:** \u2014", "**Agent Note data:** No tracked commits"];
   }
-  const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
+  const line1 = `**Total AI Ratio:** ${renderRatioWithBar(
+    report.overall_ai_ratio,
+    AI_RATIO_HEADER_BAR_WIDTH
+  )}`;
   const lines = [line1];
   if (report.model) {
     lines.push(`**Model:** \`${report.model}\``);
@@ -5795,7 +6021,7 @@ function renderMarkdown(report, opts = {}) {
     const fileList = escapeTableCell(
       commit2.files.map((file) => `${basename2(file.path)} ${file.by_ai ? "\u{1F916}" : "\u{1F464}"}`).join(", ")
     );
-    const aiRatioCell = renderRatioWithBar(commit2.ai_ratio, 5);
+    const aiRatioCell = renderRatioWithBar(commit2.ai_ratio, AI_RATIO_TABLE_BAR_WIDTH);
     lines.push(
       `| ${commitCell} | ${aiRatioCell} | ${commit2.prompts_count} | ${fileList} |`
     );
@@ -5995,7 +6221,7 @@ function renderPromptSummary(visible, total, detail) {
   return `${visible} shown / ${total} total`;
 }
 async function detectBaseBranch() {
-  for (const name of ["main", "master", "develop"]) {
+  for (const name of DEFAULT_BASE_BRANCH_CANDIDATES) {
     const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
     if (exitCode === 0) return `origin/${name}`;
   }
@@ -6047,7 +6273,7 @@ function cleanPrompt(prompt, maxLen) {
   let body = trimmed;
   if (firstLine.startsWith("## ") || firstLine.startsWith("# ")) {
     const userStart = lines.findIndex(
-      (line, index) => index > 0 && !line.startsWith("#") && !line.startsWith("```") && line.trim().length > 10
+      (line, index) => index > 0 && !line.startsWith("#") && !line.startsWith("```") && line.trim().length > MIN_PROMPT_BODY_LINE_CHARS
     );
     if (userStart !== -1) {
       body = lines.slice(userStart).join("\n").trim();
@@ -6066,7 +6292,7 @@ function renderInteractionContext(interaction) {
   return normalizeInteractionContexts(interaction).sort((left, right) => contextKindOrder2(left.kind) - contextKindOrder2(right.kind)).map((context) => context.text).join("\n\n").trim();
 }
 function contextKindOrder2(kind) {
-  return kind === "reference" ? 0 : 1;
+  return CONTEXT_KIND_ORDER2[kind];
 }
 function basename2(path) {
   return path.split("/").pop() ?? path;
@@ -6074,28 +6300,37 @@ function basename2(path) {
 
 // src/commands/pr.ts
 init_entry();
+var DEFAULT_HEAD_REF = "HEAD";
+var JSON_INDENT_SPACES2 = 2;
+var PR_FLAG_PREFIX = "--";
+var PR_FLAG_HEAD = "--head";
+var PR_FLAG_JSON = "--json";
+var PR_FLAG_OUTPUT = "--output";
+var PR_FLAG_PROMPT_DETAIL = "--prompt-detail";
+var PR_FLAG_UPDATE = "--update";
+var PR_OUTPUT_DESCRIPTION = "description";
 async function pr(args2) {
-  const isJson = args2.includes("--json");
-  const outputIdx = args2.indexOf("--output");
-  const updateIdx = args2.indexOf("--update");
-  const headIdx = args2.indexOf("--head");
-  const promptDetailIdx = args2.indexOf("--prompt-detail");
+  const isJson = args2.includes(PR_FLAG_JSON);
+  const outputIdx = args2.indexOf(PR_FLAG_OUTPUT);
+  const updateIdx = args2.indexOf(PR_FLAG_UPDATE);
+  const headIdx = args2.indexOf(PR_FLAG_HEAD);
+  const promptDetailIdx = args2.indexOf(PR_FLAG_PROMPT_DETAIL);
   const prNumber = updateIdx !== -1 ? args2[updateIdx + 1] : null;
-  const headRef = headIdx !== -1 ? args2[headIdx + 1] : "HEAD";
+  const headRef = headIdx !== -1 ? args2[headIdx + 1] : DEFAULT_HEAD_REF;
   if (promptDetailIdx !== -1 && !args2[promptDetailIdx + 1]) {
     console.error("error: --prompt-detail requires compact or full");
     process.exit(1);
   }
   const promptDetail = promptDetailIdx !== -1 ? parsePromptDetail(args2[promptDetailIdx + 1]) : parsePromptDetail(null);
   const positional = args2.filter(
-    (arg, index) => !arg.startsWith("--") && (outputIdx === -1 || index !== outputIdx + 1) && (updateIdx === -1 || index !== updateIdx + 1) && (headIdx === -1 || index !== headIdx + 1) && (promptDetailIdx === -1 || index !== promptDetailIdx + 1)
+    (arg, index) => !arg.startsWith(PR_FLAG_PREFIX) && (outputIdx === -1 || index !== outputIdx + 1) && (updateIdx === -1 || index !== updateIdx + 1) && (headIdx === -1 || index !== headIdx + 1) && (promptDetailIdx === -1 || index !== promptDetailIdx + 1)
   );
   const base = positional[0] ?? await detectBaseBranch();
   if (!base) {
     console.error("error: could not detect base branch. pass it as argument: agent-note pr <base>");
     process.exit(1);
   }
-  const outputMode = outputIdx !== -1 ? args2[outputIdx + 1] : "description";
+  const outputMode = outputIdx !== -1 ? args2[outputIdx + 1] : PR_OUTPUT_DESCRIPTION;
   const report = await collectReport(base, headRef, { dashboardPrNumber: prNumber });
   if (!report) {
     if (isJson) {
@@ -6106,7 +6341,7 @@ async function pr(args2) {
     return;
   }
   if (isJson) {
-    console.log(JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report, null, JSON_INDENT_SPACES2));
     return;
   }
   const rendered = renderMarkdown(report, { promptDetail });
@@ -6114,7 +6349,7 @@ async function pr(args2) {
     console.log(rendered);
     return;
   }
-  if (outputMode === "description") {
+  if (outputMode === PR_OUTPUT_DESCRIPTION) {
     await updatePrDescription(prNumber, rendered);
     console.log(`agent-note: PR #${prNumber} description updated`);
     return;
@@ -6124,21 +6359,24 @@ async function pr(args2) {
 }
 
 // src/commands/push-notes.ts
+init_constants();
 init_git();
-import { execFileSync as execFileSync2 } from "node:child_process";
 var NOTES_PUSH_TIMEOUT_MS = 1e4;
+var ENV_AGENTNOTE_PUSHING = "AGENTNOTE_PUSHING";
+var ENV_GIT_TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT";
+var ENV_TRUE = "1";
+var ENV_FALSE = "0";
 async function pushNotes(args2) {
   const remote = args2[0]?.trim() || "origin";
-  const { exitCode } = await gitSafe(["rev-parse", "--verify", "refs/notes/agentnote"]);
+  const { exitCode } = await gitSafe(["rev-parse", "--verify", NOTES_REF_FULL]);
   if (exitCode !== 0) return;
   try {
-    execFileSync2("git", ["push", remote, "refs/notes/agentnote"], {
-      stdio: "ignore",
+    await git(["push", remote, NOTES_REF_FULL], {
       timeout: NOTES_PUSH_TIMEOUT_MS,
       env: {
         ...process.env,
-        AGENTNOTE_PUSHING: "1",
-        GIT_TERMINAL_PROMPT: "0"
+        [ENV_AGENTNOTE_PUSHING]: ENV_TRUE,
+        [ENV_GIT_TERMINAL_PROMPT]: ENV_FALSE
       }
     });
   } catch {
@@ -6150,6 +6388,7 @@ init_constants();
 init_entry();
 init_storage();
 init_git();
+var PERCENT_DENOMINATOR3 = 100;
 async function session(sessionId) {
   if (!sessionId) {
     console.error("usage: agent-note session <session-id>");
@@ -6228,11 +6467,11 @@ async function session(sessionId) {
   let lineDetail = "";
   if (lineCount > 0 && fileCount === 0) {
     _overallMethod = "line";
-    overallRatio = lineTotalAdded > 0 ? Math.round(lineAiAdded / lineTotalAdded * 100) : 0;
+    overallRatio = lineTotalAdded > 0 ? Math.round(lineAiAdded / lineTotalAdded * PERCENT_DENOMINATOR3) : 0;
     lineDetail = ` (${lineAiAdded}/${lineTotalAdded} lines)`;
   } else if (lineCount === 0 && fileCount > 0) {
     _overallMethod = "file";
-    overallRatio = fileFilesTotal > 0 ? Math.round(fileFilesAi / fileFilesTotal * 100) : 0;
+    overallRatio = fileFilesTotal > 0 ? Math.round(fileFilesAi / fileFilesTotal * PERCENT_DENOMINATOR3) : 0;
   } else if (lineCount > 0 && fileCount > 0) {
     _overallMethod = "mixed";
     let weightedSum = 0;
@@ -6261,6 +6500,7 @@ async function session(sessionId) {
 
 // src/commands/show.ts
 init_agents();
+init_types();
 init_constants();
 init_session();
 init_storage();
@@ -6268,14 +6508,17 @@ init_git();
 init_paths();
 import { stat as stat2 } from "node:fs/promises";
 import { join as join14 } from "node:path";
+var DEFAULT_COMMIT_REF = "HEAD";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
+var BYTES_PER_KILOBYTE = 1024;
+var PERCENT_DENOMINATOR4 = 100;
 async function show(commitRef) {
   if (commitRef && !COMMIT_REF_PATTERN.test(commitRef)) {
     console.error("usage: agent-note show [commit]");
     console.error("commit must be HEAD or a 7-40 character commit SHA");
     process.exit(1);
   }
-  const ref = commitRef ?? "HEAD";
+  const ref = commitRef ?? DEFAULT_COMMIT_REF;
   const commitInfo = await git(["log", "-1", "--format=%h %s", ref]);
   const commitSha = await git(["log", "-1", "--format=%H", ref]);
   console.log(`commit:  ${commitInfo}`);
@@ -6334,19 +6577,19 @@ async function show(commitRef) {
     }
   }
   const sessionDir = join14(await agentnoteDir(), SESSIONS_DIR, sessionId);
-  const sessionAgent = await readSessionAgent(sessionDir) ?? entry.agent ?? "claude";
-  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent("claude");
+  const sessionAgent = await readSessionAgent(sessionDir) ?? entry.agent ?? AGENT_NAMES.claude;
+  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent(AGENT_NAMES.claude);
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
     const stats = await stat2(transcriptPath);
-    const sizeKb = (stats.size / 1024).toFixed(1);
+    const sizeKb = (stats.size / BYTES_PER_KILOBYTE).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }
 }
 function renderRatioBar(ratio) {
   const width = BAR_WIDTH_FULL;
-  const filled = Math.round(ratio / 100 * width);
+  const filled = Math.round(ratio / PERCENT_DENOMINATOR4 * width);
   const empty = width - filled;
   return `[${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}]`;
 }
@@ -6358,6 +6601,7 @@ function truncateLines(text, maxLen) {
 
 // src/commands/status.ts
 init_agents();
+init_types();
 init_constants();
 init_session();
 init_storage();
@@ -6367,6 +6611,33 @@ import { existsSync as existsSync14 } from "node:fs";
 import { readFile as readFile12 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4, join as join15 } from "node:path";
 var VERSION = "0.2.3";
+var CAPABILITY_LABELS = {
+  edits: "edits",
+  prompt: "prompt",
+  response: "response",
+  shell: "shell",
+  transcript: "transcript"
+};
+var CODEX_STATUS_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  stop: "Stop",
+  userPromptSubmit: "UserPromptSubmit"
+};
+var CURSOR_STATUS_HOOK_EVENTS = {
+  beforeSubmitPrompt: "beforeSubmitPrompt",
+  afterAgentResponse: "afterAgentResponse",
+  afterFileEdit: "afterFileEdit",
+  afterTabFileEdit: "afterTabFileEdit",
+  beforeShellExecution: "beforeShellExecution",
+  afterShellExecution: "afterShellExecution",
+  stop: "stop"
+};
+var GEMINI_STATUS_HOOK_EVENTS = {
+  beforeAgent: "BeforeAgent",
+  afterAgent: "AfterAgent",
+  beforeTool: "BeforeTool",
+  afterTool: "AfterTool"
+};
 async function status() {
   console.log(`agent-note v${VERSION}`);
   console.log();
@@ -6390,7 +6661,7 @@ async function status() {
   if (activeGitHooks.length > 0) {
     console.log(`git:     active (${activeGitHooks.join(", ")})`);
     console.log("commit:  tracked via git hooks");
-  } else if (enabledAgents.includes("cursor")) {
+  } else if (enabledAgents.includes(AGENT_NAMES.cursor)) {
     console.log("git:     not configured");
     console.log(
       "commit:  fallback mode (`agent-note commit` recommended; Cursor shell hooks may still attach notes)"
@@ -6453,22 +6724,22 @@ async function status() {
 }
 async function readAgentCaptureDetails(repoRoot3, enabledAgents) {
   const details = [];
-  if (enabledAgents.includes("codex")) {
+  if (enabledAgents.includes(AGENT_NAMES.codex)) {
     const codexCapabilities = await readCodexCaptureCapabilities(repoRoot3);
     if (codexCapabilities.length > 0) {
-      details.push(`codex(${codexCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.codex}(${codexCapabilities.join(", ")})`);
     }
   }
-  if (enabledAgents.includes("cursor")) {
+  if (enabledAgents.includes(AGENT_NAMES.cursor)) {
     const cursorCapabilities = await readCursorCaptureCapabilities(repoRoot3);
     if (cursorCapabilities.length > 0) {
-      details.push(`cursor(${cursorCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.cursor}(${cursorCapabilities.join(", ")})`);
     }
   }
-  if (enabledAgents.includes("gemini")) {
+  if (enabledAgents.includes(AGENT_NAMES.gemini)) {
     const geminiCapabilities = await readGeminiCaptureCapabilities(repoRoot3);
     if (geminiCapabilities.length > 0) {
-      details.push(`gemini(${geminiCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.gemini}(${geminiCapabilities.join(", ")})`);
     }
   }
   return details;
@@ -6484,9 +6755,15 @@ async function readCodexCaptureCapabilities(repoRoot3) {
       (group) => (group.hooks ?? []).some((hook2) => hook2.command?.includes(AGENTNOTE_HOOK_COMMAND))
     );
     const capabilities = [];
-    if (hasAgentnoteHook("UserPromptSubmit")) capabilities.push("prompt");
-    if (hasAgentnoteHook("Stop")) capabilities.push("response");
-    if (hasAgentnoteHook("SessionStart")) capabilities.push("transcript");
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.userPromptSubmit)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
+    }
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.stop)) {
+      capabilities.push(CAPABILITY_LABELS.response);
+    }
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.sessionStart)) {
+      capabilities.push(CAPABILITY_LABELS.transcript);
+    }
     return capabilities;
   } catch {
     return [];
@@ -6501,15 +6778,17 @@ async function readCursorCaptureCapabilities(repoRoot3) {
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
     const capabilities = [];
-    if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
-    if (hasAgentnoteHook("afterAgentResponse") || hasAgentnoteHook("stop")) {
-      capabilities.push("response");
+    if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeSubmitPrompt)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
     }
-    if (hasAgentnoteHook("afterFileEdit") || hasAgentnoteHook("afterTabFileEdit")) {
-      capabilities.push("edits");
+    if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterAgentResponse) || hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.stop)) {
+      capabilities.push(CAPABILITY_LABELS.response);
     }
-    if (hasAgentnoteHook("beforeShellExecution") || hasAgentnoteHook("afterShellExecution")) {
-      capabilities.push("shell");
+    if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterFileEdit) || hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterTabFileEdit)) {
+      capabilities.push(CAPABILITY_LABELS.edits);
+    }
+    if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeShellExecution) || hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterShellExecution)) {
+      capabilities.push(CAPABILITY_LABELS.shell);
     }
     return capabilities;
   } catch {
@@ -6527,10 +6806,14 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
       (group) => (group.hooks ?? []).some((h) => h.command?.includes(AGENTNOTE_HOOK_COMMAND))
     );
     const capabilities = [];
-    if (hasAgentnoteHook("BeforeAgent")) capabilities.push("prompt");
-    if (hasAgentnoteHook("AfterAgent")) capabilities.push("response");
-    if (hasAgentnoteHook("BeforeTool") || hasAgentnoteHook("AfterTool")) {
-      capabilities.push("edits", "shell");
+    if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.beforeAgent)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
+    }
+    if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.afterAgent)) {
+      capabilities.push(CAPABILITY_LABELS.response);
+    }
+    if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.beforeTool) || hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.afterTool)) {
+      capabilities.push(CAPABILITY_LABELS.edits, CAPABILITY_LABELS.shell);
     }
     return capabilities;
   } catch {
@@ -6564,6 +6847,7 @@ async function resolveHookDir2(repoRoot3) {
 }
 
 // src/cli.ts
+init_constants();
 var VERSION2 = "0.2.3";
 var HELP = `
 agent-note v${VERSION2} \u2014 remember why your code changed
@@ -6585,6 +6869,13 @@ usage:
 `.trim();
 var command = process.argv[2];
 var args = process.argv.slice(3);
+function parseLogCountArg(value) {
+  if (!value) return DEFAULT_LOG_COUNT;
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  console.error(`invalid log count: ${value} (expected a positive integer)`);
+  process.exit(1);
+}
 switch (command) {
   case "init":
     await init(args);
@@ -6599,7 +6890,7 @@ switch (command) {
     await show(args[0]);
     break;
   case "log":
-    await log(args[0] ? parseInt(args[0], 10) : 10);
+    await log(parseLogCountArg(args[0]));
     break;
   case "pr":
     await pr(args);

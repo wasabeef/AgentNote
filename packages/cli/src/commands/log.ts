@@ -1,10 +1,10 @@
-import { TRAILER_KEY } from "../core/constants.js";
+import { DEFAULT_LOG_COUNT, TRAILER_KEY } from "../core/constants.js";
 import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
 
 /** Print recent commits with their Agent Note session and AI ratio summary. */
-export async function log(count: number = 10): Promise<void> {
+export async function log(count: number = DEFAULT_LOG_COUNT): Promise<void> {
   const raw = await git([
     "log",
     `-${count}`,

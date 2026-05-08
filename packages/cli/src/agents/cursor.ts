@@ -5,14 +5,30 @@ import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
-import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
+import {
+  AGENT_NAMES,
+  type AgentAdapter,
+  type HookInput,
+  NORMALIZED_EVENT_KINDS,
+  type NormalizedEvent,
+  type TranscriptInteraction,
+} from "./types.js";
 
 const HOOKS_REL_PATH = ".cursor/hooks.json";
-const HOOK_COMMAND = "npx --yes agent-note hook --agent cursor";
+const HOOK_COMMAND = `npx --yes agent-note hook --agent ${AGENT_NAMES.cursor}`;
 const CURSOR_PROJECTS_DIR = join(homedir(), ".cursor", "projects");
 const CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
 const TRANSCRIPT_WAIT_MS = 1_500;
 const TRANSCRIPT_POLL_MS = 50;
+const CURSOR_HOOK_EVENTS = {
+  beforeSubmitPrompt: "beforeSubmitPrompt",
+  afterAgentResponse: "afterAgentResponse",
+  beforeShellExecution: "beforeShellExecution",
+  afterFileEdit: "afterFileEdit",
+  afterTabFileEdit: "afterTabFileEdit",
+  afterShellExecution: "afterShellExecution",
+  stop: "stop",
+} as const;
 
 type CursorHookEntry = {
   command: string;
@@ -326,13 +342,13 @@ function buildHooksConfig(): CursorHooksConfig {
   return {
     version: 1,
     hooks: {
-      beforeSubmitPrompt: [{ command: HOOK_COMMAND }],
-      beforeShellExecution: [{ command: HOOK_COMMAND }],
-      afterAgentResponse: [{ command: HOOK_COMMAND }],
-      afterFileEdit: [{ command: HOOK_COMMAND }],
-      afterTabFileEdit: [{ command: HOOK_COMMAND }],
-      afterShellExecution: [{ command: HOOK_COMMAND }],
-      stop: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.beforeSubmitPrompt]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.beforeShellExecution]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.afterAgentResponse]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.afterFileEdit]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.afterTabFileEdit]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.afterShellExecution]: [{ command: HOOK_COMMAND }],
+      [CURSOR_HOOK_EVENTS.stop]: [{ command: HOOK_COMMAND }],
     },
   };
 }
@@ -375,7 +391,7 @@ function mergeHooksConfig(existing: CursorHooksConfig): CursorHooksConfig {
 
 /** Cursor adapter for Preview hooks plus local transcript/response recovery. */
 export const cursor: AgentAdapter = {
-  name: "cursor",
+  name: AGENT_NAMES.cursor,
   settingsRelPath: HOOKS_REL_PATH,
 
   async managedPaths(): Promise<string[]> {
@@ -437,10 +453,10 @@ export const cursor: AgentAdapter = {
     const timestamp = new Date().toISOString();
 
     switch (payload.hook_event_name) {
-      case "beforeSubmitPrompt":
+      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
         return payload.prompt
           ? {
-              kind: "prompt",
+              kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
               prompt: payload.prompt,
@@ -448,7 +464,7 @@ export const cursor: AgentAdapter = {
             }
           : null;
 
-      case "afterAgentResponse": {
+      case CURSOR_HOOK_EVENTS.afterAgentResponse: {
         const response = collectMessageText(
           payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output,
         )
@@ -456,7 +472,7 @@ export const cursor: AgentAdapter = {
           .trim();
         return response
           ? {
-              kind: "response",
+              kind: NORMALIZED_EVENT_KINDS.response,
               sessionId,
               timestamp,
               response,
@@ -464,23 +480,23 @@ export const cursor: AgentAdapter = {
           : null;
       }
 
-      case "beforeShellExecution":
+      case CURSOR_HOOK_EVENTS.beforeShellExecution:
         return payload.command && isGitCommit(payload.command)
           ? {
-              kind: "pre_commit",
+              kind: NORMALIZED_EVENT_KINDS.preCommit,
               sessionId,
               timestamp,
               commitCommand: payload.command,
             }
           : null;
 
-      case "afterFileEdit":
-      case "afterTabFileEdit": {
+      case CURSOR_HOOK_EVENTS.afterFileEdit:
+      case CURSOR_HOOK_EVENTS.afterTabFileEdit: {
         const filePath = payload.file_path ?? payload.filePath;
         const editStats = extractEditStats(payload.edits);
         return filePath
           ? {
-              kind: "file_change",
+              kind: NORMALIZED_EVENT_KINDS.fileChange,
               sessionId,
               timestamp,
               file: filePath,
@@ -490,23 +506,23 @@ export const cursor: AgentAdapter = {
           : null;
       }
 
-      case "afterShellExecution":
+      case CURSOR_HOOK_EVENTS.afterShellExecution:
         return payload.command && isGitCommit(payload.command)
           ? {
-              kind: "post_commit",
+              kind: NORMALIZED_EVENT_KINDS.postCommit,
               sessionId,
               timestamp,
             }
           : null;
 
-      case "stop": {
+      case CURSOR_HOOK_EVENTS.stop: {
         const response = collectMessageText(
           payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output,
         )
           .join("\n")
           .trim();
         return {
-          kind: "stop",
+          kind: NORMALIZED_EVENT_KINDS.stop,
           sessionId,
           timestamp,
           response: response || undefined,

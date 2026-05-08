@@ -18,6 +18,23 @@ import { git, gitSafe } from "../../cli/src/git.js";
 import { normalizeEntry } from "../../cli/src/commands/normalize.js";
 import { inferDashboardUrl } from "./github.js";
 
+const AI_RATIO_HEADER_BAR_WIDTH = 8;
+const AI_RATIO_TABLE_BAR_WIDTH = 5;
+const PERCENT_DENOMINATOR = 100;
+const DEFAULT_PROGRESS_BAR_WIDTH = AI_RATIO_HEADER_BAR_WIDTH;
+const DEFAULT_BASE_BRANCH_CANDIDATES = ["main", "master", "develop"] as const;
+const OVERALL_METHODS = {
+  line: "line",
+  file: "file",
+  mixed: "mixed",
+  none: "none",
+} as const;
+type OverallMethod = (typeof OVERALL_METHODS)[keyof typeof OVERALL_METHODS];
+const CONTEXT_KIND_ORDER = {
+  reference: 0,
+  scope: 1,
+} as const satisfies Record<InteractionContext["kind"], number>;
+const MIN_PROMPT_BODY_LINE_CHARS = 10;
 const REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
 const REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
 const REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
@@ -236,7 +253,7 @@ export interface PrReport {
   total_files: number;
   total_files_ai: number;
   overall_ai_ratio: number;
-  overall_method: "line" | "file" | "mixed" | "none";
+  overall_method: OverallMethod;
   model: string | null;
   commits: CommitEntry[];
 }
@@ -314,29 +331,29 @@ export async function collectReport(
 
   const lineEligible = tracked.filter(
     (commit) =>
-      commit.attribution?.method === "line" &&
+      commit.attribution?.method === OVERALL_METHODS.line &&
       commit.attribution.lines &&
       commit.attribution.lines.total_added > 0,
   );
-  const fileOnly = tracked.filter((commit) => commit.attribution?.method === "file");
-  const excluded = tracked.filter((commit) => commit.attribution?.method === "none");
+  const fileOnly = tracked.filter((commit) => commit.attribution?.method === OVERALL_METHODS.file);
+  const excluded = tracked.filter((commit) => commit.attribution?.method === OVERALL_METHODS.none);
   const eligible = [...lineEligible, ...fileOnly];
 
-  let overallMethod: "line" | "file" | "mixed" | "none";
+  let overallMethod: OverallMethod;
   if (tracked.length > 0 && excluded.length === tracked.length) {
-    overallMethod = "none";
+    overallMethod = OVERALL_METHODS.none;
   } else if (eligible.length === 0) {
-    overallMethod = "none";
+    overallMethod = OVERALL_METHODS.none;
   } else if (fileOnly.length === 0 && lineEligible.length > 0) {
-    overallMethod = "line";
+    overallMethod = OVERALL_METHODS.line;
   } else if (lineEligible.length === 0) {
-    overallMethod = "file";
+    overallMethod = OVERALL_METHODS.file;
   } else {
-    overallMethod = "mixed";
+    overallMethod = OVERALL_METHODS.mixed;
   }
 
   let overallAiRatio: number;
-  if (overallMethod === "line") {
+  if (overallMethod === OVERALL_METHODS.line) {
     const aiAdded = lineEligible.reduce(
       (sum, commit) => sum + (commit.attribution?.lines?.ai_added ?? 0),
       0,
@@ -345,13 +362,16 @@ export async function collectReport(
       (sum, commit) => sum + (commit.attribution?.lines?.total_added ?? 0),
       0,
     );
-    overallAiRatio = totalAdded > 0 ? Math.round((aiAdded / totalAdded) * 100) : 0;
-  } else if (overallMethod === "file") {
+    overallAiRatio =
+      totalAdded > 0 ? Math.round((aiAdded / totalAdded) * PERCENT_DENOMINATOR) : 0;
+  } else if (overallMethod === OVERALL_METHODS.file) {
     const eligibleFiles = eligible.reduce((sum, commit) => sum + commit.files_total, 0);
     const eligibleFilesAi = eligible.reduce((sum, commit) => sum + commit.files_ai, 0);
     overallAiRatio =
-      eligibleFiles > 0 ? Math.round((eligibleFilesAi / eligibleFiles) * 100) : 0;
-  } else if (overallMethod === "mixed") {
+      eligibleFiles > 0
+        ? Math.round((eligibleFilesAi / eligibleFiles) * PERCENT_DENOMINATOR)
+        : 0;
+  } else if (overallMethod === OVERALL_METHODS.mixed) {
     const weightedSum = eligible.reduce(
       (sum, commit) => sum + (commit.ai_ratio ?? 0) * commit.files_total,
       0,
@@ -399,8 +419,9 @@ export async function collectReport(
 }
 
 /** Render a fixed-width text progress bar for compact Markdown tables. */
-export function renderProgressBar(ratio: number, width = 8): string {
-  const filled = Math.round((ratio / 100) * width);
+export function renderProgressBar(ratio: number, width = DEFAULT_PROGRESS_BAR_WIDTH): string {
+  const normalizedRatio = Math.min(PERCENT_DENOMINATOR, Math.max(0, ratio));
+  const filled = Math.round((normalizedRatio / PERCENT_DENOMINATOR) * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
@@ -415,7 +436,10 @@ export function renderHeader(report: PrReport): string[] {
     return ["**Total AI Ratio:** —", "**Agent Note data:** No tracked commits"];
   }
 
-  const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
+  const line1 = `**Total AI Ratio:** ${renderRatioWithBar(
+    report.overall_ai_ratio,
+    AI_RATIO_HEADER_BAR_WIDTH,
+  )}`;
   const lines = [line1];
   if (report.model) {
     lines.push(`**Model:** \`${report.model}\``);
@@ -462,7 +486,7 @@ export function renderMarkdown(report: PrReport, opts: RenderMarkdownOptions = {
     const fileList = escapeTableCell(
       commit.files.map((file) => `${basename(file.path)} ${file.by_ai ? "🤖" : "👤"}`).join(", "),
     );
-    const aiRatioCell = renderRatioWithBar(commit.ai_ratio, 5);
+    const aiRatioCell = renderRatioWithBar(commit.ai_ratio, AI_RATIO_TABLE_BAR_WIDTH);
 
     lines.push(
       `| ${commitCell} | ${aiRatioCell} | ${commit.prompts_count} | ${fileList} |`,
@@ -745,7 +769,7 @@ function renderPromptSummary(visible: number, total: number, detail: PromptDetai
 
 /** Detect the best remote base branch when the Action input omits one. */
 export async function detectBaseBranch(): Promise<string | null> {
-  for (const name of ["main", "master", "develop"]) {
+  for (const name of DEFAULT_BASE_BRANCH_CANDIDATES) {
     const { exitCode } = await gitSafe(["rev-parse", "--verify", `origin/${name}`]);
     if (exitCode === 0) return `origin/${name}`;
   }
@@ -829,7 +853,10 @@ function cleanPrompt(prompt: string, maxLen: number): string {
   if (firstLine.startsWith("## ") || firstLine.startsWith("# ")) {
     const userStart = lines.findIndex(
       (line, index) =>
-        index > 0 && !line.startsWith("#") && !line.startsWith("```") && line.trim().length > 10,
+        index > 0 &&
+        !line.startsWith("#") &&
+        !line.startsWith("```") &&
+        line.trim().length > MIN_PROMPT_BODY_LINE_CHARS,
     );
     if (userStart !== -1) {
       body = lines.slice(userStart).join("\n").trim();
@@ -859,7 +886,7 @@ function renderInteractionContext(interaction: Interaction): string {
 
 /** Show reference context before scope context when both are present. */
 function contextKindOrder(kind: InteractionContext["kind"]): number {
-  return kind === "reference" ? 0 : 1;
+  return CONTEXT_KIND_ORDER[kind];
 }
 
 /** Return the last path segment for the PR report file summary. */

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { getAgent, hasAgent, listAgents } from "../agents/index.js";
+import { AGENT_NAMES } from "../agents/types.js";
 import {
   AGENTNOTE_HOOK_MARKER,
   GIT_HOOK_NAMES,
@@ -368,7 +369,7 @@ export async function init(args: string[]): Promise<void> {
     if (dashboard) {
       console.log("    # then enable GitHub Pages for this repository");
     }
-    if (agents.includes("cursor")) {
+    if (agents.includes(AGENT_NAMES.cursor)) {
       console.log("");
       console.log("  Cursor note");
       console.log("    With the default git hooks, plain `git commit` is tracked normally.");

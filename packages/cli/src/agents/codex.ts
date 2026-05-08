@@ -3,13 +3,25 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
-import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
+import {
+  AGENT_NAMES,
+  type AgentAdapter,
+  type HookInput,
+  NORMALIZED_EVENT_KINDS,
+  type NormalizedEvent,
+  type TranscriptInteraction,
+} from "./types.js";
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const ENV_CODEX_HOME = "CODEX_HOME";
 const HOOKS_REL_PATH = ".codex/hooks.json";
-const HOOK_COMMAND = "npx --yes agent-note hook --agent codex";
+const HOOK_COMMAND = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
 const TRANSCRIPT_PREVIEW_CHARS = 4096;
+const CODEX_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  userPromptSubmit: "UserPromptSubmit",
+  stop: "Stop",
+} as const;
 
 type CodexHookPayload = {
   session_id?: string;
@@ -345,7 +357,7 @@ function appendInteractionTool(
 
 /** Codex CLI adapter for transcript-driven prompt, patch, and attribution recovery. */
 export const codex: AgentAdapter = {
-  name: "codex",
+  name: AGENT_NAMES.codex,
   settingsRelPath: CONFIG_REL_PATH,
 
   async managedPaths(): Promise<string[]> {
@@ -420,18 +432,18 @@ export const codex: AgentAdapter = {
     const transcriptPath = normalizeTranscriptPath(payload.transcript_path);
 
     switch (payload.hook_event_name) {
-      case "SessionStart":
+      case CODEX_HOOK_EVENTS.sessionStart:
         return {
-          kind: "session_start",
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
           sessionId,
           timestamp,
           model: payload.model,
           transcriptPath,
         };
-      case "UserPromptSubmit":
+      case CODEX_HOOK_EVENTS.userPromptSubmit:
         return payload.prompt
           ? {
-              kind: "prompt",
+              kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
               prompt: payload.prompt,
@@ -439,9 +451,9 @@ export const codex: AgentAdapter = {
               model: payload.model,
             }
           : null;
-      case "Stop":
+      case CODEX_HOOK_EVENTS.stop:
         return {
-          kind: "stop",
+          kind: NORMALIZED_EVENT_KINDS.stop,
           sessionId,
           timestamp,
           response: payload.last_assistant_message ?? undefined,

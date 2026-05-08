@@ -8,6 +8,7 @@ import { pushNotes } from "./commands/push-notes.js";
 import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
+import { DEFAULT_LOG_COUNT } from "./core/constants.js";
 
 declare const __VERSION__: string;
 const VERSION = __VERSION__;
@@ -34,6 +35,15 @@ usage:
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
+/** Parse the optional `agent-note log` count without passing invalid values to git. */
+function parseLogCountArg(value: string | undefined): number {
+  if (!value) return DEFAULT_LOG_COUNT;
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  console.error(`invalid log count: ${value} (expected a positive integer)`);
+  process.exit(1);
+}
+
 switch (command) {
   case "init":
     await init(args);
@@ -48,7 +58,7 @@ switch (command) {
     await show(args[0]);
     break;
   case "log":
-    await log(args[0] ? parseInt(args[0], 10) : 10);
+    await log(parseLogCountArg(args[0]));
     break;
   case "pr":
     await pr(args);

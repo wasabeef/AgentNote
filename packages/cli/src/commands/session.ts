@@ -5,6 +5,8 @@ import { readNote } from "../core/storage.js";
 import { git } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
 
+const PERCENT_DENOMINATOR = 100;
+
 interface SessionCommit {
   sha: string;
   shortInfo: string;
@@ -114,11 +116,13 @@ export async function session(sessionId: string): Promise<void> {
 
   if (lineCount > 0 && fileCount === 0) {
     _overallMethod = "line";
-    overallRatio = lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * 100) : 0;
+    overallRatio =
+      lineTotalAdded > 0 ? Math.round((lineAiAdded / lineTotalAdded) * PERCENT_DENOMINATOR) : 0;
     lineDetail = ` (${lineAiAdded}/${lineTotalAdded} lines)`;
   } else if (lineCount === 0 && fileCount > 0) {
     _overallMethod = "file";
-    overallRatio = fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * 100) : 0;
+    overallRatio =
+      fileFilesTotal > 0 ? Math.round((fileFilesAi / fileFilesTotal) * PERCENT_DENOMINATOR) : 0;
   } else if (lineCount > 0 && fileCount > 0) {
     // Mixed: same formula as pr.ts — weighted average of ai_ratio by files count.
     _overallMethod = "mixed";

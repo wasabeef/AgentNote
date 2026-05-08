@@ -4,22 +4,42 @@ import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
-import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
+import {
+  AGENT_NAMES,
+  type AgentAdapter,
+  type HookInput,
+  NORMALIZED_EVENT_KINDS,
+  type NormalizedEvent,
+  type TranscriptInteraction,
+} from "./types.js";
 
-const HOOK_COMMAND = "npx --yes agent-note hook --agent gemini";
+const HOOK_COMMAND = `npx --yes agent-note hook --agent ${AGENT_NAMES.gemini}`;
 const ENV_GEMINI_HOME = "GEMINI_HOME";
 const HOOK_TIMEOUT_MS = 10_000;
 const SETTINGS_REL_PATH = ".gemini/settings.json";
 const TRANSCRIPT_PREVIEW_CHARS = 4096;
-
-const EDIT_TOOLS = new Set(["write_file", "replace"]);
-const SHELL_TOOLS = new Set([
+const GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
+const GEMINI_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  sessionEnd: "SessionEnd",
+  beforeAgent: "BeforeAgent",
+  afterAgent: "AfterAgent",
+  beforeTool: "BeforeTool",
+  afterTool: "AfterTool",
+} as const;
+const GEMINI_EDIT_TOOL_NAMES = ["write_file", "replace"] as const;
+const GEMINI_SHELL_TOOL_NAMES = [
   "run_shell_command",
   "shell",
   "bash",
   "run_command",
   "execute_command",
-]);
+] as const;
+const GEMINI_EDIT_TOOL_MATCHER = GEMINI_EDIT_TOOL_NAMES.join("|");
+const GEMINI_SHELL_TOOL_MATCHER = GEMINI_SHELL_TOOL_NAMES.join("|");
+
+const EDIT_TOOLS = new Set<string>(GEMINI_EDIT_TOOL_NAMES);
+const SHELL_TOOLS = new Set<string>(GEMINI_SHELL_TOOL_NAMES);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -62,7 +82,7 @@ type GeminiSettingsConfig = Record<string, unknown> & {
 };
 
 const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
-  SessionStart: [
+  [GEMINI_HOOK_EVENTS.sessionStart]: [
     {
       matcher: "*",
       hooks: [
@@ -75,7 +95,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
   ],
-  SessionEnd: [
+  [GEMINI_HOOK_EVENTS.sessionEnd]: [
     {
       matcher: "*",
       hooks: [
@@ -88,7 +108,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
   ],
-  BeforeAgent: [
+  [GEMINI_HOOK_EVENTS.beforeAgent]: [
     {
       matcher: "*",
       hooks: [
@@ -101,7 +121,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
   ],
-  AfterAgent: [
+  [GEMINI_HOOK_EVENTS.afterAgent]: [
     {
       matcher: "*",
       hooks: [
@@ -114,9 +134,9 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
   ],
-  BeforeTool: [
+  [GEMINI_HOOK_EVENTS.beforeTool]: [
     {
-      matcher: "write_file|replace",
+      matcher: GEMINI_EDIT_TOOL_MATCHER,
       hooks: [
         {
           name: "agentnote-before-edit",
@@ -127,7 +147,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
     {
-      matcher: "run_shell_command|shell|bash|run_command|execute_command",
+      matcher: GEMINI_SHELL_TOOL_MATCHER,
       hooks: [
         {
           name: "agentnote-before-shell",
@@ -138,9 +158,9 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
   ],
-  AfterTool: [
+  [GEMINI_HOOK_EVENTS.afterTool]: [
     {
-      matcher: "write_file|replace",
+      matcher: GEMINI_EDIT_TOOL_MATCHER,
       hooks: [
         {
           name: "agentnote-after-edit",
@@ -151,7 +171,7 @@ const HOOKS_CONFIG: Record<string, GeminiHookGroup[]> = {
       ],
     },
     {
-      matcher: "run_shell_command|shell|bash|run_command|execute_command",
+      matcher: GEMINI_SHELL_TOOL_MATCHER,
       hooks: [
         {
           name: "agentnote-after-shell",
@@ -273,7 +293,7 @@ function findTranscriptCandidate(rootDir: string, sessionId: string): string | n
 
 /** Gemini CLI adapter for BeforeTool/AfterTool hooks and JSONL transcript recovery. */
 export const gemini: AgentAdapter = {
-  name: "gemini",
+  name: AGENT_NAMES.gemini,
   settingsRelPath: SETTINGS_REL_PATH,
 
   async managedPaths(): Promise<string[]> {
@@ -358,36 +378,52 @@ export const gemini: AgentAdapter = {
       e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : undefined;
 
     switch (e.hook_event_name) {
-      case "SessionStart":
+      case GEMINI_HOOK_EVENTS.sessionStart:
         return {
-          kind: "session_start",
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
           sessionId: sid,
           timestamp: ts,
           model: e.model,
           transcriptPath: tp,
         };
 
-      case "SessionEnd":
-        return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
+      case GEMINI_HOOK_EVENTS.sessionEnd:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId: sid,
+          timestamp: ts,
+          transcriptPath: tp,
+        };
 
-      case "BeforeAgent":
+      case GEMINI_HOOK_EVENTS.beforeAgent:
         return e.prompt
-          ? { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt, model: e.model }
+          ? {
+              kind: NORMALIZED_EVENT_KINDS.prompt,
+              sessionId: sid,
+              timestamp: ts,
+              prompt: e.prompt,
+              model: e.model,
+            }
           : null;
 
-      case "AfterAgent":
+      case GEMINI_HOOK_EVENTS.afterAgent:
         return e.prompt_response
-          ? { kind: "response", sessionId: sid, timestamp: ts, response: e.prompt_response }
+          ? {
+              kind: NORMALIZED_EVENT_KINDS.response,
+              sessionId: sid,
+              timestamp: ts,
+              response: e.prompt_response,
+            }
           : null;
 
-      case "BeforeTool": {
+      case GEMINI_HOOK_EVENTS.beforeTool: {
         const toolName = e.tool_name?.toLowerCase() ?? "";
         const filePath = e.tool_input?.file_path;
         const cmd = e.tool_input?.command ?? "";
 
         if (EDIT_TOOLS.has(toolName) && filePath) {
           return {
-            kind: "pre_edit",
+            kind: NORMALIZED_EVENT_KINDS.preEdit,
             sessionId: sid,
             timestamp: ts,
             tool: e.tool_name,
@@ -395,19 +431,24 @@ export const gemini: AgentAdapter = {
           };
         }
         if (SHELL_TOOLS.has(toolName) && isGitCommit(cmd)) {
-          return { kind: "pre_commit", sessionId: sid, timestamp: ts, commitCommand: cmd };
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preCommit,
+            sessionId: sid,
+            timestamp: ts,
+            commitCommand: cmd,
+          };
         }
         return null;
       }
 
-      case "AfterTool": {
+      case GEMINI_HOOK_EVENTS.afterTool: {
         const toolName = e.tool_name?.toLowerCase() ?? "";
         const filePath = e.tool_input?.file_path;
         const cmd = e.tool_input?.command ?? "";
 
         if (EDIT_TOOLS.has(toolName) && filePath) {
           return {
-            kind: "file_change",
+            kind: NORMALIZED_EVENT_KINDS.fileChange,
             sessionId: sid,
             timestamp: ts,
             tool: e.tool_name,
@@ -415,7 +456,12 @@ export const gemini: AgentAdapter = {
           };
         }
         if (SHELL_TOOLS.has(toolName) && isGitCommit(cmd)) {
-          return { kind: "post_commit", sessionId: sid, timestamp: ts, transcriptPath: tp };
+          return {
+            kind: NORMALIZED_EVENT_KINDS.postCommit,
+            sessionId: sid,
+            timestamp: ts,
+            transcriptPath: tp,
+          };
         }
         return null;
       }
@@ -471,7 +517,7 @@ export const gemini: AgentAdapter = {
         continue;
       }
 
-      if (type === "gemini" && current) {
+      if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
         const response = extractPartText(record.content);
         if (response) {
           current.response = current.response ? `${current.response}\n${response}` : response;

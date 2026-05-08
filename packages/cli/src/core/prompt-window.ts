@@ -90,6 +90,8 @@ const PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
 const PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
 /** Minimal shape score that can anchor a prompt window without text overlap. */
 const PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
+const LOW_SHAPE_WINDOW_TEXT_SCORE_MAX = 2;
+const LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX = 20;
 /** Version for the stable interaction selection metadata stored in git notes. */
 const PROMPT_SELECTION_SCHEMA = 1;
 /** Minimum length for obvious quoted prompt/response history blocks. */
@@ -98,6 +100,22 @@ const QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
 const QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
 /** Minimum size for indented copied transcript snippets. */
 const QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
+const TEXT_SHAPE_LENGTH_DIVISOR = 4;
+const TEXT_SHAPE_LENGTH_SCORE_MAX = 24;
+const TEXT_SHAPE_NEWLINE_WEIGHT = 10;
+const TEXT_SHAPE_NEWLINE_SCORE_MAX = 30;
+const TEXT_SHAPE_INLINE_CODE_SCORE = 18;
+const TEXT_SHAPE_PATH_SCORE = 16;
+const TEXT_SHAPE_FLAG_SCORE = 14;
+const TEXT_SHAPE_LIST_SCORE = 20;
+const FILE_REF_EXACT_PATH_SCORE = 80;
+const FILE_REF_SEGMENT_MIN_CHARS = 4;
+const FILE_REF_SEGMENT_SCORE = 5;
+const FILE_REF_BASENAME_SCORE = 20;
+const TEXT_OVERLAP_PATH_TOKEN_SCORE = 4;
+const TEXT_OVERLAP_WORD_TOKEN_SCORE = 1;
+const TOKEN_MIN_CHARS = 2;
+const TOKEN_PART_MIN_CHARS = 3;
 
 /** Select commit-window prompts and consumed markers for commits with known edit turns. */
 export function selectPromptWindowEntries(
@@ -697,9 +715,9 @@ function isHardTrimPromptRow(row: PromptWindowRow): boolean {
 /** Return true for weak leading rows that may be kept as short soft context. */
 function isLowShapePromptRow(row: PromptWindowRow): boolean {
   return (
-    row.windowTextScore < 2 &&
+    row.windowTextScore < LOW_SHAPE_WINDOW_TEXT_SCORE_MAX &&
     row.windowFileRefScore < PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE &&
-    row.windowShapeScore < 20
+    row.windowShapeScore < LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX
   );
 }
 
@@ -751,13 +769,18 @@ function scoreTextShape(text: string): number {
   const trimmed = text.trim();
   if (!trimmed) return 0;
 
-  let score = Math.min(Math.floor(trimmed.length / 4), 24);
+  let score = Math.min(
+    Math.floor(trimmed.length / TEXT_SHAPE_LENGTH_DIVISOR),
+    TEXT_SHAPE_LENGTH_SCORE_MAX,
+  );
   const newlines = (trimmed.match(/\n/g) ?? []).length;
-  score += Math.min(newlines * 10, 30);
-  if (/`[^`]+`/.test(trimmed)) score += 18;
-  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) score += 16;
-  if (/--[a-z0-9-]+/i.test(trimmed)) score += 14;
-  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += 20;
+  score += Math.min(newlines * TEXT_SHAPE_NEWLINE_WEIGHT, TEXT_SHAPE_NEWLINE_SCORE_MAX);
+  if (/`[^`]+`/.test(trimmed)) score += TEXT_SHAPE_INLINE_CODE_SCORE;
+  if (/(^|\s)(?:\.{0,2}\/|~\/|[A-Za-z0-9_.-]+\/)[^\s]+/.test(trimmed)) {
+    score += TEXT_SHAPE_PATH_SCORE;
+  }
+  if (/--[a-z0-9-]+/i.test(trimmed)) score += TEXT_SHAPE_FLAG_SCORE;
+  if (/^\s*(?:[-*]|\d+\.)\s/m.test(trimmed)) score += TEXT_SHAPE_LIST_SCORE;
 
   return score;
 }
@@ -772,7 +795,12 @@ function scorePromptTextOverlap(
   const commitTokens = tokenizePromptSelectionText(`${commitSubject}\n${commitFiles.join("\n")}`);
   let score = 0;
   for (const token of promptTokens) {
-    if (commitTokens.has(token)) score += token.includes("/") || token.includes(".") ? 4 : 1;
+    if (commitTokens.has(token)) {
+      score +=
+        token.includes("/") || token.includes(".")
+          ? TEXT_OVERLAP_PATH_TOKEN_SCORE
+          : TEXT_OVERLAP_WORD_TOKEN_SCORE;
+    }
   }
   return score;
 }
@@ -783,13 +811,15 @@ function scorePromptFileRefs(prompt: string, commitFiles: string[]): number {
   let score = 0;
   for (const file of commitFiles) {
     const lowerFile = file.toLowerCase();
-    if (lowerPrompt.includes(lowerFile)) score += 80;
-    const segments = file.split(/[/.]/).filter((segment) => segment.length >= 4);
+    if (lowerPrompt.includes(lowerFile)) score += FILE_REF_EXACT_PATH_SCORE;
+    const segments = file
+      .split(/[/.]/)
+      .filter((segment) => segment.length >= FILE_REF_SEGMENT_MIN_CHARS);
     for (const segment of segments) {
-      if (lowerPrompt.includes(segment.toLowerCase())) score += 5;
+      if (lowerPrompt.includes(segment.toLowerCase())) score += FILE_REF_SEGMENT_SCORE;
     }
     const basename = file.split("/").pop();
-    if (basename && lowerPrompt.includes(basename.toLowerCase())) score += 20;
+    if (basename && lowerPrompt.includes(basename.toLowerCase())) score += FILE_REF_BASENAME_SCORE;
   }
   return score;
 }
@@ -802,10 +832,10 @@ function tokenizePromptSelectionText(text: string): Set<string> {
     .replace(/[^\p{L}\p{N}_\-./]+/gu, " ")
     .toLowerCase();
   for (const raw of normalized.split(/\s+/)) {
-    if (!raw || raw.length < 2) continue;
+    if (!raw || raw.length < TOKEN_MIN_CHARS) continue;
     tokens.add(raw);
     for (const part of raw.split(/[./_-]/)) {
-      if (part.length >= 3) tokens.add(part);
+      if (part.length >= TOKEN_PART_MIN_CHARS) tokens.add(part);
     }
   }
   return tokens;
