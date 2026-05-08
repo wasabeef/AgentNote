@@ -35,7 +35,7 @@ Questa pagina spiega il meccanismo dietro il report: cosa viene catturato localm
   </div>
 </div>
 
-Quando i git hook generati sono installati, nella maggior parte dei repository basta continuare a usare `git commit` e `git push`. Cursor Preview recupera anche le coppie prompt / response dai transcript locali e può continuare a tracciare i commit quando i git hook non sono disponibili.
+Quando i git hook generati sono installati, nella maggior parte dei repository basta continuare a usare `git commit` e `git push`. Cursor recupera anche le coppie prompt / response dai transcript locali e può continuare a tracciare i commit quando i git hook non sono disponibili.
 
 ## Storage
 
@@ -114,14 +114,14 @@ Quando i git hook generati sono installati, nella maggior parte dei repository b
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>Parte come file-level. Sale a line-level solo quando i conteggi degli edit coincidono e il file finale corrisponde ancora all’ultimo edit IA.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>Registra prompt / response e attribution a livello file tramite hook e parsing del transcript. Il line-level non è ancora disponibile.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

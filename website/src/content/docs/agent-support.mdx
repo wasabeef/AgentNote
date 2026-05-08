@@ -13,8 +13,8 @@ Agent Note uses the same git-note format for every agent, but each agent exposes
 |---|---|---|---|
 | Claude Code | Full support | Hook-native | Line-level by default |
 | Codex CLI | Supported | Local transcript | File-level by default, line-level when `apply_patch` counts match |
-| Cursor Preview | Supported | Response hook or local transcript | File-level by default, line-level when edit counts and final blob match |
-| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
+| Cursor | Supported | Response hook or local transcript | File-level by default, line-level when edit counts and final blob match |
+| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
 
 <Aside>
   "Preview" means Agent Note supports the current public behavior, but the agent's local hook or transcript format may still change.
@@ -40,8 +40,8 @@ Each developer still needs to run `init` once after cloning because git hooks li
 |---|---|
 | The most complete line attribution today | Claude Code |
 | Codex CLI support with conservative attribution | Codex CLI |
-| Cursor editor history and response recovery | Cursor Preview |
-| Gemini CLI prompt / response capture | Gemini CLI Preview |
+| Cursor editor history and response recovery | Cursor |
+| Gemini CLI prompt / response capture | Gemini CLI |
 
 ## How Attribution Works
 
@@ -68,11 +68,11 @@ Codex CLI support is transcript-driven. Agent Note reads local transcripts, conn
 
 Shell-only edits are not guessed from command text. If no reliable transcript is available, Agent Note avoids writing uncertain attribution.
 
-### Cursor Preview
+### Cursor
 
 Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when the committed blob still matches the latest AI edit.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI support uses `BeforeTool` / `AfterTool` for file edits and `BeforeAgent` / `AfterAgent` for prompt and response recovery. Attribution currently stays at file-level.
 

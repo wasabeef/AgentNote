@@ -35,7 +35,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-Если сгенерированные git hooks установлены, в большинстве репозиториев достаточно продолжать пользоваться обычными `git commit` и `git push`. Cursor Preview также восстанавливает пары prompt / response из локальных transcripts и может продолжать отслеживать коммиты, когда git hooks недоступны.
+Если сгенерированные git hooks установлены, в большинстве репозиториев достаточно продолжать пользоваться обычными `git commit` и `git push`. Cursor также восстанавливает пары prompt / response из локальных transcripts и может продолжать отслеживать коммиты, когда git hooks недоступны.
 
 ## Хранилище
 
@@ -114,14 +114,14 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>Начинает как file-level. Переходит на line-level только когда совпадают counts правок и финальный файл всё ещё соответствует последнему AI edit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>Сохраняет prompt / response и file-level attribution через hooks и парсинг transcript. Перехода на line-level пока нет.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

@@ -96,7 +96,7 @@ npx agent-note init --agent claude
 2. **記録** prompt、response、file attribution を git note として保存
 3. **送信** `git push` 時に notes も remote に送信
 
-Cursor Preview では response hook または local transcript から prompt / response も復元されます。
+Cursor では response hook または local transcript から prompt / response も復元されます。
 git hook が使えない環境では `agent-note commit` を使います。
 
 ## 動作確認
@@ -171,14 +171,14 @@ linked:  3/20 recent commits
   </Card>
   <Card>
     <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Cursor Preview</div>
+      <div class="agent-capability-card__title">Cursor</div>
       生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。
       <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-capability-card">
-      <div class="agent-capability-card__title">Gemini CLI Preview</div>
+      <div class="agent-capability-card__title">Gemini CLI</div>
       生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は `BeforeAgent` / `AfterAgent` hook から復元され、attribution は現状 file-level のままです。
       <img class="agent-capability-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

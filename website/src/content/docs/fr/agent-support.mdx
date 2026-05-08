@@ -13,8 +13,8 @@ Agent Note écrit le même format de git note pour tous les agents, mais chaque 
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level par défaut |
 | Codex CLI | Supported | Transcript local | File-level par défaut, line-level si les comptes `apply_patch` correspondent |
-| Cursor Preview | Supported | Response hook ou transcript local | File-level par défaut, line-level si les edits et le blob final correspondent |
-| Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+| Cursor | Supported | Response hook ou transcript local | File-level par défaut, line-level si les edits et le blob final correspondent |
+| Gemini CLI | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
 
 <Aside>
   Preview signifie que l’implémentation suit le comportement public actuel, mais le format local de l’agent peut encore évoluer.
@@ -40,8 +40,8 @@ Chaque developer doit lancer `init` une fois après un clone, car les git hooks 
 |---|---|
 | Attribution ligne par ligne la plus complète aujourd'hui | Claude Code |
 | Support Codex CLI avec attribution prudente | Codex CLI |
-| Historique d'éditeur Cursor et récupération des réponses | Cursor Preview |
-| Capture prompt / réponse avec Gemini CLI | Gemini CLI Preview |
+| Historique d'éditeur Cursor et récupération des réponses | Cursor |
+| Capture prompt / réponse avec Gemini CLI | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code fournit les prompts, responses et edits via hooks. Agent Note enregi
 
 Codex CLI est transcript-driven. Agent Note lit le transcript local et passe en line-level uniquement quand les comptes `apply_patch` correspondent au diff final.
 
-### Cursor Preview
+### Cursor
 
 Cursor utilise `afterFileEdit` / `afterTabFileEdit`, plus response hooks ou transcripts locaux. Le line-level est possible seulement si le blob final correspond encore au dernier edit IA.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI utilise `BeforeTool` / `AfterTool` pour les fichiers et `BeforeAgent` / `AfterAgent` pour prompt / response. L’attribution reste file-level.
 

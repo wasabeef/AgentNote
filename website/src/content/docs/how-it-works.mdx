@@ -35,7 +35,7 @@ This page explains the mechanics behind the report: what is captured locally, wh
   </div>
 </div>
 
-With the generated git hooks installed, most repos can keep using plain `git commit` and `git push`. Cursor Preview can also recover prompt / response pairs from local transcripts, and its shell hooks can keep tracking commits when git hooks are unavailable.
+With the generated git hooks installed, most repos can keep using plain `git commit` and `git push`. Cursor can also recover prompt / response pairs from local transcripts, and its shell hooks can keep tracking commits when git hooks are unavailable.
 
 ## Storage
 
@@ -114,14 +114,14 @@ With the generated git hooks installed, most repos can keep using plain `git com
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>Starts as file-level. It upgrades to line-level only when edit counts match and the final file still matches the last AI edit.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>Records prompt / response and file-level attribution from hooks and transcripts. Line-level attribution is not available yet.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

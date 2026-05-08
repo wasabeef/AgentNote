@@ -13,8 +13,8 @@ Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent
 |---|---|---|---|
 | Claude Code | Full support | Hook-native | Standardmäßig line-level |
 | Codex CLI | Supported | Lokales Transcript | Standardmäßig file-level, line-level wenn `apply_patch` Counts passen |
-| Cursor Preview | Supported | Response hook oder lokales Transcript | Standardmäßig file-level, line-level wenn Edit Counts und finaler Blob passen |
-| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` Hooks | File-level |
+| Cursor | Supported | Response hook oder lokales Transcript | Standardmäßig file-level, line-level wenn Edit Counts und finaler Blob passen |
+| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` Hooks | File-level |
 
 <Aside>
   Preview bedeutet, dass Agent Note das aktuelle öffentliche Verhalten unterstützt, das lokale Format des Agents aber noch ändern kann.
@@ -40,8 +40,8 @@ Jeder Developer muss `init` nach dem Clone einmal ausführen, weil git hooks in 
 |---|---|
 | Die heute vollständigste zeilenweise Zuordnung | Claude Code |
 | Codex CLI mit konservativer Zuordnung | Codex CLI |
-| Cursor-Editor-Historie und Response-Wiederherstellung | Cursor Preview |
-| Prompt-/Response-Erfassung mit Gemini CLI | Gemini CLI Preview |
+| Cursor-Editor-Historie und Response-Wiederherstellung | Cursor |
+| Prompt-/Response-Erfassung mit Gemini CLI | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code liefert Prompts, Responses und Edits über Hooks. Agent Note speiche
 
 Codex CLI ist transcript-driven. Agent Note liest lokale Transcripts und wechselt nur dann zu line-level, wenn `apply_patch` Counts zum finalen Diff passen.
 
-### Cursor Preview
+### Cursor
 
 Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn der finale Blob noch zum letzten AI edit passt.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI nutzt `BeforeTool` / `AfterTool` für Dateien und `BeforeAgent` / `AfterAgent` für Prompt / Response. Attribution bleibt aktuell file-level.
 

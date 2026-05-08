@@ -35,7 +35,7 @@ Cette page explique le mécanisme derrière le rapport : ce qui est capturé loc
   </div>
 </div>
 
-Une fois les git hooks générés installés, la plupart des dépôts peuvent continuer à utiliser simplement `git commit` et `git push`. Cursor Preview récupère aussi les paires prompt / response depuis les transcripts locaux et peut continuer à suivre les commits quand les git hooks ne sont pas disponibles.
+Une fois les git hooks générés installés, la plupart des dépôts peuvent continuer à utiliser simplement `git commit` et `git push`. Cursor récupère aussi les paires prompt / response depuis les transcripts locaux et peut continuer à suivre les commits quand les git hooks ne sont pas disponibles.
 
 ## Stockage
 
@@ -114,14 +114,14 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>Démarre en file-level. Passe en line-level seulement lorsque les comptes d’édition correspondent et que le fichier final correspond encore au dernier edit IA.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>Enregistre prompt / response et attribution au niveau fichier via les hooks et le parsing du transcript. Le mode line-level n’est pas encore disponible.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

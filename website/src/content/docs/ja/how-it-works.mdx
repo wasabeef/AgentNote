@@ -35,7 +35,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-生成された git hook が入っていれば、ふだんどおり `git commit` と `git push` を使うだけで動きます。Cursor Preview は local transcript から prompt / response を復元でき、git hook が使えない環境でも shell hook で追跡を続けられます。
+生成された git hook が入っていれば、ふだんどおり `git commit` と `git push` を使うだけで動きます。Cursor は local transcript から prompt / response を復元でき、git hook が使えない環境でも shell hook で追跡を続けられます。
 
 ## ストレージ
 
@@ -104,14 +104,14 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>最初は file-level です。edit 行数が合い、最後の AI edit 後の file がそのまま残っているときだけ line-level に上がります。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>hook と transcript 解析で prompt / response と file-level attribution を記録します。line-level はまだありません。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

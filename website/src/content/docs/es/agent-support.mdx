@@ -13,8 +13,8 @@ Agent Note guarda el mismo formato de git note para todos los agents, pero cada 
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level por defecto |
 | Codex CLI | Supported | Transcript local | File-level por defecto, line-level si los conteos `apply_patch` coinciden |
-| Cursor Preview | Supported | Response hook o transcript local | File-level por defecto, line-level si los edits y el blob final coinciden |
-| Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+| Cursor | Supported | Response hook o transcript local | File-level por defecto, line-level si los edits y el blob final coinciden |
+| Gemini CLI | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
 
 <Aside>
   Preview significa que Agent Note sigue el comportamiento público actual, pero el formato local del agent puede cambiar.
@@ -40,8 +40,8 @@ Cada developer debe ejecutar `init` una vez después de clonar, porque los git h
 |---|---|
 | La atribución por línea más completa hoy | Claude Code |
 | Soporte de Codex CLI con atribución conservadora | Codex CLI |
-| Historial del editor Cursor y recuperación de respuestas | Cursor Preview |
-| Captura de prompt / response con Gemini CLI | Gemini CLI Preview |
+| Historial del editor Cursor y recuperación de respuestas | Cursor |
+| Captura de prompt / response con Gemini CLI | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code entrega prompts, responses y edits por hooks. Agent Note guarda el e
 
 Codex CLI es transcript-driven. Agent Note lee transcripts locales y sube a line-level solo cuando los conteos `apply_patch` coinciden con el diff final.
 
-### Cursor Preview
+### Cursor
 
 Cursor usa `afterFileEdit` / `afterTabFileEdit`, además de response hooks o transcripts locales. Line-level solo es posible si el blob final sigue coincidiendo con el último edit de IA.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI usa `BeforeTool` / `AfterTool` para archivos y `BeforeAgent` / `AfterAgent` para prompt / response. La attribution actual es file-level.
 
