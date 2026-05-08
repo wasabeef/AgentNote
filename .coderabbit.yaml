@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+    base_branches:
+      - ".*"
+    ignore_title_keywords:
+      - "[skip review]"
+      - "WIP"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+
+  path_filters:
+    - "!**/dist/**"
+    - "!**/node_modules/**"
+    - "!website/dist/**"
+
+  path_instructions:
+    - path: "packages/cli/src/**"
+      instructions: |
+        Review Agent Note CLI changes against AGENTS.md and docs/engineering.md.
+        Focus on git hook safety, git notes persistence, prompt selection, attribution correctness,
+        and the invariant that Agent Note must never break a user's git commit.
+
+    - path: "packages/cli/src/agents/**"
+      instructions: |
+        Check adapter-specific behavior for Claude Code, Codex CLI, Cursor, and Gemini CLI.
+        Verify event parsing, transcript handling, synchronous hook stdout requirements,
+        and compatibility with existing agent tests.
+
+    - path: "packages/pr-report/src/**"
+      instructions: |
+        Review PR report changes for Markdown safety, hidden reviewer-context safety,
+        stable GitHub Action behavior, and compatibility with repositories outside Agent Note.
+
+    - path: "packages/dashboard/**"
+      instructions: |
+        Review Dashboard changes for static GitHub Pages compatibility, safe rendering of
+        untrusted note JSON, preserved historical PR data, and avoiding external runtime dependencies.
+
+    - path: "website/**"
+      instructions: |
+        Review documentation for implementation accuracy, natural language, locale parity,
+        and clear separation between user-facing guidance and maintainer details.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Review workflow changes for least-privilege permissions, fork/PR safety,
+        GitHub Pages artifact behavior, and release reproducibility.
+
+    - path: "docs/**"
+      instructions: |
+        Review maintainer docs for accuracy against current implementation and usefulness
+        as durable context for future AI coding agents.
+
+chat:
+  auto_reply: true
