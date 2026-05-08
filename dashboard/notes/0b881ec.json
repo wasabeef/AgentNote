@@ -1,0 +1,1316 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T17:17:52.799Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review 63",
+      "response": "PR #63 の CodeRabbit 未解決 thread 4 件を確認し、ローカル修正まで完了しました。\n\n対応内容:\n- `record.ts` に `.agentnoteignore` pattern の軽量 complexity guard を追加しました。\n- guard の回帰テストを追加しました。\n- README 全言語で `.agentnoteignore` が repository root のファイルであることを明記しました。\n- website の `how-it-works` / `agent-support` / `data-and-privacy` 全 locale でも root 指定に揃えました。\n- `packages/cli/dist/cli.js` は build により更新されています。\n\n検証:\n- `npm run build --prefix packages/cli` ✅\n- `npm test --prefix packages/cli` ✅ 409 tests\n- `npm run typecheck --prefix packages/cli` ✅\n- `npm run lint --prefix packages/cli` ✅\n- `npm run build --prefix website` ✅\n\n次は commit / push して、その後 CodeRabbit の修正済み thread 4 件を resolve します。実行してよければ `y` で進めます。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "PR #63 の CodeRabbit 未解決 thread 4 件を確認し、ローカル修正まで完了しました。 対応内容: `record.ts` に `.agentnoteignore` pattern の軽量 complexity guard を追加しました。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "0b881ec03889db77d7fd64c9e6e02fd9f838e339",
+    "short_sha": "0b881ec",
+    "message": "fix(record): harden agentnoteignore patterns",
+    "date": "2026-05-09T02:17:50+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.de.md",
+        "lines": [
+          "index e9acad0..382df52 100644",
+          "--- a/README.de.md",
+          "+++ b/README.de.md",
+          "@@ -103,7 +103,7 @@ Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record li",
+          " ",
+          " ### Generierte Bundles aus der AI Ratio herausnehmen",
+          " ",
+          "-Wenn committete Bundles oder generated outputs sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, trage sie in `.agentnoteignore` ein:",
+          "+Wenn committete Bundles oder generated outputs sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, trage sie in die `.agentnoteignore` im Repository-Root ein:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.es.md",
+        "lines": [
+          "index 25ad411..0a4fed2 100644",
+          "--- a/README.es.md",
+          "+++ b/README.es.md",
+          "@@ -103,7 +103,7 @@ Los datos temporales de sesión viven en `.git/agentnote/`. El registro permanen",
+          " ",
+          " ### Excluir bundles generados del AI Ratio",
+          " ",
+          "-Si los bundles o generated outputs commiteados deben seguir visibles pero no afectar el AI Ratio, agrégalos a `.agentnoteignore`:",
+          "+Si los bundles o generated outputs commiteados deben seguir visibles pero no afectar el AI Ratio, agrégalos a la `.agentnoteignore` en la raíz del repository:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.fr.md",
+        "lines": [
+          "index 7956fc5..cc8d685 100644",
+          "--- a/README.fr.md",
+          "+++ b/README.fr.md",
+          "@@ -103,7 +103,7 @@ Les données temporaires de Session vivent sous `.git/agentnote/`. L'enregistrem",
+          " ",
+          " ### Exclure les bundles générés de l’AI Ratio",
+          " ",
+          "-Si des bundles ou generated outputs commités doivent rester visibles sans influencer l’AI Ratio, ajoutez-les à `.agentnoteignore`:",
+          "+Si des bundles ou generated outputs commités doivent rester visibles sans influencer l’AI Ratio, ajoutez-les au `.agentnoteignore` à la racine du repository :",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.id.md",
+        "lines": [
+          "index 5b22647..dd37266 100644",
+          "--- a/README.id.md",
+          "+++ b/README.id.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `",
+          " ",
+          " ### Keluarkan generated bundle dari AI Ratio",
+          " ",
+          "-Jika bundle atau generated output yang di-commit harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tambahkan ke `.agentnoteignore`:",
+          "+Jika bundle atau generated output yang di-commit harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tambahkan ke `.agentnoteignore` di repository root:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index 6d5d395..670c440 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -103,7 +103,7 @@ I dati temporanei di sessione vivono sotto `.git/agentnote/`. Il Record permanen",
+          " ",
+          " ### Escludere i bundle generati dall’AI Ratio",
+          " ",
+          "-Se bundle o generated output committati devono restare visibili ma non influenzare l’AI Ratio, aggiungili a `.agentnoteignore`:",
+          "+Se bundle o generated output committati devono restare visibili ma non influenzare l’AI Ratio, aggiungili alla `.agentnoteignore` nella root del repository:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ja.md",
+        "lines": [
+          "index 08243df..3d5ecb5 100644",
+          "--- a/README.ja.md",
+          "+++ b/README.ja.md",
+          "@@ -103,7 +103,7 @@ Agent Note は Commit の文脈を保存します。",
+          " ",
+          " ### Generated Bundle を AI Ratio から外す",
+          " ",
+          "-Commit には残したい bundle や generated output を、AI Ratio だけから外したい場合は `.agentnoteignore` に書きます。",
+          "+Commit には残したい bundle や generated output を、AI Ratio だけから外したい場合は repository root の `.agentnoteignore` に書きます。",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 6336711..57ccefc 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanen",
+          " ",
+          " ### Generated Bundle 을 AI Ratio 에서 제외하기",
+          " ",
+          "-Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에는 반영하지 않으려면 `.agentnoteignore` 에 추가하세요.",
+          "+Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에는 반영하지 않으려면 repository root 의 `.agentnoteignore` 에 추가하세요.",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.md",
+        "lines": [
+          "index 835f881..e6b2a43 100644",
+          "--- a/README.md",
+          "+++ b/README.md",
+          "@@ -103,7 +103,7 @@ Temporary session data lives under `.git/agentnote/`. The permanent record lives",
+          " ",
+          " ### Keep generated bundles out of AI Ratio",
+          " ",
+          "-If committed bundles or generated outputs should stay visible but not affect AI Ratio, add them to `.agentnoteignore`:",
+          "+If committed bundles or generated outputs should stay visible but not affect AI Ratio, add them to the repository-root `.agentnoteignore`:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 602282b..17a1fae 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `r",
+          " ",
+          " ### Excluir bundles gerados do AI Ratio",
+          " ",
+          "-Se bundles ou generated outputs commitados devem continuar visíveis, mas não influenciar o AI Ratio, adicione-os a `.agentnoteignore`:",
+          "+Se bundles ou generated outputs commitados devem continuar visíveis, mas não influenciar o AI Ratio, adicione-os à `.agentnoteignore` na raiz do repository:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ru.md",
+        "lines": [
+          "index ccafddd..25448fc 100644",
+          "--- a/README.ru.md",
+          "+++ b/README.ru.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data находятся в `.git/agentnote/`. Permanent Record",
+          " ",
+          " ### Исключить generated bundles из AI Ratio",
+          " ",
+          "-Если закоммиченные bundles или generated outputs должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в `.agentnoteignore`:",
+          "+Если закоммиченные bundles или generated outputs должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в файл `.agentnoteignore` в корне репозитория:",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-cn.md",
+        "lines": [
+          "index cb5bdf1..b4c2d64 100644",
+          "--- a/README.zh-cn.md",
+          "+++ b/README.zh-cn.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在",
+          " ",
+          " ### 将生成的 Bundle 排除在 AI Ratio 之外",
+          " ",
+          "-如果提交的 bundle 或 generated output 需要继续显示，但不应影响 AI Ratio，请把它们写入 `.agentnoteignore`：",
+          "+如果提交的 bundle 或 generated output 需要继续显示，但不应影响 AI Ratio，请把它们写入 repository root 的 `.agentnoteignore`：",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-tw.md",
+        "lines": [
+          "index c46c765..bc5ca96 100644",
+          "--- a/README.zh-tw.md",
+          "+++ b/README.zh-tw.md",
+          "@@ -103,7 +103,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在",
+          " ",
+          " ### 將生成的 Bundle 排除在 AI Ratio 之外",
+          " ",
+          "-如果提交的 bundle 或 generated output 需要繼續顯示，但不應影響 AI Ratio，請把它們寫入 `.agentnoteignore`：",
+          "+如果提交的 bundle 或 generated output 需要繼續顯示，但不應影響 AI Ratio，請把它們寫入 repository root 的 `.agentnoteignore`：",
+          " ",
+          " ```gitignore",
+          " packages/cli/dist/**"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 9911ba0..1d7ba1a 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -4182,6 +4182,7 @@ function compileAgentnoteIgnorePattern(line) {",
+          "   const anchored = rawPattern.startsWith(\"/\");",
+          "   const pattern = rawPattern.replace(/^\\/+/, \"\").replace(/\\/+$/, \"\");",
+          "   if (!pattern) return null;",
+          "+  if (isAgentnoteIgnorePatternTooComplex(pattern)) return null;",
+          "   const hasSlash = pattern.includes(\"/\");",
+          "   const prefix = anchored || hasSlash ? \"^\" : \"(?:^|/)\";",
+          "   const suffix = directoryOnly || !hasSlash ? \"(?:/.*)?$\" : \"$\";",
+          "@@ -4190,6 +4191,12 @@ function compileAgentnoteIgnorePattern(line) {",
+          "     regex: new RegExp(`${prefix}${globPatternToRegex(pattern)}${suffix}`)",
+          "   };",
+          " }",
+          "+function isAgentnoteIgnorePatternTooComplex(pattern) {",
+          "+  if (pattern.length > AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH) return true;",
+          "+  const wildcardTokens = pattern.match(/\\*\\*|\\*/g)?.length ?? 0;",
+          "+  if (wildcardTokens > AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS) return true;",
+          "+  return AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE.test(pattern);",
+          "+}",
+          " function globPatternToRegex(pattern) {",
+          "   let regex = \"\";",
+          "   for (let index = 0; index < pattern.length; index += 1) {",
+          "@@ -4674,6 +4681,7 @@ async function ensureEmptyBlobInStore() {",
+          "     }",
+          "   }",
+          " }",
+          "+var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH, AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS, AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE;",
+          " var init_record = __esm({",
+          "   \"src/core/record.ts\"() {",
+          "     \"use strict\";",
+          "@@ -4688,6 +4696,9 @@ var init_record = __esm({",
+          "     init_prompt_window();",
+          "     init_session();",
+          "     init_storage();",
+          "+    AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;",
+          "+    AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;",
+          "+    AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\\*{3,}|\\*\\.\\*/;",
+          "   }",
+          " });",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.test.ts",
+        "lines": [
+          "index acbea41..f9906ae 100644",
+          "--- a/packages/cli/src/core/record.test.ts",
+          "+++ b/packages/cli/src/core/record.test.ts",
+          "@@ -2400,6 +2400,58 @@ describe(\"recordCommitEntry\", () => {",
+          "     );",
+          "   });",
+          " ",
+          "+  it(\"ignores overly complex .agentnoteignore patterns while keeping safe patterns\", async () => {",
+          "+    writeFileSync(",
+          "+      join(repoDir, \".agentnoteignore\"),",
+          "+      `${\"a\".repeat(201)}\\npackages/cli/dist/*.*\\ncli.js\\n`,",
+          "+    );",
+          "+    execSync(\"git add .agentnoteignore\", { cwd: repoDir });",
+          "+    execSync('git commit -m \"chore: configure guarded agentnoteignore\"', { cwd: repoDir });",
+          "+",
+          "+    writeFileSync(",
+          "+      join(sessionDir, PROMPTS_FILE),",
+          "+      '{\"event\":\"prompt\",\"prompt\":\"update source and bundles\",\"turn\":1,\"timestamp\":\"2026-04-13T10:00:00Z\"}\\n',",
+          "+    );",
+          "+    writeFileSync(",
+          "+      join(sessionDir, CHANGES_FILE),",
+          "+      '{\"event\":\"file_change\",\"tool\":\"Write\",\"file\":\"src/service.ts\",\"turn\":1}\\n',",
+          "+    );",
+          "+    writeFileSync(join(sessionDir, TURN_FILE), \"1\\n\");",
+          "+",
+          "+    mkdirSync(join(repoDir, \"src\"), { recursive: true });",
+          "+    mkdirSync(join(repoDir, \"packages\", \"cli\", \"dist\"), { recursive: true });",
+          "+    writeFileSync(join(repoDir, \"src\", \"service.ts\"), \"export const status = 'done';\\n\");",
+          "+    writeFileSync(join(repoDir, \"packages\", \"cli\", \"dist\", \"cli.js\"), \"console.log('bundle');\\n\");",
+          "+    writeFileSync(join(repoDir, \"packages\", \"cli\", \"dist\", \"runtime.txt\"), \"runtime bundle\\n\");",
+          "+    execSync(\"git add src/service.ts packages/cli/dist\", { cwd: repoDir });",
+          "+    execSync('git commit -m \"feat: guarded bundle exclusion\"', { cwd: repoDir });",
+          "+",
+          "+    const commitSha = execSync(\"git rev-parse HEAD\", {",
+          "+      cwd: repoDir,",
+          "+      encoding: \"utf-8\",",
+          "+    }).trim();",
+          "+",
+          "+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });",
+          "+",
+          "+    const note = await readNote(commitSha);",
+          "+    assert.ok(note !== null);",
+          "+    const typedNote = note as {",
+          "+      attribution: { method: string; ai_ratio: number };",
+          "+      files: Array<{ path: string; ai_ratio_excluded?: boolean }>;",
+          "+    };",
+          "+    assert.equal(typedNote.attribution.method, \"file\");",
+          "+    assert.equal(typedNote.attribution.ai_ratio, 50);",
+          "+    assert.equal(",
+          "+      typedNote.files.find((file) => file.path === \"packages/cli/dist/cli.js\")?.ai_ratio_excluded,",
+          "+      true,",
+          "+    );",
+          "+    assert.equal(",
+          "+      typedNote.files.find((file) => file.path === \"packages/cli/dist/runtime.txt\")",
+          "+        ?.ai_ratio_excluded,",
+          "+      undefined,",
+          "+    );",
+          "+  });",
+          "+",
+          "   it(\"marks generated files from committed content without reading the whole blob into attribution\", async () => {",
+          "     const source = `// Code generated by sqlc. DO NOT EDIT.\\n${\"x\".repeat(8192)}\\n`;",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.ts",
+        "lines": [
+          "index babc3ad..48bf2f7 100644",
+          "--- a/packages/cli/src/core/record.ts",
+          "+++ b/packages/cli/src/core/record.ts",
+          "@@ -56,6 +56,10 @@ type AgentnoteIgnorePattern = {",
+          "   regex: RegExp;",
+          " };",
+          " ",
+          "+const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;",
+          "+const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;",
+          "+const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\\*{3,}|\\*\\.\\*/;",
+          "+",
+          " /** Record an agentnote entry as a git note after a successful commit. */",
+          " export async function recordCommitEntry(opts: {",
+          "   agentnoteDirPath: string;",
+          "@@ -1319,6 +1323,7 @@ function compileAgentnoteIgnorePattern(line: string): AgentnoteIgnorePattern | n",
+          "   const anchored = rawPattern.startsWith(\"/\");",
+          "   const pattern = rawPattern.replace(/^\\/+/, \"\").replace(/\\/+$/, \"\");",
+          "   if (!pattern) return null;",
+          "+  if (isAgentnoteIgnorePatternTooComplex(pattern)) return null;",
+          " ",
+          "   const hasSlash = pattern.includes(\"/\");",
+          "   const prefix = anchored || hasSlash ? \"^\" : \"(?:^|/)\";",
+          "@@ -1329,6 +1334,13 @@ function compileAgentnoteIgnorePattern(line: string): AgentnoteIgnorePattern | n",
+          "   };",
+          " }",
+          " ",
+          "+function isAgentnoteIgnorePatternTooComplex(pattern: string): boolean {",
+          "+  if (pattern.length > AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH) return true;",
+          "+  const wildcardTokens = pattern.match(/\\*\\*|\\*/g)?.length ?? 0;",
+          "+  if (wildcardTokens > AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS) return true;",
+          "+  return AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE.test(pattern);",
+          "+}",
+          "+",
+          " function globPatternToRegex(pattern: string): string {",
+          "   let regex = \"\";",
+          "   for (let index = 0; index < pattern.length; index += 1) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/agent-support.mdx",
+        "lines": [
+          "index 1564c5b..b4b3298 100644",
+          "--- a/website/src/content/docs/agent-support.mdx",
+          "+++ b/website/src/content/docs/agent-support.mdx",
+          "@@ -83,6 +83,6 @@ Missing data usually means Agent Note chose safety over a guess.",
+          " - No note is written when Agent Note cannot find a committed file touched by the agent.",
+          " - A prompt can be omitted when it belongs to an older commit window.",
+          " - A response can be missing when the agent did not expose it through hooks or transcripts.",
+          "-- Generated artifacts and paths listed in `.agentnoteignore` can be excluded from the AI ratio denominator.",
+          "+- Generated artifacts and paths listed in the repository-root `.agentnoteignore` can be excluded from the AI ratio denominator.",
+          " ",
+          " If you need to inspect a specific case, start with [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/data-and-privacy.mdx",
+        "lines": [
+          "index 7ce2cbc..57db07d 100644",
+          "--- a/website/src/content/docs/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/data-and-privacy.mdx",
+          "@@ -36,7 +36,7 @@ Agent Note stores the information needed to explain a commit:",
+          " | `attribution` | AI ratio, method, and line counts when available |",
+          " | `agent` / `model` | Agent and model metadata when exposed |",
+          " ",
+          "-Paths matched by `.agentnoteignore` still stay in `files`; they are only excluded from the AI Ratio denominator.",
+          "+Paths matched by the repository-root `.agentnoteignore` still stay in `files`; they are only excluded from the AI Ratio denominator.",
+          " ",
+          " The schema is shown in [How It Works](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/agent-support.mdx",
+        "lines": [
+          "index c808c74..6f9d365 100644",
+          "--- a/website/src/content/docs/de/agent-support.mdx",
+          "+++ b/website/src/content/docs/de/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI nutzt `BeforeTool` / `AfterTool` für Dateien und `BeforeAgent` / `Af",
+          " - Keine Note, wenn Agent Note keine vom Agent bearbeitete Commit-Datei findet.",
+          " - Alte Prompts können ausgelassen werden, wenn sie zu einem anderen Commit-Fenster gehören.",
+          " - Responses können fehlen, wenn der Agent sie nicht bereitstellt.",
+          "-- Generated artifacts und Pfade aus `.agentnoteignore` können aus dem AI ratio denominator entfernt werden.",
+          "+- Generated artifacts und Pfade aus der `.agentnoteignore` im Repository-Root können aus dem AI ratio denominator entfernt werden.",
+          " ",
+          " Beginnen Sie die Analyse mit [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/data-and-privacy.mdx",
+        "lines": [
+          "index bb79b77..ae2be2b 100644",
+          "--- a/website/src/content/docs/de/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/de/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note ist für Teams gebaut, die AI review history ohne gehosteten Backend-",
+          " | `attribution` | AI ratio, Methode und line counts |",
+          " | `agent` / `model` | Agent- und Modell-Metadata |",
+          " ",
+          "-Pfade, die zu `.agentnoteignore` passen, bleiben in `files`; sie werden nur aus dem Nenner der AI Ratio entfernt.",
+          "+Pfade, die zur `.agentnoteignore` im Repository-Root passen, bleiben in `files`; sie werden nur aus dem Nenner der AI Ratio entfernt.",
+          " ",
+          " Das Schema steht in [How It Works](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/how-it-works.mdx",
+        "lines": [
+          "index b310b75..5f96a74 100644",
+          "--- a/website/src/content/docs/de/how-it-works.mdx",
+          "+++ b/website/src/content/docs/de/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note und Entire lösen verwandte, aber unterschiedliche Probleme.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus. Wenn dein Repository Bundles oder generated outputs committet, die sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, liste sie in `.agentnoteignore`.",
+          "+  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus. Wenn dein Repository Bundles oder generated outputs committet, die sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, liste sie in der `.agentnoteignore` im Repository-Root.",
+          " </Aside>",
+          " ",
+          " ## Sitzungslebenszyklus"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/agent-support.mdx",
+        "lines": [
+          "index 505b3bc..e644646 100644",
+          "--- a/website/src/content/docs/es/agent-support.mdx",
+          "+++ b/website/src/content/docs/es/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI usa `BeforeTool` / `AfterTool` para archivos y `BeforeAgent` / `After",
+          " - No se escribe note para commits sin archivos AI-authored.",
+          " - Un prompt antiguo puede omitirse si pertenece a otra ventana de commit.",
+          " - Una response puede faltar si el agent no la expone.",
+          "-- Los generated artifacts y los paths listados en `.agentnoteignore` pueden excluirse del denominador del AI ratio.",
+          "+- Los generated artifacts y los paths listados en la `.agentnoteignore` en la raíz del repository pueden excluirse del denominador del AI ratio.",
+          " ",
+          " Para investigar, empieza por [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/data-and-privacy.mdx",
+        "lines": [
+          "index df6beb1..3db096f 100644",
+          "--- a/website/src/content/docs/es/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/es/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note está pensado para equipos que quieren historial de review de IA sin",
+          " | `attribution` | AI ratio, método y line counts |",
+          " | `agent` / `model` | Metadata de agent y modelo |",
+          " ",
+          "-Los paths que coinciden con `.agentnoteignore` siguen en `files`; solo se excluyen del denominador del AI Ratio.",
+          "+Los paths que coinciden con la `.agentnoteignore` en la raíz del repository siguen en `files`; solo se excluyen del denominador del AI Ratio.",
+          " ",
+          " El schema completo está en [Cómo funciona](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/how-it-works.mdx",
+        "lines": [
+          "index 30513ea..b992cc3 100644",
+          "--- a/website/src/content/docs/es/how-it-works.mdx",
+          "+++ b/website/src/content/docs/es/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note y Entire resuelven problemas relacionados, pero distintos.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Los generated artifacts comunes se excluyen del denominador de `AI ratio` como best effort usando señales específicas, como rutas de framework/cache, nombres o sufijos generados y headers del archivo commiteado. Los nombres genéricos de directorio como `build/`, `dist/`, `gen/`, `generated/` y `target/` no bastan por sí solos. Si tu repository commitea bundles o generated outputs que deben seguir visibles pero no afectar el AI Ratio, inclúyelos en `.agentnoteignore`.",
+          "+  Los generated artifacts comunes se excluyen del denominador de `AI ratio` como best effort usando señales específicas, como rutas de framework/cache, nombres o sufijos generados y headers del archivo commiteado. Los nombres genéricos de directorio como `build/`, `dist/`, `gen/`, `generated/` y `target/` no bastan por sí solos. Si tu repository commitea bundles o generated outputs que deben seguir visibles pero no afectar el AI Ratio, inclúyelos en la `.agentnoteignore` en la raíz del repository.",
+          " </Aside>",
+          " ",
+          " ## Ciclo de vida de la sesión"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/agent-support.mdx",
+        "lines": [
+          "index 240b9e1..59d38b4 100644",
+          "--- a/website/src/content/docs/fr/agent-support.mdx",
+          "+++ b/website/src/content/docs/fr/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI utilise `BeforeTool` / `AfterTool` pour les fichiers et `BeforeAgent`",
+          " - Aucun note n’est écrit pour un commit sans fichier AI-authored.",
+          " - Un prompt ancien peut être ignoré s’il appartient à une autre fenêtre de commit.",
+          " - Une response peut être absente si l’agent ne l’expose pas.",
+          "-- Certains generated artifacts et les chemins listés dans `.agentnoteignore` peuvent être exclus du dénominateur du ratio IA.",
+          "+- Certains generated artifacts et les chemins listés dans le `.agentnoteignore` à la racine du repository peuvent être exclus du dénominateur du ratio IA.",
+          " ",
+          " Pour enquêter, commencez par [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+        "lines": [
+          "index 8c68132..771d1d1 100644",
+          "--- a/website/src/content/docs/fr/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/fr/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note est conçu pour garder l’historique de review IA sans backend hébe",
+          " | `attribution` | Ratio IA, méthode et line counts |",
+          " | `agent` / `model` | Metadata agent et modèle |",
+          " ",
+          "-Les chemins qui correspondent à `.agentnoteignore` restent dans `files`; ils sont seulement exclus du dénominateur de l’AI Ratio.",
+          "+Les chemins qui correspondent au `.agentnoteignore` à la racine du repository restent dans `files`; ils sont seulement exclus du dénominateur de l’AI Ratio.",
+          " ",
+          " Le schema complet est décrit dans [Fonctionnement](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/how-it-works.mdx",
+        "lines": [
+          "index 844938c..dd2d6ba 100644",
+          "--- a/website/src/content/docs/fr/how-it-works.mdx",
+          "+++ b/website/src/content/docs/fr/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note et Entire résolvent des problèmes proches, mais différents.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Les generated artifacts courants sont exclus du dénominateur de `AI ratio` en best effort à partir de signaux précis, comme les chemins de framework/cache, les noms ou suffixes générés et les en-têtes des fichiers commités. Les noms de dossiers génériques comme `build/`, `dist/`, `gen/`, `generated/` et `target/` ne suffisent pas à eux seuls. Si votre repository commit des bundles ou generated outputs qui doivent rester visibles sans influencer l’AI Ratio, listez-les dans `.agentnoteignore`.",
+          "+  Les generated artifacts courants sont exclus du dénominateur de `AI ratio` en best effort à partir de signaux précis, comme les chemins de framework/cache, les noms ou suffixes générés et les en-têtes des fichiers commités. Les noms de dossiers génériques comme `build/`, `dist/`, `gen/`, `generated/` et `target/` ne suffisent pas à eux seuls. Si votre repository commit des bundles ou generated outputs qui doivent rester visibles sans influencer l’AI Ratio, listez-les dans le `.agentnoteignore` à la racine du repository.",
+          " </Aside>",
+          " ",
+          " ## Cycle de vie de la session"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/how-it-works.mdx",
+        "lines": [
+          "index bd2e934..6227c40 100644",
+          "--- a/website/src/content/docs/how-it-works.mdx",
+          "+++ b/website/src/content/docs/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note and Entire solve related but different problems.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Common generated artifacts are excluded from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves. If your repository commits bundles or generated outputs that should stay visible but not affect AI Ratio, list them in `.agentnoteignore`.",
+          "+  Common generated artifacts are excluded from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves. If your repository commits bundles or generated outputs that should stay visible but not affect AI Ratio, list them in the repository-root `.agentnoteignore`.",
+          " </Aside>",
+          " ",
+          " ## Session Lifecycle"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/agent-support.mdx",
+        "lines": [
+          "index b36787c..de435cd 100644",
+          "--- a/website/src/content/docs/id/agent-support.mdx",
+          "+++ b/website/src/content/docs/id/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI memakai `BeforeTool` / `AfterTool` untuk file dan `BeforeAgent` / `Af",
+          " - Note tidak ditulis jika Agent Note tidak menemukan committed file yang disentuh agent.",
+          " - Prompt lama dapat dilewati jika milik commit window lain.",
+          " - Response dapat kosong jika agent tidak mengeksposnya.",
+          "-- Generated artifacts dan path yang tercantum di `.agentnoteignore` dapat dikeluarkan dari denominator AI ratio.",
+          "+- Generated artifacts dan path yang tercantum di `.agentnoteignore` di repository root dapat dikeluarkan dari denominator AI ratio.",
+          " ",
+          " Mulai investigasi dari [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/data-and-privacy.mdx",
+        "lines": [
+          "index 4f7bc02..c0a34fe 100644",
+          "--- a/website/src/content/docs/id/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/id/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note dirancang untuk tim yang ingin menyimpan AI review history tanpa host",
+          " | `attribution` | AI ratio, method, dan line counts |",
+          " | `agent` / `model` | Metadata agent dan model |",
+          " ",
+          "-Path yang cocok dengan `.agentnoteignore` tetap berada di `files`; path hanya dikeluarkan dari denominator AI Ratio.",
+          "+Path yang cocok dengan `.agentnoteignore` di repository root tetap berada di `files`; path hanya dikeluarkan dari denominator AI Ratio.",
+          " ",
+          " Schema lengkap ada di [Cara kerja](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/how-it-works.mdx",
+        "lines": [
+          "index 778b4bc..84b2d73 100644",
+          "--- a/website/src/content/docs/id/how-it-works.mdx",
+          "+++ b/website/src/content/docs/id/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Generated artifact umum dikeluarkan dari denominator `AI ratio` secara best-effort memakai sinyal spesifik seperti path framework/cache, nama atau suffix generated, dan header file yang di-commit. Nama direktori generik seperti `build/`, `dist/`, `gen/`, `generated/`, dan `target/` saja tidak cukup. Jika repository Anda meng-commit bundle atau generated output yang harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tulis polanya di `.agentnoteignore`.",
+          "+  Generated artifact umum dikeluarkan dari denominator `AI ratio` secara best-effort memakai sinyal spesifik seperti path framework/cache, nama atau suffix generated, dan header file yang di-commit. Nama direktori generik seperti `build/`, `dist/`, `gen/`, `generated/`, dan `target/` saja tidak cukup. Jika repository Anda meng-commit bundle atau generated output yang harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tulis polanya di `.agentnoteignore` di repository root.",
+          " </Aside>",
+          " ",
+          " ## Siklus hidup sesi"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/agent-support.mdx",
+        "lines": [
+          "index 5cf8047..f9c1aab 100644",
+          "--- a/website/src/content/docs/it/agent-support.mdx",
+          "+++ b/website/src/content/docs/it/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI usa `BeforeTool` / `AfterTool` per i file e `BeforeAgent` / `AfterAge",
+          " - Nessuna note per commit senza file AI-authored.",
+          " - Un prompt vecchio può essere omesso se appartiene a un’altra finestra di commit.",
+          " - Una response può mancare se l’agent non la espone.",
+          "-- I generated artifacts e i path elencati in `.agentnoteignore` possono essere esclusi dal denominatore dell’AI ratio.",
+          "+- I generated artifacts e i path elencati nella `.agentnoteignore` nella root del repository possono essere esclusi dal denominatore dell’AI ratio.",
+          " ",
+          " Per investigare, parti da [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/data-and-privacy.mdx",
+        "lines": [
+          "index 322aae3..e238a55 100644",
+          "--- a/website/src/content/docs/it/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/it/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note è pensato per team che vogliono una AI review history senza backend",
+          " | `attribution` | AI ratio, metodo e line counts |",
+          " | `agent` / `model` | Metadata di agent e modello |",
+          " ",
+          "-I path che corrispondono a `.agentnoteignore` restano in `files`; vengono esclusi solo dal denominatore dell’AI Ratio.",
+          "+I path che corrispondono alla `.agentnoteignore` nella root del repository restano in `files`; vengono esclusi solo dal denominatore dell’AI Ratio.",
+          " ",
+          " Lo schema completo è in [Come funziona](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/how-it-works.mdx",
+        "lines": [
+          "index def5cac..d27d328 100644",
+          "--- a/website/src/content/docs/it/how-it-works.mdx",
+          "+++ b/website/src/content/docs/it/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note ed Entire risolvono problemi collegati, ma diversi.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  I generated artifact comuni vengono esclusi dal denominatore di `AI ratio` in best effort usando segnali specifici, come path di framework/cache, nomi o suffissi generati e header dei file committati. I nomi di directory generici come `build/`, `dist/`, `gen/`, `generated/` e `target/` non bastano da soli. Se il tuo repository committa bundle o generated output che devono restare visibili ma non influenzare l’AI Ratio, elencali in `.agentnoteignore`.",
+          "+  I generated artifact comuni vengono esclusi dal denominatore di `AI ratio` in best effort usando segnali specifici, come path di framework/cache, nomi o suffissi generati e header dei file committati. I nomi di directory generici come `build/`, `dist/`, `gen/`, `generated/` e `target/` non bastano da soli. Se il tuo repository committa bundle o generated output che devono restare visibili ma non influenzare l’AI Ratio, elencali nella `.agentnoteignore` nella root del repository.",
+          " </Aside>",
+          " ",
+          " ## Ciclo di vita della sessione"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/agent-support.mdx",
+        "lines": [
+          "index b66e6e5..1fca951 100644",
+          "--- a/website/src/content/docs/ja/agent-support.mdx",
+          "+++ b/website/src/content/docs/ja/agent-support.mdx",
+          "@@ -83,6 +83,6 @@ Gemini CLI は file edit の `BeforeTool` / `AfterTool` と、prompt / response",
+          " - agent が触った committed file を見つけられない commit には note を書きません。",
+          " - 古い commit window に属する prompt は省略されることがあります。",
+          " - agent が hook や transcript で response を公開しない場合、response は空になることがあります。",
+          "-- generated artifact と `.agentnoteignore` に書いた path は AI ratio の分母から除外できます。",
+          "+- generated artifact と repository root の `.agentnoteignore` に書いた path は AI ratio の分母から除外できます。",
+          " ",
+          " 具体的な確認は [Troubleshooting](./troubleshooting/) から始めてください。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+        "lines": [
+          "index 32c0ce9..33df4d2 100644",
+          "--- a/website/src/content/docs/ja/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ja/data-and-privacy.mdx",
+          "@@ -36,7 +36,7 @@ Agent Note は commit を説明するために必要な情報を保存します",
+          " | `attribution` | AI ratio、method、利用可能な line count |",
+          " | `agent` / `model` | agent と model の metadata |",
+          " ",
+          "-`.agentnoteignore` に一致した path も `files` には残ります。AI Ratio の分母からだけ除外されます。",
+          "+repository root の `.agentnoteignore` に一致した path も `files` には残ります。AI Ratio の分母からだけ除外されます。",
+          " ",
+          " schema は [仕組み](./how-it-works/#note-スキーマ) にあります。",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/how-it-works.mdx",
+        "lines": [
+          "index e594081..aeed2a1 100644",
+          "--- a/website/src/content/docs/ja/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ja/how-it-works.mdx",
+          "@@ -147,7 +147,7 @@ Agent Note と Entire は近い領域ですが、目指している workflow が",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  代表的な generated artifact は、framework / cache path、generated filename / suffix、committed file header などの具体的な signal で best-effort に `AI ratio` の分母から除外されます。`build/`、`dist/`、`gen/`、`generated/`、`target/` のような汎用ディレクトリ名だけでは generated 扱いしません。Commit には残したい bundle や generated output を AI Ratio だけから外したい場合は、`.agentnoteignore` に書いてください。",
+          "+  代表的な generated artifact は、framework / cache path、generated filename / suffix、committed file header などの具体的な signal で best-effort に `AI ratio` の分母から除外されます。`build/`、`dist/`、`gen/`、`generated/`、`target/` のような汎用ディレクトリ名だけでは generated 扱いしません。Commit には残したい bundle や generated output を AI Ratio だけから外したい場合は、repository root の `.agentnoteignore` に書いてください。",
+          " </Aside>",
+          " ",
+          " 保存範囲、見える人、Agent Note service へ送信しないものは [データとプライバシー](./data-and-privacy/) を参照してください。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/agent-support.mdx",
+        "lines": [
+          "index d683011..7cb30b1 100644",
+          "--- a/website/src/content/docs/ko/agent-support.mdx",
+          "+++ b/website/src/content/docs/ko/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI 는 file edit 에 `BeforeTool` / `AfterTool`, prompt / response 에 `",
+          " - AI-authored file 이 없는 commit 에는 note 를 쓰지 않습니다.",
+          " - 오래된 prompt 는 다른 commit window 에 속하면 생략될 수 있습니다.",
+          " - agent 가 response 를 노출하지 않으면 response 가 비어 있을 수 있습니다.",
+          "-- generated artifacts 와 `.agentnoteignore` 에 적은 path 는 AI ratio denominator 에서 제외할 수 있습니다.",
+          "+- generated artifacts 와 repository root 의 `.agentnoteignore` 에 적은 path 는 AI ratio denominator 에서 제외할 수 있습니다.",
+          " ",
+          " 조사는 [Troubleshooting](./troubleshooting/) 에서 시작하세요."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+        "lines": [
+          "index 73a381f..1b6c9f1 100644",
+          "--- a/website/src/content/docs/ko/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ko/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note 는 hosted backend 없이 AI review history 를 남기려는 팀을 ",
+          " | `attribution` | AI ratio, method, line counts |",
+          " | `agent` / `model` | agent 와 model metadata |",
+          " ",
+          "-`.agentnoteignore` 와 일치하는 path 도 `files` 에 남습니다. AI Ratio denominator 에서만 제외됩니다.",
+          "+repository root 의 `.agentnoteignore` 와 일치하는 path 도 `files` 에 남습니다. AI Ratio denominator 에서만 제외됩니다.",
+          " ",
+          " 전체 schema 는 [작동 방식](./how-it-works/#note-schema) 에 있습니다.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/how-it-works.mdx",
+        "lines": [
+          "index 1c8af30..078601f 100644",
+          "--- a/website/src/content/docs/ko/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ko/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note 와 Entire 는 비슷한 문제를 다루지만 목표 workflow 가 ",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  대표적인 generated artifact 는 framework/cache path, generated filename/suffix, commit 된 file header 같은 구체적인 signal 로 best-effort 로 `AI ratio` 분모에서 제외됩니다. `build/`, `dist/`, `gen/`, `generated/`, `target/` 같은 범용 directory 이름만으로는 generated 로 보지 않습니다. Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에만 반영하지 않으려면 `.agentnoteignore` 에 적어 주세요.",
+          "+  대표적인 generated artifact 는 framework/cache path, generated filename/suffix, commit 된 file header 같은 구체적인 signal 로 best-effort 로 `AI ratio` 분모에서 제외됩니다. `build/`, `dist/`, `gen/`, `generated/`, `target/` 같은 범용 directory 이름만으로는 generated 로 보지 않습니다. Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에만 반영하지 않으려면 repository root 의 `.agentnoteignore` 에 적어 주세요.",
+          " </Aside>",
+          " ",
+          " ## 세션 라이프사이클"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/agent-support.mdx",
+        "lines": [
+          "index bdfd6db..153748c 100644",
+          "--- a/website/src/content/docs/pt-br/agent-support.mdx",
+          "+++ b/website/src/content/docs/pt-br/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI usa `BeforeTool` / `AfterTool` para arquivos e `BeforeAgent` / `After",
+          " - Nenhuma note é escrita quando o Agent Note não encontra arquivo commitado tocado pelo agent.",
+          " - Um prompt antigo pode ser omitido se pertencer a outra commit window.",
+          " - Uma response pode faltar se o agent não a expõe.",
+          "-- Generated artifacts e paths listados em `.agentnoteignore` podem ser excluídos do denominador do AI ratio.",
+          "+- Generated artifacts e paths listados na `.agentnoteignore` na raiz do repository podem ser excluídos do denominador do AI ratio.",
+          " ",
+          " Para investigar, comece por [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "lines": [
+          "index 27c8d1f..f3a6a41 100644",
+          "--- a/website/src/content/docs/pt-br/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/pt-br/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ O Agent Note foi feito para times que querem AI review history sem hosted backen",
+          " | `attribution` | AI ratio, method e line counts |",
+          " | `agent` / `model` | Metadata de agent e model |",
+          " ",
+          "-Paths que correspondem a `.agentnoteignore` continuam em `files`; eles são removidos apenas do denominador do AI Ratio.",
+          "+Paths que correspondem à `.agentnoteignore` na raiz do repository continuam em `files`; eles são removidos apenas do denominador do AI Ratio.",
+          " ",
+          " O schema completo está em [Como funciona](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+        "lines": [
+          "index ddf0e8d..5c85271 100644",
+          "--- a/website/src/content/docs/pt-br/how-it-works.mdx",
+          "+++ b/website/src/content/docs/pt-br/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note e Entire resolvem problemas relacionados, mas diferentes.",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Generated artifacts comuns são excluídos do denominador de `AI ratio` em best effort usando sinais específicos, como caminhos de framework/cache, nomes ou sufixos gerados e headers dos arquivos commitados. Nomes genéricos de diretório como `build/`, `dist/`, `gen/`, `generated/` e `target/` não bastam por si só. Se o seu repository commita bundles ou generated outputs que devem continuar visíveis, mas não influenciar o AI Ratio, liste-os em `.agentnoteignore`.",
+          "+  Generated artifacts comuns são excluídos do denominador de `AI ratio` em best effort usando sinais específicos, como caminhos de framework/cache, nomes ou sufixos gerados e headers dos arquivos commitados. Nomes genéricos de diretório como `build/`, `dist/`, `gen/`, `generated/` e `target/` não bastam por si só. Se o seu repository commita bundles ou generated outputs que devem continuar visíveis, mas não influenciar o AI Ratio, liste-os na `.agentnoteignore` na raiz do repository.",
+          " </Aside>",
+          " ",
+          " ## Ciclo de vida da sessão"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/agent-support.mdx",
+        "lines": [
+          "index 01e3f7f..d4184ac 100644",
+          "--- a/website/src/content/docs/ru/agent-support.mdx",
+          "+++ b/website/src/content/docs/ru/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI использует `BeforeTool` / `AfterTool` для файлов ",
+          " - Note не пишется, если Agent Note не находит файл commit, изменённый agent.",
+          " - Старый prompt может быть пропущен, если относится к другому commit window.",
+          " - Response может отсутствовать, если agent ее не предоставляет.",
+          "-- Generated artifacts и пути из `.agentnoteignore` можно исключить из AI ratio denominator.",
+          "+- Generated artifacts и пути из `.agentnoteignore` в корне репозитория можно исключить из AI ratio denominator.",
+          " ",
+          " Начните проверку с [Troubleshooting](./troubleshooting/)."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+        "lines": [
+          "index 4df42d8..c3e9f76 100644",
+          "--- a/website/src/content/docs/ru/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ru/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note создан для команд, которым нужна AI review",
+          " | `attribution` | AI ratio, method, and line counts |",
+          " | `agent` / `model` | Agent and model metadata |",
+          " ",
+          "-Пути, совпавшие с `.agentnoteignore`, остаются в `files`; они исключаются только из знаменателя AI Ratio.",
+          "+Пути, совпавшие с `.agentnoteignore` в корне репозитория, остаются в `files`; они исключаются только из знаменателя AI Ratio.",
+          " ",
+          " Полная схема описана в [How It Works](./how-it-works/#note-schema).",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/how-it-works.mdx",
+        "lines": [
+          "index 83173df..89be1f5 100644",
+          "--- a/website/src/content/docs/ru/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ru/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note и Entire решают похожие, но разные задачи",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort по конкретным сигналам: путям framework/cache, generated именам или суффиксам файлов и заголовкам закоммиченных файлов. Общих имён директорий вроде `build/`, `dist/`, `gen/`, `generated/` и `target/` самих по себе недостаточно. Если repository коммитит bundles или generated outputs, которые должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в `.agentnoteignore`.",
+          "+  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort по конкретным сигналам: путям framework/cache, generated именам или суффиксам файлов и заголовкам закоммиченных файлов. Общих имён директорий вроде `build/`, `dist/`, `gen/`, `generated/` и `target/` самих по себе недостаточно. Если repository коммитит bundles или generated outputs, которые должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в файл `.agentnoteignore` в корне репозитория.",
+          " </Aside>",
+          " ",
+          " ## Жизненный цикл сессии"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+        "lines": [
+          "index c5943fe..0c2b278 100644",
+          "--- a/website/src/content/docs/zh-cn/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-cn/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI 使用 `BeforeTool` / `AfterTool` 记录文件，使用 `BeforeAgent`",
+          " - 没有 AI-authored file 的 commit 不会写入 note。",
+          " - 属于旧 commit window 的 prompt 可能被省略。",
+          " - agent 没有暴露 response 时，response 可能为空。",
+          "-- generated artifacts 和 `.agentnoteignore` 中列出的 path 可以从 AI ratio denominator 中排除。",
+          "+- generated artifacts 和 repository root 的 `.agentnoteignore` 中列出的 path 可以从 AI ratio denominator 中排除。",
+          " ",
+          " 排查请从 [Troubleshooting](./troubleshooting/) 开始。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "lines": [
+          "index a3f2172..a8ee67c 100644",
+          "--- a/website/src/content/docs/zh-cn/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/zh-cn/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note 面向希望保留 AI review history、但不想依赖 hosted backend",
+          " | `attribution` | AI ratio、method 和 line counts |",
+          " | `agent` / `model` | agent 与 model metadata |",
+          " ",
+          "-匹配 `.agentnoteignore` 的 path 仍会保留在 `files` 中，只会从 AI Ratio 的分母里排除。",
+          "+匹配 repository root 的 `.agentnoteignore` 的 path 仍会保留在 `files` 中，只会从 AI Ratio 的分母里排除。",
+          " ",
+          " 完整 schema 见 [工作原理](./how-it-works/#note-schema)。",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "lines": [
+          "index 4ad7d2e..0716756 100644",
+          "--- a/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note 和 Entire 解决的是相关但不同的问题。",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  常见的 generated artifacts 会以 best-effort 的方式根据具体 signal 排除在 `AI ratio` 分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。仅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 这类通用目录名并不足以判定为 generated。如果你的 repository 需要提交 bundle 或 generated output，并希望它们继续显示但不影响 AI Ratio，请把路径写入 `.agentnoteignore`。",
+          "+  常见的 generated artifacts 会以 best-effort 的方式根据具体 signal 排除在 `AI ratio` 分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。仅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 这类通用目录名并不足以判定为 generated。如果你的 repository 需要提交 bundle 或 generated output，并希望它们继续显示但不影响 AI Ratio，请把路径写入 repository root 的 `.agentnoteignore`。",
+          " </Aside>",
+          " ",
+          " ## Session 生命周期"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+        "lines": [
+          "index dabe30f..31af3bc 100644",
+          "--- a/website/src/content/docs/zh-tw/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-tw/agent-support.mdx",
+          "@@ -72,6 +72,6 @@ Gemini CLI 使用 `BeforeTool` / `AfterTool` 記錄檔案，使用 `BeforeAgent`",
+          " - 沒有 AI-authored file 的 commit 不會寫入 note。",
+          " - 屬於舊 commit window 的 prompt 可能被省略。",
+          " - agent 沒有暴露 response 時，response 可能為空。",
+          "-- generated artifacts 和 `.agentnoteignore` 中列出的 path 可以從 AI ratio denominator 中排除。",
+          "+- generated artifacts 和 repository root 的 `.agentnoteignore` 中列出的 path 可以從 AI ratio denominator 中排除。",
+          " ",
+          " 排查請從 [Troubleshooting](./troubleshooting/) 開始。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "lines": [
+          "index 5b42b8d..5aad80c 100644",
+          "--- a/website/src/content/docs/zh-tw/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/zh-tw/data-and-privacy.mdx",
+          "@@ -26,7 +26,7 @@ Agent Note 面向希望保留 AI review history、但不想依賴 hosted backend",
+          " | `attribution` | AI ratio、method 與 line counts |",
+          " | `agent` / `model` | agent 與 model metadata |",
+          " ",
+          "-符合 `.agentnoteignore` 的 path 仍會保留在 `files` 中，只會從 AI Ratio 的分母中排除。",
+          "+符合 repository root 的 `.agentnoteignore` 的 path 仍會保留在 `files` 中，只會從 AI Ratio 的分母中排除。",
+          " ",
+          " 完整 schema 見 [運作方式](./how-it-works/#note-schema)。",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "lines": [
+          "index 65b1b40..60a2b74 100644",
+          "--- a/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "@@ -153,7 +153,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。",
+          " </Aside>",
+          " ",
+          " <Aside>",
+          "-  常見的 generated artifacts 會以 best-effort 的方式根據具體 signal 排除在 `AI ratio` 的分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請把路徑寫入 `.agentnoteignore`。",
+          "+  常見的 generated artifacts 會以 best-effort 的方式根據具體 signal 排除在 `AI ratio` 的分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請把路徑寫入 repository root 的 `.agentnoteignore`。",
+          " </Aside>",
+          " ",
+          " ## Session 生命週期"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 63,
+    "title": "feat(record): support .agentnoteignore for AI ratio",
+    "state": "open"
+  }
+}
