@@ -1,0 +1,154 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T02:25:04.877Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "⏺ 全体像が把握できた。レビューをまとめる。\n\n  ---\n  PR #58 レビュー（2回目）: fix(hooks): refresh heartbeat during long turns\n\n  ▎ 前回からの差分: PR がプッシュアップデートされ、hasRecordableSessionData()\n  ▎ を軸にした2つ目の修正が追加されている。\n\n  CI: ✅ 全チェック pass / State: OPEN / Mergeable: true\n\n  ---\n  変更の全体像\n\n  ┌─────────────────────────┬────────────────────────────────────────────────────┐\n  │         ファイル         │                      変更内容                      │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ core/session.ts          │ hasRecordableSessionData() を新規 export           │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ core/constants.ts        │ RECORDABLE_SESSION_FILES 定数追加                  │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ commands/hook.ts         │ heartbeat リファクタ + trailer guard               │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ commands/commit.ts       │ trailer guard                                      │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ commands/init.ts         │ prepare-commit-msg に recordable data チェック追加 │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ pr-report/src/report.ts  │ — vs 0% 表示修正                                   │\n  ├──────────────────────────┼────────────────────────────────────────────────────┤\n  │ website docs 12 ロケール │ — 表示の説明追加                                   │\n  └──────────────────────────┴────────────────────────────────────────────────────┘\n\n  根本修正は 2層構造になっている:\n  1. heartbeat 更新漏れ → 長い turn でも全 normalized event で更新\n  2. metadata-only trailer → hasRecordableSessionData() で dangling trailer を防止\n\n  ---\n  hasRecordableSessionData() の評価 ✅\n\n  // session.ts\n  export async function hasRecordableSessionData(sessionDir: string): Promise<boolean> {\n    for (const fileName of RECORDABLE_SESSION_FILES) {  // prompts.jsonl, changes.jsonl, pre_blobs.jsonl\n      const stats = await stat(join(sessionDir, fileName));\n      if (stats.isFile() && stats.size > 0) return true;\n    }\n    // Codex special case: transcript-driven attribution\n    if (agent === \"codex\") { /* TRANSCRIPT_PATH_FILE check */ }\n    return false;\n  }\n\n  stat() でサイズ確認するのは最小コスト。readFile は使っていない。エラーは catch して false\n  扱い（fail-closed）。設計として正確。\n\n  ---\n  Gemini stop ガード ✅\n\n  if (!(adapter.name === \"gemini\" && event.kind === \"stop\")) {\n    await refreshHeartbeat(agentnoteDirPath, event.sessionId);\n  }\n  // ...\n  case \"stop\":\n    if (adapter.name === \"gemini\") {\n      await unlink(join(sessionDir, HEARTBEAT_FILE));  // 削除\n    }\n\n  Gemini SessionEnd → refresh スキップ → 削除。不要な write-then-delete を回避。Claude/Cursor は stop\n  がセッション終了でないため refresh が続く（意図通り）。\n\n  ---\n  shell script の recordable check ✅\n\n  for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do\n    if [ -s \"$SESSION_DIR/$FILE_NAME\" ]; then\n      HAS_RECORDABLE_DATA=1; break\n    fi\n  done\n  if [ \"$HAS_RECORDABLE_DATA\" -ne 1 ] && [ \"$(cat \"$SESSION_DIR/agent\" 2>/dev/null | tr -d '\\n')\" = \"codex\" ] && [\n  -s \"$SESSION_DIR/transcript_path\" ]; then\n    HAS_RECORDABLE_DATA=1\n  fi\n  if [ \"$HAS_RECORDABLE_DATA\" -ne 1 ]; then exit 0; fi\n\n  - -s フラグ（non-empty check）は正しい。[ -f ] && [ -s ] の重複チェックなく簡潔。\n  - Codex special case を TypeScript と同じロジックで再現。\n  - ファイル名に空白がなく word-split は安全。\n\n  ---\n  テストカバレッジ ✅\n\n  ┌──────────────────────────────────────────────────────────────┬───────────────────┬──────────┐\n  │                            テスト                            │     ファイル      │ 確認済み │\n  ├──────────────────────────────────────────────────────────────┼───────────────────┼──────────┤\n  │ filtered event は heartbeat を作らない（タイトルも修正済み） │ hook.test.ts:139  │ ✅       │\n  ├──────────────────────────────────────────────────────────────┼───────────────────┼──────────┤\n  │ metadata-only session は trailer を注入しない                │ hook.test.ts:186  │ ✅       │\n  ├──────────────────────────────────────────────────────────────┼───────────────────┼──────────┤\n  │ long turn 中の commit hook が heartbeat を更新               │ hook.test.ts:207  │ ✅       │\n  ├──────────────────────────────────────────────────────────────┼───────────────────┼──────────┤\n  │ prepare-commit-msg は metadata-only skip → data あり inject  │ init.test.ts:188  │ ✅       │\n  ├──────────────────────────────────────────────────────────────┼───────────────────┼──────────┤\n  │ agent-note commit は metadata-only で trailer なし           │ commit.test.ts:72 │ ✅       │\n  └──────────────────────────────────────────────────────────────┴───────────────────┴──────────┘\n\n  3 entry point（hook / commit / prepare-commit-msg）が全て回帰テスト済み。\n\n  ---\n  🟢 low.nits\n\n  1. hasRecordableSessionData() の unit test なし\n\n  session.test.ts に直接テストなし。\n\n  integration 経由でカバーされているが、Codex special case と stat エラー catch の直接確認がない。将来の variant\n  追加時のリグレッションリスクがある。必須ではないが追加すると堅牢。\n\n  2. インストール済み hook は再 init まで更新されない\n\n  RECORDABLE_SESSION_FILES が将来変わっても、agent-note init を再実行しないと既存の prepare-commit-msg\n  は古いファイルリストを使う。設計上の制約（init で hook を生成する方式の宿命）だが、agent-note upgrade\n  的なコマンドが将来必要になる可能性。\n\n  ---\n  🔵 info.q\n\n  investigations.md の Follow-up セクションで「PR #58 の commit 自身 (56e6b48) が note\n  なし」という2次バグが報告され、その修正（hasRecordableSessionData）も同 PR\n  に含まれている。このセルフ参照的な構造は正しく解決されているか確認した → Yes。hasRecordableSessionData の 3\n  カ所への適用により、metadata-only セッションへの dangling trailer は防止される。PR の「Agent Note data: No\n  tracked commits」表示はその証左。\n\n  ---\n  総評\n\n  Approve — 2 段階の根本修正（heartbeat + metadata-only guard）が一貫して 3 つの entry point\n  に適用されている。テスト・docs 更新も完備。hasRecordableSessionData の unit test\n  は追加すると良いが、マージブロッカーではない。",
+      "response": "レビュー確認しました。low nit の `hasRecordableSessionData()` unit test は今入れておいた方が後々かなり効くので、追加してから CLI test を再実行して PR #58 を更新します。既存 hook の再 init 制約は設計上の制約として docs に残すか、既存記述で足りるか確認します。\nunit test を追加しました。ここから targeted test → full CLI test の順で再確認します。\nunit test 追加後も CLI full test は 399 件 pass しました。dist を更新してから commit / push します。\nbuild 後の dist 差分はありませんでした。追加されたのは unit test のみです。直前 commit に amend せず、review 指摘対応として小さく別 commit にします。",
+      "files_touched": [
+        "packages/cli/src/core/session.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/core/session.test.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "acad5db1a4265c76768d9bc271e04b01538ccd5f",
+    "short_sha": "acad5db",
+    "message": "test(session): cover recordable session data",
+    "date": "2026-05-08T11:25:03+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/src/core/session.test.ts",
+        "lines": [
+          "index eaab1a0..33ca08e 100644",
+          "--- a/packages/cli/src/core/session.test.ts",
+          "+++ b/packages/cli/src/core/session.test.ts",
+          "@@ -1,9 +1,16 @@",
+          " import assert from \"node:assert/strict\";",
+          "-import { mkdtempSync, rmSync } from \"node:fs\";",
+          "+import { mkdtempSync, rmSync, writeFileSync } from \"node:fs\";",
+          " import { tmpdir } from \"node:os\";",
+          " import { join } from \"node:path\";",
+          " import { after, before, describe, it } from \"node:test\";",
+          " import {",
+          "+  CHANGES_FILE,",
+          "+  PROMPTS_FILE,",
+          "+  SESSION_AGENT_FILE,",
+          "+  TRANSCRIPT_PATH_FILE,",
+          "+} from \"./constants.js\";",
+          "+import {",
+          "+  hasRecordableSessionData,",
+          "   readSessionAgent,",
+          "   readSessionTranscriptPath,",
+          "   writeSessionAgent,",
+          "@@ -75,3 +82,62 @@ describe(\"session transcript path round-trip\", () => {",
+          "     assert.equal(result, path);",
+          "   });",
+          " });",
+          "+",
+          "+describe(\"hasRecordableSessionData\", () => {",
+          "+  let sessionDir: string;",
+          "+",
+          "+  before(() => {",
+          "+    sessionDir = mkdtempSync(join(tmpdir(), \"agentnote-session-recordable-\"));",
+          "+  });",
+          "+",
+          "+  after(() => {",
+          "+    rmSync(sessionDir, { recursive: true, force: true });",
+          "+  });",
+          "+",
+          "+  it(\"returns false for metadata-only sessions\", async () => {",
+          "+    writeFileSync(join(sessionDir, SESSION_AGENT_FILE), \"claude\\n\");",
+          "+    writeFileSync(join(sessionDir, TRANSCRIPT_PATH_FILE), \"/tmp/transcript.jsonl\\n\");",
+          "+",
+          "+    assert.equal(await hasRecordableSessionData(sessionDir), false);",
+          "+  });",
+          "+",
+          "+  it(\"returns true when prompt data exists\", async () => {",
+          "+    const dir = mkdtempSync(join(tmpdir(), \"agentnote-session-recordable-prompt-\"));",
+          "+    try {",
+          "+      writeFileSync(join(dir, PROMPTS_FILE), '{\"event\":\"prompt\",\"prompt\":\"fix\"}\\n');",
+          "+",
+          "+      assert.equal(await hasRecordableSessionData(dir), true);",
+          "+    } finally {",
+          "+      rmSync(dir, { recursive: true, force: true });",
+          "+    }",
+          "+  });",
+          "+",
+          "+  it(\"returns true when change data exists\", async () => {",
+          "+    const dir = mkdtempSync(join(tmpdir(), \"agentnote-session-recordable-change-\"));",
+          "+    try {",
+          "+      writeFileSync(join(dir, CHANGES_FILE), '{\"event\":\"file_change\",\"file\":\"src/app.ts\"}\\n');",
+          "+",
+          "+      assert.equal(await hasRecordableSessionData(dir), true);",
+          "+    } finally {",
+          "+      rmSync(dir, { recursive: true, force: true });",
+          "+    }",
+          "+  });",
+          "+",
+          "+  it(\"allows Codex transcript-driven sessions with only transcript metadata\", async () => {",
+          "+    const dir = mkdtempSync(join(tmpdir(), \"agentnote-session-recordable-codex-\"));",
+          "+    try {",
+          "+      writeFileSync(join(dir, SESSION_AGENT_FILE), \"codex\\n\");",
+          "+      writeFileSync(join(dir, TRANSCRIPT_PATH_FILE), \"/tmp/codex-rollout.jsonl\\n\");",
+          "+",
+          "+      assert.equal(await hasRecordableSessionData(dir), true);",
+          "+    } finally {",
+          "+      rmSync(dir, { recursive: true, force: true });",
+          "+    }",
+          "+  });",
+          "+",
+          "+  it(\"returns false when the session directory is missing\", async () => {",
+          "+    const missingDir = join(tmpdir(), \"agentnote-session-recordable-missing\");",
+          "+",
+          "+    assert.equal(await hasRecordableSessionData(missingDir), false);",
+          "+  });",
+          "+});"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 58,
+    "title": "fix(hooks): refresh heartbeat during long turns",
+    "state": "open"
+  }
+}
