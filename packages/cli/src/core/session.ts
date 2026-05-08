@@ -39,7 +39,7 @@ export async function readSessionTranscriptPath(sessionDir: string): Promise<str
   return transcriptPath || null;
 }
 
-/** True when the session has prompts, file changes, pre-edit blobs, or Codex transcript metadata. */
+/** True when the session has data that can produce a non-empty commit note. */
 export async function hasRecordableSessionData(sessionDir: string): Promise<boolean> {
   for (const fileName of RECORDABLE_SESSION_FILES) {
     try {
@@ -49,16 +49,5 @@ export async function hasRecordableSessionData(sessionDir: string): Promise<bool
       // Missing files are normal for brand-new or metadata-only sessions.
     }
   }
-
-  const agent = await readSessionAgent(sessionDir);
-  if (agent === "codex") {
-    try {
-      const stats = await stat(join(sessionDir, TRANSCRIPT_PATH_FILE));
-      if (stats.isFile() && stats.size > 0) return true;
-    } catch {
-      // Codex can be transcript-driven, but only when a transcript path exists.
-    }
-  }
-
   return false;
 }

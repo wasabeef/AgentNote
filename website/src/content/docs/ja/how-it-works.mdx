@@ -37,6 +37,10 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 生成された git hook が入っていれば、ふだんどおり `git commit` と `git push` を使うだけで動きます。Cursor は local transcript から prompt / response を復元でき、git hook が使えない環境でも shell hook で追跡を続けられます。
 
+<Aside>
+  Git hook は trailer を差し込む前に、session が新しく、記録できる data を持っているか確認します。`transcript_path` だけでは補助 metadata なので、recordable data として扱いません。
+</Aside>
+
 ## ストレージ
 
 <CardGrid>

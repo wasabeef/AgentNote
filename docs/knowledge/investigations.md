@@ -25,9 +25,20 @@
 - 修正: `agent-note hook` は、正規化された hook event を受けた時点で session heartbeat を更新します。これにより、長い turn の tool event、response、commit hook event が session freshness を延長します。Gemini の `SessionEnd` は true session termination なので、従来通り最後に heartbeat を削除します。
 - 表示修正: PR Report は `tracked_commits === 0 && total_commits > 0` の場合、`Total AI Ratio: ░░░░░░░░ 0%` ではなく `Total AI Ratio: —` と `Agent Note data: No tracked commits` を表示します。これで missing note と true 0% attribution commit を分離します。
 - Follow-up: PR `#58` の commit `56e6b48 fix(hooks): refresh heartbeat during long turns` では `Agentnote-Session` trailer は入ったものの、git note は作成されませんでした。原因は heartbeat ではなく、commit 時点の session が `SessionStart` / `transcript_path` / heartbeat だけの metadata-only session だったことです。`recordCommitEntry()` は `interactions.length === 0 && aiFiles.length === 0` の空 note を安全側で skip するため、trailer だけが残りました。
-- Follow-up 修正: `prepare-commit-msg`、`agent-note commit`、Agent の `PreToolUse git commit` trailer injection は、fresh heartbeat だけではなく、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかに実データがある session だけを記録対象にします。これにより、plain shell commit や metadata-only session に dangling `Agentnote-Session` trailer を付けません。
+- Follow-up 修正: `prepare-commit-msg`、`agent-note commit`、Agent の `PreToolUse git commit` trailer injection は、fresh heartbeat だけではなく、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかに実データがある session だけを記録対象にします。`transcript_path` は補助 metadata であり、単体では recordable data として扱いません。これにより、plain shell commit や metadata-only session に dangling `Agentnote-Session` trailer を付けません。
 - 採用しなかった案: trailer がない場合に `post-commit` が `.git/agentnote/session` を fallback として読む案は採用しません。commit trailer を source of truth にする設計を維持し、TOCTOU risk を増やさないためです。
 - Regression coverage: `packages/cli/src/commands/hook.test.ts` で `PreToolUse` の `git commit` hook が stale heartbeat を更新すること、metadata-only session では trailer を注入しないことを確認します。`packages/cli/src/commands/init.test.ts` で生成された `prepare-commit-msg` hook が metadata-only session を skip し、prompt data がある session だけに trailer を入れることを確認します。`packages/cli/src/commands/commit.test.ts` で manual `agent-note commit` も同じ条件を使うことを確認します。`packages/pr-report/src/report.test.ts` で note missing commit は `Total AI Ratio: —`、true 0% attribution commit は従来通り `░░░░░░░░ 0%` と表示されることを確認します。
+
+### PR #59 Codex shell-only commit が trailer 付き no-note になる
+
+- 対象 PR: `#59`
+- 対象 commit: `afcb2d9 docs: normalize agent names on website`
+- 観測結果: commit message には `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` が入っていましたが、`git notes --ref=agentnote show afcb2d9` は `no note found` でした。そのため PR Report では AI 判定できず、commit table では prompt / file 情報が欠落しました。
+- 直接原因: 変更は Codex の `apply_patch` ではなく shell command による一括置換で行われていました。Codex adapter は安全側のため、shell command だけから `files_touched` や AI-authored files を推測しません。
+- 設計漏れ: transcript 内に古い `apply_patch` edit が残っている場合、human-only skip guard が「current commit file には transcript edit がなく、別 file への transcript edit だけがある」と判断し、current turn の shell-only tool activity まで空 note として skip していました。結果として trailer はあるのに note がない状態が再発しました。
+- 修正: current prompt window に `files_touched` を持たない tool-backed Codex interaction がある場合は、shell-only work として prompt-only note を残します。ただし shell command から file attribution は推測せず、`files_touched` は付けず、AI ratio は 0% のままにします。cross-turn commit では shell-only fallback を出さず、古い `apply_patch` が別 file にあるだけの human-only commit は引き続き skip します。
+- 追加修正: Codex でも `transcript_path` だけの metadata-only session は recordable としません。少なくとも `prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかが必要です。
+- Regression coverage: `packages/cli/src/core/record.test.ts` に PR #59 型の shell-only Codex regression を追加し、古い transcript edit があっても current shell-only prompt が prompt-only note として残ること、file attribution は付かないことを確認します。同じ test file に 100+ case の shell-only fallback simulation を追加し、current no-file tool activity だけが rescue され、true human-only commit は skip されることを確認します。`packages/cli/src/core/session.test.ts` に 100+ case の recordable session matrix を追加し、`transcript_path` 単体ではどの Agent でも recordable にならないことを確認します。`packages/cli/src/commands/codex.test.ts` は shell の `echo` 経由ではなく stdin に JSON を直接渡すようにし、改行を含む prompt でも実際の hook と同じ形で `prompts.jsonl` が作られることを確認します。
 
 ### Prompt window policy の module 分離
 

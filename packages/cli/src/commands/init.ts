@@ -144,10 +144,6 @@ for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
     break
   fi
 done
-SESSION_AGENT=$(cat "$SESSION_DIR/agent" 2>/dev/null | tr -d '\\n')
-if [ "$HAS_RECORDABLE_DATA" -ne 1 ] && [ "$SESSION_AGENT" = "codex" ] && [ -s "$SESSION_DIR/transcript_path" ]; then
-  HAS_RECORDABLE_DATA=1
-fi
 if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"

@@ -167,7 +167,7 @@ Agent Note и Entire решают похожие, но разные задачи
 | **Stop** | Логирует событие stop (heartbeat остаётся активным — Stop = конец response, а не конец сессии) |
 
 <Aside>
-  Git hooks проверяют свежесть сессии по heartbeat и наличие записываемых session data перед вставкой trailers или записью notes. Heartbeat обновляется hook events во время длинных turns; metadata-only sessions пропускаются.
+  Git hooks проверяют свежесть сессии по heartbeat и наличие записываемых session data перед вставкой trailers или записью notes. Heartbeat обновляется hook events во время длинных turns; metadata-only sessions пропускаются. Один путь к transcript — это только вспомогательные metadata, а не записываемые data.
 </Aside>
 
 <Aside type="tip">
