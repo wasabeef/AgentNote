@@ -364,7 +364,7 @@ Git notes are invisible to branch listings, GitHub UI, and CI — but still push
 
 ### Commit trailer
 
-Every commit made during an AI session gets a trailer:
+Every recordable commit made during an AI session gets a trailer:
 
 ```
 feat: add auth middleware
@@ -373,10 +373,10 @@ Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
 ```
 
 Injected via two parallel paths:
-1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session` and appends trailer to the commit message file.
-2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook rewrites the git commit command to inject `--trailer` directly.
+1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session`, verifies the session is fresh and has recordable data, then appends the trailer to the commit message file.
+2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook applies the same guard before rewriting the git commit command to inject `--trailer` directly.
 
-Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook still injects the trailer.
+Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook can still inject the trailer when the session has recordable data.
 
 ### Git hooks for commit integration
 
@@ -384,11 +384,13 @@ Three git hooks handle commit integration and notes sharing:
 
 | Git hook | When | What it does |
 |---|---|---|
-| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness via heartbeat, appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
+| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and recordable session data, then appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
 | `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
-Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is updated on `SessionStart` and `UserPromptSubmit`. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Missing heartbeat in git hooks = skip (fail closed).
+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in git hooks = skip (fail closed).
+
+Trailer injection also requires recordable session data. Prompts, file-change records, pre-edit blobs, or Codex transcript metadata count as recordable data. Heartbeat and `SessionStart` metadata alone do not, so plain shell commits and metadata-only sessions do not receive dangling `Agentnote-Session` trailers.
 
 ### Git hook installation
 

@@ -51,6 +51,8 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 
 agent が触った committed file を見つけられない commit には note を書きません。人間だけの commit を AI が書いたように見せないためです。
 
+Header が `Total AI Ratio: —` と `Agent Note data: No tracked commits` の場合、PR に commit はありますが、その commit の Agent Note data が見つかっていません。本当に AI ratio が `0%` という意味ではありません。
+
 ## Prompt が足りない
 
 prompt selection は session 全体ではなく commit window に基づきます。

@@ -90,7 +90,7 @@ npx agent-note init --agent claude
 
 ## What Happens Automatically
 
-After setup, plain `git commit` will:
+After setup, plain `git commit` will, when the current session has Agent Note data:
 
 1. **Inject** an `Agentnote-Session` trailer into the commit message
 2. **Record** prompts, responses, and file attribution as a git note
@@ -192,4 +192,3 @@ npx agent-note deinit --agent claude
 ```
 
 This removes agent hooks and git hooks. Add `--remove-workflow` to also delete `agentnote-pr-report.yml` and `agentnote-dashboard.yml`.
-

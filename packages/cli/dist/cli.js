@@ -10,7 +10,7 @@ var __export = (target, all) => {
 };
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
+var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
 var init_constants = __esm({
   "src/core/constants.ts"() {
     "use strict";
@@ -46,6 +46,7 @@ var init_constants = __esm({
     MILLISECONDS_PER_SECOND = 1e3;
     PRE_BLOBS_FILE = "pre_blobs.jsonl";
     COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+    RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
     EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
     SCHEMA_VERSION = 1;
     TEXT_ENCODING = "utf-8";
@@ -3108,7 +3109,7 @@ var init_prompt_window = __esm({
 
 // src/core/session.ts
 import { existsSync as existsSync6 } from "node:fs";
-import { readFile as readFile6, writeFile as writeFile5 } from "node:fs/promises";
+import { readFile as readFile6, stat, writeFile as writeFile5 } from "node:fs/promises";
 import { join as join5 } from "node:path";
 async function writeSessionAgent(sessionDir, agentName) {
   await writeFile5(join5(sessionDir, SESSION_AGENT_FILE), `${agentName}
@@ -3129,6 +3130,24 @@ async function readSessionTranscriptPath(sessionDir) {
   if (!existsSync6(saved)) return null;
   const transcriptPath = (await readFile6(saved, TEXT_ENCODING)).trim();
   return transcriptPath || null;
+}
+async function hasRecordableSessionData(sessionDir) {
+  for (const fileName of RECORDABLE_SESSION_FILES) {
+    try {
+      const stats = await stat(join5(sessionDir, fileName));
+      if (stats.isFile() && stats.size > 0) return true;
+    } catch {
+    }
+  }
+  const agent = await readSessionAgent(sessionDir);
+  if (agent === "codex") {
+    try {
+      const stats = await stat(join5(sessionDir, TRANSCRIPT_PATH_FILE));
+      if (stats.isFile() && stats.size > 0) return true;
+    } catch {
+    }
+  }
+  return false;
 }
 var init_session = __esm({
   "src/core/session.ts"() {
@@ -4436,6 +4455,7 @@ var init_paths = __esm({
 // src/commands/commit.ts
 init_constants();
 init_record();
+init_session();
 init_paths();
 import { spawn as spawn2 } from "node:child_process";
 import { existsSync as existsSync8 } from "node:fs";
@@ -4458,6 +4478,9 @@ async function commit(args2) {
           if (ageSeconds > HEARTBEAT_TTL_SECONDS) sessionId = "";
         }
       } catch {
+        sessionId = "";
+      }
+      if (sessionId && !await hasRecordableSessionData(join8(dir, SESSIONS_DIR, sessionId))) {
         sessionId = "";
       }
     }
@@ -4508,6 +4531,7 @@ import { isAbsolute as isAbsolute2, join as join9, resolve as resolve5 } from "n
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
+var RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -4598,20 +4622,33 @@ ${AGENTNOTE_HOOK_MARKER}
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
 case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, or stale heartbeat \u2192 skip.
+# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session \u2192 skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then exit 0; fi
+SESSION_DIR="$GIT_DIR/agentnote/sessions/$SESSION_ID"
 # Check freshness via this session's heartbeat (< 1 hour).
-HEARTBEAT_FILE="$GIT_DIR/agentnote/sessions/$SESSION_ID/heartbeat"
+HEARTBEAT_FILE="$SESSION_DIR/heartbeat"
 if [ ! -f "$HEARTBEAT_FILE" ]; then exit 0; fi
 NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
 if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
+HAS_RECORDABLE_DATA=0
+for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+  if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
+    HAS_RECORDABLE_DATA=1
+    break
+  fi
+done
+SESSION_AGENT=$(cat "$SESSION_DIR/agent" 2>/dev/null | tr -d '\\n')
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ] && [ "$SESSION_AGENT" = "codex" ] && [ -s "$SESSION_DIR/transcript_path" ]; then
+  HAS_RECORDABLE_DATA=1
+fi
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -5058,6 +5095,11 @@ async function readCurrentHead() {
     return null;
   }
 }
+async function refreshHeartbeat(agentnoteDirPath, sessionId, opts = {}) {
+  const heartbeatPath = join12(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+  if (opts.onlyIfExists && !existsSync12(heartbeatPath)) return;
+  await writeFile8(heartbeatPath, String(Date.now()));
+}
 async function hook(args2 = []) {
   const raw = await readStdin();
   let sync = false;
@@ -5079,10 +5121,7 @@ async function hook(args2 = []) {
     if (peekSid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(peekSid)) {
       try {
         const dir = await agentnoteDir();
-        const hbPath = join12(dir, SESSIONS_DIR, peekSid, HEARTBEAT_FILE);
-        if (existsSync12(hbPath)) {
-          await writeFile8(hbPath, String(Date.now()));
-        }
+        await refreshHeartbeat(dir, peekSid, { onlyIfExists: true });
       } catch {
       }
     }
@@ -5096,6 +5135,9 @@ async function hook(args2 = []) {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join12(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir6(sessionDir, { recursive: true });
+  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+    await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  }
   switch (event.kind) {
     case "session_start": {
       await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
@@ -5110,7 +5152,6 @@ async function hook(args2 = []) {
         agent: adapter.name,
         model: event.model ?? null
       });
-      await writeFile8(join12(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
     case "stop": {
@@ -5173,7 +5214,6 @@ async function hook(args2 = []) {
         turn,
         model: event.model ?? null
       });
-      await writeFile8(join12(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       if (adapter.name === "cursor") {
         process.stdout.write(JSON.stringify({ continue: true }));
       }
@@ -5274,7 +5314,7 @@ async function hook(args2 = []) {
         break;
       }
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
+      if (!cmd.includes(TRAILER_KEY) && event.sessionId && await hasRecordableSessionData(sessionDir)) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
         const updatedCmd = injectGitCommitTrailer(cmd, trailer);
         if (updatedCmd) {
@@ -5491,6 +5531,80 @@ init_storage();
 init_git();
 import { existsSync as existsSync13 } from "node:fs";
 import { join as join13 } from "node:path";
+var REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
+var REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
+var REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
+var REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
+var REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
+var REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
+var REVIEWER_CONTEXT_COMMENT_BEGIN = "<!-- agentnote-reviewer-context";
+var REVIEWER_CONTEXT_COMMENT_END = "-->";
+var REVIEWER_AREA_RULES = [
+  {
+    id: "tests",
+    label: "Tests",
+    matches: (path) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) || path.includes("/__tests__/") || path.includes("/test/") || path.includes("/tests/") || path.startsWith("test/") || path.startsWith("tests/")
+  },
+  {
+    id: "workflow",
+    label: "Workflows",
+    matches: (path) => path === "action.yml" || path === "action.yaml" || path.startsWith(".github/workflows/") || path.startsWith(".github/actions/") || path === ".github/dependabot.yml"
+  },
+  {
+    id: "docs",
+    label: "Documentation",
+    matches: (path) => path === "README.md" || /^README\.[a-z-]+\.md$/i.test(path) || path.startsWith("docs/") || path.startsWith("website/src/content/docs/") || /\.(md|mdx|rst|adoc)$/i.test(path)
+  },
+  {
+    id: "dependencies",
+    label: "Dependencies",
+    matches: (path) => path === "package.json" || path === "package-lock.json" || path === "pnpm-lock.yaml" || path === "yarn.lock" || path === "bun.lock" || path === "Cargo.toml" || path === "Cargo.lock" || path === "go.mod" || path === "go.sum" || path === "Gemfile" || path === "Gemfile.lock" || path === "pyproject.toml" || path === "poetry.lock" || path.endsWith("/package.json") || path.endsWith("/package-lock.json")
+  },
+  {
+    id: "config",
+    label: "Configuration",
+    matches: (path) => /(^|\/)(tsconfig|jsconfig|eslint|prettier|biome|vite|webpack|rollup|astro|next|nuxt|tailwind|postcss|babel|jest|vitest|playwright|cypress|docker-compose)(\.|$)/i.test(
+      path
+    ) || path === "Dockerfile" || path.endsWith(".config.js") || path.endsWith(".config.ts") || path.endsWith(".config.mjs") || path.endsWith(".config.cjs")
+  },
+  {
+    id: "generated",
+    label: "Generated outputs",
+    matches: (path) => path.includes("/dist/") || path.startsWith("dist/") || path.includes("/build/") || path.startsWith("build/") || path.endsWith(".generated.ts") || path.endsWith(".generated.js") || path.includes("/generated/")
+  },
+  {
+    id: "scripts",
+    label: "Scripts",
+    matches: (path) => path.startsWith("scripts/") || path.startsWith("tools/") || path.startsWith("bin/") || path.includes("/scripts/")
+  },
+  {
+    id: "frontend",
+    label: "Frontend",
+    matches: (path) => path.startsWith("src/components/") || path.startsWith("src/pages/") || path.startsWith("src/app/") || path.startsWith("src/styles/") || path.startsWith("public/") || path.includes("/components/") || path.includes("/pages/") || path.includes("/app/") || path.includes("/styles/") || /\.(css|scss|sass|less|astro|svelte|vue)$/i.test(path)
+  },
+  {
+    id: "backend",
+    label: "Backend",
+    matches: (path) => path.startsWith("api/") || path.startsWith("server/") || path.startsWith("routes/") || path.startsWith("controllers/") || path.startsWith("models/") || path.includes("/api/") || path.includes("/server/") || path.includes("/routes/") || path.includes("/controllers/") || path.includes("/models/")
+  },
+  {
+    id: "source",
+    label: "Source",
+    matches: () => true
+  }
+];
+var REVIEW_FOCUS_BY_AREA = {
+  docs: "Check that docs and examples match the implemented behavior without exposing internal development terminology.",
+  tests: "Check that tests cover behavior, edge cases, and regression risks rather than only snapshots.",
+  workflow: "Check that automation is safe for forks, retries, permissions, and existing deployment workflows.",
+  dependencies: "Check that dependency or package metadata changes are intentional and compatible with release expectations.",
+  config: "Check that configuration changes are scoped, documented, and consistent with the affected tooling.",
+  generated: "Check that generated outputs are consistent with source changes and were not hand-edited accidentally.",
+  scripts: "Check that scripts remain safe, idempotent, and clear about the files or services they touch.",
+  frontend: "Check user-facing behavior, accessibility, layout, and build output for the changed UI paths.",
+  backend: "Check API or server behavior, data handling, error paths, and compatibility with existing clients.",
+  source: "Compare the stated intent with the changed source files and the prompt evidence below."
+};
 async function collectReport(base, headRef = "HEAD", opts = {}) {
   const head = await git(["rev-parse", "--short", headRef]);
   const raw = await git(["log", "--reverse", "--format=%H	%h	%s", `${base}..${headRef}`]);
@@ -5618,6 +5732,9 @@ function renderRatioWithBar(ratio, width) {
   return `${renderProgressBar(ratio, width)} ${ratio}%`;
 }
 function renderHeader(report) {
+  if (report.total_commits > 0 && report.tracked_commits === 0) {
+    return ["**Total AI Ratio:** \u2014", "**Agent Note data:** No tracked commits"];
+  }
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
   const lines = [line1];
   if (report.model) {
@@ -5642,6 +5759,10 @@ function renderMarkdown(report, opts = {}) {
   lines.push("");
   lines.push(...renderHeader(report));
   lines.push("");
+  const reviewerContext = renderReviewerContext(report, visibleInteractionsBySha);
+  if (reviewerContext.length > 0) {
+    lines.push(...reviewerContext);
+  }
   lines.push("| Commit | AI Ratio | Prompts | Files |");
   lines.push("|---|---|---|---|");
   for (const commit2 of report.commits) {
@@ -5709,6 +5830,145 @@ function renderMarkdown(report, opts = {}) {
     lines.push("</details>");
   }
   return lines.join("\n");
+}
+function renderReviewerContext(report, visibleInteractionsBySha) {
+  if (report.tracked_commits === 0) return [];
+  const changedAreas = collectReviewerChangedAreas(report);
+  const reviewFocus = collectReviewerFocus(changedAreas);
+  const intentSignals = collectReviewerIntentSignals(report, visibleInteractionsBySha);
+  if (changedAreas.length === 0 && reviewFocus.length === 0 && intentSignals.length === 0) {
+    return [];
+  }
+  const body = [
+    "Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.",
+    ""
+  ];
+  if (changedAreas.length > 0) {
+    body.push("Changed areas:", "");
+    for (const area of changedAreas) {
+      body.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
+    }
+    body.push("");
+  }
+  if (reviewFocus.length > 0) {
+    body.push("Review focus:", "");
+    for (const focus of reviewFocus) {
+      body.push(`- ${focus}`);
+    }
+    body.push("");
+  }
+  if (intentSignals.length > 0) {
+    body.push("Author intent signals:", "");
+    for (const signal of intentSignals) {
+      body.push(`- ${signal}`);
+    }
+    body.push("");
+  }
+  return [
+    REVIEWER_CONTEXT_COMMENT_BEGIN,
+    ...body.map(sanitizeReviewerCommentLine),
+    REVIEWER_CONTEXT_COMMENT_END,
+    ""
+  ];
+}
+function collectReviewerChangedAreas(report) {
+  const areaFiles = /* @__PURE__ */ new Map();
+  for (const commit2 of report.commits) {
+    if (commit2.session_id === null) continue;
+    for (const file of commit2.files) {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.matches(file.path));
+      const id = rule?.id ?? "source";
+      const files = areaFiles.get(id) ?? /* @__PURE__ */ new Set();
+      files.add(file.path);
+      areaFiles.set(id, files);
+    }
+  }
+  return [...areaFiles].map(([id, files]) => {
+    const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.id === id);
+    return {
+      id,
+      label: rule?.label ?? "Source",
+      files: [...files].sort().slice(0, REVIEWER_CONTEXT_MAX_AREA_FILES),
+      totalFiles: files.size
+    };
+  }).sort((left, right) => right.totalFiles - left.totalFiles || left.label.localeCompare(right.label)).slice(0, REVIEWER_CONTEXT_MAX_CHANGED_AREAS).map(({ id, label, files, totalFiles }) => ({
+    id,
+    label,
+    files,
+    moreCount: Math.max(0, totalFiles - files.length)
+  }));
+}
+function collectReviewerFocus(areas) {
+  const focus = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const area of areas) {
+    const text = REVIEW_FOCUS_BY_AREA[area.id];
+    if (!seen.has(text)) {
+      focus.push(text);
+      seen.add(text);
+    }
+    if (focus.length >= REVIEWER_CONTEXT_MAX_REVIEW_FOCUS) break;
+  }
+  return focus;
+}
+function collectReviewerIntentSignals(report, visibleInteractionsBySha) {
+  const signals = [];
+  const seen = /* @__PURE__ */ new Set();
+  const primarySignals = [];
+  const fallbackSignals = [];
+  let commitSignalCount = 0;
+  const trackedCommitsNewestFirst = report.commits.filter((commit2) => commit2.session_id !== null).toReversed();
+  for (const commit2 of trackedCommitsNewestFirst) {
+    if (commitSignalCount < REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS) {
+      pushReviewerSignal(signals, seen, `Commit: ${commit2.message}`);
+      commitSignalCount += 1;
+    }
+    for (const interaction of visibleInteractionsBySha.get(commit2.sha) ?? []) {
+      const target = isPrimaryReviewerInteraction(interaction) ? primarySignals : fallbackSignals;
+      const context = renderInteractionContext(interaction);
+      if (context) {
+        target.push(`Context: ${context}`);
+      }
+      target.push(`Prompt: ${interaction.prompt}`);
+    }
+  }
+  for (const signal of [...primarySignals, ...fallbackSignals]) {
+    pushReviewerSignal(signals, seen, signal);
+    if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+  }
+  return signals;
+}
+function isPrimaryReviewerInteraction(interaction) {
+  const signals = interaction.selection?.signals ?? [];
+  return interaction.selection?.source === "primary" || signals.includes("primary_edit_turn") || signals.includes("exact_commit_path") || signals.includes("diff_identifier");
+}
+function pushReviewerSignal(signals, seen, rawSignal) {
+  const signal = formatReviewerSnippet(rawSignal);
+  if (!signal || seen.has(signal)) return;
+  signals.push(signal);
+  seen.add(signal);
+}
+function formatReviewerSnippet(value) {
+  const compact = value.replaceAll("\n", " ").replace(/\s+/g, " ").replace(/^#+\s*/, "").trim();
+  if (!compact) return "";
+  const clipped = compact.length > REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH ? `${compact.slice(0, REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH)}\u2026` : compact;
+  return escapeInlineText(clipped);
+}
+function escapeInlineText(value) {
+  return value.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+function sanitizeReviewerCommentLine(value) {
+  return escapeInlineText(value).replaceAll("--", "- -");
+}
+function formatInlineCode(value) {
+  return `\`${value.replaceAll("`", "\\`")}\``;
+}
+function formatReviewerAreaFiles(area) {
+  const files = area.files.map(formatInlineCode);
+  if (area.moreCount > 0) {
+    files.push(`${area.moreCount} more`);
+  }
+  return files.join(", ");
 }
 function renderPromptSummary(visible, total, detail) {
   if (detail === "full" || visible === total) return `${total} total`;
@@ -5986,7 +6246,7 @@ init_session();
 init_storage();
 init_git();
 init_paths();
-import { stat } from "node:fs/promises";
+import { stat as stat2 } from "node:fs/promises";
 import { join as join14 } from "node:path";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
 async function show(commitRef) {
@@ -6059,7 +6319,7 @@ async function show(commitRef) {
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
-    const stats = await stat(transcriptPath);
+    const stats = await stat2(transcriptPath);
     const sizeKb = (stats.size / 1024).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }

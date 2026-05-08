@@ -49,6 +49,8 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 
 如果 commit 中找不到 agent 修改過的已提交檔案，Agent Note 不會寫 note。
 
+如果 header 顯示 `Total AI Ratio: —` 和 `Agent Note data: No tracked commits`，表示 PR 有 commits，但沒有找到這些 commit 的 Agent Note data。這不同於真正的 AI ratio `0%`。
+
 ## Prompt 缺失
 
 prompt selection 基於 commit-to-commit window，而不是整個 session。

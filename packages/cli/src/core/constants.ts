@@ -83,6 +83,8 @@ export const MILLISECONDS_PER_SECOND = 1000;
 export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 /** Tracks (turn, file) pairs already attributed to a commit. Not rotated — persists across turns. */
 export const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+/** Session files that prove a commit can produce a non-empty git note. */
+export const RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE] as const;
 
 // ─── Git ───
 /** SHA-1 hash of a git blob with empty content (canonical git empty blob). */

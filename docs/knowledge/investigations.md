@@ -6,22 +6,6 @@
 
 ## Open Follow-ups
 
-### Long-running session で commit note が作成されない
-
-- 対象 PR: `#57`
-- 対象 commit: `b28d52f feat(report): add reviewer context`
-- 観測結果: PR body の Agent Note が `Total AI Ratio: ░░░░░░░░ 0%` になり、commit table も `AI Ratio` / `Prompts` / `Files` がすべて `—` でした。`git notes --ref=agentnote show b28d52f` も `no note found` です。
-- 正常例: PR `#56` の commit `dfd82eb docs: make README language more user-facing` は commit message に `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` を持ち、git note も正常に作成されています。
-- 差分: PR `#57` の commit message には `Agentnote-Session` trailer がありません。`post-commit` hook は HEAD の trailer を source of truth として `agent-note record <session_id>` を呼ぶため、trailer がない commit は記録対象になりません。
-- 有力な原因仮説: `prepare-commit-msg` hook は `.git/agentnote/session` と heartbeat を確認し、heartbeat が 1 時間より古い場合は安全側で trailer 注入を skip します。PR `#57` は長い single turn / session 再開後の作業になっており、commit 時点で heartbeat freshness の前提を満たせなかった可能性があります。
-- 問題: commit 自体は成功するため、ユーザーには「commit したのに Agent Note log がない」ように見えます。また PR Report が `tracked_commits = 0` を `Total AI Ratio: 0%` と表示するため、「本当に AI ratio が 0%」と誤解されます。
-- 検討案:
-  - `tracked_commits === 0 && total_commits > 0` の PR Report は `Total AI Ratio: —` や `No Agent Note data` のように表示し、true 0% と missing data を分離します。
-  - `prepare-commit-msg` が heartbeat stale で skip した場合に、debug / status で理由を確認できる signal を残すか検討します。
-  - long-running session の heartbeat 更新方針を見直します。たとえば prompt / stop / tool event のどれで heartbeat を更新すべきか、Stop を session end と扱わない既存設計と矛盾しないかを確認します。
-  - trailer がない場合に `post-commit` が `.git/agentnote/session` を fallback として読む案は TOCTOU risk があるため、採用するなら session freshness / commit time / current HEAD との対応を慎重に検証します。
-- Regression 方針: PR `#56` 型の正常記録、PR `#57` 型の stale heartbeat skip、true 0% attribution commit、note missing commit を分けた fixture を用意し、PR Report 表示と hook behavior の両方を検証します。
-
 ### CLI dist tracking
 
 - 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。
@@ -29,6 +13,21 @@
 - tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。
 
 ## Resolved Investigations
+
+### Long-running session で commit note が作成されない
+
+- 対象 PR: `#57`
+- 対象 commit: `b28d52f feat(report): add reviewer context`
+- 観測結果: PR body の Agent Note が `Total AI Ratio: ░░░░░░░░ 0%` になり、commit table も `AI Ratio` / `Prompts` / `Files` がすべて `—` でした。`git notes --ref=agentnote show b28d52f` も `no note found` です。
+- 正常例: PR `#56` の commit `dfd82eb docs: make README language more user-facing` は commit message に `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` を持ち、git note も正常に作成されています。
+- 差分: PR `#57` の commit message には `Agentnote-Session` trailer がありません。`post-commit` hook は HEAD の trailer を source of truth として `agent-note record <session_id>` を呼ぶため、trailer がない commit は記録対象になりません。
+- 原因: `prepare-commit-msg` hook は `.git/agentnote/session` と session heartbeat を確認し、heartbeat が 1 時間より古い場合は安全側で trailer 注入を skip します。旧実装は `prompt` で heartbeat を更新していましたが、長い single turn 中の `file_change`、`response`、`pre_commit` では更新していませんでした。そのため、1 時間を超える長い AI 作業の最後に `git commit` すると、commit 直前に agent hook event が来ていても heartbeat が stale のままになり得ました。
+- 修正: `agent-note hook` は、正規化された hook event を受けた時点で session heartbeat を更新します。これにより、長い turn の tool event、response、commit hook event が session freshness を延長します。Gemini の `SessionEnd` は true session termination なので、従来通り最後に heartbeat を削除します。
+- 表示修正: PR Report は `tracked_commits === 0 && total_commits > 0` の場合、`Total AI Ratio: ░░░░░░░░ 0%` ではなく `Total AI Ratio: —` と `Agent Note data: No tracked commits` を表示します。これで missing note と true 0% attribution commit を分離します。
+- Follow-up: PR `#58` の commit `56e6b48 fix(hooks): refresh heartbeat during long turns` では `Agentnote-Session` trailer は入ったものの、git note は作成されませんでした。原因は heartbeat ではなく、commit 時点の session が `SessionStart` / `transcript_path` / heartbeat だけの metadata-only session だったことです。`recordCommitEntry()` は `interactions.length === 0 && aiFiles.length === 0` の空 note を安全側で skip するため、trailer だけが残りました。
+- Follow-up 修正: `prepare-commit-msg`、`agent-note commit`、Agent の `PreToolUse git commit` trailer injection は、fresh heartbeat だけではなく、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかに実データがある session だけを記録対象にします。これにより、plain shell commit や metadata-only session に dangling `Agentnote-Session` trailer を付けません。
+- 採用しなかった案: trailer がない場合に `post-commit` が `.git/agentnote/session` を fallback として読む案は採用しません。commit trailer を source of truth にする設計を維持し、TOCTOU risk を増やさないためです。
+- Regression coverage: `packages/cli/src/commands/hook.test.ts` で `PreToolUse` の `git commit` hook が stale heartbeat を更新すること、metadata-only session では trailer を注入しないことを確認します。`packages/cli/src/commands/init.test.ts` で生成された `prepare-commit-msg` hook が metadata-only session を skip し、prompt data がある session だけに trailer を入れることを確認します。`packages/cli/src/commands/commit.test.ts` で manual `agent-note commit` も同じ条件を使うことを確認します。`packages/pr-report/src/report.test.ts` で note missing commit は `Total AI Ratio: —`、true 0% attribution commit は従来通り `░░░░░░░░ 0%` と表示されることを確認します。
 
 ### Prompt window policy の module 分離
 

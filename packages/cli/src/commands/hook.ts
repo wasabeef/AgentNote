@@ -22,7 +22,11 @@ import {
 import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
-import { writeSessionAgent, writeSessionTranscriptPath } from "../core/session.js";
+import {
+  hasRecordableSessionData,
+  writeSessionAgent,
+  writeSessionTranscriptPath,
+} from "../core/session.js";
 import { git, injectGitCommitTrailer } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
@@ -103,6 +107,21 @@ async function readCurrentHead(): Promise<string | null> {
   }
 }
 
+type RefreshHeartbeatOptions = {
+  onlyIfExists?: boolean;
+};
+
+/** Keep a live session fresh while long agent turns emit tool/response events. */
+async function refreshHeartbeat(
+  agentnoteDirPath: string,
+  sessionId: string,
+  opts: RefreshHeartbeatOptions = {},
+): Promise<void> {
+  const heartbeatPath = join(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+  if (opts.onlyIfExists && !existsSync(heartbeatPath)) return;
+  await writeFile(heartbeatPath, String(Date.now()));
+}
+
 /** Handle one normalized agent hook event from stdin. */
 export async function hook(args: string[] = []): Promise<void> {
   const raw = await readStdin();
@@ -134,10 +153,7 @@ export async function hook(args: string[] = []): Promise<void> {
     ) {
       try {
         const dir = await agentnoteDir();
-        const hbPath = join(dir, SESSIONS_DIR, peekSid, HEARTBEAT_FILE);
-        if (existsSync(hbPath)) {
-          await writeFile(hbPath, String(Date.now()));
-        }
+        await refreshHeartbeat(dir, peekSid, { onlyIfExists: true });
       } catch {
         // Never break the agent workflow for heartbeat refresh.
       }
@@ -154,6 +170,11 @@ export async function hook(args: string[] = []): Promise<void> {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir(sessionDir, { recursive: true });
+  // Only Gemini maps `stop` to true session termination today; other adapters
+  // use `stop` for response-end events and must keep the heartbeat alive.
+  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+    await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  }
 
   switch (event.kind) {
     case "session_start": {
@@ -169,7 +190,6 @@ export async function hook(args: string[] = []): Promise<void> {
         agent: adapter.name,
         model: event.model ?? null,
       });
-      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
 
@@ -259,7 +279,6 @@ export async function hook(args: string[] = []): Promise<void> {
         turn,
         model: event.model ?? null,
       });
-      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       if (adapter.name === "cursor") {
         process.stdout.write(JSON.stringify({ continue: true }));
       }
@@ -386,7 +405,11 @@ export async function hook(args: string[] = []): Promise<void> {
       // The command may be chained (e.g., "git add . && git commit -m '...' && git push"),
       // so we must inject --trailer into the git commit segment only, not at the end.
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
+      if (
+        !cmd.includes(TRAILER_KEY) &&
+        event.sessionId &&
+        (await hasRecordableSessionData(sessionDir))
+      ) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
         const updatedCmd = injectGitCommitTrailer(cmd, trailer);
         if (updatedCmd) {
