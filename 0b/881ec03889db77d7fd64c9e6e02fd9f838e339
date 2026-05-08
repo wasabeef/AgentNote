@@ -1,0 +1,239 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T17:17:52.799Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review 63",
+      "response": "PR #63 の CodeRabbit 未解決 thread 4 件を確認し、ローカル修正まで完了しました。\n\n対応内容:\n- `record.ts` に `.agentnoteignore` pattern の軽量 complexity guard を追加しました。\n- guard の回帰テストを追加しました。\n- README 全言語で `.agentnoteignore` が repository root のファイルであることを明記しました。\n- website の `how-it-works` / `agent-support` / `data-and-privacy` 全 locale でも root 指定に揃えました。\n- `packages/cli/dist/cli.js` は build により更新されています。\n\n検証:\n- `npm run build --prefix packages/cli` ✅\n- `npm test --prefix packages/cli` ✅ 409 tests\n- `npm run typecheck --prefix packages/cli` ✅\n- `npm run lint --prefix packages/cli` ✅\n- `npm run build --prefix website` ✅\n\n次は commit / push して、その後 CodeRabbit の修正済み thread 4 件を resolve します。実行してよければ `y` で進めます。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "PR #63 の CodeRabbit 未解決 thread 4 件を確認し、ローカル修正まで完了しました。 対応内容: `record.ts` に `.agentnoteignore` pattern の軽量 complexity guard を追加しました。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
