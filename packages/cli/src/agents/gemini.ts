@@ -18,7 +18,7 @@ const ENV_GEMINI_HOME = "GEMINI_HOME";
 const HOOK_TIMEOUT_MS = 10_000;
 const SETTINGS_REL_PATH = ".gemini/settings.json";
 const TRANSCRIPT_PREVIEW_CHARS = 4096;
-const GEMINI_MESSAGE_TYPE = AGENT_NAMES.gemini;
+const GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
 const GEMINI_HOOK_EVENTS = {
   sessionStart: "SessionStart",
   sessionEnd: "SessionEnd",
@@ -517,7 +517,7 @@ export const gemini: AgentAdapter = {
         continue;
       }
 
-      if (type === GEMINI_MESSAGE_TYPE && current) {
+      if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
         const response = extractPartText(record.content);
         if (response) {
           current.response = current.response ? `${current.response}\n${response}` : response;

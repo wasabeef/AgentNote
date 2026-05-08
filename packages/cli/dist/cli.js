@@ -1553,7 +1553,7 @@ function findTranscriptCandidate2(rootDir, sessionId) {
   }
   return null;
 }
-var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, GEMINI_MESSAGE_TYPE, GEMINI_HOOK_EVENTS, GEMINI_EDIT_TOOL_NAMES, GEMINI_SHELL_TOOL_NAMES, GEMINI_EDIT_TOOL_MATCHER, GEMINI_SHELL_TOOL_MATCHER, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
+var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, GEMINI_TRANSCRIPT_MESSAGE_TYPE, GEMINI_HOOK_EVENTS, GEMINI_EDIT_TOOL_NAMES, GEMINI_SHELL_TOOL_NAMES, GEMINI_EDIT_TOOL_MATCHER, GEMINI_SHELL_TOOL_MATCHER, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
 var init_gemini = __esm({
   "src/agents/gemini.ts"() {
     "use strict";
@@ -1565,7 +1565,7 @@ var init_gemini = __esm({
     HOOK_TIMEOUT_MS = 1e4;
     SETTINGS_REL_PATH = ".gemini/settings.json";
     TRANSCRIPT_PREVIEW_CHARS2 = 4096;
-    GEMINI_MESSAGE_TYPE = AGENT_NAMES.gemini;
+    GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
     GEMINI_HOOK_EVENTS = {
       sessionStart: "SessionStart",
       sessionEnd: "SessionEnd",
@@ -1873,7 +1873,7 @@ var init_gemini = __esm({
             if (typeof record.timestamp === "string") current.timestamp = record.timestamp;
             continue;
           }
-          if (type === GEMINI_MESSAGE_TYPE && current) {
+          if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
             const response = extractPartText(record.content);
             if (response) {
               current.response = current.response ? `${current.response}
