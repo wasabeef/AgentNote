@@ -1,0 +1,130 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T12:27:11.706Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "⏺ ---\n  PR #60 レビュー\n\n  CI: ✅ Test / Lint / PR Report / Dashboard / Website / deploy 全 pass\n\n  ---\n  変更の全体像\n\n  ┌─────────────────┬───────────────────────────────────────────────────────────────────────────────────────────┐\n  │    ファイル     │                                         変更内容                                          │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ session.ts             │ hasRecordableSessionData() から Codex transcript_path 特殊ケースを削除            │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ init.ts                │ prepare-commit-msg shell hook から Codex transcript_path チェックを削除           │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ record.ts              │ collectCurrentUnattributedToolPromptIds() 追加、human-only shortcut に shell-only │\n  │                        │  guard 追加                                                                       │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ record.test.ts         │ PR #59 regression + 100+ case simulation (+230行)                                 │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ session.test.ts        │ Codex transcript-only を false に変更 + 100+ matrix (+71行)                       │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ codex.test.ts          │ echo '...' | execSync → spawnSync + stdin JSON に統一 (-60+26行)                  │\n  ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┤\n  │ website 12 locale +    │ transcript_path 単体は recordable でない旨を追記                                  │\n  │ docs                   │                                                                                   │\n  └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────┘\n\n  ---\n  評価\n\n  ✅ 根本原因の修正が正確\n\n  PR #59 の afcb2d9 で起きたパターン：\n  - Codex transcript に古い apply_patch edits（別ファイル）が残っている\n  - 現在の commit は exec_command（shell）経由で、files_touched が空\n  - 旧コードの human-only shortcut 条件が transcriptEditsOthers=true, transcriptEditsCommit=false → 空 note として\n  skip\n\n  修正の currentUnattributedToolPromptIds.size === 0 ガードと selectTranscriptFallbackInteractions の preferred\n  優先ロジックで、現在 window の shell-only tool turn を確実に rescue する。\n\n  ✅ crossTurnCommit での shell-only fallback 無効化が適切\n\n  cross-turn では「どの shell command が当該 commit に対応するか」が曖昧なため、rescue しない設計。simulation\n  テストの crossTurnCommit=true ケースが全て expectedSkip=true になっていることで確認済み。\n\n  ✅ transcript_path の役割整理が明確\n\n  「transcript を読む場所を示す metadata」と「commit note を生成できる実データ」を分離。hasRecordableSessionData()\n  のコントラクトが統一されてシンプルになった。\n\n  ✅ codex.test.ts のリファクタリング\n\n  echo '...' | execSync から spawnSync + stdin JSON への変更で、改行を含む prompt の quote\n  エスケープ問題が解消されている。\n\n  ---\n  指摘事項\n\n  🟢 low.nits — multi-paragraph docstring（record.ts:719-726）\n\n  /**\n   * Find current-window transcript turns that used tools without file evidence.\n   *\n   * Codex can edit through shell commands that do not expose `files_touched`.\n   * We keep those prompts as prompt-only notes, but never infer AI-authored files\n   * from the shell command itself.\n   */\n\n  CLAUDE.md に「multi-paragraph docstrings 禁止、1行まで」とある。PR #58 と同じ指摘。\n\n  /** Current-window tool turns without file evidence — preserved as prompt-only notes. */\n\n  ---\n  🟢 low.nits — multi-line comment in test（record.test.ts:568-572）\n\n  // PR #59 regression shape: the long Codex transcript contains old\n  // apply_patch edits for other files, while the current commit was made\n  // through a shell command that does not expose files_touched. The note must\n  // keep the current prompt/response without guessing AI-authored files.\n\n  同じくコメントブロック違反。test description に集約できる。\n\n  ---\n  総評\n\n  コアロジックは正確で、PR #59 の再発防止として transcript_path 単体を recordable から外し、shell-only turn を\n  rescue するという2つの独立した問題を正しく解決している。テストカバレッジも厚い。ブロッカーなし、nit 2件のみ。",
+      "response": "レビューありがとうございます。nit 2 件は今直せる範囲なので、コメント規約に合わせて短くして、再チェックして push します。\nnit 2 件はコメントだけの整備なので、動作に触らず最小差分で直します。先に該当箇所を確認して、規約に合う 1 行コメントへ寄せます。\n作業前から `record.ts` と `record.test.ts` に未コミット差分があります。まず差分の正体を確認して、こちらの修正だけを壊さず積みます。\n指摘された 2 件はすでに未コミット差分として入っていました。ついでに同じ PR で追加された近接の複数段落 TSDoc も規約に照らして見直してから、まとめて検証します。\n対象の TSDoc も 1 行に寄せました。ここからは comment-only の差分として、lint/typecheck/diff check で崩れていないことを確認します。\n差分はコメント整理だけで、`lint` / `typecheck` / `git diff --check` は通りました。PR フィードバック対応として、この最小差分をコミットして push します。",
+      "files_touched": [
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/core/record.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "list_or_checklist_shape",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "apply_patch",
+        "exec_command",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/core/record.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "8044c2a5554822bcda7f11b26d1655211c1802a4",
+    "short_sha": "8044c2a",
+    "message": "docs: tighten Codex shell-only comments",
+    "date": "2026-05-08T21:27:10+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/src/core/record.test.ts",
+        "lines": [
+          "index fca8caf..8cfc68f 100644",
+          "--- a/packages/cli/src/core/record.test.ts",
+          "+++ b/packages/cli/src/core/record.test.ts",
+          "@@ -2534,11 +2534,7 @@ describe(\"recordCommitEntry\", () => {",
+          "     }",
+          "   });",
+          " ",
+          "-  it(\"transcript-driven Codex keeps prompt-only notes for current shell-only tool turns\", async () => {",
+          "-    // PR #59 regression shape: the long Codex transcript contains old",
+          "-    // apply_patch edits for other files, while the current commit was made",
+          "-    // through a shell command that does not expose files_touched. The note must",
+          "-    // keep the current prompt/response without guessing AI-authored files.",
+          "+  it(\"transcript-driven Codex keeps prompt-only notes for current shell-only tool turns without guessing files\", async () => {",
+          "     const codexHome = mkdtempSync(join(tmpdir(), \"codex-home-\"));",
+          "     const prevCodexHome = process.env.CODEX_HOME;",
+          "     process.env.CODEX_HOME = codexHome;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.ts",
+        "lines": [
+          "index 5c50e58..3ab9ee0 100644",
+          "--- a/packages/cli/src/core/record.ts",
+          "+++ b/packages/cli/src/core/record.ts",
+          "@@ -724,12 +724,7 @@ function filterInteractionCommitFiles(",
+          "   );",
+          " }",
+          " ",
+          "-/**",
+          "- * Pick the safest transcript fallback when no exact commit-file match exists.",
+          "- *",
+          "- * Tool-backed rows are preferred because they still provide observable agent",
+          "- * activity without guessing file authorship from shell-only output.",
+          "- */",
+          "+/** Prefer tool-backed fallback rows without guessing shell-only file authorship. */",
+          " function selectTranscriptFallbackInteractions(",
+          "   interactions: TranscriptInteraction[],",
+          "   commitFileSet: Set<string>,",
+          "@@ -754,13 +749,7 @@ function selectTranscriptFallbackInteractions(",
+          "   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];",
+          " }",
+          " ",
+          "-/**",
+          "- * Find current-window transcript turns that used tools without file evidence.",
+          "- *",
+          "- * Codex can edit through shell commands that do not expose `files_touched`.",
+          "- * We keep those prompts as prompt-only notes, but never infer AI-authored files",
+          "- * from the shell command itself.",
+          "- */",
+          "+/** Current-window tool turns without file evidence, kept as prompt-only notes. */",
+          " function collectCurrentUnattributedToolPromptIds(",
+          "   interactions: TranscriptInteraction[],",
+          "   promptEntries: Record<string, unknown>[],"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 60,
+    "title": "fix(record): preserve Codex shell-only prompt notes",
+    "state": "open"
+  }
+}
