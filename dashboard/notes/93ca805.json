@@ -594,6 +594,6 @@
   "pull_request": {
     "number": 58,
     "title": "fix(hooks): refresh heartbeat during long turns",
-    "state": "open"
+    "state": "merged"
   }
 }
