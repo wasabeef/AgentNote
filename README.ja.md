@@ -106,7 +106,7 @@ Agent Note は Commit の文脈を保存します。
 | Agent | Status | 表示できる粒度 | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | AI が書いた行の目安まで表示 | Native Hooks で会話を復元します。 |
-| Codex CLI | Preview | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |
+| Codex CLI | Supported | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |
 | Cursor | Supported | 通常は変更ファイルまで表示 | Cursor の Edit Hooks を使います。Commit に入ったファイルが最後の AI 編集と一致する場合だけ、AI が書いた行の目安も表示できます。 |
 | Gemini CLI | Preview | 変更ファイルまで表示 | Generated Hooks で会話と通常の `git commit` を記録します。 |
 

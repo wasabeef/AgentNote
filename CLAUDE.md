@@ -66,7 +66,7 @@ Agent Note supports multiple coding agents via an adapter pattern:
 - **`index.ts`**: Agent registry — `getAgent()`, `hasAgent()`, `listAgents()`.
 - **`claude.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.
 - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.
-- **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.
+- **`cursor.ts`**: Cursor adapter. Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.
 - **`gemini.ts`**: Gemini CLI adapter (Preview). Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern). `extractInteractions` parses JSONL transcripts from `~/.gemini/tmp/`; transcript schema may evolve with Gemini CLI updates.
 
 ### Hook event handling (`packages/cli/src/commands/hook.ts`)

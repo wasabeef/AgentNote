@@ -12,9 +12,9 @@ Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 a
 | Agent | 상태 | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | 기본 line-level |
-| Codex CLI | Preview | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
-| Cursor Preview | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |
-| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+| Codex CLI | Supported | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
+| Cursor | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |
+| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
 
 <Aside>
   Preview 는 현재 공개된 동작을 지원한다는 뜻입니다. agent 의 local hook 또는 transcript 형식은 바뀔 수 있습니다.
@@ -39,9 +39,9 @@ git hook 은 `.git/` 안에 있으므로, 각 developer 는 clone 후 한 번 `i
 | 필요한 것 | 기대할 수 있는 것 |
 |---|---|
 | 현재 가장 자세한 line attribution | Claude Code |
-| 보수적인 attribution 의 Codex CLI support | Preview 의 Codex CLI |
-| Cursor editor history 와 response 복원 | Cursor Preview |
-| Gemini CLI prompt / response 기록 | Gemini CLI Preview |
+| 보수적인 attribution 의 Codex CLI support | Codex CLI |
+| Cursor editor history 와 response 복원 | Cursor |
+| Gemini CLI prompt / response 기록 | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code 는 hook 으로 prompt, response, edit data 를 제공합니다. Age
 
 Codex CLI 는 transcript-driven 입니다. local transcript 를 읽고, `apply_patch` count 가 final diff 와 맞을 때만 line-level 로 승격합니다.
 
-### Cursor Preview
+### Cursor
 
 Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final blob 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI 는 file edit 에 `BeforeTool` / `AfterTool`, prompt / response 에 `BeforeAgent` / `AfterAgent` 를 사용합니다. 현재 attribution 은 file-level 입니다.
 

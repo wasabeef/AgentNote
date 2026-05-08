@@ -35,7 +35,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-只要生成的 git hook 已安裝，大多數儲存庫裡就繼續正常使用 `git commit` 與 `git push` 即可。Cursor Preview 也能從本機 transcript 還原 prompt / response，在 git hook 無法使用的環境下也能繼續追蹤 commit。
+只要生成的 git hook 已安裝，大多數儲存庫裡就繼續正常使用 `git commit` 與 `git push` 即可。Cursor 也能從本機 transcript 還原 prompt / response，在 git hook 無法使用的環境下也能繼續追蹤 commit。
 
 ## 儲存
 
@@ -114,14 +114,14 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>起點是 file-level。只有 edit 計數一致，且最終檔案仍與最後一次 AI edit 相同時，才會升級成 line-level。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>透過 hooks 與 transcript 解析記錄 prompt / response 與 file-level attribution。目前還沒有 line-level 歸因。</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

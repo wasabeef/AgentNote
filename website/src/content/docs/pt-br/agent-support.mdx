@@ -12,9 +12,9 @@ O Agent Note grava o mesmo formato de git note para todos os agents, mas cada ag
 | Agent | Status | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level por padrão |
-| Codex CLI | Preview | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |
-| Cursor Preview | Supported | Response hook ou local transcript | File-level por padrão, line-level quando edit count e final blob batem |
-| Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+| Codex CLI | Supported | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |
+| Cursor | Supported | Response hook ou local transcript | File-level por padrão, line-level quando edit count e final blob batem |
+| Gemini CLI | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
 
 <Aside>
   Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
@@ -39,9 +39,9 @@ Cada developer precisa rodar `init` uma vez depois do clone, porque git hooks fi
 | Você precisa de... | Espere... |
 |---|---|
 | A attribution por linha mais completa hoje | Claude Code |
-| Suporte Codex CLI com attribution conservadora | Codex CLI em Preview |
-| Histórico do editor Cursor e recuperação de response | Cursor Preview |
-| Captura de prompt / response no Gemini CLI | Gemini CLI Preview |
+| Suporte Codex CLI com attribution conservadora | Codex CLI |
+| Histórico do editor Cursor e recuperação de response | Cursor |
+| Captura de prompt / response no Gemini CLI | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code fornece prompts, responses e edits por hooks. O Agent Note salva o e
 
 Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para line-level apenas quando os counts de `apply_patch` batem com o diff final.
 
-### Cursor Preview
+### Cursor
 
 Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o final blob ainda bate com o último AI edit.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI usa `BeforeTool` / `AfterTool` para arquivos e `BeforeAgent` / `AfterAgent` para prompt / response. A attribution atual é file-level.
 

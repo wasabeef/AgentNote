@@ -35,7 +35,7 @@ Halaman ini menjelaskan mekanisme di balik report: apa yang dikumpulkan secara l
   </div>
 </div>
 
-Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus memakai `git commit` dan `git push` seperti biasa. Cursor Preview juga memulihkan pasangan prompt / response dari transcript lokal dan tetap bisa melacak commit saat git hook tidak tersedia.
+Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus memakai `git commit` dan `git push` seperti biasa. Cursor juga memulihkan pasangan prompt / response dari transcript lokal dan tetap bisa melacak commit saat git hook tidak tersedia.
 
 ## Penyimpanan
 
@@ -114,14 +114,14 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>Mulai sebagai file-level. Naik ke line-level hanya ketika jumlah edit cocok dan file final masih sama dengan edit AI terakhir.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>Mencatat prompt / response dan attribution level file lewat hook dan parsing transcript. Mode line-level belum tersedia.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

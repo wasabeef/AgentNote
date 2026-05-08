@@ -106,7 +106,7 @@ Temporary Session Data находятся в `.git/agentnote/`. Permanent Record
 | Agent | Status | Детализация | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Оценка по строкам по умолчанию | Использует Native Hooks, чтобы восстановить разговор. |
-| Codex CLI | Preview | Обычно по файлам | Может оценить строки, написанные AI, только когда история patch в Codex совпадает с итоговым Commit. Если локальный Transcript нельзя прочитать, Agent Note не создаёт сомнительную Note. |
+| Codex CLI | Supported | Обычно по файлам | Может оценить строки, написанные AI, только когда история patch в Codex совпадает с итоговым Commit. Если локальный Transcript нельзя прочитать, Agent Note не создаёт сомнительную Note. |
 | Cursor | Supported | Обычно по файлам | Использует Cursor Edit Hooks. Может оценить строки, написанные AI, только когда файл в Commit всё ещё совпадает с последним AI Edit. |
 | Gemini CLI | Preview | По файлам | Использует Generated Hooks, чтобы записывать разговоры и обычные запуски `git commit`. |
 

@@ -106,7 +106,7 @@ Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record li
 | Agent | Status | Detail | Hinweise |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Schätzung KI-geschriebener Zeilen | Nutzt Native Hooks, um die Unterhaltung wiederherzustellen. |
-| Codex CLI | Preview | Geänderte Dateien standardmäßig | Kann KI-geschriebene Zeilen nur schätzen, wenn die Codex-Patch-Historie zum finalen Commit passt. Wenn das lokale Transcript nicht gelesen werden kann, schreibt Agent Note keine unsichere Note. |
+| Codex CLI | Supported | Geänderte Dateien standardmäßig | Kann KI-geschriebene Zeilen nur schätzen, wenn die Codex-Patch-Historie zum finalen Commit passt. Wenn das lokale Transcript nicht gelesen werden kann, schreibt Agent Note keine unsichere Note. |
 | Cursor | Supported | Geänderte Dateien standardmäßig | Nutzt Cursor-Edit-Hooks. Kann KI-geschriebene Zeilen nur schätzen, wenn die Datei im Commit noch zum letzten KI-Edit passt. |
 | Gemini CLI | Preview | Geänderte Dateien | Nutzt generierte Hooks, um Unterhaltungen und normale `git commit`-Läufe zu erfassen. |
 

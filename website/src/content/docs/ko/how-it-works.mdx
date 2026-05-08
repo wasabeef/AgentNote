@@ -35,7 +35,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </div>
 </div>
 
-생성된 git hook 이 설치되어 있으면 대부분의 리포지토리에서는 평소처럼 `git commit` 과 `git push` 를 쓰면 됩니다. Cursor Preview 는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없어도 shell hook 으로 commit 추적을 이어갈 수 있습니다.
+생성된 git hook 이 설치되어 있으면 대부분의 리포지토리에서는 평소처럼 `git commit` 과 `git push` 를 쓰면 됩니다. Cursor 는 local transcript 에서 prompt / response 쌍을 복원할 수 있고, git hook 을 쓸 수 없어도 shell hook 으로 commit 추적을 이어갈 수 있습니다.
 
 ## 저장소
 
@@ -114,14 +114,14 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Cursor Preview</div>
+      <div class="agent-attribution-card__title">Cursor</div>
       <p>처음에는 file-level 입니다. edit count 가 맞고 final file 이 마지막 AI edit 와 그대로 같을 때만 line-level 로 올라갑니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>
   <Card>
     <div class="agent-attribution-card">
-      <div class="agent-attribution-card__title">Gemini CLI Preview</div>
+      <div class="agent-attribution-card__title">Gemini CLI</div>
       <p>hook 과 transcript parsing 으로 prompt / response 와 file-level attribution 을 기록합니다. line-level 은 아직 없습니다.</p>
       <img class="agent-attribution-card__logo" src="/AgentNote/model-icons/gemini.png" alt="" aria-hidden="true" />
     </div>

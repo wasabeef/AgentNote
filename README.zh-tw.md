@@ -106,7 +106,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在 
 | Agent | Status | 顯示粒度 | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | 預設顯示到行級估算 | 使用 Native Hooks 還原對話。 |
-| Codex CLI | Preview | 通常為檔案級 | 只有當 Codex patch 記錄與最終 Commit 相符時，才會顯示 AI 編寫行數的估算。無法讀取 Local Transcript 時，Agent Note 不會寫入不確定的 Note。 |
+| Codex CLI | Supported | 通常為檔案級 | 只有當 Codex patch 記錄與最終 Commit 相符時，才會顯示 AI 編寫行數的估算。無法讀取 Local Transcript 時，Agent Note 不會寫入不確定的 Note。 |
 | Cursor | Supported | 通常為檔案級 | 使用 Cursor Edit Hooks。只有 Commit 中的檔案仍符合最後一次 AI 編輯時，才會顯示 AI 編寫行數的估算。 |
 | Gemini CLI | Preview | 檔案級 | 使用 Generated Hooks 記錄對話和一般 `git commit`。 |
 

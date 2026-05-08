@@ -12,9 +12,9 @@ Agent Note использует один формат git note для всех a
 | Agent | Статус | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level по умолчанию |
-| Codex CLI | Preview | Local transcript | File-level по умолчанию, line-level если `apply_patch` counts совпадают |
-| Cursor Preview | Supported | Response hook или local transcript | File-level по умолчанию, line-level если edit counts и final blob совпадают |
-| Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
+| Codex CLI | Supported | Local transcript | File-level по умолчанию, line-level если `apply_patch` counts совпадают |
+| Cursor | Supported | Response hook или local transcript | File-level по умолчанию, line-level если edit counts и final blob совпадают |
+| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
 
 <Aside>
   Preview означает поддержку текущего публичного поведения. Локальный формат agent hooks или transcripts может измениться.
@@ -39,9 +39,9 @@ npx agent-note init --agent claude codex cursor gemini
 | Нужно... | Ожидайте... |
 |---|---|
 | Самая полная построчная attribution сегодня | Claude Code |
-| Поддержка Codex CLI с консервативной attribution | Codex CLI в Preview |
-| История редактора Cursor и восстановление response | Cursor Preview |
-| Захват prompt / response в Gemini CLI | Gemini CLI Preview |
+| Поддержка Codex CLI с консервативной attribution | Codex CLI |
+| История редактора Cursor и восстановление response | Cursor |
+| Захват prompt / response в Gemini CLI | Gemini CLI |
 
 ## Attribution
 
@@ -59,11 +59,11 @@ Claude Code предоставляет prompts, responses и edits через ho
 
 Codex CLI работает через transcripts. Agent Note читает local transcript и переходит на line-level только когда `apply_patch` counts совпадают с финальным diff.
 
-### Cursor Preview
+### Cursor
 
 Cursor использует `afterFileEdit` / `afterTabFileEdit`, а также response hooks или local transcripts. Line-level возможен только если final blob всё еще совпадает с последним AI edit.
 
-### Gemini CLI Preview
+### Gemini CLI
 
 Gemini CLI использует `BeforeTool` / `AfterTool` для файлов и `BeforeAgent` / `AfterAgent` для prompt / response. Attribution пока file-level.
 

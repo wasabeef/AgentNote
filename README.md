@@ -106,7 +106,7 @@ Temporary session data lives under `.git/agentnote/`. The permanent record lives
 | Agent | Status | Detail | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Line estimates by default | Uses native hooks to recover the conversation. |
-| Codex CLI | Preview | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |
+| Codex CLI | Supported | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |
 | Cursor | Supported | Changed files by default | Uses Cursor edit hooks. Can estimate AI-written lines only when the committed file still matches the last AI edit. |
 | Gemini CLI | Preview | Changed files | Uses generated hooks to capture conversations and normal `git commit` runs. |
 
