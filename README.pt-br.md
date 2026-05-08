@@ -106,7 +106,7 @@ Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `r
 | Agent | Status | Detalhe | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Estimativa por linha por padrão | Usa Native Hooks para recuperar a conversa. |
-| Codex CLI | Preview | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |
+| Codex CLI | Supported | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |
 | Cursor | Supported | Por arquivo por padrão | Usa Cursor Edit Hooks. Pode estimar linhas escritas pela AI apenas quando o arquivo no Commit ainda corresponde ao último Edit da AI. |
 | Gemini CLI | Preview | Por arquivo | Usa Generated Hooks para registrar conversas e execuções normais de `git commit`. |
 

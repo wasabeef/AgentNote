@@ -106,7 +106,7 @@ Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanen
 | Agent | Status | 표시 수준 | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | 줄 단위 추정까지 표시 | Native Hooks 로 대화를 복원합니다. |
-| Codex CLI | Preview | 보통 파일 단위 | Codex patch 기록이 최종 Commit 과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. Local Transcript 를 읽을 수 없으면 불확실한 Note 를 만들지 않습니다. |
+| Codex CLI | Supported | 보통 파일 단위 | Codex patch 기록이 최종 Commit 과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. Local Transcript 를 읽을 수 없으면 불확실한 Note 를 만들지 않습니다. |
 | Cursor | Supported | 보통 파일 단위 | Cursor Edit Hooks 를 사용합니다. Commit 에 포함된 파일이 마지막 AI 수정과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. |
 | Gemini CLI | Preview | 파일 단위 | Generated Hooks 로 대화와 일반 `git commit` 실행을 기록합니다. |
 

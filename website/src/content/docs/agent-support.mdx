@@ -12,7 +12,7 @@ Agent Note uses the same git-note format for every agent, but each agent exposes
 | Agent | Status | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook-native | Line-level by default |
-| Codex CLI | Preview | Local transcript | File-level by default, line-level when `apply_patch` counts match |
+| Codex CLI | Supported | Local transcript | File-level by default, line-level when `apply_patch` counts match |
 | Cursor Preview | Supported | Response hook or local transcript | File-level by default, line-level when edit counts and final blob match |
 | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
 
@@ -39,7 +39,7 @@ Each developer still needs to run `init` once after cloning because git hooks li
 | You need... | Expect... |
 |---|---|
 | The most complete line attribution today | Claude Code |
-| Codex CLI support with conservative attribution | Codex CLI in Preview |
+| Codex CLI support with conservative attribution | Codex CLI |
 | Cursor editor history and response recovery | Cursor Preview |
 | Gemini CLI prompt / response capture | Gemini CLI Preview |
 

@@ -106,7 +106,7 @@ Los datos temporales de sesión viven en `.git/agentnote/`. El registro permanen
 | Agent | Estado | Detalle | Notas |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Estimación de líneas escritas por IA | Usa Hooks nativos para recuperar la conversación. |
-| Codex CLI | Preview | Archivos modificados por defecto | Puede estimar líneas escritas por IA solo cuando el historial de parches de Codex coincide con el Commit final. Si no puede leer el Transcript Local, Agent Note evita notas inciertas. |
+| Codex CLI | Supported | Archivos modificados por defecto | Puede estimar líneas escritas por IA solo cuando el historial de parches de Codex coincide con el Commit final. Si no puede leer el Transcript Local, Agent Note evita notas inciertas. |
 | Cursor | Supported | Archivos modificados por defecto | Usa los Hooks de edición de Cursor. Puede estimar líneas escritas por IA solo cuando el archivo del Commit aún coincide con la última edición de IA. |
 | Gemini CLI | Preview | Archivos modificados | Usa Hooks generados para capturar conversaciones y ejecuciones normales de `git commit`. |
 

@@ -12,7 +12,7 @@ Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 a
 | Agent | 상태 | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | 기본 line-level |
-| Codex CLI | Preview | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
+| Codex CLI | Supported | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
 | Cursor Preview | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |
 | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
 
@@ -39,7 +39,7 @@ git hook 은 `.git/` 안에 있으므로, 각 developer 는 clone 후 한 번 `i
 | 필요한 것 | 기대할 수 있는 것 |
 |---|---|
 | 현재 가장 자세한 line attribution | Claude Code |
-| 보수적인 attribution 의 Codex CLI support | Preview 의 Codex CLI |
+| 보수적인 attribution 의 Codex CLI support | Codex CLI |
 | Cursor editor history 와 response 복원 | Cursor Preview |
 | Gemini CLI prompt / response 기록 | Gemini CLI Preview |
 

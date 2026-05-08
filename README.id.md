@@ -106,7 +106,7 @@ Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `
 | Agent | Status | Detail | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Perkiraan per baris secara default | Menggunakan Native Hooks untuk memulihkan percakapan. |
-| Codex CLI | Preview | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |
+| Codex CLI | Supported | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |
 | Cursor | Supported | Biasanya per file | Menggunakan Cursor Edit Hooks. Dapat memperkirakan baris yang ditulis AI hanya saat file dalam Commit masih cocok dengan Edit AI terakhir. |
 | Gemini CLI | Preview | Per file | Menggunakan Generated Hooks untuk mencatat percakapan dan `git commit` normal. |
 

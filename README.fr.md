@@ -106,7 +106,7 @@ Les données temporaires de Session vivent sous `.git/agentnote/`. L'enregistrem
 | Agent | Statut | Détail | Notes |
 | --- | --- | --- | --- |
 | Claude Code | Full support | Estimation des lignes écrites par l'IA | Utilise des Hooks natifs pour retrouver la conversation. |
-| Codex CLI | Preview | Fichiers modifiés par défaut | Peut estimer les lignes écrites par l'IA seulement quand l'historique de patch Codex correspond au Commit final. Si le Transcript Local ne peut pas être lu, Agent Note évite d'écrire une Note incertaine. |
+| Codex CLI | Supported | Fichiers modifiés par défaut | Peut estimer les lignes écrites par l'IA seulement quand l'historique de patch Codex correspond au Commit final. Si le Transcript Local ne peut pas être lu, Agent Note évite d'écrire une Note incertaine. |
 | Cursor | Supported | Fichiers modifiés par défaut | Utilise les Hooks d'édition Cursor. Peut estimer les lignes écrites par l'IA seulement quand le fichier Commité correspond encore à la dernière édition IA. |
 | Gemini CLI | Preview | Fichiers modifiés | Utilise les Hooks générés pour capturer les conversations et les `git commit` normaux. |
 

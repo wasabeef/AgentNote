@@ -12,7 +12,7 @@ Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap ag
 | Agent | Status | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level secara default |
-| Codex CLI | Preview | Local transcript | File-level secara default, line-level jika count `apply_patch` cocok |
+| Codex CLI | Supported | Local transcript | File-level secara default, line-level jika count `apply_patch` cocok |
 | Cursor Preview | Supported | Response hook atau local transcript | File-level secara default, line-level jika edit count dan final blob cocok |
 | Gemini CLI Preview | Preview | Hook `BeforeAgent` / `AfterAgent` | File-level |
 
@@ -39,7 +39,7 @@ Setiap developer perlu menjalankan `init` sekali setelah clone, karena git hooks
 | Anda butuh... | Yang bisa diharapkan |
 |---|---|
 | Attribution per baris paling lengkap saat ini | Claude Code |
-| Dukungan Codex CLI dengan attribution konservatif | Codex CLI dalam Preview |
+| Dukungan Codex CLI dengan attribution konservatif | Codex CLI |
 | Riwayat editor Cursor dan pemulihan response | Cursor Preview |
 | Capture prompt / response dari Gemini CLI | Gemini CLI Preview |
 

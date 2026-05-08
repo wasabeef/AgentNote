@@ -12,7 +12,7 @@ Agent Note guarda el mismo formato de git note para todos los agents, pero cada 
 | Agent | Estado | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | Line-level por defecto |
-| Codex CLI | Preview | Transcript local | File-level por defecto, line-level si los conteos `apply_patch` coinciden |
+| Codex CLI | Supported | Transcript local | File-level por defecto, line-level si los conteos `apply_patch` coinciden |
 | Cursor Preview | Supported | Response hook o transcript local | File-level por defecto, line-level si los edits y el blob final coinciden |
 | Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
 
@@ -39,7 +39,7 @@ Cada developer debe ejecutar `init` una vez después de clonar, porque los git h
 | Necesitas... | Espera... |
 |---|---|
 | La atribución por línea más completa hoy | Claude Code |
-| Soporte de Codex CLI con atribución conservadora | Codex CLI en Preview |
+| Soporte de Codex CLI con atribución conservadora | Codex CLI |
 | Historial del editor Cursor y recuperación de respuestas | Cursor Preview |
 | Captura de prompt / response con Gemini CLI | Gemini CLI Preview |
 

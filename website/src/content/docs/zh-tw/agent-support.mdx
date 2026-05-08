@@ -12,7 +12,7 @@ Agent Note 對所有 agent 使用相同的 git note 格式，但每個 agent 暴
 | Agent | 狀態 | Prompt / Response | Attribution |
 |---|---|---|---|
 | Claude Code | Full support | Hook native | 預設 line-level |
-| Codex CLI | Preview | Local transcript | 預設 file-level，`apply_patch` 計數符合最終 diff 時為 line-level |
+| Codex CLI | Supported | Local transcript | 預設 file-level，`apply_patch` 計數符合最終 diff 時為 line-level |
 | Cursor Preview | Supported | Response hook 或 local transcript | 預設 file-level，edit count 與 final blob 符合時為 line-level |
 | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
 
@@ -39,7 +39,7 @@ npx agent-note init --agent claude codex cursor gemini
 | 你需要... | 可以期待... |
 |---|---|
 | 目前最完整的逐行歸因 | Claude Code |
-| 保守歸因的 Codex CLI 支援 | Preview 中的 Codex CLI |
+| 保守歸因的 Codex CLI 支援 | Codex CLI |
 | Cursor 編輯器歷史與 response 復原 | Cursor Preview |
 | Gemini CLI 的 prompt / response 擷取 | Gemini CLI Preview |
 
