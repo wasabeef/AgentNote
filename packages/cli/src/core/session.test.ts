@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
   CHANGES_FILE,
+  PRE_BLOBS_FILE,
   PROMPTS_FILE,
   SESSION_AGENT_FILE,
   TRANSCRIPT_PATH_FILE,
@@ -123,15 +124,83 @@ describe("hasRecordableSessionData", () => {
     }
   });
 
-  it("allows Codex transcript-driven sessions with only transcript metadata", async () => {
+  it("does not allow Codex transcript metadata without prompt or edit data", async () => {
     const dir = mkdtempSync(join(tmpdir(), "agentnote-session-recordable-codex-"));
     try {
       writeFileSync(join(dir, SESSION_AGENT_FILE), "codex\n");
       writeFileSync(join(dir, TRANSCRIPT_PATH_FILE), "/tmp/codex-rollout.jsonl\n");
 
-      assert.equal(await hasRecordableSessionData(dir), true);
+      assert.equal(await hasRecordableSessionData(dir), false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the recordable data contract stable across 100+ generated cases", async () => {
+    const agents = ["claude", "codex", "cursor", "gemini"] as const;
+    const cases: Array<{
+      agent: (typeof agents)[number];
+      hasPrompt: boolean;
+      hasChange: boolean;
+      hasPreBlob: boolean;
+      hasTranscript: boolean;
+      hasEmptyPromptFile: boolean;
+      expected: boolean;
+    }> = [];
+
+    for (const agent of agents) {
+      for (const hasPrompt of [false, true]) {
+        for (const hasChange of [false, true]) {
+          for (const hasPreBlob of [false, true]) {
+            for (const hasTranscript of [false, true]) {
+              for (const hasEmptyPromptFile of [false, true]) {
+                cases.push({
+                  agent,
+                  hasPrompt,
+                  hasChange,
+                  hasPreBlob,
+                  hasTranscript,
+                  hasEmptyPromptFile,
+                  expected: hasPrompt || hasChange || hasPreBlob,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    assert.ok(cases.length >= 100, `expected at least 100 cases, got ${cases.length}`);
+
+    for (let index = 0; index < cases.length; index++) {
+      const promptCase = cases[index];
+      const dir = mkdtempSync(join(tmpdir(), "agentnote-session-recordable-matrix-"));
+      try {
+        writeFileSync(join(dir, SESSION_AGENT_FILE), `${promptCase.agent}\n`);
+        if (promptCase.hasTranscript) {
+          writeFileSync(join(dir, TRANSCRIPT_PATH_FILE), "/tmp/transcript.jsonl\n");
+        }
+        if (promptCase.hasEmptyPromptFile) {
+          writeFileSync(join(dir, PROMPTS_FILE), "");
+        }
+        if (promptCase.hasPrompt) {
+          writeFileSync(join(dir, PROMPTS_FILE), '{"event":"prompt","prompt":"fix"}\n');
+        }
+        if (promptCase.hasChange) {
+          writeFileSync(join(dir, CHANGES_FILE), '{"event":"file_change","file":"src/app.ts"}\n');
+        }
+        if (promptCase.hasPreBlob) {
+          writeFileSync(join(dir, PRE_BLOBS_FILE), '{"event":"pre_blob","file":"src/app.ts"}\n');
+        }
+
+        assert.equal(
+          await hasRecordableSessionData(dir),
+          promptCase.expected,
+          `case ${index}: ${JSON.stringify(promptCase)}`,
+        );
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     }
   });
 

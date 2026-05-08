@@ -93,7 +93,7 @@ Gemini-specific event handling:
 
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
-- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. Skips amends.
+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. `transcript_path` alone is metadata, not recordable data. Skips amends.
 - **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 

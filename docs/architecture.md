@@ -390,7 +390,7 @@ Three git hooks handle commit integration and notes sharing:
 
 Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in git hooks = skip (fail closed).
 
-Trailer injection also requires recordable session data. Prompts, file-change records, pre-edit blobs, or Codex transcript metadata count as recordable data. Heartbeat and `SessionStart` metadata alone do not, so plain shell commits and metadata-only sessions do not receive dangling `Agentnote-Session` trailers.
+Trailer injection also requires recordable session data. Prompts, file-change records, or pre-edit blobs count as recordable data. Transcript paths are supporting metadata, not recordable data by themselves. Heartbeat, `SessionStart`, and `transcript_path` metadata alone do not receive dangling `Agentnote-Session` trailers.
 
 ### Git hook installation
 

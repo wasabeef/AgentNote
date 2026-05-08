@@ -34,6 +34,20 @@ describe("agentnote codex", () => {
   let testHome: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
+  function runCodexHook(payload: Record<string, unknown>): void {
+    const result = spawnSync("node", [cliPath, "hook", "--agent", "codex"], {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+      input: JSON.stringify(payload),
+      encoding: "utf-8",
+    });
+    assert.equal(
+      result.status,
+      0,
+      `codex hook failed: stdout=${result.stdout} stderr=${result.stderr}`,
+    );
+  }
+
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-codex-"));
     testHome = join(testDir, ".home");
@@ -82,27 +96,19 @@ describe("agentnote codex", () => {
       }),
     );
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: transcriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: transcriptPath,
       prompt: "Create hello.txt",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
@@ -163,27 +169,19 @@ describe("agentnote codex", () => {
         '{"timestamp":"2026-04-10T01:00:02Z","type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","input":"*** Begin Patch\\n*** Update File: hello-again.txt\\n@@\\n-Hello\\n+Hello from Codex\\n*** End Patch\\n"}}\n',
     );
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: transcriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: transcriptPath,
       prompt: "Update hello.txt",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     writeFileSync(join(testDir, "hello-again.txt"), "Hello from Codex\nAnd human line\n");
@@ -219,27 +217,19 @@ describe("agentnote codex", () => {
       }),
     );
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: transcriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: transcriptPath,
       prompt: "Create absolute.txt",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     writeFileSync(join(testDir, "absolute.txt"), "Absolute path\n");
@@ -279,27 +269,19 @@ describe("agentnote codex", () => {
         '{"timestamp":"2026-04-10T02:00:03Z","type":"response_item","payload":{"type":"function_call","call_name":"apply_patch","arguments":"{\\"patch\\":\\"*** Begin Patch\\\\n*** Add File: multi.txt\\\\n+Hello\\\\n*** Add File: note.txt\\\\n+Details\\\\n*** End Patch\\\\n\\"}"}}\n',
     );
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: transcriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: transcriptPath,
       prompt: "Create multi.txt\nand note.txt",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     writeFileSync(join(testDir, "multi.txt"), "Hello\n");
@@ -353,27 +335,19 @@ describe("agentnote codex", () => {
         `{"timestamp":"2026-04-15T09:31:35.587Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\\"cmd\\":\\"printf 'shell path\\\\n' > shell-note.txt\\",\\"workdir\\":\\"${testDir}\\",\\"yield_time_ms\\":1000,\\"max_output_tokens\\":3000}","call_id":"call_exec_command_shell"}}\n`,
     );
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: transcriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: transcriptPath,
       prompt: "Update shell-note.txt via shell.",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     writeFileSync(join(testDir, "shell-note.txt"), "Shell path\n");
@@ -412,27 +386,19 @@ describe("agentnote codex", () => {
     const sessionId = "codex-session-missing-transcript";
     const missingTranscriptPath = join(testHome, ".codex", "sessions", "missing.jsonl");
 
-    const sessionStart = JSON.stringify({
+    runCodexHook({
       hook_event_name: "SessionStart",
       session_id: sessionId,
       transcript_path: missingTranscriptPath,
       model: "gpt-5-codex",
     });
-    execSync(`echo '${sessionStart}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
-    });
 
-    const promptEvent = JSON.stringify({
+    runCodexHook({
       hook_event_name: "UserPromptSubmit",
       session_id: sessionId,
       transcript_path: missingTranscriptPath,
       prompt: "Create missing-note.txt",
       model: "gpt-5-codex",
-    });
-    execSync(`echo '${promptEvent}' | node ${cliPath} hook --agent codex`, {
-      cwd: testDir,
-      env: { ...process.env, HOME: testHome },
     });
 
     writeFileSync(join(testDir, "missing-note.txt"), "Draft\n");

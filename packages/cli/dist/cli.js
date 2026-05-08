@@ -3139,14 +3139,6 @@ async function hasRecordableSessionData(sessionDir) {
     } catch {
     }
   }
-  const agent = await readSessionAgent(sessionDir);
-  if (agent === "codex") {
-    try {
-      const stats = await stat(join5(sessionDir, TRANSCRIPT_PATH_FILE));
-      if (stats.isFile() && stats.size > 0) return true;
-    } catch {
-    }
-  }
   return false;
 }
 var init_session = __esm({
@@ -3331,6 +3323,12 @@ async function recordCommitEntry(opts) {
   for (const i of allInteractions) {
     if (i.prompt_id) interactionsById.set(i.prompt_id, i);
   }
+  const currentUnattributedToolPromptIds = collectCurrentUnattributedToolPromptIds(
+    allInteractions,
+    promptEntries,
+    maxConsumedTurn,
+    currentTurn
+  );
   const transcriptEditsCommit = allInteractions.some(
     (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
   );
@@ -3352,7 +3350,7 @@ async function recordCommitEntry(opts) {
     const id = typeof entry2.prompt_id === "string" ? entry2.prompt_id : void 0;
     return !!id && interactionsById.has(id);
   });
-  if (hasTurnData && prompts.length === 0 && aiFiles.length === 0 && !transcriptEditsCommit && transcriptEditsOthers && !canUsePromptOnlyFallback) {
+  if (hasTurnData && prompts.length === 0 && aiFiles.length === 0 && !transcriptEditsCommit && transcriptEditsOthers && !canUsePromptOnlyFallback && currentUnattributedToolPromptIds.size === 0) {
     interactions = [];
   } else if (relevantPromptEntries.length > 0) {
     interactions = relevantPromptEntries.map((entry2) => {
@@ -3460,7 +3458,11 @@ async function recordCommitEntry(opts) {
       );
       useSelectableTranscriptAttribution = true;
     } else if (!crossTurnCommit && transcriptMatched.length === 0) {
-      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
+      interactions = selectTranscriptFallbackInteractions(
+        allInteractions,
+        commitFileSet,
+        currentUnattributedToolPromptIds
+      );
     } else {
       interactions = [];
     }
@@ -3619,9 +3621,31 @@ function filterInteractionCommitFiles(interaction, commitFileSet, consumedPrompt
     (file) => !consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file))
   );
 }
-function selectTranscriptFallbackInteractions(interactions, commitFileSet) {
+function selectTranscriptFallbackInteractions(interactions, commitFileSet, preferredPromptIds = /* @__PURE__ */ new Set()) {
+  const preferredToolBacked = preferredPromptIds.size > 0 ? [...interactions].reverse().find(
+    (interaction) => !!interaction.prompt_id && preferredPromptIds.has(interaction.prompt_id) && (interaction.tools?.length ?? 0) > 0
+  ) : void 0;
+  if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
   const latestToolBacked = [...interactions].reverse().find((interaction) => (interaction.tools?.length ?? 0) > 0);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+function collectCurrentUnattributedToolPromptIds(interactions, promptEntries, maxConsumedTurn, currentTurn) {
+  const candidatePromptIds = /* @__PURE__ */ new Set();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : void 0;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!promptId || turn <= maxConsumedTurn) continue;
+    if (currentTurn > 0 && turn > currentTurn) continue;
+    candidatePromptIds.add(promptId);
+  }
+  const unattributedToolPromptIds = /* @__PURE__ */ new Set();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id || !candidatePromptIds.has(interaction.prompt_id)) continue;
+    if ((interaction.tools?.length ?? 0) === 0) continue;
+    if ((interaction.files_touched ?? []).length > 0) continue;
+    unattributedToolPromptIds.add(interaction.prompt_id);
+  }
+  return unattributedToolPromptIds;
 }
 async function fillInteractionResponsesFromEvents(sessionDir, promptEntries, interactions) {
   if (interactions.length === 0 || promptEntries.length === 0) return;
@@ -4644,10 +4668,6 @@ for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
     break
   fi
 done
-SESSION_AGENT=$(cat "$SESSION_DIR/agent" 2>/dev/null | tr -d '\\n')
-if [ "$HAS_RECORDABLE_DATA" -ne 1 ] && [ "$SESSION_AGENT" = "codex" ] && [ -s "$SESSION_DIR/transcript_path" ]; then
-  HAS_RECORDABLE_DATA=1
-fi
 if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"

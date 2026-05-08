@@ -206,6 +206,28 @@ type ConsumedTailRevivalSimulationCase = {
   legacyKeep: boolean;
 };
 
+type CodexShellOnlyFallbackSimulationCase = {
+  name: string;
+  hasPromptWindow: boolean;
+  hasAiFiles: boolean;
+  transcriptEditsCommit: boolean;
+  transcriptEditsOthers: boolean;
+  canUsePromptOnlyFallback: boolean;
+  currentToolName:
+    | "none"
+    | "exec_command"
+    | "exec_file"
+    | "shell_command"
+    | "run_shell_command"
+    | "terminal"
+    | "terminal_command"
+    | "powershell"
+    | "unknown_shell_tool";
+  crossTurnCommit: boolean;
+  expectedSkip: boolean;
+  legacySkip: boolean;
+};
+
 const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE = 44;
 const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE = 55;
 const PROMPT_BOUNDARY_SIMULATION_LOW_SHAPE = 0;
@@ -597,6 +619,69 @@ function consumedTailSimulationShapeScore(
   return promptShape === "substantive" ? PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE : 0;
 }
 
+function buildCodexShellOnlyFallbackSimulationCases(): CodexShellOnlyFallbackSimulationCase[] {
+  const cases: CodexShellOnlyFallbackSimulationCase[] = [];
+  const currentToolNames: CodexShellOnlyFallbackSimulationCase["currentToolName"][] = [
+    "none",
+    "exec_command",
+    "exec_file",
+    "shell_command",
+    "run_shell_command",
+    "terminal",
+    "terminal_command",
+    "powershell",
+    "unknown_shell_tool",
+  ];
+
+  for (const hasPromptWindow of [false, true]) {
+    for (const hasAiFiles of [false, true]) {
+      for (const transcriptEditsCommit of [false, true]) {
+        for (const transcriptEditsOthers of [false, true]) {
+          for (const canUsePromptOnlyFallback of [false, true]) {
+            for (const currentToolName of currentToolNames) {
+              for (const crossTurnCommit of [false, true]) {
+                const promptCase = {
+                  hasPromptWindow,
+                  hasAiFiles,
+                  transcriptEditsCommit,
+                  transcriptEditsOthers,
+                  canUsePromptOnlyFallback,
+                  currentToolName,
+                  crossTurnCommit,
+                };
+                cases.push({
+                  name: `promptWindow=${hasPromptWindow}, aiFiles=${hasAiFiles}, commitEdit=${transcriptEditsCommit}, otherEdit=${transcriptEditsOthers}, fallback=${canUsePromptOnlyFallback}, currentTool=${currentToolName}, crossTurn=${crossTurnCommit}`,
+                  ...promptCase,
+                  expectedSkip: shouldSkipCodexHumanOnlySimulation(promptCase, "current"),
+                  legacySkip: shouldSkipCodexHumanOnlySimulation(promptCase, "legacy"),
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return cases;
+}
+
+function shouldSkipCodexHumanOnlySimulation(
+  promptCase: Omit<CodexShellOnlyFallbackSimulationCase, "name" | "expectedSkip" | "legacySkip">,
+  mode: "current" | "legacy",
+): boolean {
+  const hasCurrentUnattributedTool = promptCase.currentToolName !== "none";
+  const canUseCurrentToolFallback = hasCurrentUnattributedTool && !promptCase.crossTurnCommit;
+  return (
+    !promptCase.hasPromptWindow &&
+    !promptCase.hasAiFiles &&
+    !promptCase.transcriptEditsCommit &&
+    promptCase.transcriptEditsOthers &&
+    !promptCase.canUsePromptOnlyFallback &&
+    (mode === "legacy" || !canUseCurrentToolFallback)
+  );
+}
+
 describe("prompt task-boundary policy simulation", () => {
   it("separates stale primary revival from legitimate split-commit carryover across 100+ cases", () => {
     const cases = buildPromptBoundarySimulationCases();
@@ -720,6 +805,68 @@ describe("prompt task-boundary policy simulation", () => {
         )
         .every((promptCase) => promptCase.expectedKeep),
       "Codex prompt-only fallback must still be allowed to re-evaluate consumed tail prompts",
+    );
+  });
+
+  it("keeps current Codex shell-only tool turns from being hidden by old transcript edits across 100+ cases", () => {
+    const cases = buildCodexShellOnlyFallbackSimulationCases();
+    assert.ok(
+      cases.length >= 100,
+      `expected at least 100 shell-only fallback simulation cases, got ${cases.length}`,
+    );
+
+    const fixedLegacySkips = cases.filter(
+      (promptCase) => promptCase.legacySkip && !promptCase.expectedSkip,
+    );
+
+    for (const promptCase of cases) {
+      assert.equal(
+        shouldSkipCodexHumanOnlySimulation(promptCase, "current"),
+        promptCase.expectedSkip,
+        promptCase.name,
+      );
+    }
+
+    assert.ok(
+      fixedLegacySkips.length >= 8,
+      "the simulation should include legacy human-only skips rescued by current shell-only tool activity",
+    );
+    assert.ok(
+      fixedLegacySkips.every((promptCase) => promptCase.currentToolName !== "none"),
+      "only current no-file tool activity should rescue the prompt-only note",
+    );
+    assert.ok(
+      fixedLegacySkips.every((promptCase) => !promptCase.crossTurnCommit),
+      "cross-turn shell-only fallback stays disabled because it is too ambiguous",
+    );
+    assert.ok(
+      cases
+        .filter(
+          (promptCase) =>
+            promptCase.currentToolName === "none" &&
+            !promptCase.hasPromptWindow &&
+            !promptCase.hasAiFiles &&
+            !promptCase.transcriptEditsCommit &&
+            promptCase.transcriptEditsOthers &&
+            !promptCase.canUsePromptOnlyFallback,
+        )
+        .every((promptCase) => promptCase.expectedSkip),
+      "true human-only commits with only old file edits must still be skipped",
+    );
+    assert.ok(
+      cases
+        .filter(
+          (promptCase) =>
+            promptCase.crossTurnCommit &&
+            promptCase.currentToolName !== "none" &&
+            !promptCase.hasPromptWindow &&
+            !promptCase.hasAiFiles &&
+            !promptCase.transcriptEditsCommit &&
+            promptCase.transcriptEditsOthers &&
+            !promptCase.canUsePromptOnlyFallback,
+        )
+        .every((promptCase) => promptCase.expectedSkip),
+      "cross-turn shell-only activity must not be rescued without stronger evidence",
     );
   });
 });
@@ -2377,6 +2524,89 @@ describe("recordCommitEntry", () => {
         null,
         "human-only commit must not inherit transcript interactions for other files",
       );
+    } finally {
+      if (prevCodexHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = prevCodexHome;
+      }
+      rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it("transcript-driven Codex keeps prompt-only notes for current shell-only tool turns", async () => {
+    // PR #59 regression shape: the long Codex transcript contains old
+    // apply_patch edits for other files, while the current commit was made
+    // through a shell command that does not expose files_touched. The note must
+    // keep the current prompt/response without guessing AI-authored files.
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const prevCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+
+    writeFileSync(join(sessionDir, "agent"), "codex\n");
+
+    try {
+      const transcriptPath = join(codexHome, `${SESSION_ID}.jsonl`);
+      writeFileSync(
+        transcriptPath,
+        [
+          `{"timestamp":"2026-05-08T07:00:00Z","type":"session_meta","payload":{"id":"${SESSION_ID}","timestamp":"2026-05-08T07:00:00Z"}}`,
+          '{"timestamp":"2026-05-08T07:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"edit an unrelated file"}]}}',
+          '{"timestamp":"2026-05-08T07:00:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Editing unrelated.ts."}]}}',
+          '{"timestamp":"2026-05-08T07:00:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"old","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: unrelated.ts\\\\n+export const unrelated = true;\\\\n*** End Patch\\"}"}}',
+          '{"timestamp":"2026-05-08T07:10:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"normalize website agent names"}]}}',
+          '{"timestamp":"2026-05-08T07:10:02Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will update the website copy with a shell replacement."}]}}',
+          '{"timestamp":"2026-05-08T07:10:03Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"shell","arguments":"{\\"cmd\\":\\"perl -pi -e s/Cursor Preview/Cursor/g website/src/content/docs/agent-support.mdx\\"}"}}',
+        ].join("\n"),
+      );
+
+      writeFileSync(
+        join(sessionDir, PROMPTS_FILE),
+        '{"event":"prompt","prompt":"edit an unrelated file","prompt_id":"id-old","turn":1,"timestamp":"2026-05-08T07:00:01Z"}\n' +
+          '{"event":"prompt","prompt":"normalize website agent names","prompt_id":"id-current","turn":2,"timestamp":"2026-05-08T07:10:01Z"}\n',
+      );
+      writeFileSync(join(sessionDir, TURN_FILE), "2\n");
+      writeFileSync(
+        join(sessionDir, COMMITTED_PAIRS_FILE),
+        '{"turn":1,"prompt_id":"id-old","file":"unrelated.ts","prompt_scope":"primary"}\n',
+      );
+
+      const docPath = join(repoDir, "website/src/content/docs/agent-support.mdx");
+      mkdirSync(dirname(docPath), { recursive: true });
+      writeFileSync(docPath, "Cursor\nGemini CLI\n");
+      execSync("git add website/src/content/docs/agent-support.mdx", { cwd: repoDir });
+      execSync('git commit -m "docs: normalize agent names"', { cwd: repoDir });
+
+      const commitSha = execSync("git rev-parse HEAD", {
+        cwd: repoDir,
+        encoding: "utf-8",
+      }).trim();
+
+      await recordCommitEntry({
+        agentnoteDirPath,
+        sessionId: SESSION_ID,
+        transcriptPath,
+      });
+
+      const note = await readNote(commitSha);
+      assert.ok(note !== null, "current shell-only Codex work should still leave a note");
+      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
+      const interactions = note.interactions as Array<{
+        prompt: string;
+        response: string | null;
+        files_touched?: string[];
+        tools?: string[];
+      }>;
+      assert.deepEqual(
+        interactions.map((interaction) => interaction.prompt),
+        ["normalize website agent names"],
+      );
+      assert.equal(
+        interactions[0].response,
+        "I will update the website copy with a shell replacement.",
+      );
+      assert.equal(interactions[0].files_touched, undefined);
+      assert.deepEqual(interactions[0].tools, ["exec_command"]);
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;

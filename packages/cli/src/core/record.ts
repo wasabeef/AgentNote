@@ -261,6 +261,12 @@ export async function recordCommitEntry(opts: {
   for (const i of allInteractions) {
     if (i.prompt_id) interactionsById.set(i.prompt_id, i);
   }
+  const currentUnattributedToolPromptIds = collectCurrentUnattributedToolPromptIds(
+    allInteractions,
+    promptEntries,
+    maxConsumedTurn,
+    currentTurn,
+  );
 
   // Human-only commit shortcut: when turn tracking says this commit has no
   // AI-edited files AND the transcript shows AI editing OTHER files but not
@@ -312,7 +318,8 @@ export async function recordCommitEntry(opts: {
     aiFiles.length === 0 &&
     !transcriptEditsCommit &&
     transcriptEditsOthers &&
-    !canUsePromptOnlyFallback
+    !canUsePromptOnlyFallback &&
+    currentUnattributedToolPromptIds.size === 0
   ) {
     interactions = [];
   } else if (relevantPromptEntries.length > 0) {
@@ -448,7 +455,11 @@ export async function recordCommitEntry(opts: {
       );
       useSelectableTranscriptAttribution = true;
     } else if (!crossTurnCommit && transcriptMatched.length === 0) {
-      interactions = selectTranscriptFallbackInteractions(allInteractions, commitFileSet);
+      interactions = selectTranscriptFallbackInteractions(
+        allInteractions,
+        commitFileSet,
+        currentUnattributedToolPromptIds,
+      );
     } else {
       interactions = [];
     }
@@ -722,11 +733,57 @@ function filterInteractionCommitFiles(
 function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
+  preferredPromptIds = new Set<string>(),
 ): Interaction[] {
+  const preferredToolBacked =
+    preferredPromptIds.size > 0
+      ? [...interactions]
+          .reverse()
+          .find(
+            (interaction) =>
+              !!interaction.prompt_id &&
+              preferredPromptIds.has(interaction.prompt_id) &&
+              (interaction.tools?.length ?? 0) > 0,
+          )
+      : undefined;
+  if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
+
   const latestToolBacked = [...interactions]
     .reverse()
     .find((interaction) => (interaction.tools?.length ?? 0) > 0);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+
+/**
+ * Find current-window transcript turns that used tools without file evidence.
+ *
+ * Codex can edit through shell commands that do not expose `files_touched`.
+ * We keep those prompts as prompt-only notes, but never infer AI-authored files
+ * from the shell command itself.
+ */
+function collectCurrentUnattributedToolPromptIds(
+  interactions: TranscriptInteraction[],
+  promptEntries: Record<string, unknown>[],
+  maxConsumedTurn: number,
+  currentTurn: number,
+): Set<string> {
+  const candidatePromptIds = new Set<string>();
+  for (const entry of promptEntries) {
+    const promptId = typeof entry.prompt_id === "string" ? entry.prompt_id : undefined;
+    const turn = typeof entry.turn === "number" ? entry.turn : 0;
+    if (!promptId || turn <= maxConsumedTurn) continue;
+    if (currentTurn > 0 && turn > currentTurn) continue;
+    candidatePromptIds.add(promptId);
+  }
+
+  const unattributedToolPromptIds = new Set<string>();
+  for (const interaction of interactions) {
+    if (!interaction.prompt_id || !candidatePromptIds.has(interaction.prompt_id)) continue;
+    if ((interaction.tools?.length ?? 0) === 0) continue;
+    if ((interaction.files_touched ?? []).length > 0) continue;
+    unattributedToolPromptIds.add(interaction.prompt_id);
+  }
+  return unattributedToolPromptIds;
 }
 
 /** Fill missing responses from hook events for agents without transcript rows. */
