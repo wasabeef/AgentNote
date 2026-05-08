@@ -37491,6 +37491,9 @@ function renderRatioWithBar(ratio, width) {
 }
 /** Render the top summary lines before the per-commit table. */
 function renderHeader(report) {
+    if (report.total_commits > 0 && report.tracked_commits === 0) {
+        return ["**Total AI Ratio:** —", "**Agent Note data:** No tracked commits"];
+    }
     const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
     const lines = [line1];
     if (report.model) {

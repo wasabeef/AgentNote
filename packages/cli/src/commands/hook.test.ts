@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -8,6 +8,7 @@ import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
   EVENTS_FILE,
+  HEARTBEAT_FILE,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
@@ -126,6 +127,27 @@ describe("agent-note hook", () => {
     assert.ok(!existsSync(changesFile), "should not record Bash tool use");
   });
 
+  it("does not recreate heartbeat for filtered events after a session ended", () => {
+    const sessionId = "a1b2c3d4-0006-0006-0006-000000000006";
+    const event = JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: sessionId,
+      prompt: "<task-notification>background reminder</task-notification>",
+    });
+
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
+
+    const heartbeatPath = join(
+      testDir,
+      ".git",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
+      sessionId,
+      HEARTBEAT_FILE,
+    );
+    assert.ok(!existsSync(heartbeatPath), "filtered events should not recreate heartbeat");
+  });
+
   it("injects trailer on PreToolUse git commit", () => {
     const event = JSON.stringify({
       hook_event_name: "PreToolUse",
@@ -148,6 +170,26 @@ describe("agent-note hook", () => {
       result.hookSpecificOutput.updatedInput.command.includes(TRAILER_KEY),
       "should inject session trailer",
     );
+  });
+
+  it("refreshes heartbeat on commit hook events during long turns", () => {
+    const sessionId = "a1b2c3d4-0007-0007-0007-000000000007";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    const heartbeatPath = join(sessionDir, HEARTBEAT_FILE);
+    writeFileSync(heartbeatPath, "1");
+
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: sessionId,
+      tool_name: "Bash",
+      tool_input: { command: "git commit -m long-turn" },
+    });
+
+    execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, { cwd: testDir });
+
+    const heartbeat = Number.parseInt(readFileSync(heartbeatPath, "utf-8"), 10);
+    assert.ok(heartbeat > 1, "heartbeat should be refreshed before commit");
   });
 
   it("injects trailer on PreToolUse chained git add && git commit", () => {

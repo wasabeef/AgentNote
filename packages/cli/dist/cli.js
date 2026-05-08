@@ -5058,6 +5058,11 @@ async function readCurrentHead() {
     return null;
   }
 }
+async function refreshHeartbeat(agentnoteDirPath, sessionId, opts = {}) {
+  const heartbeatPath = join12(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+  if (opts.onlyIfExists && !existsSync12(heartbeatPath)) return;
+  await writeFile8(heartbeatPath, String(Date.now()));
+}
 async function hook(args2 = []) {
   const raw = await readStdin();
   let sync = false;
@@ -5079,10 +5084,7 @@ async function hook(args2 = []) {
     if (peekSid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(peekSid)) {
       try {
         const dir = await agentnoteDir();
-        const hbPath = join12(dir, SESSIONS_DIR, peekSid, HEARTBEAT_FILE);
-        if (existsSync12(hbPath)) {
-          await writeFile8(hbPath, String(Date.now()));
-        }
+        await refreshHeartbeat(dir, peekSid, { onlyIfExists: true });
       } catch {
       }
     }
@@ -5096,6 +5098,7 @@ async function hook(args2 = []) {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join12(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir6(sessionDir, { recursive: true });
+  await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   switch (event.kind) {
     case "session_start": {
       await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
@@ -5110,7 +5113,6 @@ async function hook(args2 = []) {
         agent: adapter.name,
         model: event.model ?? null
       });
-      await writeFile8(join12(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
     case "stop": {
@@ -5173,7 +5175,6 @@ async function hook(args2 = []) {
         turn,
         model: event.model ?? null
       });
-      await writeFile8(join12(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       if (adapter.name === "cursor") {
         process.stdout.write(JSON.stringify({ continue: true }));
       }
@@ -5491,6 +5492,80 @@ init_storage();
 init_git();
 import { existsSync as existsSync13 } from "node:fs";
 import { join as join13 } from "node:path";
+var REVIEWER_CONTEXT_MAX_CHANGED_AREAS = 4;
+var REVIEWER_CONTEXT_MAX_AREA_FILES = 3;
+var REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS = 2;
+var REVIEWER_CONTEXT_MAX_INTENT_SIGNALS = 4;
+var REVIEWER_CONTEXT_MAX_REVIEW_FOCUS = 4;
+var REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH = 150;
+var REVIEWER_CONTEXT_COMMENT_BEGIN = "<!-- agentnote-reviewer-context";
+var REVIEWER_CONTEXT_COMMENT_END = "-->";
+var REVIEWER_AREA_RULES = [
+  {
+    id: "tests",
+    label: "Tests",
+    matches: (path) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(path) || path.includes("/__tests__/") || path.includes("/test/") || path.includes("/tests/") || path.startsWith("test/") || path.startsWith("tests/")
+  },
+  {
+    id: "workflow",
+    label: "Workflows",
+    matches: (path) => path === "action.yml" || path === "action.yaml" || path.startsWith(".github/workflows/") || path.startsWith(".github/actions/") || path === ".github/dependabot.yml"
+  },
+  {
+    id: "docs",
+    label: "Documentation",
+    matches: (path) => path === "README.md" || /^README\.[a-z-]+\.md$/i.test(path) || path.startsWith("docs/") || path.startsWith("website/src/content/docs/") || /\.(md|mdx|rst|adoc)$/i.test(path)
+  },
+  {
+    id: "dependencies",
+    label: "Dependencies",
+    matches: (path) => path === "package.json" || path === "package-lock.json" || path === "pnpm-lock.yaml" || path === "yarn.lock" || path === "bun.lock" || path === "Cargo.toml" || path === "Cargo.lock" || path === "go.mod" || path === "go.sum" || path === "Gemfile" || path === "Gemfile.lock" || path === "pyproject.toml" || path === "poetry.lock" || path.endsWith("/package.json") || path.endsWith("/package-lock.json")
+  },
+  {
+    id: "config",
+    label: "Configuration",
+    matches: (path) => /(^|\/)(tsconfig|jsconfig|eslint|prettier|biome|vite|webpack|rollup|astro|next|nuxt|tailwind|postcss|babel|jest|vitest|playwright|cypress|docker-compose)(\.|$)/i.test(
+      path
+    ) || path === "Dockerfile" || path.endsWith(".config.js") || path.endsWith(".config.ts") || path.endsWith(".config.mjs") || path.endsWith(".config.cjs")
+  },
+  {
+    id: "generated",
+    label: "Generated outputs",
+    matches: (path) => path.includes("/dist/") || path.startsWith("dist/") || path.includes("/build/") || path.startsWith("build/") || path.endsWith(".generated.ts") || path.endsWith(".generated.js") || path.includes("/generated/")
+  },
+  {
+    id: "scripts",
+    label: "Scripts",
+    matches: (path) => path.startsWith("scripts/") || path.startsWith("tools/") || path.startsWith("bin/") || path.includes("/scripts/")
+  },
+  {
+    id: "frontend",
+    label: "Frontend",
+    matches: (path) => path.startsWith("src/components/") || path.startsWith("src/pages/") || path.startsWith("src/app/") || path.startsWith("src/styles/") || path.startsWith("public/") || path.includes("/components/") || path.includes("/pages/") || path.includes("/app/") || path.includes("/styles/") || /\.(css|scss|sass|less|astro|svelte|vue)$/i.test(path)
+  },
+  {
+    id: "backend",
+    label: "Backend",
+    matches: (path) => path.startsWith("api/") || path.startsWith("server/") || path.startsWith("routes/") || path.startsWith("controllers/") || path.startsWith("models/") || path.includes("/api/") || path.includes("/server/") || path.includes("/routes/") || path.includes("/controllers/") || path.includes("/models/")
+  },
+  {
+    id: "source",
+    label: "Source",
+    matches: () => true
+  }
+];
+var REVIEW_FOCUS_BY_AREA = {
+  docs: "Check that docs and examples match the implemented behavior without exposing internal development terminology.",
+  tests: "Check that tests cover behavior, edge cases, and regression risks rather than only snapshots.",
+  workflow: "Check that automation is safe for forks, retries, permissions, and existing deployment workflows.",
+  dependencies: "Check that dependency or package metadata changes are intentional and compatible with release expectations.",
+  config: "Check that configuration changes are scoped, documented, and consistent with the affected tooling.",
+  generated: "Check that generated outputs are consistent with source changes and were not hand-edited accidentally.",
+  scripts: "Check that scripts remain safe, idempotent, and clear about the files or services they touch.",
+  frontend: "Check user-facing behavior, accessibility, layout, and build output for the changed UI paths.",
+  backend: "Check API or server behavior, data handling, error paths, and compatibility with existing clients.",
+  source: "Compare the stated intent with the changed source files and the prompt evidence below."
+};
 async function collectReport(base, headRef = "HEAD", opts = {}) {
   const head = await git(["rev-parse", "--short", headRef]);
   const raw = await git(["log", "--reverse", "--format=%H	%h	%s", `${base}..${headRef}`]);
@@ -5618,6 +5693,9 @@ function renderRatioWithBar(ratio, width) {
   return `${renderProgressBar(ratio, width)} ${ratio}%`;
 }
 function renderHeader(report) {
+  if (report.total_commits > 0 && report.tracked_commits === 0) {
+    return ["**Total AI Ratio:** \u2014", "**Agent Note data:** No tracked commits"];
+  }
   const line1 = `**Total AI Ratio:** ${renderRatioWithBar(report.overall_ai_ratio, 8)}`;
   const lines = [line1];
   if (report.model) {
@@ -5642,6 +5720,10 @@ function renderMarkdown(report, opts = {}) {
   lines.push("");
   lines.push(...renderHeader(report));
   lines.push("");
+  const reviewerContext = renderReviewerContext(report, visibleInteractionsBySha);
+  if (reviewerContext.length > 0) {
+    lines.push(...reviewerContext);
+  }
   lines.push("| Commit | AI Ratio | Prompts | Files |");
   lines.push("|---|---|---|---|");
   for (const commit2 of report.commits) {
@@ -5709,6 +5791,145 @@ function renderMarkdown(report, opts = {}) {
     lines.push("</details>");
   }
   return lines.join("\n");
+}
+function renderReviewerContext(report, visibleInteractionsBySha) {
+  if (report.tracked_commits === 0) return [];
+  const changedAreas = collectReviewerChangedAreas(report);
+  const reviewFocus = collectReviewerFocus(changedAreas);
+  const intentSignals = collectReviewerIntentSignals(report, visibleInteractionsBySha);
+  if (changedAreas.length === 0 && reviewFocus.length === 0 && intentSignals.length === 0) {
+    return [];
+  }
+  const body = [
+    "Generated from Agent Note data. Use this as intent and review focus, not as proof that the implementation is correct.",
+    ""
+  ];
+  if (changedAreas.length > 0) {
+    body.push("Changed areas:", "");
+    for (const area of changedAreas) {
+      body.push(`- ${area.label}: ${formatReviewerAreaFiles(area)}`);
+    }
+    body.push("");
+  }
+  if (reviewFocus.length > 0) {
+    body.push("Review focus:", "");
+    for (const focus of reviewFocus) {
+      body.push(`- ${focus}`);
+    }
+    body.push("");
+  }
+  if (intentSignals.length > 0) {
+    body.push("Author intent signals:", "");
+    for (const signal of intentSignals) {
+      body.push(`- ${signal}`);
+    }
+    body.push("");
+  }
+  return [
+    REVIEWER_CONTEXT_COMMENT_BEGIN,
+    ...body.map(sanitizeReviewerCommentLine),
+    REVIEWER_CONTEXT_COMMENT_END,
+    ""
+  ];
+}
+function collectReviewerChangedAreas(report) {
+  const areaFiles = /* @__PURE__ */ new Map();
+  for (const commit2 of report.commits) {
+    if (commit2.session_id === null) continue;
+    for (const file of commit2.files) {
+      const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.matches(file.path));
+      const id = rule?.id ?? "source";
+      const files = areaFiles.get(id) ?? /* @__PURE__ */ new Set();
+      files.add(file.path);
+      areaFiles.set(id, files);
+    }
+  }
+  return [...areaFiles].map(([id, files]) => {
+    const rule = REVIEWER_AREA_RULES.find((candidate) => candidate.id === id);
+    return {
+      id,
+      label: rule?.label ?? "Source",
+      files: [...files].sort().slice(0, REVIEWER_CONTEXT_MAX_AREA_FILES),
+      totalFiles: files.size
+    };
+  }).sort((left, right) => right.totalFiles - left.totalFiles || left.label.localeCompare(right.label)).slice(0, REVIEWER_CONTEXT_MAX_CHANGED_AREAS).map(({ id, label, files, totalFiles }) => ({
+    id,
+    label,
+    files,
+    moreCount: Math.max(0, totalFiles - files.length)
+  }));
+}
+function collectReviewerFocus(areas) {
+  const focus = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const area of areas) {
+    const text = REVIEW_FOCUS_BY_AREA[area.id];
+    if (!seen.has(text)) {
+      focus.push(text);
+      seen.add(text);
+    }
+    if (focus.length >= REVIEWER_CONTEXT_MAX_REVIEW_FOCUS) break;
+  }
+  return focus;
+}
+function collectReviewerIntentSignals(report, visibleInteractionsBySha) {
+  const signals = [];
+  const seen = /* @__PURE__ */ new Set();
+  const primarySignals = [];
+  const fallbackSignals = [];
+  let commitSignalCount = 0;
+  const trackedCommitsNewestFirst = report.commits.filter((commit2) => commit2.session_id !== null).toReversed();
+  for (const commit2 of trackedCommitsNewestFirst) {
+    if (commitSignalCount < REVIEWER_CONTEXT_MAX_COMMIT_INTENT_SIGNALS) {
+      pushReviewerSignal(signals, seen, `Commit: ${commit2.message}`);
+      commitSignalCount += 1;
+    }
+    for (const interaction of visibleInteractionsBySha.get(commit2.sha) ?? []) {
+      const target = isPrimaryReviewerInteraction(interaction) ? primarySignals : fallbackSignals;
+      const context = renderInteractionContext(interaction);
+      if (context) {
+        target.push(`Context: ${context}`);
+      }
+      target.push(`Prompt: ${interaction.prompt}`);
+    }
+  }
+  for (const signal of [...primarySignals, ...fallbackSignals]) {
+    pushReviewerSignal(signals, seen, signal);
+    if (signals.length >= REVIEWER_CONTEXT_MAX_INTENT_SIGNALS) return signals;
+  }
+  return signals;
+}
+function isPrimaryReviewerInteraction(interaction) {
+  const signals = interaction.selection?.signals ?? [];
+  return interaction.selection?.source === "primary" || signals.includes("primary_edit_turn") || signals.includes("exact_commit_path") || signals.includes("diff_identifier");
+}
+function pushReviewerSignal(signals, seen, rawSignal) {
+  const signal = formatReviewerSnippet(rawSignal);
+  if (!signal || seen.has(signal)) return;
+  signals.push(signal);
+  seen.add(signal);
+}
+function formatReviewerSnippet(value) {
+  const compact = value.replaceAll("\n", " ").replace(/\s+/g, " ").replace(/^#+\s*/, "").trim();
+  if (!compact) return "";
+  const clipped = compact.length > REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH ? `${compact.slice(0, REVIEWER_CONTEXT_SNIPPET_MAX_LENGTH)}\u2026` : compact;
+  return escapeInlineText(clipped);
+}
+function escapeInlineText(value) {
+  return value.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+function sanitizeReviewerCommentLine(value) {
+  return escapeInlineText(value).replaceAll("--", "- -");
+}
+function formatInlineCode(value) {
+  return `\`${value.replaceAll("`", "\\`")}\``;
+}
+function formatReviewerAreaFiles(area) {
+  const files = area.files.map(formatInlineCode);
+  if (area.moreCount > 0) {
+    files.push(`${area.moreCount} more`);
+  }
+  return files.join(", ");
 }
 function renderPromptSummary(visible, total, detail) {
   if (detail === "full" || visible === total) return `${total} total`;

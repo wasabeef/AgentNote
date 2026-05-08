@@ -103,6 +103,21 @@ async function readCurrentHead(): Promise<string | null> {
   }
 }
 
+type RefreshHeartbeatOptions = {
+  onlyIfExists?: boolean;
+};
+
+/** Keep a live session fresh while long agent turns emit tool/response events. */
+async function refreshHeartbeat(
+  agentnoteDirPath: string,
+  sessionId: string,
+  opts: RefreshHeartbeatOptions = {},
+): Promise<void> {
+  const heartbeatPath = join(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+  if (opts.onlyIfExists && !existsSync(heartbeatPath)) return;
+  await writeFile(heartbeatPath, String(Date.now()));
+}
+
 /** Handle one normalized agent hook event from stdin. */
 export async function hook(args: string[] = []): Promise<void> {
   const raw = await readStdin();
@@ -134,10 +149,7 @@ export async function hook(args: string[] = []): Promise<void> {
     ) {
       try {
         const dir = await agentnoteDir();
-        const hbPath = join(dir, SESSIONS_DIR, peekSid, HEARTBEAT_FILE);
-        if (existsSync(hbPath)) {
-          await writeFile(hbPath, String(Date.now()));
-        }
+        await refreshHeartbeat(dir, peekSid, { onlyIfExists: true });
       } catch {
         // Never break the agent workflow for heartbeat refresh.
       }
@@ -154,6 +166,7 @@ export async function hook(args: string[] = []): Promise<void> {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir(sessionDir, { recursive: true });
+  await refreshHeartbeat(agentnoteDirPath, event.sessionId);
 
   switch (event.kind) {
     case "session_start": {
@@ -169,7 +182,6 @@ export async function hook(args: string[] = []): Promise<void> {
         agent: adapter.name,
         model: event.model ?? null,
       });
-      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       break;
     }
 
@@ -259,7 +271,6 @@ export async function hook(args: string[] = []): Promise<void> {
         turn,
         model: event.model ?? null,
       });
-      await writeFile(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
       if (adapter.name === "cursor") {
         process.stdout.write(JSON.stringify({ continue: true }));
       }

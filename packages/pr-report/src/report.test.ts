@@ -58,6 +58,56 @@ function extractReviewerContext(markdown: string): string {
 }
 
 describe("renderMarkdown", () => {
+  it("separates missing Agent Note data from a true zero AI ratio", () => {
+    const missingReport = baseReport({
+      tracked_commits: 0,
+      total_prompts: 0,
+      total_files: 0,
+      total_files_ai: 0,
+      overall_ai_ratio: 0,
+      model: null,
+      commits: [
+        {
+          sha: "def456789012",
+          short: "def4567",
+          message: "feat: human commit without note",
+          session_id: null,
+          model: null,
+          ai_ratio: null,
+          attribution_method: null,
+          prompts_count: 0,
+          files_total: 0,
+          files_ai: 0,
+          files: [],
+          interactions: [],
+          attribution: null,
+        },
+      ],
+    });
+    const trueZeroReport = baseReport({
+      overall_ai_ratio: 0,
+      commits: [
+        {
+          ...baseReport().commits[0],
+          ai_ratio: 0,
+          attribution: {
+            ai_ratio: 0,
+            method: "file",
+          },
+        },
+      ],
+    });
+
+    const missingMarkdown = renderMarkdown(missingReport);
+    const trueZeroMarkdown = renderMarkdown(trueZeroReport);
+
+    assert.ok(missingMarkdown.includes("**Total AI Ratio:** —"));
+    assert.ok(missingMarkdown.includes("**Agent Note data:** No tracked commits"));
+    assert.ok(!missingMarkdown.includes("**Total AI Ratio:** ░░░░░░░░ 0%"));
+    assert.ok(trueZeroMarkdown.includes("**Total AI Ratio:** ░░░░░░░░ 0%"));
+    assert.ok(!trueZeroMarkdown.includes("No tracked commits"));
+  });
+
   it("renders hidden reviewer context before the commit table", () => {
     const base = baseReport();
     const markdown = renderMarkdown(

@@ -49,6 +49,8 @@ La mayoría de problemas vienen de git hooks locales, git notes faltantes o conf
 
 Agent Note no escribe note para commits donde no puede asociar ningún archivo commitado con el agente.
 
+Si el header muestra `Total AI Ratio: —` y `Agent Note data: No tracked commits`, la PR tiene commits pero no se encontraron datos de Agent Note para ellos. No es lo mismo que un AI ratio real de `0%`.
+
 ## Faltan prompts
 
 Prompt selection usa la ventana commit-to-commit, no toda la sesión.
