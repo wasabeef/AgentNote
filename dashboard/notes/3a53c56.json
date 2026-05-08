@@ -1037,6 +1037,6 @@
   "pull_request": {
     "number": 59,
     "title": "docs: promote Codex CLI support status",
-    "state": "open"
+    "state": "merged"
   }
 }
