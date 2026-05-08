@@ -103,7 +103,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在 
 
 ### 将生成的 Bundle 排除在 AI Ratio 之外
 
-如果提交的 bundle 或 generated output 需要继续显示，但不应影响 AI Ratio，请把它们写入 `.agentnoteignore`：
+如果提交的 bundle 或 generated output 需要继续显示，但不应影响 AI Ratio，请把它们写入 repository root 的 `.agentnoteignore`：
 
 ```gitignore
 packages/cli/dist/**

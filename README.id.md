@@ -103,7 +103,7 @@ Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `
 
 ### Keluarkan generated bundle dari AI Ratio
 
-Jika bundle atau generated output yang di-commit harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tambahkan ke `.agentnoteignore`:
+Jika bundle atau generated output yang di-commit harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tambahkan ke `.agentnoteignore` di repository root:
 
 ```gitignore
 packages/cli/dist/**

@@ -103,7 +103,7 @@ Temporary Session Data находятся в `.git/agentnote/`. Permanent Record
 
 ### Исключить generated bundles из AI Ratio
 
-Если закоммиченные bundles или generated outputs должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в `.agentnoteignore`:
+Если закоммиченные bundles или generated outputs должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в файл `.agentnoteignore` в корне репозитория:
 
 ```gitignore
 packages/cli/dist/**

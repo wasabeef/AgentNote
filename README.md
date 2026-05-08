@@ -103,7 +103,7 @@ Temporary session data lives under `.git/agentnote/`. The permanent record lives
 
 ### Keep generated bundles out of AI Ratio
 
-If committed bundles or generated outputs should stay visible but not affect AI Ratio, add them to `.agentnoteignore`:
+If committed bundles or generated outputs should stay visible but not affect AI Ratio, add them to the repository-root `.agentnoteignore`:
 
 ```gitignore
 packages/cli/dist/**

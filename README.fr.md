@@ -103,7 +103,7 @@ Les données temporaires de Session vivent sous `.git/agentnote/`. L'enregistrem
 
 ### Exclure les bundles générés de l’AI Ratio
 
-Si des bundles ou generated outputs commités doivent rester visibles sans influencer l’AI Ratio, ajoutez-les à `.agentnoteignore`:
+Si des bundles ou generated outputs commités doivent rester visibles sans influencer l’AI Ratio, ajoutez-les au `.agentnoteignore` à la racine du repository :
 
 ```gitignore
 packages/cli/dist/**

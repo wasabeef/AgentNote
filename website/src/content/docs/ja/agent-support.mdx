@@ -83,6 +83,6 @@ Gemini CLI は file edit の `BeforeTool` / `AfterTool` と、prompt / response 
 - agent が触った committed file を見つけられない commit には note を書きません。
 - 古い commit window に属する prompt は省略されることがあります。
 - agent が hook や transcript で response を公開しない場合、response は空になることがあります。
-- generated artifact と `.agentnoteignore` に書いた path は AI ratio の分母から除外できます。
+- generated artifact と repository root の `.agentnoteignore` に書いた path は AI ratio の分母から除外できます。
 
 具体的な確認は [Troubleshooting](./troubleshooting/) から始めてください。

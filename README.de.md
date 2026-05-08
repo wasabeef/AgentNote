@@ -103,7 +103,7 @@ Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record li
 
 ### Generierte Bundles aus der AI Ratio herausnehmen
 
-Wenn committete Bundles oder generated outputs sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, trage sie in `.agentnoteignore` ein:
+Wenn committete Bundles oder generated outputs sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, trage sie in die `.agentnoteignore` im Repository-Root ein:
 
 ```gitignore
 packages/cli/dist/**

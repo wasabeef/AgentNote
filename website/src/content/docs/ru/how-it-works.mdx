@@ -153,7 +153,7 @@ Agent Note и Entire решают похожие, но разные задачи
 </Aside>
 
 <Aside>
-  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort по конкретным сигналам: путям framework/cache, generated именам или суффиксам файлов и заголовкам закоммиченных файлов. Общих имён директорий вроде `build/`, `dist/`, `gen/`, `generated/` и `target/` самих по себе недостаточно. Если repository коммитит bundles или generated outputs, которые должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в `.agentnoteignore`.
+  Распространённые generated artifacts исключаются из знаменателя `AI ratio` в best effort по конкретным сигналам: путям framework/cache, generated именам или суффиксам файлов и заголовкам закоммиченных файлов. Общих имён директорий вроде `build/`, `dist/`, `gen/`, `generated/` и `target/` самих по себе недостаточно. Если repository коммитит bundles или generated outputs, которые должны оставаться видимыми, но не влиять на AI Ratio, добавьте их в файл `.agentnoteignore` в корне репозитория.
 </Aside>
 
 ## Жизненный цикл сессии

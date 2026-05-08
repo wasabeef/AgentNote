@@ -4182,6 +4182,7 @@ function compileAgentnoteIgnorePattern(line) {
   const anchored = rawPattern.startsWith("/");
   const pattern = rawPattern.replace(/^\/+/, "").replace(/\/+$/, "");
   if (!pattern) return null;
+  if (isAgentnoteIgnorePatternTooComplex(pattern)) return null;
   const hasSlash = pattern.includes("/");
   const prefix = anchored || hasSlash ? "^" : "(?:^|/)";
   const suffix = directoryOnly || !hasSlash ? "(?:/.*)?$" : "$";
@@ -4189,6 +4190,12 @@ function compileAgentnoteIgnorePattern(line) {
     negated,
     regex: new RegExp(`${prefix}${globPatternToRegex(pattern)}${suffix}`)
   };
+}
+function isAgentnoteIgnorePatternTooComplex(pattern) {
+  if (pattern.length > AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH) return true;
+  const wildcardTokens = pattern.match(/\*\*|\*/g)?.length ?? 0;
+  if (wildcardTokens > AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS) return true;
+  return AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE.test(pattern);
 }
 function globPatternToRegex(pattern) {
   let regex = "";
@@ -4674,6 +4681,7 @@ async function ensureEmptyBlobInStore() {
     }
   }
 }
+var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH, AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS, AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE;
 var init_record = __esm({
   "src/core/record.ts"() {
     "use strict";
@@ -4688,6 +4696,9 @@ var init_record = __esm({
     init_prompt_window();
     init_session();
     init_storage();
+    AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
+    AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
+    AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
   }
 });
 

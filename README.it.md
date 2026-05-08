@@ -103,7 +103,7 @@ I dati temporanei di sessione vivono sotto `.git/agentnote/`. Il Record permanen
 
 ### Escludere i bundle generati dall’AI Ratio
 
-Se bundle o generated output committati devono restare visibili ma non influenzare l’AI Ratio, aggiungili a `.agentnoteignore`:
+Se bundle o generated output committati devono restare visibili ma non influenzare l’AI Ratio, aggiungili alla `.agentnoteignore` nella root del repository:
 
 ```gitignore
 packages/cli/dist/**

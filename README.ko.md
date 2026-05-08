@@ -103,7 +103,7 @@ Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanen
 
 ### Generated Bundle 을 AI Ratio 에서 제외하기
 
-Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에는 반영하지 않으려면 `.agentnoteignore` 에 추가하세요.
+Commit 에 남겨야 하는 bundle 이나 generated output 을 계속 표시하되 AI Ratio 에는 반영하지 않으려면 repository root 의 `.agentnoteignore` 에 추가하세요.
 
 ```gitignore
 packages/cli/dist/**

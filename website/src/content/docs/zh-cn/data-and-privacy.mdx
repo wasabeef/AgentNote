@@ -26,7 +26,7 @@ Agent Note 面向希望保留 AI review history、但不想依赖 hosted backend
 | `attribution` | AI ratio、method 和 line counts |
 | `agent` / `model` | agent 与 model metadata |
 
-匹配 `.agentnoteignore` 的 path 仍会保留在 `files` 中，只会从 AI Ratio 的分母里排除。
+匹配 repository root 的 `.agentnoteignore` 的 path 仍会保留在 `files` 中，只会从 AI Ratio 的分母里排除。
 
 完整 schema 见 [工作原理](./how-it-works/#note-schema)。
 

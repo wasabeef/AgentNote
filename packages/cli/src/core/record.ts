@@ -56,6 +56,10 @@ type AgentnoteIgnorePattern = {
   regex: RegExp;
 };
 
+const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
+const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
+const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
+
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
   agentnoteDirPath: string;
@@ -1319,6 +1323,7 @@ function compileAgentnoteIgnorePattern(line: string): AgentnoteIgnorePattern | n
   const anchored = rawPattern.startsWith("/");
   const pattern = rawPattern.replace(/^\/+/, "").replace(/\/+$/, "");
   if (!pattern) return null;
+  if (isAgentnoteIgnorePatternTooComplex(pattern)) return null;
 
   const hasSlash = pattern.includes("/");
   const prefix = anchored || hasSlash ? "^" : "(?:^|/)";
@@ -1327,6 +1332,13 @@ function compileAgentnoteIgnorePattern(line: string): AgentnoteIgnorePattern | n
     negated,
     regex: new RegExp(`${prefix}${globPatternToRegex(pattern)}${suffix}`),
   };
+}
+
+function isAgentnoteIgnorePatternTooComplex(pattern: string): boolean {
+  if (pattern.length > AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH) return true;
+  const wildcardTokens = pattern.match(/\*\*|\*/g)?.length ?? 0;
+  if (wildcardTokens > AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS) return true;
+  return AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE.test(pattern);
 }
 
 function globPatternToRegex(pattern: string): string {

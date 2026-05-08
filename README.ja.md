@@ -103,7 +103,7 @@ Agent Note は Commit の文脈を保存します。
 
 ### Generated Bundle を AI Ratio から外す
 
-Commit には残したい bundle や generated output を、AI Ratio だけから外したい場合は `.agentnoteignore` に書きます。
+Commit には残したい bundle や generated output を、AI Ratio だけから外したい場合は repository root の `.agentnoteignore` に書きます。
 
 ```gitignore
 packages/cli/dist/**
