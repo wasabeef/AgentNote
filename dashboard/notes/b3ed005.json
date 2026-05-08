@@ -1488,6 +1488,6 @@
   "pull_request": {
     "number": 60,
     "title": "fix(record): preserve Codex shell-only prompt notes",
-    "state": "open"
+    "state": "merged"
   }
 }
