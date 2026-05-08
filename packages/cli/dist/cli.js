@@ -60,7 +60,9 @@ import { promisify } from "node:util";
 async function git(args2, options) {
   const { stdout } = await execFileAsync(GIT_BINARY, args2, {
     cwd: options?.cwd,
-    encoding: TEXT_ENCODING
+    encoding: TEXT_ENCODING,
+    env: options?.env,
+    timeout: options?.timeout
   });
   return stdout.trim();
 }
@@ -5340,7 +5342,7 @@ async function hook(args2 = []) {
     }
     if (adapter.name === AGENT_NAMES.gemini && input.sync) {
       if (isRecord4(peek) && peek.hook_event_name === GEMINI_BEFORE_TOOL_EVENT) {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
     }
     return;
@@ -5460,7 +5462,7 @@ async function hook(args2 = []) {
         tool_use_id: event.toolUseId ?? null
       });
       if (adapter.name === AGENT_NAMES.gemini) {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
       break;
     }
@@ -5965,7 +5967,8 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
   };
 }
 function renderProgressBar(ratio, width = DEFAULT_PROGRESS_BAR_WIDTH) {
-  const filled = Math.round(ratio / PERCENT_DENOMINATOR2 * width);
+  const normalizedRatio = Math.min(PERCENT_DENOMINATOR2, Math.max(0, ratio));
+  const filled = Math.round(normalizedRatio / PERCENT_DENOMINATOR2 * width);
   return "\u2588".repeat(filled) + "\u2591".repeat(width - filled);
 }
 function renderRatioWithBar(ratio, width) {
@@ -6358,9 +6361,7 @@ async function pr(args2) {
 // src/commands/push-notes.ts
 init_constants();
 init_git();
-import { execFileSync as execFileSync2 } from "node:child_process";
 var NOTES_PUSH_TIMEOUT_MS = 1e4;
-var GIT_BINARY2 = "git";
 var ENV_AGENTNOTE_PUSHING = "AGENTNOTE_PUSHING";
 var ENV_GIT_TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT";
 var ENV_TRUE = "1";
@@ -6370,8 +6371,7 @@ async function pushNotes(args2) {
   const { exitCode } = await gitSafe(["rev-parse", "--verify", NOTES_REF_FULL]);
   if (exitCode !== 0) return;
   try {
-    execFileSync2(GIT_BINARY2, ["push", remote, NOTES_REF_FULL], {
-      stdio: "ignore",
+    await git(["push", remote, NOTES_REF_FULL], {
       timeout: NOTES_PUSH_TIMEOUT_MS,
       env: {
         ...process.env,
@@ -6869,6 +6869,13 @@ usage:
 `.trim();
 var command = process.argv[2];
 var args = process.argv.slice(3);
+function parseLogCountArg(value) {
+  if (!value) return DEFAULT_LOG_COUNT;
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  console.error(`invalid log count: ${value} (expected a positive integer)`);
+  process.exit(1);
+}
 switch (command) {
   case "init":
     await init(args);
@@ -6883,7 +6890,7 @@ switch (command) {
     await show(args[0]);
     break;
   case "log":
-    await log(args[0] ? parseInt(args[0], 10) : DEFAULT_LOG_COUNT);
+    await log(parseLogCountArg(args[0]));
     break;
   case "pr":
     await pr(args);

@@ -36990,6 +36990,8 @@ async function git(args, options) {
     const { stdout } = await git_execFileAsync(GIT_BINARY, args, {
         cwd: options?.cwd,
         encoding: constants_TEXT_ENCODING,
+        env: options?.env,
+        timeout: options?.timeout,
     });
     return stdout.trim();
 }
@@ -37523,7 +37525,8 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
 }
 /** Render a fixed-width text progress bar for compact Markdown tables. */
 function renderProgressBar(ratio, width = DEFAULT_PROGRESS_BAR_WIDTH) {
-    const filled = Math.round((ratio / report_PERCENT_DENOMINATOR) * width);
+    const normalizedRatio = Math.min(report_PERCENT_DENOMINATOR, Math.max(0, ratio));
+    const filled = Math.round((normalizedRatio / report_PERCENT_DENOMINATOR) * width);
     return "█".repeat(filled) + "░".repeat(width - filled);
 }
 /** Render AI ratio as `bar percentage` for stable table alignment. */
@@ -37928,7 +37931,6 @@ const ACTION_OUTPUT_NAMES = {
 const AGENTNOTE_NOTES_REFSPEC = `${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
 const DASHBOARD_PREVIEW_HELP_URL = "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
 const DEFAULT_BASE_BRANCH = "main";
-const DEFAULT_OVERALL_METHOD = "file";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
@@ -38087,7 +38089,7 @@ async function run() {
         report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);
         const json = JSON.stringify(report, null, JSON_INDENT_SPACES);
         setOutput(ACTION_OUTPUT_NAMES.overallAiRatio, String(report.overall_ai_ratio ?? 0));
-        setOutput(ACTION_OUTPUT_NAMES.overallMethod, String(report.overall_method ?? DEFAULT_OVERALL_METHOD));
+        setOutput(ACTION_OUTPUT_NAMES.overallMethod, report.overall_method);
         setOutput(ACTION_OUTPUT_NAMES.trackedCommits, String(report.tracked_commits ?? 0));
         setOutput(ACTION_OUTPUT_NAMES.totalCommits, String(report.total_commits ?? 0));
         setOutput(ACTION_OUTPUT_NAMES.totalPrompts, String(report.total_prompts ?? 0));

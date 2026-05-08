@@ -420,7 +420,8 @@ export async function collectReport(
 
 /** Render a fixed-width text progress bar for compact Markdown tables. */
 export function renderProgressBar(ratio: number, width = DEFAULT_PROGRESS_BAR_WIDTH): string {
-  const filled = Math.round((ratio / PERCENT_DENOMINATOR) * width);
+  const normalizedRatio = Math.min(PERCENT_DENOMINATOR, Math.max(0, ratio));
+  const filled = Math.round((normalizedRatio / PERCENT_DENOMINATOR) * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 

@@ -27,7 +27,6 @@ const ACTION_OUTPUT_NAMES = {
 const AGENTNOTE_NOTES_REFSPEC = `${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
 const DASHBOARD_PREVIEW_HELP_URL = "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
 const DEFAULT_BASE_BRANCH = "main";
-const DEFAULT_OVERALL_METHOD = "file";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
@@ -221,10 +220,7 @@ async function run(): Promise<void> {
 		const json = JSON.stringify(report, null, JSON_INDENT_SPACES);
 
 		core.setOutput(ACTION_OUTPUT_NAMES.overallAiRatio, String(report.overall_ai_ratio ?? 0));
-		core.setOutput(
-			ACTION_OUTPUT_NAMES.overallMethod,
-			String(report.overall_method ?? DEFAULT_OVERALL_METHOD),
-		);
+		core.setOutput(ACTION_OUTPUT_NAMES.overallMethod, report.overall_method);
 		core.setOutput(ACTION_OUTPUT_NAMES.trackedCommits, String(report.tracked_commits ?? 0));
 		core.setOutput(ACTION_OUTPUT_NAMES.totalCommits, String(report.total_commits ?? 0));
 		core.setOutput(ACTION_OUTPUT_NAMES.totalPrompts, String(report.total_prompts ?? 0));

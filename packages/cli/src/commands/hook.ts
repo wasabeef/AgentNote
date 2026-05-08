@@ -173,7 +173,7 @@ export async function hook(args: string[] = []): Promise<void> {
     // Gemini BeforeTool requires {"decision": "allow"} even for unrecognized tools.
     if (adapter.name === AGENT_NAMES.gemini && input.sync) {
       if (isRecord(peek) && peek.hook_event_name === GEMINI_BEFORE_TOOL_EVENT) {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
     }
     return;
@@ -334,7 +334,7 @@ export async function hook(args: string[] = []): Promise<void> {
 
       // Gemini BeforeTool requires {"decision": "allow"} on stdout.
       if (adapter.name === AGENT_NAMES.gemini) {
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
       }
       break;
     }

@@ -1,9 +1,7 @@
-import { execFileSync } from "node:child_process";
 import { NOTES_REF_FULL } from "../core/constants.js";
-import { gitSafe } from "../git.js";
+import { git, gitSafe } from "../git.js";
 
 const NOTES_PUSH_TIMEOUT_MS = 10_000;
-const GIT_BINARY = "git";
 const ENV_AGENTNOTE_PUSHING = "AGENTNOTE_PUSHING";
 const ENV_GIT_TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT";
 const ENV_TRUE = "1";
@@ -21,8 +19,7 @@ export async function pushNotes(args: string[]): Promise<void> {
   if (exitCode !== 0) return;
 
   try {
-    execFileSync(GIT_BINARY, ["push", remote, NOTES_REF_FULL], {
-      stdio: "ignore",
+    await git(["push", remote, NOTES_REF_FULL], {
       timeout: NOTES_PUSH_TIMEOUT_MS,
       env: {
         ...process.env,

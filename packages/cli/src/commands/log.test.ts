@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,5 +65,23 @@ describe("agentnote log", () => {
 
     const lines = output.trim().split("\n");
     assert.equal(lines.length, 1, "should show only 1 commit");
+  });
+
+  it("rejects invalid count arguments before calling git log", () => {
+    const runInvalidLog = (value: string): string => {
+      try {
+        execFileSync("node", [cliPath, "log", value], {
+          cwd: testDir,
+          encoding: "utf-8",
+          stdio: "pipe",
+        });
+      } catch (error) {
+        return String((error as { stderr?: unknown }).stderr ?? "");
+      }
+      assert.fail(`expected agent-note log ${value} to fail`);
+    };
+
+    assert.match(runInvalidLog("0"), /invalid log count: 0/);
+    assert.match(runInvalidLog("1.5"), /invalid log count: 1\.5/);
   });
 });

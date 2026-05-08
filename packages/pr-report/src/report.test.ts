@@ -108,6 +108,23 @@ describe("renderMarkdown", () => {
     assert.ok(!trueZeroMarkdown.includes("No tracked commits"));
   });
 
+  it("clamps malformed AI ratios while rendering progress bars", () => {
+    const markdown = renderMarkdown(
+      baseReport({
+        overall_ai_ratio: 150,
+        commits: [
+          {
+            ...baseReport().commits[0],
+            ai_ratio: 150,
+          },
+        ],
+      }),
+    );
+
+    assert.ok(markdown.includes("**Total AI Ratio:** ████████ 150%"));
+    assert.ok(markdown.includes("| █████ 150% | 1 |"));
+  });
+
   it("renders hidden reviewer context before the commit table", () => {
     const base = baseReport();
     const markdown = renderMarkdown(

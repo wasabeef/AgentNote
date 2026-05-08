@@ -1,3 +1,4 @@
+import type { ExecFileOptionsWithStringEncoding } from "node:child_process";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { TEXT_ENCODING } from "./core/constants.js";
@@ -34,10 +35,15 @@ type GitCommitCommand = {
 };
 
 /** Run a git command through `execFile` and return trimmed stdout. */
-export async function git(args: string[], options?: { cwd?: string }): Promise<string> {
+export async function git(
+  args: string[],
+  options?: Pick<ExecFileOptionsWithStringEncoding, "cwd" | "env" | "timeout">,
+): Promise<string> {
   const { stdout } = await execFileAsync(GIT_BINARY, args, {
     cwd: options?.cwd,
     encoding: TEXT_ENCODING,
+    env: options?.env,
+    timeout: options?.timeout,
   });
   return stdout.trim();
 }
@@ -45,7 +51,7 @@ export async function git(args: string[], options?: { cwd?: string }): Promise<s
 /** Run a git command and return stdout plus exit code instead of throwing. */
 export async function gitSafe(
   args: string[],
-  options?: { cwd?: string },
+  options?: Pick<ExecFileOptionsWithStringEncoding, "cwd" | "env" | "timeout">,
 ): Promise<{ stdout: string; exitCode: number }> {
   try {
     const stdout = await git(args, options);
