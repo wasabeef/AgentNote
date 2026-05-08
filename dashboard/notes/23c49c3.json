@@ -1,0 +1,245 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T13:16:19.151Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージしました",
+      "response": "マージ確認しました。PR #60 の作業は完了です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/60#issuecomment-4406600171 を確認してほしい。\nCodeRabbit を導入したので別ブランチで設定ファイル作成して",
+      "response": "CodeRabbit のコメント内容と公式の設定形式を確認してから、main を最新化して専用ブランチを切ります。設定は repo 全体に効くので、まずコメントの意図を外さないように読みます。\nCodeRabbit 側の原因は、default branch 以外を base にした PR が自動レビュー対象外だったことでした。公式 docs では `.coderabbit.yaml` の `reviews.auto_review.base_branches` に regex を追加できるので、この repo は全 branch base の PR をレビュー対象にする設定にします。\n設定は公式 schema v2 を使い、今回の skip 原因に効く `base_branches: [\".*\"]` を入れます。ついでに draft PR も対象にして、この repo の活発な小刻み push に合わせて auto-pause は切ります。\n公式 reference で使った key は確認できました。`base_branches` は「default branch 以外の base branch を regex で指定、`.*` で全 branch」と明記されているので、今回の skip にはこれが本筋です。YAML と差分を軽く検証します。\n`.coderabbit.yaml` を作成しました。ブランチは `chore/coderabbit-config` です。\n\n主な設定:\n- `reviews.auto_review.base_branches: [\".*\"]` で default branch 以外を base にした PR も自動レビュー対象にする\n- `drafts: true` で draft PR もレビュー対象\n- `auto_pause_after_reviewed_commits: 0` で小刻み push でも自動レビューを止めない\n- `path_instructions` で CLI / Agent adapters / PR Report / Dashboard / docs / workflows ごとにレビュー観点を指定\n- generated `dist` / `node_modules` / `website/dist` は review 対象外\n\n確認済み:\n`ruby` で YAML parse OK\n`git diff --check` OK\n\n参考:\n- CodeRabbit comment: https://github.com/wasabeef/AgentNote/pull/60#issuecomment-4406600171\n- CodeRabbit YAML template: https://docs.coderabbit.ai/reference/yaml-template",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "CodeRabbit 側の原因は、default branch 以外を base にした PR が自動レビュー対象外だったことでした。 公式 docs では `.coderabbit.yaml` の `reviews.auto_review.base_branches` に regex を追加できるので、この repo は全 branch base の PR をレビュー対象にする設定にします。"
+        }
+      ],
+      "files_touched": [
+        ".coderabbit.yaml"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "このPRはmainに向けたPRでなのになんでレビューskipになった？",
+      "response": "まず事実を確認します。CodeRabbit の表示だけだと「base が default 以外」と読めますが、GitHub 側の PR metadata と default branch を照らして、なぜそう判定されたか切り分けます。\n確認した限り、GitHub 上の事実はこうです。\n\n- PR #60 の base は `main`\n- repository の default branch も `main`\n- PR は draft ではない\n- CodeRabbit comment には `Configuration used: defaults` と出ている\n\nなので、**GitHub の PR metadata だけを見ると「main 向けなのに skip」は矛盾しています。**  \nこれはこちらの PR 設定というより、CodeRabbit 側の「有効設定 / branch allowlist / install 直後の同期状態」の問題っぽいです。\n\nCodeRabbit docs では、`reviews.auto_review.base_branches` は default branch 以外を追加する設定で、default branch は通常含まれます。つまり `main` 向けなら本来 skip されないはずです。  \nhttps://docs.coderabbit.ai/configuration/username-based-pr-review-control\n\n今回の comment が `defaults` だったので、PR #60 時点では `.coderabbit.yaml` は存在せず、CodeRabbit UI 側の default/config 判定だけで動いていました。そこで何らかの理由で「対象 branch ではない」と判定された、という状態です。\n\n今作っている `.coderabbit.yaml` の\n\n```yaml\nreviews:\n  auto_review:\n    base_branches:\n      - \".*\"\n```\n\nは、その曖昧さを潰すための設定です。`.*` は全 base branch を対象にする指定なので、`main` はもちろん、将来 `release/*` や作業用 base branch があっても skip されにくくなります。\n\n厳密な原因をさらに詰めるなら、次のどちらかです。\n\n- CodeRabbit UI で Auto Review / branch allowlist がどうなっていたか確認する\n- PR 上で `@coderabbitai configuration` を実行して、有効設定を吐かせる\n\nローカル/GitHub API から見える範囲では「PR #60 が main 向けではなかった」は否定できます。CodeRabbit 側の有効設定判定が原因です。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "確認した限り、GitHub 上の事実はこうです。 PR #60 の base は `main` repository の default branch も `main` PR は draft ではない CodeRabbit comment には `Configuration used: defaults` と出ている なので、**GitHub の PR metadata だけを見ると「main 向けなのに skip」は矛盾しています。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "draftはfalseにしといて",
+      "response": "了解です。draft PR は自動レビュー対象から外す形に調整します。設定ファイルだけの変更なので、YAML 検証まで通します。",
+      "files_touched": [
+        ".coderabbit.yaml"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "apply_patch",
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "coderabbit の web での設定がないか調べて",
+      "response": "CodeRabbit の Web UI 側に同等の設定があるか、公式 docs ベースで確認します。ローカルの `.coderabbit.yaml` と UI のどちらが効くかも合わせて見ます。\n調べました。CodeRabbit には Web UI 側の repo 設定があります。\n\n設定場所は docs 上だと以下です。\n\n1. CodeRabbit dashboard を開く\n2. sidebar の `Repositories`\n3. 対象 repo の gear icon / Settings\n4. `Use Organization Settings` が ON なら OFF にすると repo 個別設定を編集できる\n5. `Concise` / `All Settings` / `YAML Editor` の 3 モードで編集できる\n\nただし優先順位があります。\n\n- 最優先: repo の `.coderabbit.yaml`\n- 次: central config repo\n- 次: CodeRabbit Web UI の repository settings\n- 次: organization settings\n- 最後: defaults\n\nなので、`.coderabbit.yaml` を入れると Web UI の repo 設定より優先されます。今回みたいに設定を repo で管理したいなら `.coderabbit.yaml` が正解寄りです。\n\nPR #60 の skip comment は `Configuration used: defaults` だったので、少なくともその時点では repo YAML も Web UI 設定も効いておらず、CodeRabbit の default 設定で判定されていました。実際の Web UI の現在値はログイン済み dashboard 内でしか見えなさそうです。\n\n補足として、CodeRabbit docs では `@coderabbitai configuration` を PR にコメントすると、現在有効な設定を YAML 形式で出せると書かれています。これを使うと Web UI / defaults / YAML のどれが効いているか確認しやすいです。\n\nSources:\n- https://docs.coderabbit.ai/guides/repository-settings/\n- https://docs.coderabbit.ai/guides/configuration-overview\n- https://docs.coderabbit.ai/guides/configure-coderabbit\n- https://docs.coderabbit.ai/configuration/username-based-pr-review-control",
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "コミットプッシュしてPR作成して",
+      "response": "設定ファイルをコミットして push し、PR を作成します。作成後に PR URL と初期 checks / CodeRabbit の挙動まで確認します。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "なので今の方針としては、`.coderabbit.yaml` を repo に置いて設定を code review 可能にするのが一番扱いやすいです。\n\n`drafts: false` にして、`base_branches: [\".*\"]` で main 以外 base の PR skip も潰す、という形がちょうど良さそうです。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "tail",
+        "signals": [
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".coderabbit.yaml",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "23c49c3587d297789ef0d36f37b90c2a35db4cc8",
+    "short_sha": "23c49c3",
+    "message": "chore: configure CodeRabbit reviews",
+    "date": "2026-05-08T22:16:17+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": ".coderabbit.yaml",
+        "lines": [
+          "new file mode 100644",
+          "index 0000000..ecae50d",
+          "--- /dev/null",
+          "+++ b/.coderabbit.yaml",
+          "@@ -0,0 +1,72 @@",
+          "+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json",
+          "+",
+          "+language: \"en-US\"",
+          "+early_access: false",
+          "+",
+          "+reviews:",
+          "+  profile: \"assertive\"",
+          "+  request_changes_workflow: false",
+          "+  high_level_summary: true",
+          "+  poem: false",
+          "+  review_status: true",
+          "+  collapse_walkthrough: true",
+          "+",
+          "+  auto_review:",
+          "+    enabled: true",
+          "+    auto_incremental_review: true",
+          "+    auto_pause_after_reviewed_commits: 0",
+          "+    drafts: false",
+          "+    base_branches:",
+          "+      - \".*\"",
+          "+    ignore_title_keywords:",
+          "+      - \"[skip review]\"",
+          "+      - \"WIP\"",
+          "+    ignore_usernames:",
+          "+      - \"dependabot[bot]\"",
+          "+      - \"renovate[bot]\"",
+          "+",
+          "+  path_filters:",
+          "+    - \"!**/dist/**\"",
+          "+    - \"!**/node_modules/**\"",
+          "+    - \"!website/dist/**\"",
+          "+",
+          "+  path_instructions:",
+          "+    - path: \"packages/cli/src/**\"",
+          "+      instructions: |",
+          "+        Review Agent Note CLI changes against AGENTS.md and docs/engineering.md.",
+          "+        Focus on git hook safety, git notes persistence, prompt selection, attribution correctness,",
+          "+        and the invariant that Agent Note must never break a user's git commit.",
+          "+",
+          "+    - path: \"packages/cli/src/agents/**\"",
+          "+      instructions: |",
+          "+        Check adapter-specific behavior for Claude Code, Codex CLI, Cursor, and Gemini CLI.",
+          "+        Verify event parsing, transcript handling, synchronous hook stdout requirements,",
+          "+        and compatibility with existing agent tests.",
+          "+",
+          "+    - path: \"packages/pr-report/src/**\"",
+          "+      instructions: |",
+          "+        Review PR report changes for Markdown safety, hidden reviewer-context safety,",
+          "+        stable GitHub Action behavior, and compatibility with repositories outside Agent Note.",
+          "+",
+          "+    - path: \"packages/dashboard/**\"",
+          "+      instructions: |",
+          "+        Review Dashboard changes for static GitHub Pages compatibility, safe rendering of",
+          "+        untrusted note JSON, preserved historical PR data, and avoiding external runtime dependencies.",
+          "+",
+          "+    - path: \"website/**\"",
+          "+      instructions: |",
+          "+        Review documentation for implementation accuracy, natural language, locale parity,",
+          "+        and clear separation between user-facing guidance and maintainer details.",
+          "+",
+          "+    - path: \".github/workflows/**\"",
+          "+      instructions: |",
+          "+        Review workflow changes for least-privilege permissions, fork/PR safety,",
+          "+        GitHub Pages artifact behavior, and release reproducibility.",
+          "+",
+          "+    - path: \"docs/**\"",
+          "+      instructions: |",
+          "+        Review maintainer docs for accuracy against current implementation and usefulness",
+          "+        as durable context for future AI coding agents.",
+          "+",
+          "+chat:",
+          "+  auto_reply: true"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 61,
+    "title": "chore: configure CodeRabbit reviews",
+    "state": "open"
+  }
+}
