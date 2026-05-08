@@ -724,12 +724,7 @@ function filterInteractionCommitFiles(
   );
 }
 
-/**
- * Pick the safest transcript fallback when no exact commit-file match exists.
- *
- * Tool-backed rows are preferred because they still provide observable agent
- * activity without guessing file authorship from shell-only output.
- */
+/** Prefer tool-backed fallback rows without guessing shell-only file authorship. */
 function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
@@ -754,13 +749,7 @@ function selectTranscriptFallbackInteractions(
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
 }
 
-/**
- * Find current-window transcript turns that used tools without file evidence.
- *
- * Codex can edit through shell commands that do not expose `files_touched`.
- * We keep those prompts as prompt-only notes, but never infer AI-authored files
- * from the shell command itself.
- */
+/** Current-window tool turns without file evidence, kept as prompt-only notes. */
 function collectCurrentUnattributedToolPromptIds(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],

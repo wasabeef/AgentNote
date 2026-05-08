@@ -2534,11 +2534,7 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("transcript-driven Codex keeps prompt-only notes for current shell-only tool turns", async () => {
-    // PR #59 regression shape: the long Codex transcript contains old
-    // apply_patch edits for other files, while the current commit was made
-    // through a shell command that does not expose files_touched. The note must
-    // keep the current prompt/response without guessing AI-authored files.
+  it("transcript-driven Codex keeps prompt-only notes for current shell-only tool turns without guessing files", async () => {
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
