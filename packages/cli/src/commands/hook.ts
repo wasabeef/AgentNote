@@ -22,7 +22,11 @@ import {
 import { appendJsonl } from "../core/jsonl.js";
 import { recordCommitEntry } from "../core/record.js";
 import { rotateLogs } from "../core/rotate.js";
-import { writeSessionAgent, writeSessionTranscriptPath } from "../core/session.js";
+import {
+  hasRecordableSessionData,
+  writeSessionAgent,
+  writeSessionTranscriptPath,
+} from "../core/session.js";
 import { git, injectGitCommitTrailer } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
@@ -166,7 +170,9 @@ export async function hook(args: string[] = []): Promise<void> {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir(sessionDir, { recursive: true });
-  await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+    await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  }
 
   switch (event.kind) {
     case "session_start": {
@@ -397,7 +403,11 @@ export async function hook(args: string[] = []): Promise<void> {
       // The command may be chained (e.g., "git add . && git commit -m '...' && git push"),
       // so we must inject --trailer into the git commit segment only, not at the end.
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
+      if (
+        !cmd.includes(TRAILER_KEY) &&
+        event.sessionId &&
+        (await hasRecordableSessionData(sessionDir))
+      ) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
         const updatedCmd = injectGitCommitTrailer(cmd, trailer);
         if (updatedCmd) {

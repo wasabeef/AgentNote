@@ -11,6 +11,7 @@ import {
   TRAILER_KEY,
 } from "../core/constants.js";
 import { recordCommitEntry } from "../core/record.js";
+import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 
 /**
@@ -43,6 +44,9 @@ export async function commit(args: string[]): Promise<void> {
         }
       } catch {
         // No heartbeat file — treat as expired (matches status behavior).
+        sessionId = "";
+      }
+      if (sessionId && !(await hasRecordableSessionData(join(dir, SESSIONS_DIR, sessionId)))) {
         sessionId = "";
       }
     }

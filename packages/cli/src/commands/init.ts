@@ -8,6 +8,7 @@ import {
   HEARTBEAT_TTL_SECONDS,
   NOTES_FETCH_REFSPEC,
   NOTES_REF_FULL,
+  RECORDABLE_SESSION_FILES,
   TEXT_ENCODING,
   TRAILER_KEY,
 } from "../core/constants.js";
@@ -20,6 +21,7 @@ export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 
 const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
+const RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
 
 const PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
@@ -120,20 +122,32 @@ ${AGENTNOTE_HOOK_MARKER}
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
 case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, or stale heartbeat → skip.
+# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session → skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then exit 0; fi
+SESSION_DIR="$GIT_DIR/agentnote/sessions/$SESSION_ID"
 # Check freshness via this session's heartbeat (< 1 hour).
-HEARTBEAT_FILE="$GIT_DIR/agentnote/sessions/$SESSION_ID/heartbeat"
+HEARTBEAT_FILE="$SESSION_DIR/heartbeat"
 if [ ! -f "$HEARTBEAT_FILE" ]; then exit 0; fi
 NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
 if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
+HAS_RECORDABLE_DATA=0
+for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+  if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
+    HAS_RECORDABLE_DATA=1
+    break
+  fi
+done
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ] && [ "$(cat "$SESSION_DIR/agent" 2>/dev/null | tr -d '\\n')" = "codex" ] && [ -s "$SESSION_DIR/transcript_path" ]; then
+  HAS_RECORDABLE_DATA=1
+fi
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"

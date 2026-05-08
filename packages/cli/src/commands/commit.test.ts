@@ -49,6 +49,10 @@ describe("agentnote commit", () => {
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
     writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     ensureHeartbeat(sessionDir);
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"commit this change"}\n',
+    );
 
     writeFileSync(join(testDir, "hello.txt"), "hello");
     execSync("git add hello.txt", { cwd: testDir });
@@ -65,9 +69,27 @@ describe("agentnote commit", () => {
     );
   });
 
+  it("does not add Agentnote-Session trailer for metadata-only active sessions", () => {
+    const sessionId = "b1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    ensureHeartbeat(sessionDir);
+
+    writeFileSync(join(testDir, "metadata-only.txt"), "metadata only");
+    execSync("git add metadata-only.txt", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "metadata-only commit"`, { cwd: testDir });
+
+    const msg = execSync("git log -1 --format=%B", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.ok(!msg.includes(TRAILER_KEY), "metadata-only sessions should not get a trailer");
+  });
+
   it("records entry as git note with prompts and AI ratio", () => {
     const sessionId = "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
     ensureHeartbeat(sessionDir);
 
     // simulate prompts

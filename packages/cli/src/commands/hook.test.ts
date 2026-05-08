@@ -19,6 +19,15 @@ describe("agent-note hook", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
+  function writeRecordablePrompt(sessionId: string, prompt = "commit this change"): void {
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      `{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"${prompt}"}\n`,
+    );
+  }
+
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-hook-"));
     execSync("git init", { cwd: testDir });
@@ -127,7 +136,7 @@ describe("agent-note hook", () => {
     assert.ok(!existsSync(changesFile), "should not record Bash tool use");
   });
 
-  it("does not recreate heartbeat for filtered events after a session ended", () => {
+  it("does not recreate heartbeat for filtered events when no heartbeat file exists", () => {
     const sessionId = "a1b2c3d4-0006-0006-0006-000000000006";
     const event = JSON.stringify({
       hook_event_name: "UserPromptSubmit",
@@ -149,6 +158,8 @@ describe("agent-note hook", () => {
   });
 
   it("injects trailer on PreToolUse git commit", () => {
+    writeRecordablePrompt("a1b2c3d4-0001-0001-0001-000000000001");
+
     const event = JSON.stringify({
       hook_event_name: "PreToolUse",
       session_id: "a1b2c3d4-0001-0001-0001-000000000001",
@@ -172,6 +183,27 @@ describe("agent-note hook", () => {
     );
   });
 
+  it("does not inject trailer on PreToolUse git commit for metadata-only sessions", () => {
+    const sessionId = "a1b2c3d4-0008-0008-0008-000000000008";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+
+    const event = JSON.stringify({
+      hook_event_name: "PreToolUse",
+      session_id: sessionId,
+      tool_name: "Bash",
+      tool_input: { command: "git commit -m 'metadata-only'" },
+    });
+
+    const out = execSync(`echo '${event}' | node ${cliPath} hook --agent claude`, {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.equal(out.trim(), "", "metadata-only sessions should not inject a trailer");
+  });
+
   it("refreshes heartbeat on commit hook events during long turns", () => {
     const sessionId = "a1b2c3d4-0007-0007-0007-000000000007";
     const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
@@ -193,6 +225,8 @@ describe("agent-note hook", () => {
   });
 
   it("injects trailer on PreToolUse chained git add && git commit", () => {
+    writeRecordablePrompt("a1b2c3d4-0001-0001-0001-000000000001", "commit chained change");
+
     const event = JSON.stringify({
       hook_event_name: "PreToolUse",
       session_id: "a1b2c3d4-0001-0001-0001-000000000001",

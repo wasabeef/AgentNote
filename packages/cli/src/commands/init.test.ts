@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+import {
+  AGENTNOTE_DIR,
+  HEARTBEAT_FILE,
+  NOTES_REF_FULL,
+  PROMPTS_FILE,
+  SESSION_FILE,
+  SESSIONS_DIR,
+  TRAILER_KEY,
+} from "../core/constants.js";
 
 function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -173,6 +181,48 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     const hook = readFileSync(hookPath, "utf-8");
     assert.ok(!hook.includes('if [ -f "'), "backup path should not use double quotes");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("prepare-commit-msg skips metadata-only sessions before injecting trailers", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-prepare-session-data-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-2222-2222-2222-000000000222";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+
+    const hookPath = join(dir, ".git", "hooks", "prepare-commit-msg");
+    const metadataOnlyMessagePath = join(dir, "metadata-only-message.txt");
+    writeFileSync(metadataOnlyMessagePath, "subject\n");
+    execFileSync(hookPath, [metadataOnlyMessagePath], { cwd: dir });
+    assert.ok(
+      !readFileSync(metadataOnlyMessagePath, "utf-8").includes(TRAILER_KEY),
+      "metadata-only sessions should not receive a trailer",
+    );
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"commit this change"}\n',
+    );
+    const recordableMessagePath = join(dir, "recordable-message.txt");
+    writeFileSync(recordableMessagePath, "subject\n");
+    execFileSync(hookPath, [recordableMessagePath], { cwd: dir });
+    assert.ok(
+      readFileSync(recordableMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
+      "sessions with prompts should receive a trailer",
+    );
 
     rmSync(dir, { recursive: true, force: true });
   });

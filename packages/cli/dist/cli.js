@@ -10,7 +10,7 @@ var __export = (target, all) => {
 };
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
+var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
 var init_constants = __esm({
   "src/core/constants.ts"() {
     "use strict";
@@ -46,6 +46,7 @@ var init_constants = __esm({
     MILLISECONDS_PER_SECOND = 1e3;
     PRE_BLOBS_FILE = "pre_blobs.jsonl";
     COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+    RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
     EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
     SCHEMA_VERSION = 1;
     TEXT_ENCODING = "utf-8";
@@ -3108,7 +3109,7 @@ var init_prompt_window = __esm({
 
 // src/core/session.ts
 import { existsSync as existsSync6 } from "node:fs";
-import { readFile as readFile6, writeFile as writeFile5 } from "node:fs/promises";
+import { readFile as readFile6, stat, writeFile as writeFile5 } from "node:fs/promises";
 import { join as join5 } from "node:path";
 async function writeSessionAgent(sessionDir, agentName) {
   await writeFile5(join5(sessionDir, SESSION_AGENT_FILE), `${agentName}
@@ -3129,6 +3130,24 @@ async function readSessionTranscriptPath(sessionDir) {
   if (!existsSync6(saved)) return null;
   const transcriptPath = (await readFile6(saved, TEXT_ENCODING)).trim();
   return transcriptPath || null;
+}
+async function hasRecordableSessionData(sessionDir) {
+  for (const fileName of RECORDABLE_SESSION_FILES) {
+    try {
+      const stats = await stat(join5(sessionDir, fileName));
+      if (stats.isFile() && stats.size > 0) return true;
+    } catch {
+    }
+  }
+  const agent = await readSessionAgent(sessionDir);
+  if (agent === "codex") {
+    try {
+      const stats = await stat(join5(sessionDir, TRANSCRIPT_PATH_FILE));
+      if (stats.isFile() && stats.size > 0) return true;
+    } catch {
+    }
+  }
+  return false;
 }
 var init_session = __esm({
   "src/core/session.ts"() {
@@ -4436,6 +4455,7 @@ var init_paths = __esm({
 // src/commands/commit.ts
 init_constants();
 init_record();
+init_session();
 init_paths();
 import { spawn as spawn2 } from "node:child_process";
 import { existsSync as existsSync8 } from "node:fs";
@@ -4458,6 +4478,9 @@ async function commit(args2) {
           if (ageSeconds > HEARTBEAT_TTL_SECONDS) sessionId = "";
         }
       } catch {
+        sessionId = "";
+      }
+      if (sessionId && !await hasRecordableSessionData(join8(dir, SESSIONS_DIR, sessionId))) {
         sessionId = "";
       }
     }
@@ -4508,6 +4531,7 @@ import { isAbsolute as isAbsolute2, join as join9, resolve as resolve5 } from "n
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
+var RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -4598,20 +4622,32 @@ ${AGENTNOTE_HOOK_MARKER}
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
 case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, or stale heartbeat \u2192 skip.
+# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session \u2192 skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then exit 0; fi
+SESSION_DIR="$GIT_DIR/agentnote/sessions/$SESSION_ID"
 # Check freshness via this session's heartbeat (< 1 hour).
-HEARTBEAT_FILE="$GIT_DIR/agentnote/sessions/$SESSION_ID/heartbeat"
+HEARTBEAT_FILE="$SESSION_DIR/heartbeat"
 if [ ! -f "$HEARTBEAT_FILE" ]; then exit 0; fi
 NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
 if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
+HAS_RECORDABLE_DATA=0
+for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+  if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
+    HAS_RECORDABLE_DATA=1
+    break
+  fi
+done
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ] && [ "$(cat "$SESSION_DIR/agent" 2>/dev/null | tr -d '\\n')" = "codex" ] && [ -s "$SESSION_DIR/transcript_path" ]; then
+  HAS_RECORDABLE_DATA=1
+fi
+if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -5098,7 +5134,9 @@ async function hook(args2 = []) {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join12(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir6(sessionDir, { recursive: true });
-  await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+    await refreshHeartbeat(agentnoteDirPath, event.sessionId);
+  }
   switch (event.kind) {
     case "session_start": {
       await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
@@ -5275,7 +5313,7 @@ async function hook(args2 = []) {
         break;
       }
       const cmd = event.commitCommand ?? "";
-      if (!cmd.includes(TRAILER_KEY) && event.sessionId) {
+      if (!cmd.includes(TRAILER_KEY) && event.sessionId && await hasRecordableSessionData(sessionDir)) {
         const trailer = `--trailer '${TRAILER_KEY}: ${event.sessionId}'`;
         const updatedCmd = injectGitCommitTrailer(cmd, trailer);
         if (updatedCmd) {
@@ -6207,7 +6245,7 @@ init_session();
 init_storage();
 init_git();
 init_paths();
-import { stat } from "node:fs/promises";
+import { stat as stat2 } from "node:fs/promises";
 import { join as join14 } from "node:path";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
 async function show(commitRef) {
@@ -6280,7 +6318,7 @@ async function show(commitRef) {
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
-    const stats = await stat(transcriptPath);
+    const stats = await stat2(transcriptPath);
     const sizeKb = (stats.size / 1024).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }
