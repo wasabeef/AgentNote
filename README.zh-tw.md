@@ -110,7 +110,7 @@ packages/cli/dist/**
 packages/pr-report/dist/**
 ```
 
-這些檔案仍會出現在 PR Report 和 Dashboard 中，只會從 AI Ratio 的分母中排除。
+這些檔案仍會出現在 Notes、PR Report 和 Dashboard 中，只會從 AI Ratio 的分母中排除。
 
 ## Agent Support
 

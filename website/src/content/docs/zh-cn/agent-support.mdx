@@ -72,6 +72,6 @@ Gemini CLI 使用 `BeforeTool` / `AfterTool` 记录文件，使用 `BeforeAgent`
 - 没有 AI-authored file 的 commit 不会写入 note。
 - 属于旧 commit window 的 prompt 可能被省略。
 - agent 没有暴露 response 时，response 可能为空。
-- generated artifacts 和 repository root 的 `.agentnoteignore` 中列出的 path 可以从 AI ratio denominator 中排除。
+- generated artifacts 和 repository root 的 `.agentnoteignore` 中列出的 path 仍会保留在 Notes、PR Report 和 Dashboard 中，只会从 AI ratio denominator 中排除。
 
 排查请从 [Troubleshooting](./troubleshooting/) 开始。

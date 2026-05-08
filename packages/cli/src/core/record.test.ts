@@ -2311,7 +2311,7 @@ describe("recordCommitEntry", () => {
     );
     writeFileSync(
       join(sessionDir, PRE_BLOBS_FILE),
-      `{"event":"pre_blob","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n`,
+      `{"event":"pre_edit","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n`,
     );
     writeFileSync(
       join(sessionDir, CHANGES_FILE),

@@ -110,7 +110,7 @@ packages/cli/dist/**
 packages/pr-report/dist/**
 ```
 
-File tersebut tetap muncul di PR Report dan Dashboard. File hanya dikeluarkan dari denominator AI Ratio.
+File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikeluarkan dari denominator AI Ratio.
 
 ## Agent Support
 

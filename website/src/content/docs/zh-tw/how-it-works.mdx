@@ -153,7 +153,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。
 </Aside>
 
 <Aside>
-  常見的 generated artifacts 會以 best-effort 的方式根據具體 signal 排除在 `AI ratio` 的分母之外，例如 framework/cache path、generated filename/suffix，以及 committed file header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請把路徑寫入 repository root 的 `.agentnoteignore`。
+  常見的 generated artifacts 會以 best-effort 的方式根據具體信號排除在 `AI ratio` 的分母之外，例如框架/快取路徑、生成的檔名/後綴，以及已提交的檔案 header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請將路徑加入倉庫根目錄的 `.agentnoteignore` 檔案中。
 </Aside>
 
 ## Session 生命週期

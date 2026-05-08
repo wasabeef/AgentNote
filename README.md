@@ -110,7 +110,7 @@ packages/cli/dist/**
 packages/pr-report/dist/**
 ```
 
-Those files still appear in PR Report and Dashboard. They are only removed from the AI Ratio denominator.
+Those files still appear in Notes, PR Report, and Dashboard. They are only removed from the AI Ratio denominator.
 
 ## Agent Support
 
