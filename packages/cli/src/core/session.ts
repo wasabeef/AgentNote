@@ -39,15 +39,7 @@ export async function readSessionTranscriptPath(sessionDir: string): Promise<str
   return transcriptPath || null;
 }
 
-/**
- * Return true when the session contains data that can produce a non-empty
- * commit note.
- *
- * Heartbeat and SessionStart metadata only prove that an agent process exists;
- * they do not prove that a user prompt, file edit, or pre-edit signal happened.
- * Git hooks use this as a fail-closed guard before adding a session trailer, so
- * plain shell commits do not end up with dangling `Agentnote-Session` trailers.
- */
+/** True when the session has prompts, file changes, pre-edit blobs, or Codex transcript metadata. */
 export async function hasRecordableSessionData(sessionDir: string): Promise<boolean> {
   for (const fileName of RECORDABLE_SESSION_FILES) {
     try {

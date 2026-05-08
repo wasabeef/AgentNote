@@ -170,6 +170,8 @@ export async function hook(args: string[] = []): Promise<void> {
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir(sessionDir, { recursive: true });
+  // Only Gemini maps `stop` to true session termination today; other adapters
+  // use `stop` for response-end events and must keep the heartbeat alive.
   if (!(adapter.name === "gemini" && event.kind === "stop")) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
