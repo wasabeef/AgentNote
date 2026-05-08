@@ -1,0 +1,250 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T07:13:49.220Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージしました",
+      "response": "main に戻すなら、こちらで `git switch main && git pull` まで進めます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "他にやることあるっけ",
+      "response": "直近で残っていそうなのは大きくはありません。今の main は #58 まで取り込み済みで、working tree も clean です。\n\nやるなら次候補はこのあたりです。\n\n- `v0.2.4` の version bump / tag / release note 作成。#58 は user-facing な bug fix なので patch release 価値があります。\n- この repo で `agent-note init` 済み hook は更新済みですが、他ユーザー向けには「既存 clone は再 `agent-note init` が必要」かどうかを release note に一言入れるか検討。\n- PR #58 後の Dashboard / PR Report が期待通り表示されるか、次 PR で実地確認。\n- `docs/architecture.md` と `AGENTS.md` / `CLAUDE.md` の hook 説明は更新済みなので、追加 docs 作業は今のところ不要そうです。\n\n優先するなら次は release 準備です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote#agent-support を確認して、 Agent Support の現状を教えてほしい",
+      "response": "README の公開表示とローカルの最新版を照合して、Agent Support の現状を整理します。GitHub 側の anchor はレンダリング後の内容が対象なので、まず公開ページを確認します。\nGitHub の raw fetch がこちらの web tool で落ちたので、`gh api` で main の README を直接取得して確認します。あわせてローカル main と差分がないか見ます。\n確認しました。公開 README の `Agent Support` 現状はこうです。\n\n| Agent | Status | 現状 |\n|---|---|---|\n| Claude Code | Full support | 会話復元 + 既定で行単位の AI 推定まで対応 |\n| Codex CLI | Preview | 基本は変更ファイル単位。`apply_patch` 履歴と最終 Commit diff が一致した場合のみ行単位に昇格。Transcript が読めない場合は不確かな Note を作らない |\n| Cursor | Supported | 基本は変更ファイル単位。Cursor edit hook を使い、Commit 済み file が最後の AI edit と一致する場合のみ行単位に昇格 |\n| Gemini CLI | Preview | 変更ファイル単位。Generated hooks で会話と通常の `git commit` を記録 |\n\n補足として、公開 README / website では Cursor は `Supported` ですが、`AGENTS.md` / `CLAUDE.md` の adapter 説明にはまだ `Cursor adapter (Preview)` と残っています。ここは表記ゆれなので、直すなら次に `Cursor adapter` から `(Preview)` を外すのがよさそうです。\n\n参照: https://github.com/wasabeef/AgentNote#agent-support",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "README の公開表示とローカルの最新版を照合して、Agent Support の現状を整理します。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "全部 Supported以上にはならないのか",
+      "response": "結論、**今すぐ全部を Supported 以上にするのはまだ少し強い**と思います。特に Gemini CLI はまだ Preview のままが誠実です。\n\n現状の肌感はこうです。\n\n| Agent | 今の表記 | Supported 以上にできるか |\n|---|---|---|\n| Claude Code | Full support | 既に OK |\n| Cursor | Supported | 既に OK |\n| Codex CLI | Preview | Supported に上げてもよさそう。最近の修正で transcript-driven / missing transcript / shell-only / metadata-only の安全側挙動がかなり固まっています |\n| Gemini CLI | Preview | まだ Preview が妥当。Gemini 側の hook / transcript schema が変わるリスクをこちらで完全に握れていないため |\n\n`Supported` の意味を「行単位まで常に取れる」ではなく「通常利用でき、壊れたときは安全側に倒れる」と定義するなら、Codex CLI は上げられると思います。実際 README にも「不確かな Note は作らない」と書けていて、これは Supported と相性がいいです。\n\n一方で Gemini CLI は、実装・テストはかなり進んでいますが、`BeforeTool` / `AfterTool` / `BeforeAgent` / `AfterAgent` の payload shape や transcript 形式が upstream 依存です。ここを Supported と言うなら、実機で複数バージョン確認して「壊れたら安全に skip する」ことをもう少し固めたいです。\n\nなのでおすすめは:\n\n1. Codex CLI: `Preview` → `Supported`\n2. Gemini CLI: `Preview` 維持\n3. `AGENTS.md` / `CLAUDE.md` の Cursor `(Preview)` 表記ゆれを修正\n\n全部 Supported にするより、この方が信頼を削らないと思います。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "現状の肌感はこうです。 | Agent | 今の表記 | Supported 以上にできるか | |---|---|---| | Claude Code | Full support | 既に OK | | Cursor | Supported | 既に OK | | Codex CLI | Preview | Supported に上げてもよさそう。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "了解、では website/ docs/ を別ブランチきって更新してPRまで作成してほしい",
+      "response": "Codex CLI を `Supported` に上げ、Gemini CLI は `Preview` 維持、さらに Cursor の表記ゆれも潰す方針で進めます。公開 README も Agent Support の入口なので、website / docs に加えて各言語 README も同じ内容に揃えて PR まで作ります。\nブランチ `docs-promote-codex-support` を切りました。まず README と website の全言語 Agent Support 表を揃え、その後 docs/knowledge と AGENTS/CLAUDE の表記ゆれを直します。\nCodex は `Supported`、Gemini は `Preview` のままという線で、表・おすすめ文・policy の現在地を更新します。多言語 README と website は同じ意味になるように一括で揃えます。\n表記更新は入りました。これから不整合 grep、website build、diff check を通してから commit / push / PR 作成まで進めます。\n検証は通りました。古い `Codex CLI Preview` 表記も残っていません。ここから commit / push / PR 作成へ進めます。\nCodex CLI の `Preview` 表記を `Supported` に上げる変更は一通り入っていて、website build と whitespace check までは通っています。ここから差分を最終確認して、commit / push / PR 作成まで進めます。\n差分は想定どおり docs / website / README のみで、コード実装には触っていません。PR 作成用の skill 手順も確認したので、これから変更を commit して remote に push します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "ブランチ `docs-promote-codex-support` を切りました。 まず README と website の全言語 Agent Support 表を揃え、その後 docs/knowledge と AGENTS/CLAUDE の表記ゆれを直します。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/agent-support.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/fr/agent-support.mdx",
+        "website/src/content/docs/de/agent-support.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/es/agent-support.mdx",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/zh-cn/agent-support.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/id/agent-support.mdx",
+        "website/src/content/docs/pt-br/agent-support.mdx",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/knowledge/agent-support-policy.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/agent-support-policy.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
