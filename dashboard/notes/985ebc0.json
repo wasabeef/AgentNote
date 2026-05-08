@@ -2205,6 +2205,6 @@
   "pull_request": {
     "number": 63,
     "title": "feat(record): support .agentnoteignore for AI ratio",
-    "state": "open"
+    "state": "merged"
   }
 }
