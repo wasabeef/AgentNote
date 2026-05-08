@@ -491,6 +491,6 @@
   "pull_request": {
     "number": 62,
     "title": "refactor: centralize protocol constants",
-    "state": "open"
+    "state": "merged"
   }
 }
