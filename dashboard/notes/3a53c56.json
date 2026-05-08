@@ -1,0 +1,1042 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-08T07:13:49.220Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージしました",
+      "response": "main に戻すなら、こちらで `git switch main && git pull` まで進めます。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "他にやることあるっけ",
+      "response": "直近で残っていそうなのは大きくはありません。今の main は #58 まで取り込み済みで、working tree も clean です。\n\nやるなら次候補はこのあたりです。\n\n- `v0.2.4` の version bump / tag / release note 作成。#58 は user-facing な bug fix なので patch release 価値があります。\n- この repo で `agent-note init` 済み hook は更新済みですが、他ユーザー向けには「既存 clone は再 `agent-note init` が必要」かどうかを release note に一言入れるか検討。\n- PR #58 後の Dashboard / PR Report が期待通り表示されるか、次 PR で実地確認。\n- `docs/architecture.md` と `AGENTS.md` / `CLAUDE.md` の hook 説明は更新済みなので、追加 docs 作業は今のところ不要そうです。\n\n優先するなら次は release 準備です。",
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote#agent-support を確認して、 Agent Support の現状を教えてほしい",
+      "response": "README の公開表示とローカルの最新版を照合して、Agent Support の現状を整理します。GitHub 側の anchor はレンダリング後の内容が対象なので、まず公開ページを確認します。\nGitHub の raw fetch がこちらの web tool で落ちたので、`gh api` で main の README を直接取得して確認します。あわせてローカル main と差分がないか見ます。\n確認しました。公開 README の `Agent Support` 現状はこうです。\n\n| Agent | Status | 現状 |\n|---|---|---|\n| Claude Code | Full support | 会話復元 + 既定で行単位の AI 推定まで対応 |\n| Codex CLI | Preview | 基本は変更ファイル単位。`apply_patch` 履歴と最終 Commit diff が一致した場合のみ行単位に昇格。Transcript が読めない場合は不確かな Note を作らない |\n| Cursor | Supported | 基本は変更ファイル単位。Cursor edit hook を使い、Commit 済み file が最後の AI edit と一致する場合のみ行単位に昇格 |\n| Gemini CLI | Preview | 変更ファイル単位。Generated hooks で会話と通常の `git commit` を記録 |\n\n補足として、公開 README / website では Cursor は `Supported` ですが、`AGENTS.md` / `CLAUDE.md` の adapter 説明にはまだ `Cursor adapter (Preview)` と残っています。ここは表記ゆれなので、直すなら次に `Cursor adapter` から `(Preview)` を外すのがよさそうです。\n\n参照: https://github.com/wasabeef/AgentNote#agent-support",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "README の公開表示とローカルの最新版を照合して、Agent Support の現状を整理します。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "全部 Supported以上にはならないのか",
+      "response": "結論、**今すぐ全部を Supported 以上にするのはまだ少し強い**と思います。特に Gemini CLI はまだ Preview のままが誠実です。\n\n現状の肌感はこうです。\n\n| Agent | 今の表記 | Supported 以上にできるか |\n|---|---|---|\n| Claude Code | Full support | 既に OK |\n| Cursor | Supported | 既に OK |\n| Codex CLI | Preview | Supported に上げてもよさそう。最近の修正で transcript-driven / missing transcript / shell-only / metadata-only の安全側挙動がかなり固まっています |\n| Gemini CLI | Preview | まだ Preview が妥当。Gemini 側の hook / transcript schema が変わるリスクをこちらで完全に握れていないため |\n\n`Supported` の意味を「行単位まで常に取れる」ではなく「通常利用でき、壊れたときは安全側に倒れる」と定義するなら、Codex CLI は上げられると思います。実際 README にも「不確かな Note は作らない」と書けていて、これは Supported と相性がいいです。\n\n一方で Gemini CLI は、実装・テストはかなり進んでいますが、`BeforeTool` / `AfterTool` / `BeforeAgent` / `AfterAgent` の payload shape や transcript 形式が upstream 依存です。ここを Supported と言うなら、実機で複数バージョン確認して「壊れたら安全に skip する」ことをもう少し固めたいです。\n\nなのでおすすめは:\n\n1. Codex CLI: `Preview` → `Supported`\n2. Gemini CLI: `Preview` 維持\n3. `AGENTS.md` / `CLAUDE.md` の Cursor `(Preview)` 表記ゆれを修正\n\n全部 Supported にするより、この方が信頼を削らないと思います。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "現状の肌感はこうです。 | Agent | 今の表記 | Supported 以上にできるか | |---|---|---| | Claude Code | Full support | 既に OK | | Cursor | Supported | 既に OK | | Codex CLI | Preview | Supported に上げてもよさそう。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "了解、では website/ docs/ を別ブランチきって更新してPRまで作成してほしい",
+      "response": "Codex CLI を `Supported` に上げ、Gemini CLI は `Preview` 維持、さらに Cursor の表記ゆれも潰す方針で進めます。公開 README も Agent Support の入口なので、website / docs に加えて各言語 README も同じ内容に揃えて PR まで作ります。\nブランチ `docs-promote-codex-support` を切りました。まず README と website の全言語 Agent Support 表を揃え、その後 docs/knowledge と AGENTS/CLAUDE の表記ゆれを直します。\nCodex は `Supported`、Gemini は `Preview` のままという線で、表・おすすめ文・policy の現在地を更新します。多言語 README と website は同じ意味になるように一括で揃えます。\n表記更新は入りました。これから不整合 grep、website build、diff check を通してから commit / push / PR 作成まで進めます。\n検証は通りました。古い `Codex CLI Preview` 表記も残っていません。ここから commit / push / PR 作成へ進めます。\nCodex CLI の `Preview` 表記を `Supported` に上げる変更は一通り入っていて、website build と whitespace check までは通っています。ここから差分を最終確認して、commit / push / PR 作成まで進めます。\n差分は想定どおり docs / website / README のみで、コード実装には触っていません。PR 作成用の skill 手順も確認したので、これから変更を commit して remote に push します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "ブランチ `docs-promote-codex-support` を切りました。 まず README と website の全言語 Agent Support 表を揃え、その後 docs/knowledge と AGENTS/CLAUDE の表記ゆれを直します。"
+        }
+      ],
+      "files_touched": [
+        "README.md",
+        "README.ja.md",
+        "README.fr.md",
+        "README.de.md",
+        "README.it.md",
+        "README.es.md",
+        "README.ko.md",
+        "README.zh-cn.md",
+        "README.zh-tw.md",
+        "README.ru.md",
+        "README.id.md",
+        "README.pt-br.md",
+        "website/src/content/docs/agent-support.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/fr/agent-support.mdx",
+        "website/src/content/docs/de/agent-support.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/es/agent-support.mdx",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/zh-cn/agent-support.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/id/agent-support.mdx",
+        "website/src/content/docs/pt-br/agent-support.mdx",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/knowledge/agent-support-policy.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/agent-support-policy.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "3a53c56663e24053598a1ae4afe61509ddc6bd39",
+    "short_sha": "3a53c56",
+    "message": "docs: promote codex support status",
+    "date": "2026-05-08T16:13:47+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index 6273a9e..c2b092b 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -66,7 +66,7 @@ Agent Note supports multiple coding agents via an adapter pattern:",
+          " - **`index.ts`**: Agent registry — `getAgent()`, `hasAgent()`, `listAgents()`.",
+          " - **`claude.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.",
+          " - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.",
+          "-- **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.",
+          "+- **`cursor.ts`**: Cursor adapter. Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.",
+          " - **`gemini.ts`**: Gemini CLI adapter (Preview). Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern). `extractInteractions` parses JSONL transcripts from `~/.gemini/tmp/`; transcript schema may evolve with Gemini CLI updates.",
+          " ",
+          " ### Hook event handling (`packages/cli/src/commands/hook.ts`)"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index 828dc58..0806c5b 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -66,7 +66,7 @@ Agent Note supports multiple coding agents via an adapter pattern:",
+          " - **`index.ts`**: Agent registry — `getAgent()`, `hasAgent()`, `listAgents()`.",
+          " - **`claude.ts`**: Claude Code adapter. Hooks for Edit/Write/MultiEdit/NotebookEdit and Bash.",
+          " - **`codex.ts`**: Codex CLI adapter. Parses `apply_patch` transcripts for file attribution.",
+          "-- **`cursor.ts`**: Cursor adapter (Preview). Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.",
+          "+- **`cursor.ts`**: Cursor adapter. Hooks via `.cursor/hooks.json`. Parses `~/.cursor/projects/` transcripts. Edit-count attribution with line-level upgrade when edit stats match commit diff.",
+          " - **`gemini.ts`**: Gemini CLI adapter (Preview). Hooks via `.gemini/settings.json`. BeforeTool/AfterTool for file edits (`write_file`, `replace`) and shell commands. Trailer injection via `prepare-commit-msg` git hook (pending-commit pattern). `extractInteractions` parses JSONL transcripts from `~/.gemini/tmp/`; transcript schema may evolve with Gemini CLI updates.",
+          " ",
+          " ### Hook event handling (`packages/cli/src/commands/hook.ts`)"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.de.md",
+        "lines": [
+          "index 554cc80..8daeccd 100644",
+          "--- a/README.de.md",
+          "+++ b/README.de.md",
+          "@@ -106,7 +106,7 @@ Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record li",
+          " | Agent | Status | Detail | Hinweise |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Schätzung KI-geschriebener Zeilen | Nutzt Native Hooks, um die Unterhaltung wiederherzustellen. |",
+          "-| Codex CLI | Preview | Geänderte Dateien standardmäßig | Kann KI-geschriebene Zeilen nur schätzen, wenn die Codex-Patch-Historie zum finalen Commit passt. Wenn das lokale Transcript nicht gelesen werden kann, schreibt Agent Note keine unsichere Note. |",
+          "+| Codex CLI | Supported | Geänderte Dateien standardmäßig | Kann KI-geschriebene Zeilen nur schätzen, wenn die Codex-Patch-Historie zum finalen Commit passt. Wenn das lokale Transcript nicht gelesen werden kann, schreibt Agent Note keine unsichere Note. |",
+          " | Cursor | Supported | Geänderte Dateien standardmäßig | Nutzt Cursor-Edit-Hooks. Kann KI-geschriebene Zeilen nur schätzen, wenn die Datei im Commit noch zum letzten KI-Edit passt. |",
+          " | Gemini CLI | Preview | Geänderte Dateien | Nutzt generierte Hooks, um Unterhaltungen und normale `git commit`-Läufe zu erfassen. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.es.md",
+        "lines": [
+          "index d691d24..90a8e30 100644",
+          "--- a/README.es.md",
+          "+++ b/README.es.md",
+          "@@ -106,7 +106,7 @@ Los datos temporales de sesión viven en `.git/agentnote/`. El registro permanen",
+          " | Agent | Estado | Detalle | Notas |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Estimación de líneas escritas por IA | Usa Hooks nativos para recuperar la conversación. |",
+          "-| Codex CLI | Preview | Archivos modificados por defecto | Puede estimar líneas escritas por IA solo cuando el historial de parches de Codex coincide con el Commit final. Si no puede leer el Transcript Local, Agent Note evita notas inciertas. |",
+          "+| Codex CLI | Supported | Archivos modificados por defecto | Puede estimar líneas escritas por IA solo cuando el historial de parches de Codex coincide con el Commit final. Si no puede leer el Transcript Local, Agent Note evita notas inciertas. |",
+          " | Cursor | Supported | Archivos modificados por defecto | Usa los Hooks de edición de Cursor. Puede estimar líneas escritas por IA solo cuando el archivo del Commit aún coincide con la última edición de IA. |",
+          " | Gemini CLI | Preview | Archivos modificados | Usa Hooks generados para capturar conversaciones y ejecuciones normales de `git commit`. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.fr.md",
+        "lines": [
+          "index cea67b8..b261036 100644",
+          "--- a/README.fr.md",
+          "+++ b/README.fr.md",
+          "@@ -106,7 +106,7 @@ Les données temporaires de Session vivent sous `.git/agentnote/`. L'enregistrem",
+          " | Agent | Statut | Détail | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Estimation des lignes écrites par l'IA | Utilise des Hooks natifs pour retrouver la conversation. |",
+          "-| Codex CLI | Preview | Fichiers modifiés par défaut | Peut estimer les lignes écrites par l'IA seulement quand l'historique de patch Codex correspond au Commit final. Si le Transcript Local ne peut pas être lu, Agent Note évite d'écrire une Note incertaine. |",
+          "+| Codex CLI | Supported | Fichiers modifiés par défaut | Peut estimer les lignes écrites par l'IA seulement quand l'historique de patch Codex correspond au Commit final. Si le Transcript Local ne peut pas être lu, Agent Note évite d'écrire une Note incertaine. |",
+          " | Cursor | Supported | Fichiers modifiés par défaut | Utilise les Hooks d'édition Cursor. Peut estimer les lignes écrites par l'IA seulement quand le fichier Commité correspond encore à la dernière édition IA. |",
+          " | Gemini CLI | Preview | Fichiers modifiés | Utilise les Hooks générés pour capturer les conversations et les `git commit` normaux. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.id.md",
+        "lines": [
+          "index 12b5405..689867e 100644",
+          "--- a/README.id.md",
+          "+++ b/README.id.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `",
+          " | Agent | Status | Detail | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Perkiraan per baris secara default | Menggunakan Native Hooks untuk memulihkan percakapan. |",
+          "-| Codex CLI | Preview | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |",
+          "+| Codex CLI | Supported | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |",
+          " | Cursor | Supported | Biasanya per file | Menggunakan Cursor Edit Hooks. Dapat memperkirakan baris yang ditulis AI hanya saat file dalam Commit masih cocok dengan Edit AI terakhir. |",
+          " | Gemini CLI | Preview | Per file | Menggunakan Generated Hooks untuk mencatat percakapan dan `git commit` normal. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index dbfdb2a..84007bc 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -106,7 +106,7 @@ I dati temporanei di sessione vivono sotto `.git/agentnote/`. Il Record permanen",
+          " | Agent | Stato | Dettaglio | Note |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Stima delle linee scritte dall'AI | Usa Hook nativi per recuperare la conversazione. |",
+          "-| Codex CLI | Preview | File modificati di default | Può stimare le linee scritte dall'AI solo quando la cronologia patch di Codex corrisponde al Commit finale. Se il Transcript locale non può essere letto, Agent Note evita Note incerte. |",
+          "+| Codex CLI | Supported | File modificati di default | Può stimare le linee scritte dall'AI solo quando la cronologia patch di Codex corrisponde al Commit finale. Se il Transcript locale non può essere letto, Agent Note evita Note incerte. |",
+          " | Cursor | Supported | File modificati di default | Usa gli Edit Hook di Cursor. Può stimare le linee scritte dall'AI solo quando il file nel Commit corrisponde ancora all'ultimo Edit AI. |",
+          " | Gemini CLI | Preview | File modificati | Usa Hook generati per catturare conversazioni e normali esecuzioni di `git commit`. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ja.md",
+        "lines": [
+          "index c91c7f8..7ec30f0 100644",
+          "--- a/README.ja.md",
+          "+++ b/README.ja.md",
+          "@@ -106,7 +106,7 @@ Agent Note は Commit の文脈を保存します。",
+          " | Agent | Status | 表示できる粒度 | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | AI が書いた行の目安まで表示 | Native Hooks で会話を復元します。 |",
+          "-| Codex CLI | Preview | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |",
+          "+| Codex CLI | Supported | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |",
+          " | Cursor | Supported | 通常は変更ファイルまで表示 | Cursor の Edit Hooks を使います。Commit に入ったファイルが最後の AI 編集と一致する場合だけ、AI が書いた行の目安も表示できます。 |",
+          " | Gemini CLI | Preview | 変更ファイルまで表示 | Generated Hooks で会話と通常の `git commit` を記録します。 |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 865aee0..d8bda6f 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanen",
+          " | Agent | Status | 표시 수준 | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 줄 단위 추정까지 표시 | Native Hooks 로 대화를 복원합니다. |",
+          "-| Codex CLI | Preview | 보통 파일 단위 | Codex patch 기록이 최종 Commit 과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. Local Transcript 를 읽을 수 없으면 불확실한 Note 를 만들지 않습니다. |",
+          "+| Codex CLI | Supported | 보통 파일 단위 | Codex patch 기록이 최종 Commit 과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. Local Transcript 를 읽을 수 없으면 불확실한 Note 를 만들지 않습니다. |",
+          " | Cursor | Supported | 보통 파일 단위 | Cursor Edit Hooks 를 사용합니다. Commit 에 포함된 파일이 마지막 AI 수정과 맞을 때만 AI 가 작성한 줄의 추정치도 표시할 수 있습니다. |",
+          " | Gemini CLI | Preview | 파일 단위 | Generated Hooks 로 대화와 일반 `git commit` 실행을 기록합니다. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.md",
+        "lines": [
+          "index ea19228..97c5c0d 100644",
+          "--- a/README.md",
+          "+++ b/README.md",
+          "@@ -106,7 +106,7 @@ Temporary session data lives under `.git/agentnote/`. The permanent record lives",
+          " | Agent | Status | Detail | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Line estimates by default | Uses native hooks to recover the conversation. |",
+          "-| Codex CLI | Preview | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |",
+          "+| Codex CLI | Supported | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |",
+          " | Cursor | Supported | Changed files by default | Uses Cursor edit hooks. Can estimate AI-written lines only when the committed file still matches the last AI edit. |",
+          " | Gemini CLI | Preview | Changed files | Uses generated hooks to capture conversations and normal `git commit` runs. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 540bcca..1e37ae2 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `r",
+          " | Agent | Status | Detalhe | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Estimativa por linha por padrão | Usa Native Hooks para recuperar a conversa. |",
+          "-| Codex CLI | Preview | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |",
+          "+| Codex CLI | Supported | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |",
+          " | Cursor | Supported | Por arquivo por padrão | Usa Cursor Edit Hooks. Pode estimar linhas escritas pela AI apenas quando o arquivo no Commit ainda corresponde ao último Edit da AI. |",
+          " | Gemini CLI | Preview | Por arquivo | Usa Generated Hooks para registrar conversas e execuções normais de `git commit`. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ru.md",
+        "lines": [
+          "index 27bbac2..59058c5 100644",
+          "--- a/README.ru.md",
+          "+++ b/README.ru.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data находятся в `.git/agentnote/`. Permanent Record",
+          " | Agent | Status | Детализация | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Оценка по строкам по умолчанию | Использует Native Hooks, чтобы восстановить разговор. |",
+          "-| Codex CLI | Preview | Обычно по файлам | Может оценить строки, написанные AI, только когда история patch в Codex совпадает с итоговым Commit. Если локальный Transcript нельзя прочитать, Agent Note не создаёт сомнительную Note. |",
+          "+| Codex CLI | Supported | Обычно по файлам | Может оценить строки, написанные AI, только когда история patch в Codex совпадает с итоговым Commit. Если локальный Transcript нельзя прочитать, Agent Note не создаёт сомнительную Note. |",
+          " | Cursor | Supported | Обычно по файлам | Использует Cursor Edit Hooks. Может оценить строки, написанные AI, только когда файл в Commit всё ещё совпадает с последним AI Edit. |",
+          " | Gemini CLI | Preview | По файлам | Использует Generated Hooks, чтобы записывать разговоры и обычные запуски `git commit`. |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-cn.md",
+        "lines": [
+          "index e8ff7f6..9c00049 100644",
+          "--- a/README.zh-cn.md",
+          "+++ b/README.zh-cn.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在",
+          " | Agent | Status | 显示粒度 | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 默认显示到行级估算 | 使用 Native Hooks 还原对话。 |",
+          "-| Codex CLI | Preview | 通常为文件级 | 只有当 Codex patch 记录与最终 Commit 匹配时，才会显示 AI 编写行数的估算。无法读取 Local Transcript 时，Agent Note 不会写入不确定的 Note。 |",
+          "+| Codex CLI | Supported | 通常为文件级 | 只有当 Codex patch 记录与最终 Commit 匹配时，才会显示 AI 编写行数的估算。无法读取 Local Transcript 时，Agent Note 不会写入不确定的 Note。 |",
+          " | Cursor | Supported | 通常为文件级 | 使用 Cursor Edit Hooks。只有 Commit 中的文件仍匹配最后一次 AI 编辑时，才会显示 AI 编写行数的估算。 |",
+          " | Gemini CLI | Preview | 文件级 | 使用 Generated Hooks 记录对话和普通 `git commit`。 |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-tw.md",
+        "lines": [
+          "index 19cde48..be82ed8 100644",
+          "--- a/README.zh-tw.md",
+          "+++ b/README.zh-tw.md",
+          "@@ -106,7 +106,7 @@ Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在",
+          " | Agent | Status | 顯示粒度 | Notes |",
+          " | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 預設顯示到行級估算 | 使用 Native Hooks 還原對話。 |",
+          "-| Codex CLI | Preview | 通常為檔案級 | 只有當 Codex patch 記錄與最終 Commit 相符時，才會顯示 AI 編寫行數的估算。無法讀取 Local Transcript 時，Agent Note 不會寫入不確定的 Note。 |",
+          "+| Codex CLI | Supported | 通常為檔案級 | 只有當 Codex patch 記錄與最終 Commit 相符時，才會顯示 AI 編寫行數的估算。無法讀取 Local Transcript 時，Agent Note 不會寫入不確定的 Note。 |",
+          " | Cursor | Supported | 通常為檔案級 | 使用 Cursor Edit Hooks。只有 Commit 中的檔案仍符合最後一次 AI 編輯時，才會顯示 AI 編寫行數的估算。 |",
+          " | Gemini CLI | Preview | 檔案級 | 使用 Generated Hooks 記錄對話和一般 `git commit`。 |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/agent-support-policy.md",
+        "lines": [
+          "index 9eeb7b6..215cb8e 100644",
+          "--- a/docs/knowledge/agent-support-policy.md",
+          "+++ b/docs/knowledge/agent-support-policy.md",
+          "@@ -5,29 +5,28 @@",
+          " > 個別の実装経緯や詳細な制約は `archive/codex-support-plan.md`、`archive/cursor-support-plan.md`、",
+          " > `archive/gemini-support-plan.md` を参照し、この文書では release judgement と rollout 順を固定する。",
+          " >",
+          "-> 2026-04-15 時点で `packages/cli` の `build` / `typecheck` / `lint` / `test` は green であり、",
+          "+> 2026-05-08 時点で `packages/cli` の `build` / `typecheck` / `lint` / `test` は green であり、",
+          " > 現在の議論は「実装が壊れているか」ではなく「どの条件で preview を外せるか」にある。",
+          " ",
+          " ## 0. 結論",
+          " ",
+          " Claude 以外を一括で正式化するのではなく、agent ごとに promotion する。",
+          "-推奨順は次の通り。",
+          "+現在の public status は次の通り。",
+          " ",
+          "-1. **Cursor**",
+          "-2. **Codex CLI**",
+          "-3. **Gemini CLI**",
+          "+1. **Claude Code**: `Full support`",
+          "+2. **Cursor**: `Supported`",
+          "+3. **Codex CLI**: `Supported`",
+          "+4. **Gemini CLI**: `Preview`",
+          " ",
+          "-理由は明確である。",
+          "+Gemini CLI だけを `Preview` に残す理由は明確である。",
+          " ",
+          "-- Cursor は既存の計画書上でも、残差分が optional optimization に近い",
+          "-- Codex CLI は実用上かなり成立しているが、parser hardening と docs 上の基準整理が残っている",
+          " - Gemini CLI は upstream 側の event / transcript 仕様に未確定事項があり、実機検証が promotion gate になる",
+          " ",
+          "-したがって、直近の方針は次の 3 段 rollout とする。",
+          "+これまでの rollout は次の状態である。",
+          " ",
+          "-- **Phase 1**: Cursor を `Supported` に引き上げる",
+          "-- **Phase 2**: Codex CLI を `Supported` に引き上げる",
+          "-- **Phase 3**: Gemini CLI を `Supported` に引き上げる",
+          "+- **Phase 1**: Cursor を `Supported` に引き上げ済み",
+          "+- **Phase 2**: Codex CLI を `Supported` に引き上げ済み",
+          "+- **Phase 3**: Gemini CLI は実機検証完了まで `Preview` 維持",
+          " ",
+          " このとき、Claude の `Full support` は「行単位 attribution が通常経路で成立する最上位 tier」として残す。",
+          " Codex CLI と Cursor は `Supported` であっても attribution の精度は条件付き line-level のままでよい。",
+          "@@ -112,8 +111,8 @@ support status と attribution fidelity は別軸として扱う。",
+          " ",
+          " この整理により、次が可能になる。",
+          " ",
+          "-- Cursor を `Supported` に昇格しつつ、line-level は conditional のまま説明する",
+          "-- Codex CLI を `Supported` に昇格しつつ、transcript-driven であることを limitation として明示する",
+          "+- Cursor を `Supported` に保ちつつ、line-level は conditional のまま説明する",
+          "+- Codex CLI を `Supported` に保ちつつ、transcript-driven であることを limitation として明示する",
+          " - Gemini CLI は file-level でも `Supported` になりうるが、upstream 未確定事項がある限りは `Preview` に留める",
+          " ",
+          " ## 6. 共通 Promotion Gate",
+          "@@ -161,8 +160,8 @@ Cursor は最も promotion に近い。",
+          " ",
+          " ### 7.3 Codex CLI",
+          " ",
+          "-Codex CLI は実用上かなり成立しているが、Cursor より promotion 条件が 1 段だけ重い。",
+          "-理由は transcript-driven な設計ゆえに、parser と validation の健全性が support judgment に直結するためである。",
+          "+Codex CLI は `Supported` とする。",
+          "+ただし transcript-driven な設計なので、attribution fidelity は Claude Code と同じ意味ではない。",
+          " ",
+          " 現在の評価:",
+          " ",
+          "@@ -170,18 +169,13 @@ Codex CLI は実用上かなり成立しているが、Cursor より promotion ",
+          " - prompt / response / files_touched の transcript 復元は成立している",
+          " - patch 行数が commit と一致したときの safe line-level upgrade は成立している",
+          " - 通常は file-level attribution で説明可能である",
+          "-",
+          "-残件:",
+          "-",
+          "-- transcript schema 変化に備えた parser hardening",
+          "-- shell / exec 由来の変更を transcript だけでどこまで recover できるかの継続検証",
+          "-- `Preview` 解除基準の docs 明文化",
+          "-- transcript path validation の hardening",
+          "+- transcript が読めない、または不確かな場合は note を作らず安全側に倒れる",
+          "+- shell-only の変更を transcript だけから AI-authored file と推測しない",
+          " ",
+          " 判断:",
+          " ",
+          "-- **promotion 候補の第 2 優先**",
+          "-- hardening と docs 整備が済めば `Supported` に引き上げてよい",
+          "+- **`Supported` 維持**",
+          "+- transcript-driven limitation は README と website で明示する",
+          " ",
+          " ### 7.4 Gemini CLI",
+          " ",
+          "@@ -211,6 +205,8 @@ upstream 側の未確定仕様が promotion blocker になっている。",
+          " ",
+          " ### Phase 1: Cursor promotion",
+          " ",
+          "+Status: 完了。",
+          "+",
+          " 目的:",
+          " ",
+          " - `Preview` 表記を外し、最初の non-Claude `Supported` agent を作る",
+          "@@ -229,6 +225,8 @@ exit criteria:",
+          " ",
+          " ### Phase 2: Codex CLI promotion",
+          " ",
+          "+Status: 完了。",
+          "+",
+          " 目的:",
+          " ",
+          " - transcript-driven agent として最初の正式サポートを確立する",
+          "@@ -239,7 +237,7 @@ exit criteria:",
+          " - parser の fixture 強化",
+          " - shell-only change recovery の到達範囲を docs に明示",
+          " - `status` で Codex の capture 詳細を表示するか検討し、必要なら追加する",
+          "-- README と website の `Codex CLI | Preview` を `Supported` へ更新",
+          "+- README と website の `Codex CLI | Supported` を維持する",
+          " ",
+          " exit criteria:",
+          " ",
+          "@@ -249,6 +247,8 @@ exit criteria:",
+          " ",
+          " ### Phase 3: Gemini CLI promotion",
+          " ",
+          "+Status: 未完了。Gemini CLI は `Preview` を維持する。",
+          "+",
+          " 目的:",
+          " ",
+          " - upstream 仕様の未確定事項を解消し、正式サポート判定を可能にする",
+          "@@ -260,7 +260,7 @@ exit criteria:",
+          " - `BeforeAgent` の発火頻度を確認する",
+          " - transcript schema と探索経路を確定し、必要なら parser を修正する",
+          " - 実機 fixture ベースの test を追加する",
+          "-- README と website の `Gemini CLI | Preview` を `Supported` へ更新",
+          "+- promotion 判断時に README と website の Gemini CLI status を更新する",
+          " ",
+          " exit criteria:",
+          " ",
+          "@@ -272,14 +272,11 @@ exit criteria:",
+          " ",
+          " promotion の実務優先順位は次の通り。",
+          " ",
+          "-1. Cursor の public status 更新",
+          "-2. Codex CLI の hardening と validation 強化",
+          "-3. Codex CLI の public status 更新",
+          "-4. Gemini CLI の実機検証",
+          "-5. Gemini CLI の parser / docs 更新",
+          "-6. Gemini CLI の public status 更新",
+          "+1. Gemini CLI の実機検証",
+          "+2. Gemini CLI の parser / docs 更新",
+          "+3. Gemini CLI の public status 更新判断",
+          " ",
+          "-この順序にすることで、最小の risk で `Preview` を順に減らせる。",
+          "+Cursor と Codex CLI の public status は更新済みである。",
+          " ",
+          " ## 10. Rollback 方針",
+          " ",
+          "@@ -306,10 +303,10 @@ promotion は reversible に行う。",
+          " ",
+          " ## 12. 現時点の推奨判断",
+          " ",
+          "-2026-04-15 時点の推奨判断を短く固定する。",
+          "+2026-05-08 時点の推奨判断を短く固定する。",
+          " ",
+          "-- **Cursor**: promotion してよい",
+          "-- **Codex CLI**: hardening 後に promotion",
+          "+- **Cursor**: `Supported` 維持",
+          "+- **Codex CLI**: `Supported` 維持",
+          " - **Gemini CLI**: 実機検証完了後に promotion",
+          " ",
+          "-したがって、次に着手すべき具体的な仕事は `Cursor → Codex CLI → Gemini CLI` の順である。",
+          "+したがって、次に着手すべき具体的な仕事は Gemini CLI の実機検証である。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/agent-support.mdx",
+        "lines": [
+          "index 23c9561..027d93a 100644",
+          "--- a/website/src/content/docs/agent-support.mdx",
+          "+++ b/website/src/content/docs/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note uses the same git-note format for every agent, but each agent exposes",
+          " | Agent | Status | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook-native | Line-level by default |",
+          "-| Codex CLI | Preview | Local transcript | File-level by default, line-level when `apply_patch` counts match |",
+          "+| Codex CLI | Supported | Local transcript | File-level by default, line-level when `apply_patch` counts match |",
+          " | Cursor Preview | Supported | Response hook or local transcript | File-level by default, line-level when edit counts and final blob match |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Each developer still needs to run `init` once after cloning because git hooks li",
+          " | You need... | Expect... |",
+          " |---|---|",
+          " | The most complete line attribution today | Claude Code |",
+          "-| Codex CLI support with conservative attribution | Codex CLI in Preview |",
+          "+| Codex CLI support with conservative attribution | Codex CLI |",
+          " | Cursor editor history and response recovery | Cursor Preview |",
+          " | Gemini CLI prompt / response capture | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/agent-support.mdx",
+        "lines": [
+          "index 3b201f8..398ab1f 100644",
+          "--- a/website/src/content/docs/de/agent-support.mdx",
+          "+++ b/website/src/content/docs/de/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent",
+          " | Agent | Status | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook-native | Standardmäßig line-level |",
+          "-| Codex CLI | Preview | Lokales Transcript | Standardmäßig file-level, line-level wenn `apply_patch` Counts passen |",
+          "+| Codex CLI | Supported | Lokales Transcript | Standardmäßig file-level, line-level wenn `apply_patch` Counts passen |",
+          " | Cursor Preview | Supported | Response hook oder lokales Transcript | Standardmäßig file-level, line-level wenn Edit Counts und finaler Blob passen |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` Hooks | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Jeder Developer muss `init` nach dem Clone einmal ausführen, weil git hooks in",
+          " | Du brauchst... | Erwartung |",
+          " |---|---|",
+          " | Die heute vollständigste zeilenweise Zuordnung | Claude Code |",
+          "-| Codex CLI mit konservativer Zuordnung | Codex CLI im Preview |",
+          "+| Codex CLI mit konservativer Zuordnung | Codex CLI |",
+          " | Cursor-Editor-Historie und Response-Wiederherstellung | Cursor Preview |",
+          " | Prompt-/Response-Erfassung mit Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/agent-support.mdx",
+        "lines": [
+          "index 866e214..ebd2d07 100644",
+          "--- a/website/src/content/docs/es/agent-support.mdx",
+          "+++ b/website/src/content/docs/es/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note guarda el mismo formato de git note para todos los agents, pero cada",
+          " | Agent | Estado | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level por defecto |",
+          "-| Codex CLI | Preview | Transcript local | File-level por defecto, line-level si los conteos `apply_patch` coinciden |",
+          "+| Codex CLI | Supported | Transcript local | File-level por defecto, line-level si los conteos `apply_patch` coinciden |",
+          " | Cursor Preview | Supported | Response hook o transcript local | File-level por defecto, line-level si los edits y el blob final coinciden |",
+          " | Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Cada developer debe ejecutar `init` una vez después de clonar, porque los git h",
+          " | Necesitas... | Espera... |",
+          " |---|---|",
+          " | La atribución por línea más completa hoy | Claude Code |",
+          "-| Soporte de Codex CLI con atribución conservadora | Codex CLI en Preview |",
+          "+| Soporte de Codex CLI con atribución conservadora | Codex CLI |",
+          " | Historial del editor Cursor y recuperación de respuestas | Cursor Preview |",
+          " | Captura de prompt / response con Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/agent-support.mdx",
+        "lines": [
+          "index e147dbf..4681cca 100644",
+          "--- a/website/src/content/docs/fr/agent-support.mdx",
+          "+++ b/website/src/content/docs/fr/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note écrit le même format de git note pour tous les agents, mais chaque",
+          " | Agent | Statut | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level par défaut |",
+          "-| Codex CLI | Preview | Transcript local | File-level par défaut, line-level si les comptes `apply_patch` correspondent |",
+          "+| Codex CLI | Supported | Transcript local | File-level par défaut, line-level si les comptes `apply_patch` correspondent |",
+          " | Cursor Preview | Supported | Response hook ou transcript local | File-level par défaut, line-level si les edits et le blob final correspondent |",
+          " | Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Chaque developer doit lancer `init` une fois après un clone, car les git hooks",
+          " | Besoin | Attendez-vous à |",
+          " |---|---|",
+          " | Attribution ligne par ligne la plus complète aujourd'hui | Claude Code |",
+          "-| Support Codex CLI avec attribution prudente | Codex CLI en Preview |",
+          "+| Support Codex CLI avec attribution prudente | Codex CLI |",
+          " | Historique d'éditeur Cursor et récupération des réponses | Cursor Preview |",
+          " | Capture prompt / réponse avec Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/agent-support.mdx",
+        "lines": [
+          "index bb3aa19..858e7a7 100644",
+          "--- a/website/src/content/docs/id/agent-support.mdx",
+          "+++ b/website/src/content/docs/id/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap ag",
+          " | Agent | Status | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level secara default |",
+          "-| Codex CLI | Preview | Local transcript | File-level secara default, line-level jika count `apply_patch` cocok |",
+          "+| Codex CLI | Supported | Local transcript | File-level secara default, line-level jika count `apply_patch` cocok |",
+          " | Cursor Preview | Supported | Response hook atau local transcript | File-level secara default, line-level jika edit count dan final blob cocok |",
+          " | Gemini CLI Preview | Preview | Hook `BeforeAgent` / `AfterAgent` | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Setiap developer perlu menjalankan `init` sekali setelah clone, karena git hooks",
+          " | Anda butuh... | Yang bisa diharapkan |",
+          " |---|---|",
+          " | Attribution per baris paling lengkap saat ini | Claude Code |",
+          "-| Dukungan Codex CLI dengan attribution konservatif | Codex CLI dalam Preview |",
+          "+| Dukungan Codex CLI dengan attribution konservatif | Codex CLI |",
+          " | Riwayat editor Cursor dan pemulihan response | Cursor Preview |",
+          " | Capture prompt / response dari Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/agent-support.mdx",
+        "lines": [
+          "index 5df4d70..42375e3 100644",
+          "--- a/website/src/content/docs/it/agent-support.mdx",
+          "+++ b/website/src/content/docs/it/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note usa lo stesso formato di git note per tutti gli agent, ma ogni agent",
+          " | Agent | Stato | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level di default |",
+          "-| Codex CLI | Preview | Transcript locale | File-level di default, line-level quando i conteggi `apply_patch` coincidono |",
+          "+| Codex CLI | Supported | Transcript locale | File-level di default, line-level quando i conteggi `apply_patch` coincidono |",
+          " | Cursor Preview | Supported | Response hook o transcript locale | File-level di default, line-level quando edit count e blob finale coincidono |",
+          " | Gemini CLI Preview | Preview | Hook `BeforeAgent` / `AfterAgent` | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Ogni developer deve eseguire `init` una volta dopo il clone, perché i git hooks",
+          " | Ti serve... | Aspettati... |",
+          " |---|---|",
+          " | L'attribution riga per riga più completa oggi | Claude Code |",
+          "-| Supporto Codex CLI con attribution prudente | Codex CLI in Preview |",
+          "+| Supporto Codex CLI con attribution prudente | Codex CLI |",
+          " | Cronologia editor Cursor e recupero delle response | Cursor Preview |",
+          " | Capture prompt / response con Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/agent-support.mdx",
+        "lines": [
+          "index bb5ba7f..71401df 100644",
+          "--- a/website/src/content/docs/ja/agent-support.mdx",
+          "+++ b/website/src/content/docs/ja/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note はどの agent でも同じ git note 形式で保存します。た",
+          " | Agent | 状態 | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | 既定で line-level |",
+          "-| Codex CLI | Preview | Local transcript | 既定は file-level。`apply_patch` 行数が最終 diff と一致したとき line-level |",
+          "+| Codex CLI | Supported | Local transcript | 既定は file-level。`apply_patch` 行数が最終 diff と一致したとき line-level |",
+          " | Cursor Preview | Supported | Response hook または local transcript | 既定は file-level。edit 行数と最終 blob が一致したとき line-level |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ git hook は `.git/` の中にあるため、各 developer は clone 後に 1 ",
+          " | 必要なこと | 期待できるもの |",
+          " |---|---|",
+          " | いま最も詳しい行単位の attribution | Claude Code |",
+          "-| Codex CLI を安全側の判定で使う | Preview の Codex CLI support |",
+          "+| Codex CLI を安全側の判定で使う | Codex CLI |",
+          " | Cursor の editor history と response 復元 | Cursor Preview |",
+          " | Gemini CLI の prompt / response 取得 | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/agent-support.mdx",
+        "lines": [
+          "index 53c1f80..d442ec7 100644",
+          "--- a/website/src/content/docs/ko/agent-support.mdx",
+          "+++ b/website/src/content/docs/ko/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 a",
+          " | Agent | 상태 | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | 기본 line-level |",
+          "-| Codex CLI | Preview | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |",
+          "+| Codex CLI | Supported | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |",
+          " | Cursor Preview | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ git hook 은 `.git/` 안에 있으므로, 각 developer 는 clone 후 한 번 `i",
+          " | 필요한 것 | 기대할 수 있는 것 |",
+          " |---|---|",
+          " | 현재 가장 자세한 line attribution | Claude Code |",
+          "-| 보수적인 attribution 의 Codex CLI support | Preview 의 Codex CLI |",
+          "+| 보수적인 attribution 의 Codex CLI support | Codex CLI |",
+          " | Cursor editor history 와 response 복원 | Cursor Preview |",
+          " | Gemini CLI prompt / response 기록 | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/agent-support.mdx",
+        "lines": [
+          "index e6e3650..37986b8 100644",
+          "--- a/website/src/content/docs/pt-br/agent-support.mdx",
+          "+++ b/website/src/content/docs/pt-br/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ O Agent Note grava o mesmo formato de git note para todos os agents, mas cada ag",
+          " | Agent | Status | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level por padrão |",
+          "-| Codex CLI | Preview | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |",
+          "+| Codex CLI | Supported | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |",
+          " | Cursor Preview | Supported | Response hook ou local transcript | File-level por padrão, line-level quando edit count e final blob batem |",
+          " | Gemini CLI Preview | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ Cada developer precisa rodar `init` uma vez depois do clone, porque git hooks fi",
+          " | Você precisa de... | Espere... |",
+          " |---|---|",
+          " | A attribution por linha mais completa hoje | Claude Code |",
+          "-| Suporte Codex CLI com attribution conservadora | Codex CLI em Preview |",
+          "+| Suporte Codex CLI com attribution conservadora | Codex CLI |",
+          " | Histórico do editor Cursor e recuperação de response | Cursor Preview |",
+          " | Captura de prompt / response no Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/agent-support.mdx",
+        "lines": [
+          "index 499c512..ff4b7c3 100644",
+          "--- a/website/src/content/docs/ru/agent-support.mdx",
+          "+++ b/website/src/content/docs/ru/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note использует один формат git note для всех a",
+          " | Agent | Статус | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | Line-level по умолчанию |",
+          "-| Codex CLI | Preview | Local transcript | File-level по умолчанию, line-level если `apply_patch` counts совпадают |",
+          "+| Codex CLI | Supported | Local transcript | File-level по умолчанию, line-level если `apply_patch` counts совпадают |",
+          " | Cursor Preview | Supported | Response hook или local transcript | File-level по умолчанию, line-level если edit counts и final blob совпадают |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ npx agent-note init --agent claude codex cursor gemini",
+          " | Нужно... | Ожидайте... |",
+          " |---|---|",
+          " | Самая полная построчная attribution сегодня | Claude Code |",
+          "-| Поддержка Codex CLI с консервативной attribution | Codex CLI в Preview |",
+          "+| Поддержка Codex CLI с консервативной attribution | Codex CLI |",
+          " | История редактора Cursor и восстановление response | Cursor Preview |",
+          " | Захват prompt / response в Gemini CLI | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+        "lines": [
+          "index 9dcc50e..e923eaa 100644",
+          "--- a/website/src/content/docs/zh-cn/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-cn/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴",
+          " | Agent | 状态 | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | 默认 line-level |",
+          "-| Codex CLI | Preview | Local transcript | 默认 file-level，`apply_patch` 计数匹配最终 diff 时为 line-level |",
+          "+| Codex CLI | Supported | Local transcript | 默认 file-level，`apply_patch` 计数匹配最终 diff 时为 line-level |",
+          " | Cursor Preview | Supported | Response hook 或 local transcript | 默认 file-level，edit count 和 final blob 匹配时为 line-level |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ npx agent-note init --agent claude codex cursor gemini",
+          " | 你需要... | 可以期待... |",
+          " |---|---|",
+          " | 目前最完整的逐行归因 | Claude Code |",
+          "-| 保守归因的 Codex CLI 支持 | Preview 中的 Codex CLI |",
+          "+| 保守归因的 Codex CLI 支持 | Codex CLI |",
+          " | Cursor 编辑器历史和 response 恢复 | Cursor Preview |",
+          " | Gemini CLI 的 prompt / response 捕获 | Gemini CLI Preview |",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+        "lines": [
+          "index 8800923..1ab7abb 100644",
+          "--- a/website/src/content/docs/zh-tw/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-tw/agent-support.mdx",
+          "@@ -12,7 +12,7 @@ Agent Note 對所有 agent 使用相同的 git note 格式，但每個 agent 暴",
+          " | Agent | 狀態 | Prompt / Response | Attribution |",
+          " |---|---|---|---|",
+          " | Claude Code | Full support | Hook native | 預設 line-level |",
+          "-| Codex CLI | Preview | Local transcript | 預設 file-level，`apply_patch` 計數符合最終 diff 時為 line-level |",
+          "+| Codex CLI | Supported | Local transcript | 預設 file-level，`apply_patch` 計數符合最終 diff 時為 line-level |",
+          " | Cursor Preview | Supported | Response hook 或 local transcript | 預設 file-level，edit count 與 final blob 符合時為 line-level |",
+          " | Gemini CLI Preview | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |",
+          " ",
+          "@@ -39,7 +39,7 @@ npx agent-note init --agent claude codex cursor gemini",
+          " | 你需要... | 可以期待... |",
+          " |---|---|",
+          " | 目前最完整的逐行歸因 | Claude Code |",
+          "-| 保守歸因的 Codex CLI 支援 | Preview 中的 Codex CLI |",
+          "+| 保守歸因的 Codex CLI 支援 | Codex CLI |",
+          " | Cursor 編輯器歷史與 response 復原 | Cursor Preview |",
+          " | Gemini CLI 的 prompt / response 擷取 | Gemini CLI Preview |"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 59,
+    "title": "docs: promote Codex CLI support status",
+    "state": "open"
+  }
+}
