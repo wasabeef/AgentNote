@@ -4,20 +4,34 @@ import { execSync } from "child_process";
 import {
 	COMMENT_MARKER,
 	hasDeploymentBranchProtection,
+	PR_OUTPUT_MODES,
 	resolvePrOutputMode,
 	shouldRetryNotesFetch,
 	upsertDescription,
 } from "./github.js";
+import { NOTES_REF_FULL } from "../../cli/src/core/constants.js";
 import { parsePromptDetail } from "../../cli/src/core/entry.js";
 import { collectReport, renderMarkdown } from "./report.js";
 
 type PrOutputMode = ReturnType<typeof resolvePrOutputMode>;
 
-const AGENTNOTE_NOTES_REFSPEC = "refs/notes/agentnote:refs/notes/agentnote";
+const ACTION_OUTPUT_NAMES = {
+	overallAiRatio: "overall_ai_ratio",
+	overallMethod: "overall_method",
+	trackedCommits: "tracked_commits",
+	totalCommits: "total_commits",
+	totalPrompts: "total_prompts",
+	json: "json",
+	markdown: "markdown",
+} as const;
+const AGENTNOTE_NOTES_REFSPEC = `${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
 const DASHBOARD_PREVIEW_HELP_URL = "https://wasabeef.github.io/AgentNote/dashboard/#pr-previews";
+const DEFAULT_BASE_BRANCH = "main";
+const DEFAULT_OVERALL_METHOD = "file";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const JSON_INDENT_SPACES = 2;
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 1000;
 
@@ -52,7 +66,7 @@ async function postPrReport(
 	outputMode: PrOutputMode,
 	markdown: string,
 ): Promise<void> {
-	if (outputMode === "none") return;
+	if (outputMode === PR_OUTPUT_MODES.none) return;
 	if (!markdown || !github.context.payload.pull_request) return;
 
 	const token = process.env[GITHUB_TOKEN_ENV] || "";
@@ -65,7 +79,7 @@ async function postPrReport(
 	const { owner, repo } = github.context.repo;
 	const issueNumber = github.context.payload.pull_request.number;
 
-	if (outputMode === "description") {
+	if (outputMode === PR_OUTPUT_MODES.description) {
 		const { data: pr } = await octokit.rest.pulls.get({
 			owner,
 			repo,
@@ -163,7 +177,7 @@ async function run(): Promise<void> {
 	try {
 		const base =
 			core.getInput("base") ||
-			`origin/${github.context.payload.pull_request?.base?.ref ?? "main"}`;
+			`origin/${github.context.payload.pull_request?.base?.ref ?? DEFAULT_BASE_BRANCH}`;
 		const headSha = github.context.payload.pull_request?.head?.sha;
 		const prNumber = github.context.payload.pull_request?.number ?? null;
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
@@ -204,17 +218,20 @@ async function run(): Promise<void> {
 			report.dashboard_url,
 		);
 
-		const json = JSON.stringify(report, null, 2);
+		const json = JSON.stringify(report, null, JSON_INDENT_SPACES);
 
-		core.setOutput("overall_ai_ratio", String(report.overall_ai_ratio ?? 0));
-		core.setOutput("overall_method", String(report.overall_method ?? "file"));
-		core.setOutput("tracked_commits", String(report.tracked_commits ?? 0));
-		core.setOutput("total_commits", String(report.total_commits ?? 0));
-		core.setOutput("total_prompts", String(report.total_prompts ?? 0));
-		core.setOutput("json", json);
+		core.setOutput(ACTION_OUTPUT_NAMES.overallAiRatio, String(report.overall_ai_ratio ?? 0));
+		core.setOutput(
+			ACTION_OUTPUT_NAMES.overallMethod,
+			String(report.overall_method ?? DEFAULT_OVERALL_METHOD),
+		);
+		core.setOutput(ACTION_OUTPUT_NAMES.trackedCommits, String(report.tracked_commits ?? 0));
+		core.setOutput(ACTION_OUTPUT_NAMES.totalCommits, String(report.total_commits ?? 0));
+		core.setOutput(ACTION_OUTPUT_NAMES.totalPrompts, String(report.total_prompts ?? 0));
+		core.setOutput(ACTION_OUTPUT_NAMES.json, json);
 
 		const markdown = renderMarkdown(report, { promptDetail });
-		core.setOutput("markdown", markdown);
+		core.setOutput(ACTION_OUTPUT_NAMES.markdown, markdown);
 
 		await postPrReport(prOutputMode, markdown);
 	} catch (error) {

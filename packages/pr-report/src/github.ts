@@ -9,8 +9,21 @@ export const DESCRIPTION_BEGIN = "<!-- agentnote-begin -->";
 export const DESCRIPTION_END = "<!-- agentnote-end -->";
 
 const GITHUB_REPOSITORY_URL_PATTERN = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/;
+const GITHUB_CLI_BINARY = "gh";
+const GITHUB_CLI_API_COMMAND = "api";
+const GITHUB_CLI_PR_COMMAND = "pr";
+const GITHUB_CLI_PR_COMMENT_COMMAND = "comment";
+const GITHUB_CLI_PR_VIEW_COMMAND = "view";
+const GITHUB_CLI_JSON_FLAG = "--json";
+const GITHUB_CLI_BODY_FLAG = "--body";
 const PR_QUERY_PARAM = "pr";
 const TEXT_ENCODING = "utf-8";
+export const PR_OUTPUT_MODES = {
+	description: "description",
+	comment: "comment",
+	none: "none",
+} as const;
+export type PrOutputMode = (typeof PR_OUTPUT_MODES)[keyof typeof PR_OUTPUT_MODES];
 
 const execFileAsync = promisify(execFile);
 
@@ -21,17 +34,15 @@ const execFileAsync = promisify(execFile);
  * workflow still produces the primary PR report instead of silently doing
  * nothing.
  */
-export function resolvePrOutputMode(
-	prOutputInput: string,
-): "description" | "comment" | "none" {
+export function resolvePrOutputMode(prOutputInput: string): PrOutputMode {
 	if (
-		prOutputInput === "description" ||
-		prOutputInput === "comment" ||
-		prOutputInput === "none"
+		prOutputInput === PR_OUTPUT_MODES.description ||
+		prOutputInput === PR_OUTPUT_MODES.comment ||
+		prOutputInput === PR_OUTPUT_MODES.none
 	) {
 		return prOutputInput;
 	}
-	return "description";
+	return PR_OUTPUT_MODES.description;
 }
 
 /**
@@ -176,9 +187,9 @@ export async function postPrComment(
 		const commentId = stdout.trim().split("\n")[0];
 		if (commentId) {
 			await execFileAsync(
-				"gh",
+				GITHUB_CLI_BINARY,
 				[
-					"api",
+					GITHUB_CLI_API_COMMAND,
 					"-X",
 					"PATCH",
 					`/repos/{owner}/{repo}/issues/comments/${commentId}`,
@@ -193,9 +204,13 @@ export async function postPrComment(
 		// fall through to create
 	}
 
-	await execFileAsync("gh", ["pr", "comment", prNumber, "--body", body], {
-		encoding: TEXT_ENCODING,
-	});
+	await execFileAsync(
+		GITHUB_CLI_BINARY,
+		[GITHUB_CLI_PR_COMMAND, GITHUB_CLI_PR_COMMENT_COMMAND, prNumber, GITHUB_CLI_BODY_FLAG, body],
+		{
+			encoding: TEXT_ENCODING,
+		},
+	);
 }
 
 /** Wrap generated markdown in description markers for idempotent replacement. */
@@ -206,8 +221,8 @@ function wrapWithMarkers(content: string): string {
 /** Read only the PR body through the GitHub CLI fallback path. */
 async function readPrBody(prNumber: string): Promise<string> {
 	const { stdout } = await execFileAsync(
-		"gh",
-		["pr", "view", prNumber, "--json", "body"],
+		GITHUB_CLI_BINARY,
+		[GITHUB_CLI_PR_COMMAND, GITHUB_CLI_PR_VIEW_COMMAND, prNumber, GITHUB_CLI_JSON_FLAG, "body"],
 		{ encoding: TEXT_ENCODING },
 	);
 	return JSON.parse(stdout).body ?? "";

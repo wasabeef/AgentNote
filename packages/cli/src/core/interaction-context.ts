@@ -25,7 +25,19 @@ const MAX_CONTEXT_CHARS = 900;
 const MAX_SCOPE_PROMPT_CHARS = 120;
 const MAX_SCOPE_LINES = 10;
 const MAX_SCOPE_SENTENCES = 4;
+const MAX_REFERENCE_PARAGRAPHS = 2;
+const MAX_SCOPE_PROMPT_LINES = 3;
 const MIN_SCOPE_SCORE = 2;
+const REFERENCE_CONTEXT_RANK = 3;
+const CONTEXT_SEPARATOR_CHARS = 2;
+const SENTENCE_LOOKAHEAD_CHARS = 16;
+const SUBJECT_TOKEN_SCOPE_THRESHOLD = 2;
+const STRUCTURAL_SCOPE_WEIGHT = 2;
+const GENERIC_SUBJECT_TOKEN_MIN_CHARS = 3;
+const CONTEXT_KIND_ORDER = {
+  reference: 0,
+  scope: 1,
+} as const satisfies Record<InteractionContext["kind"], number>;
 const GENERIC_TOKENS = new Set([
   "agent",
   "agentnote",
@@ -151,12 +163,13 @@ export function selectInteractionContext(
   if (scored.length === 0) return undefined;
 
   const maxChars = Math.min(MAX_CONTEXT_CHARS, candidate.previousResponse.length);
-  const selected = scored.slice(0, 2).sort((a, b) => a.index - b.index);
+  const selected = scored.slice(0, MAX_REFERENCE_PARAGRAPHS).sort((a, b) => a.index - b.index);
   const output: string[] = [];
   let length = 0;
 
   for (const item of selected) {
-    const nextLength = length + item.paragraph.length + (output.length > 0 ? 2 : 0);
+    const nextLength =
+      length + item.paragraph.length + (output.length > 0 ? CONTEXT_SEPARATOR_CHARS : 0);
     if (nextLength > maxChars) continue;
     output.push(item.paragraph);
     length = nextLength;
@@ -175,7 +188,7 @@ export function toReferenceContext(
     kind: "reference",
     source: "previous_response",
     text,
-    rank: 3,
+    rank: REFERENCE_CONTEXT_RANK,
   };
 }
 
@@ -273,7 +286,7 @@ function isShortPrompt(prompt: string): boolean {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= 3;
+  return prompt.trim().length <= MAX_SCOPE_PROMPT_CHARS && lines.length <= MAX_SCOPE_PROMPT_LINES;
 }
 
 function splitScopeSentences(response: string): string[] {
@@ -334,7 +347,7 @@ function isSentenceBoundary(text: string, index: number): boolean {
 
 function isLikelyFileOrDomainDot(text: string, index: number): boolean {
   const before = text.slice(Math.max(0, index - 32), index);
-  const after = text.slice(index + 1, index + 16);
+  const after = text.slice(index + 1, index + SENTENCE_LOOKAHEAD_CHARS);
   return /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(`${before}.${after}`) && /\w/.test(after);
 }
 
@@ -349,14 +362,14 @@ function scoreScopeSentence(
   const codeIdentifierHits = countIdentifierHits(sentence, signature.codeIdentifiers);
   const subjectTokenHits = countSubjectTokenHits(sentence, signature.commitSubjectTokens);
   const issueRefHits = ISSUE_OR_PR_REFERENCE.test(sentence) ? 1 : 0;
-  const scopedTitleHits = subjectTokenHits >= 2 ? 1 : 0;
+  const scopedTitleHits = subjectTokenHits >= SUBJECT_TOKEN_SCOPE_THRESHOLD ? 1 : 0;
   const issueScopedTitleHits = issueRefHits > 0 && subjectTokenHits > 0 ? 1 : 0;
   const markdownIssueHits = issueRefHits > 0 && MARKDOWN_FILE_REFERENCE.test(sentence) ? 1 : 0;
   const structuralScore =
-    codeIdentifierHits * 2 +
-    scopedTitleHits * 2 +
-    issueScopedTitleHits * 2 +
-    markdownIssueHits * 2 +
+    codeIdentifierHits * STRUCTURAL_SCOPE_WEIGHT +
+    scopedTitleHits * STRUCTURAL_SCOPE_WEIGHT +
+    issueScopedTitleHits * STRUCTURAL_SCOPE_WEIGHT +
+    markdownIssueHits * STRUCTURAL_SCOPE_WEIGHT +
     fileHits;
 
   return {
@@ -495,7 +508,9 @@ function tokenizeSubject(text: string): string[] {
     .toLowerCase()
     .split(/[^\p{L}\p{N}_-]+/u)
     .map((token) => token.trim())
-    .filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token));
+    .filter(
+      (token) => token.length >= GENERIC_SUBJECT_TOKEN_MIN_CHARS && !GENERIC_TOKENS.has(token),
+    );
   return unique(tokens);
 }
 
@@ -535,7 +550,7 @@ function dedupeContexts(contexts: RankedInteractionContext[]): RankedInteraction
 
 function contextBlockLength(contexts: RankedInteractionContext[]): number {
   return contexts.reduce((length, context, index) => {
-    return length + context.text.length + (index > 0 ? 2 : 0);
+    return length + context.text.length + (index > 0 ? CONTEXT_SEPARATOR_CHARS : 0);
   }, 0);
 }
 
@@ -550,7 +565,7 @@ function sortContextsForDisplay(contexts: RankedInteractionContext[]): RankedInt
 }
 
 function contextKindOrder(kind: InteractionContext["kind"]): number {
-  return kind === "reference" ? 0 : 1;
+  return CONTEXT_KIND_ORDER[kind];
 }
 
 function stripRank(context: RankedInteractionContext): InteractionContext {

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { getAgent, listAgents } from "../agents/index.js";
+import { AGENT_NAMES, type AgentName } from "../agents/types.js";
 import {
   AGENTNOTE_HOOK_COMMAND,
   AGENTNOTE_HOOK_MARKER,
@@ -22,6 +23,33 @@ import { normalizeEntry } from "./normalize.js";
 
 declare const __VERSION__: string;
 const VERSION = __VERSION__;
+const CAPABILITY_LABELS = {
+  edits: "edits",
+  prompt: "prompt",
+  response: "response",
+  shell: "shell",
+  transcript: "transcript",
+} as const;
+const CODEX_STATUS_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  stop: "Stop",
+  userPromptSubmit: "UserPromptSubmit",
+} as const;
+const CURSOR_STATUS_HOOK_EVENTS = {
+  beforeSubmitPrompt: "beforeSubmitPrompt",
+  afterAgentResponse: "afterAgentResponse",
+  afterFileEdit: "afterFileEdit",
+  afterTabFileEdit: "afterTabFileEdit",
+  beforeShellExecution: "beforeShellExecution",
+  afterShellExecution: "afterShellExecution",
+  stop: "stop",
+} as const;
+const GEMINI_STATUS_HOOK_EVENTS = {
+  beforeAgent: "BeforeAgent",
+  afterAgent: "AfterAgent",
+  beforeTool: "BeforeTool",
+  afterTool: "AfterTool",
+} as const;
 
 /**
  * Print a compact health summary for Agent Note in the current repository.
@@ -34,7 +62,7 @@ export async function status(): Promise<void> {
   console.log();
 
   const repoRoot = await root();
-  const enabledAgents: string[] = [];
+  const enabledAgents: AgentName[] = [];
   for (const agentName of listAgents()) {
     if (await getAgent(agentName).isEnabled(repoRoot)) {
       enabledAgents.push(agentName);
@@ -56,7 +84,7 @@ export async function status(): Promise<void> {
   if (activeGitHooks.length > 0) {
     console.log(`git:     active (${activeGitHooks.join(", ")})`);
     console.log("commit:  tracked via git hooks");
-  } else if (enabledAgents.includes("cursor")) {
+  } else if (enabledAgents.includes(AGENT_NAMES.cursor)) {
     console.log("git:     not configured");
     console.log(
       "commit:  fallback mode (`agent-note commit` recommended; Cursor shell hooks may still attach notes)",
@@ -133,28 +161,28 @@ export async function status(): Promise<void> {
  */
 async function readAgentCaptureDetails(
   repoRoot: string,
-  enabledAgents: string[],
+  enabledAgents: AgentName[],
 ): Promise<string[]> {
   const details: string[] = [];
 
-  if (enabledAgents.includes("codex")) {
+  if (enabledAgents.includes(AGENT_NAMES.codex)) {
     const codexCapabilities = await readCodexCaptureCapabilities(repoRoot);
     if (codexCapabilities.length > 0) {
-      details.push(`codex(${codexCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.codex}(${codexCapabilities.join(", ")})`);
     }
   }
 
-  if (enabledAgents.includes("cursor")) {
+  if (enabledAgents.includes(AGENT_NAMES.cursor)) {
     const cursorCapabilities = await readCursorCaptureCapabilities(repoRoot);
     if (cursorCapabilities.length > 0) {
-      details.push(`cursor(${cursorCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.cursor}(${cursorCapabilities.join(", ")})`);
     }
   }
 
-  if (enabledAgents.includes("gemini")) {
+  if (enabledAgents.includes(AGENT_NAMES.gemini)) {
     const geminiCapabilities = await readGeminiCaptureCapabilities(repoRoot);
     if (geminiCapabilities.length > 0) {
-      details.push(`gemini(${geminiCapabilities.join(", ")})`);
+      details.push(`${AGENT_NAMES.gemini}(${geminiCapabilities.join(", ")})`);
     }
   }
 
@@ -182,9 +210,15 @@ async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]>
       );
 
     const capabilities: string[] = [];
-    if (hasAgentnoteHook("UserPromptSubmit")) capabilities.push("prompt");
-    if (hasAgentnoteHook("Stop")) capabilities.push("response");
-    if (hasAgentnoteHook("SessionStart")) capabilities.push("transcript");
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.userPromptSubmit)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
+    }
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.stop)) {
+      capabilities.push(CAPABILITY_LABELS.response);
+    }
+    if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.sessionStart)) {
+      capabilities.push(CAPABILITY_LABELS.transcript);
+    }
     return capabilities;
   } catch {
     return [];
@@ -207,15 +241,26 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
       (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
 
     const capabilities: string[] = [];
-    if (hasAgentnoteHook("beforeSubmitPrompt")) capabilities.push("prompt");
-    if (hasAgentnoteHook("afterAgentResponse") || hasAgentnoteHook("stop")) {
-      capabilities.push("response");
+    if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeSubmitPrompt)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
     }
-    if (hasAgentnoteHook("afterFileEdit") || hasAgentnoteHook("afterTabFileEdit")) {
-      capabilities.push("edits");
+    if (
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterAgentResponse) ||
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.stop)
+    ) {
+      capabilities.push(CAPABILITY_LABELS.response);
     }
-    if (hasAgentnoteHook("beforeShellExecution") || hasAgentnoteHook("afterShellExecution")) {
-      capabilities.push("shell");
+    if (
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterFileEdit) ||
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterTabFileEdit)
+    ) {
+      capabilities.push(CAPABILITY_LABELS.edits);
+    }
+    if (
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeShellExecution) ||
+      hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.afterShellExecution)
+    ) {
+      capabilities.push(CAPABILITY_LABELS.shell);
     }
     return capabilities;
   } catch {
@@ -241,10 +286,17 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
       );
 
     const capabilities: string[] = [];
-    if (hasAgentnoteHook("BeforeAgent")) capabilities.push("prompt");
-    if (hasAgentnoteHook("AfterAgent")) capabilities.push("response");
-    if (hasAgentnoteHook("BeforeTool") || hasAgentnoteHook("AfterTool")) {
-      capabilities.push("edits", "shell");
+    if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.beforeAgent)) {
+      capabilities.push(CAPABILITY_LABELS.prompt);
+    }
+    if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.afterAgent)) {
+      capabilities.push(CAPABILITY_LABELS.response);
+    }
+    if (
+      hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.beforeTool) ||
+      hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.afterTool)
+    ) {
+      capabilities.push(CAPABILITY_LABELS.edits, CAPABILITY_LABELS.shell);
     }
     return capabilities;
   } catch {

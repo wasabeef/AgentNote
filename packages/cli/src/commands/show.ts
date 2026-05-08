@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { getAgent, hasAgent } from "../agents/index.js";
+import { AGENT_NAMES } from "../agents/types.js";
 import {
   BAR_WIDTH_FULL,
   SESSIONS_DIR,
@@ -14,7 +15,10 @@ import { git } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 import { normalizeEntry } from "./normalize.js";
 
+const DEFAULT_COMMIT_REF = "HEAD";
 const COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
+const BYTES_PER_KILOBYTE = 1024;
+const PERCENT_DENOMINATOR = 100;
 
 /** Print the Agent Note details attached to one commit. */
 export async function show(commitRef?: string): Promise<void> {
@@ -24,7 +28,7 @@ export async function show(commitRef?: string): Promise<void> {
     process.exit(1);
   }
 
-  const ref = commitRef ?? "HEAD";
+  const ref = commitRef ?? DEFAULT_COMMIT_REF;
 
   const commitInfo = await git(["log", "-1", "--format=%h %s", ref]);
   const commitSha = await git(["log", "-1", "--format=%H", ref]);
@@ -103,21 +107,21 @@ export async function show(commitRef?: string): Promise<void> {
 
   // Show transcript location only if available locally.
   const sessionDir = join(await agentnoteDir(), SESSIONS_DIR, sessionId);
-  const sessionAgent = (await readSessionAgent(sessionDir)) ?? entry.agent ?? "claude";
-  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent("claude");
+  const sessionAgent = (await readSessionAgent(sessionDir)) ?? entry.agent ?? AGENT_NAMES.claude;
+  const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent(AGENT_NAMES.claude);
   const transcriptPath =
     (await readSessionTranscriptPath(sessionDir)) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
     const stats = await stat(transcriptPath);
-    const sizeKb = (stats.size / 1024).toFixed(1);
+    const sizeKb = (stats.size / BYTES_PER_KILOBYTE).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }
 }
 
 function renderRatioBar(ratio: number): string {
   const width = BAR_WIDTH_FULL;
-  const filled = Math.round((ratio / 100) * width);
+  const filled = Math.round((ratio / PERCENT_DENOMINATOR) * width);
   const empty = width - filled;
   return `[${"█".repeat(filled)}${"░".repeat(empty)}]`;
 }

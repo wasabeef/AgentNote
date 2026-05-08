@@ -4,7 +4,11 @@ import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getAgent, hasAgent } from "../agents/index.js";
-import type { TranscriptInteraction } from "../agents/types.js";
+import {
+  AGENT_NAMES,
+  NORMALIZED_EVENT_KINDS,
+  type TranscriptInteraction,
+} from "../agents/types.js";
 import { git, gitSafe } from "../git.js";
 import { computePositionAttribution, countLines, parseUnifiedHunks } from "./attribution.js";
 import {
@@ -15,6 +19,7 @@ import {
   EVENTS_FILE,
   PRE_BLOBS_FILE,
   PROMPTS_FILE,
+  SESSIONS_DIR,
   TEXT_ENCODING,
   TURN_FILE,
 } from "./constants.js";
@@ -51,9 +56,9 @@ export async function recordCommitEntry(opts: {
   sessionId: string;
   transcriptPath?: string;
 }): Promise<{ promptCount: number; aiRatio: number }> {
-  const sessionDir = join(opts.agentnoteDirPath, "sessions", opts.sessionId);
+  const sessionDir = join(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
-  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : "claude";
+  const agentName = sessionAgent && hasAgent(sessionAgent) ? sessionAgent : AGENT_NAMES.claude;
   const adapter = getAgent(agentName);
   const commitSha = await git(["rev-parse", "HEAD"]);
 
@@ -288,7 +293,7 @@ export async function recordCommitEntry(opts: {
     return touched.length > 0 && !touched.some((f) => commitFileSet.has(f));
   });
   const promptOnlyFallbackEntries =
-    agentName === "codex" &&
+    agentName === AGENT_NAMES.codex &&
     hasTurnData &&
     aiFiles.length === 0 &&
     relevantPromptEntries.length === 0 &&
@@ -1808,11 +1813,15 @@ async function readResponsesByTurn(sessionDir: string): Promise<Map<number, stri
   const entries = await readJsonlEntries(eventsFile);
   const responsesByTurn = new Map<number, { response: string; priority: number }>();
   for (const entry of entries) {
-    if (entry.event !== "response" && entry.event !== "stop") continue;
+    if (
+      entry.event !== NORMALIZED_EVENT_KINDS.response &&
+      entry.event !== NORMALIZED_EVENT_KINDS.stop
+    )
+      continue;
     const turn = typeof entry.turn === "number" ? entry.turn : 0;
     const response = typeof entry.response === "string" ? entry.response.trim() : "";
     if (!turn || !response) continue;
-    const priority = entry.event === "response" ? 2 : 1;
+    const priority = entry.event === NORMALIZED_EVENT_KINDS.response ? 2 : 1;
     const current = responsesByTurn.get(turn);
     if (current && current.priority > priority) continue;
     responsesByTurn.set(turn, { response, priority });
@@ -1827,7 +1836,7 @@ async function readTranscriptCorrelationStartMs(sessionDir: string): Promise<num
   const entries = await readJsonlEntries(eventsFile);
   let latestSessionStartMs: number | null = null;
   for (const entry of entries) {
-    if (entry.event !== "session_start") continue;
+    if (entry.event !== NORMALIZED_EVENT_KINDS.sessionStart) continue;
     const timestampMs = parseTimestampMs(entry.timestamp);
     if (timestampMs === null) continue;
     if (latestSessionStartMs === null || timestampMs > latestSessionStartMs) {
@@ -1844,7 +1853,7 @@ async function readSessionModel(sessionDir: string): Promise<string | null> {
   const entries = await readJsonlEntries(eventsFile);
   let fallbackModel: string | null = null;
   for (const e of entries) {
-    if (e.event === "session_start" && typeof e.model === "string" && e.model) {
+    if (e.event === NORMALIZED_EVENT_KINDS.sessionStart && typeof e.model === "string" && e.model) {
       return e.model;
     }
     if (fallbackModel === null && typeof e.model === "string" && e.model) {

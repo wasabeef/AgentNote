@@ -4,29 +4,65 @@ import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
-import type { AgentAdapter, HookInput, NormalizedEvent, TranscriptInteraction } from "./types.js";
+import {
+  AGENT_NAMES,
+  type AgentAdapter,
+  type HookInput,
+  NORMALIZED_EVENT_KINDS,
+  type NormalizedEvent,
+  type TranscriptInteraction,
+} from "./types.js";
 
 const HOOK_COMMAND = "npx --yes agent-note hook";
-const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent claude`;
+const CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent ${AGENT_NAMES.claude}`;
 const ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
+const CLAUDE_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  stop: "Stop",
+  userPromptSubmit: "UserPromptSubmit",
+  preToolUse: "PreToolUse",
+  postToolUse: "PostToolUse",
+} as const;
+const CLAUDE_TOOLS = {
+  bash: "Bash",
+  edit: "Edit",
+  write: "Write",
+  multiEdit: "MultiEdit",
+  notebookEdit: "NotebookEdit",
+} as const;
+const CLAUDE_EDIT_TOOLS = new Set<string>([
+  CLAUDE_TOOLS.edit,
+  CLAUDE_TOOLS.write,
+  CLAUDE_TOOLS.multiEdit,
+  CLAUDE_TOOLS.notebookEdit,
+]);
+const CLAUDE_EDIT_TOOL_MATCHER = "Edit|Write|MultiEdit|NotebookEdit";
+const CLAUDE_POST_TOOL_MATCHER = `${CLAUDE_EDIT_TOOL_MATCHER}|${CLAUDE_TOOLS.bash}`;
+const CLAUDE_GIT_COMMIT_FILTER = "Bash(*git commit*)";
 
 const HOOKS_CONFIG = {
-  SessionStart: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-  Stop: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-  UserPromptSubmit: [{ hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }],
-  PreToolUse: [
+  [CLAUDE_HOOK_EVENTS.sessionStart]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] },
+  ],
+  [CLAUDE_HOOK_EVENTS.stop]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] },
+  ],
+  [CLAUDE_HOOK_EVENTS.userPromptSubmit]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] },
+  ],
+  [CLAUDE_HOOK_EVENTS.preToolUse]: [
     {
-      matcher: "Edit|Write|MultiEdit|NotebookEdit",
+      matcher: CLAUDE_EDIT_TOOL_MATCHER,
       hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND }],
     },
     {
-      matcher: "Bash",
-      hooks: [{ type: "command", if: "Bash(*git commit*)", command: CLAUDE_HOOK_COMMAND }],
+      matcher: CLAUDE_TOOLS.bash,
+      hooks: [{ type: "command", if: CLAUDE_GIT_COMMIT_FILTER, command: CLAUDE_HOOK_COMMAND }],
     },
   ],
-  PostToolUse: [
+  [CLAUDE_HOOK_EVENTS.postToolUse]: [
     {
-      matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
+      matcher: CLAUDE_POST_TOOL_MATCHER,
       hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }],
     },
   ],
@@ -86,7 +122,7 @@ function isGitCommit(cmd: string): boolean {
 
 /** Claude Code adapter for hook installation, event parsing, and transcript recovery. */
 export const claude: AgentAdapter = {
-  name: "claude",
+  name: AGENT_NAMES.claude,
   settingsRelPath: ".claude/settings.json",
 
   async managedPaths(): Promise<string[]> {
@@ -174,17 +210,22 @@ export const claude: AgentAdapter = {
       e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : undefined;
 
     switch (e.hook_event_name) {
-      case "SessionStart":
+      case CLAUDE_HOOK_EVENTS.sessionStart:
         return {
-          kind: "session_start",
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
           sessionId: sid,
           timestamp: ts,
           model: e.model,
           transcriptPath: tp,
         };
-      case "Stop":
-        return { kind: "stop", sessionId: sid, timestamp: ts, transcriptPath: tp };
-      case "UserPromptSubmit":
+      case CLAUDE_HOOK_EVENTS.stop:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId: sid,
+          timestamp: ts,
+          transcriptPath: tp,
+        };
+      case CLAUDE_HOOK_EVENTS.userPromptSubmit:
         // Claude Code fires UserPromptSubmit for system-injected messages
         // (task notifications, reminders, teammate messages) that are not
         // real user prompts. Skip them to keep turn attribution correct.
@@ -192,19 +233,18 @@ export const claude: AgentAdapter = {
         if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
           return null;
         }
-        return { kind: "prompt", sessionId: sid, timestamp: ts, prompt: e.prompt };
-      case "PreToolUse": {
+        return {
+          kind: NORMALIZED_EVENT_KINDS.prompt,
+          sessionId: sid,
+          timestamp: ts,
+          prompt: e.prompt,
+        };
+      case CLAUDE_HOOK_EVENTS.preToolUse: {
         const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";
-        if (
-          (tool === "Edit" ||
-            tool === "Write" ||
-            tool === "MultiEdit" ||
-            tool === "NotebookEdit") &&
-          e.tool_input?.file_path
-        ) {
+        if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
           return {
-            kind: "pre_edit",
+            kind: NORMALIZED_EVENT_KINDS.preEdit,
             sessionId: sid,
             timestamp: ts,
             tool,
@@ -212,22 +252,21 @@ export const claude: AgentAdapter = {
             toolUseId: e.tool_use_id,
           };
         }
-        if (tool === "Bash" && isGitCommit(cmd)) {
-          return { kind: "pre_commit", sessionId: sid, timestamp: ts, commitCommand: cmd };
+        if (tool === CLAUDE_TOOLS.bash && isGitCommit(cmd)) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preCommit,
+            sessionId: sid,
+            timestamp: ts,
+            commitCommand: cmd,
+          };
         }
         return null;
       }
-      case "PostToolUse": {
+      case CLAUDE_HOOK_EVENTS.postToolUse: {
         const tool = e.tool_name;
-        if (
-          (tool === "Edit" ||
-            tool === "Write" ||
-            tool === "MultiEdit" ||
-            tool === "NotebookEdit") &&
-          e.tool_input?.file_path
-        ) {
+        if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
           return {
-            kind: "file_change",
+            kind: NORMALIZED_EVENT_KINDS.fileChange,
             sessionId: sid,
             timestamp: ts,
             tool,
@@ -235,8 +274,13 @@ export const claude: AgentAdapter = {
             toolUseId: e.tool_use_id,
           };
         }
-        if (tool === "Bash" && isGitCommit(e.tool_input?.command ?? "")) {
-          return { kind: "post_commit", sessionId: sid, timestamp: ts, transcriptPath: tp };
+        if (tool === CLAUDE_TOOLS.bash && isGitCommit(e.tool_input?.command ?? "")) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.postCommit,
+            sessionId: sid,
+            timestamp: ts,
+            transcriptPath: tp,
+          };
         }
         return null;
       }

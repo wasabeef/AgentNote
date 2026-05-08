@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { getAgent, hasAgent } from "../agents/index.js";
-import type { HookInput } from "../agents/types.js";
+import { AGENT_NAMES, type HookInput, NORMALIZED_EVENT_KINDS } from "../agents/types.js";
 import {
   CHANGES_FILE,
   EMPTY_BLOB,
@@ -30,6 +30,20 @@ import {
 import { git, injectGitCommitTrailer } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
+const CLAUDE_PRE_TOOL_USE_EVENT = "PreToolUse";
+const CURSOR_BEFORE_SUBMIT_PROMPT_EVENT = "beforeSubmitPrompt";
+const CURSOR_BEFORE_SHELL_EXECUTION_EVENT = "beforeShellExecution";
+const GEMINI_BEFORE_TOOL_EVENT = "BeforeTool";
+const GEMINI_ALLOW_DECISION = "allow";
+const JSON_INDENT_SPACES = 2;
+const PRE_BLOB_EVENT = "pre_blob";
+const SYNCHRONOUS_HOOK_EVENTS = new Set([
+  CLAUDE_PRE_TOOL_USE_EVENT,
+  CURSOR_BEFORE_SUBMIT_PROMPT_EVENT,
+  CURSOR_BEFORE_SHELL_EXECUTION_EVENT,
+  GEMINI_BEFORE_TOOL_EVENT,
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -37,9 +51,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Detect agent hook events that must respond synchronously on stdout. */
 export function isSynchronousHookEvent(value: unknown): boolean {
   if (!isRecord(value) || typeof value.hook_event_name !== "string") return false;
-  return ["PreToolUse", "beforeSubmitPrompt", "beforeShellExecution", "BeforeTool"].includes(
-    value.hook_event_name,
-  );
+  return SYNCHRONOUS_HOOK_EVENTS.has(value.hook_event_name);
 }
 
 /**
@@ -159,8 +171,8 @@ export async function hook(args: string[] = []): Promise<void> {
       }
     }
     // Gemini BeforeTool requires {"decision": "allow"} even for unrecognized tools.
-    if (adapter.name === "gemini" && input.sync) {
-      if (isRecord(peek) && peek.hook_event_name === "BeforeTool") {
+    if (adapter.name === AGENT_NAMES.gemini && input.sync) {
+      if (isRecord(peek) && peek.hook_event_name === GEMINI_BEFORE_TOOL_EVENT) {
         process.stdout.write(JSON.stringify({ decision: "allow" }));
       }
     }
@@ -172,19 +184,19 @@ export async function hook(args: string[] = []): Promise<void> {
   await mkdir(sessionDir, { recursive: true });
   // Only Gemini maps `stop` to true session termination today; other adapters
   // use `stop` for response-end events and must keep the heartbeat alive.
-  if (!(adapter.name === "gemini" && event.kind === "stop")) {
+  if (!(adapter.name === AGENT_NAMES.gemini && event.kind === NORMALIZED_EVENT_KINDS.stop)) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
 
   switch (event.kind) {
-    case "session_start": {
+    case NORMALIZED_EVENT_KINDS.sessionStart: {
       await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
-        event: "session_start",
+        event: NORMALIZED_EVENT_KINDS.sessionStart,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         agent: adapter.name,
@@ -193,14 +205,14 @@ export async function hook(args: string[] = []): Promise<void> {
       break;
     }
 
-    case "stop": {
+    case NORMALIZED_EVENT_KINDS.stop: {
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       const turn = await readCurrentTurn(sessionDir);
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
-        event: "stop",
+        event: NORMALIZED_EVENT_KINDS.stop,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         turn,
@@ -219,7 +231,7 @@ export async function hook(args: string[] = []): Promise<void> {
       // This is best-effort: Gemini CLI does not wait for SessionEnd hooks to
       // complete, so the heartbeat may survive if the process exits first. The
       // prepare-commit-msg 1-hour staleness check is the ultimate safeguard.
-      if (adapter.name === "gemini") {
+      if (adapter.name === AGENT_NAMES.gemini) {
         try {
           await unlink(join(sessionDir, HEARTBEAT_FILE));
         } catch {
@@ -229,7 +241,7 @@ export async function hook(args: string[] = []): Promise<void> {
       break;
     }
 
-    case "prompt": {
+    case NORMALIZED_EVENT_KINDS.prompt: {
       await writeFile(join(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
@@ -238,7 +250,7 @@ export async function hook(args: string[] = []): Promise<void> {
       const eventsPath = join(sessionDir, EVENTS_FILE);
       if (!existsSync(eventsPath)) {
         await appendJsonl(eventsPath, {
-          event: "session_start",
+          event: NORMALIZED_EVENT_KINDS.sessionStart,
           session_id: event.sessionId,
           timestamp: event.timestamp,
           agent: adapter.name,
@@ -265,30 +277,30 @@ export async function hook(args: string[] = []): Promise<void> {
       await writeFile(join(sessionDir, PROMPT_ID_FILE), promptId);
 
       await appendJsonl(join(sessionDir, PROMPTS_FILE), {
-        event: "prompt",
+        event: NORMALIZED_EVENT_KINDS.prompt,
         timestamp: event.timestamp,
         prompt: event.prompt,
         prompt_id: promptId,
         turn,
       });
       await appendJsonl(eventsPath, {
-        event: "prompt",
+        event: NORMALIZED_EVENT_KINDS.prompt,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         prompt_id: promptId,
         turn,
         model: event.model ?? null,
       });
-      if (adapter.name === "cursor") {
+      if (adapter.name === AGENT_NAMES.cursor) {
         process.stdout.write(JSON.stringify({ continue: true }));
       }
       break;
     }
 
-    case "response": {
+    case NORMALIZED_EVENT_KINDS.response: {
       const turn = await readCurrentTurn(sessionDir);
       await appendJsonl(join(sessionDir, EVENTS_FILE), {
-        event: "response",
+        event: NORMALIZED_EVENT_KINDS.response,
         session_id: event.sessionId,
         timestamp: event.timestamp,
         turn,
@@ -297,7 +309,7 @@ export async function hook(args: string[] = []): Promise<void> {
       break;
     }
 
-    case "pre_edit": {
+    case NORMALIZED_EVENT_KINDS.preEdit: {
       // Capture blob hash before AI edit for line-level attribution.
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
@@ -310,7 +322,7 @@ export async function hook(args: string[] = []): Promise<void> {
       const preBlob = isAbsolute(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
 
       await appendJsonl(join(sessionDir, PRE_BLOBS_FILE), {
-        event: "pre_blob",
+        event: PRE_BLOB_EVENT,
         turn,
         prompt_id: promptId,
         file: filePath,
@@ -321,13 +333,13 @@ export async function hook(args: string[] = []): Promise<void> {
       });
 
       // Gemini BeforeTool requires {"decision": "allow"} on stdout.
-      if (adapter.name === "gemini") {
+      if (adapter.name === AGENT_NAMES.gemini) {
         process.stdout.write(JSON.stringify({ decision: "allow" }));
       }
       break;
     }
 
-    case "file_change": {
+    case NORMALIZED_EVENT_KINDS.fileChange: {
       // Normalize absolute paths to repo-relative for consistent matching.
       const absPath = event.file ?? "";
       const filePath = await normalizeToRepoRelative(absPath);
@@ -341,12 +353,12 @@ export async function hook(args: string[] = []): Promise<void> {
       // Cursor emits repeated same-file edits without a stable event ID. Persist a
       // per-edit key so split commits do not consume later edits early.
       const changeId =
-        adapter.name === "cursor"
-          ? `${event.timestamp}:${event.tool ?? "file_change"}:${filePath}:${postBlob}`
+        adapter.name === AGENT_NAMES.cursor
+          ? `${event.timestamp}:${event.tool ?? NORMALIZED_EVENT_KINDS.fileChange}:${filePath}:${postBlob}`
           : null;
 
       await appendJsonl(join(sessionDir, CHANGES_FILE), {
-        event: "file_change",
+        event: NORMALIZED_EVENT_KINDS.fileChange,
         timestamp: event.timestamp,
         tool: event.tool,
         file: filePath,
@@ -364,8 +376,8 @@ export async function hook(args: string[] = []): Promise<void> {
       break;
     }
 
-    case "pre_commit": {
-      if (adapter.name === "gemini") {
+    case NORMALIZED_EVENT_KINDS.preCommit: {
+      if (adapter.name === AGENT_NAMES.gemini) {
         const headBefore = await readCurrentHead();
         await writeFile(
           join(sessionDir, PENDING_COMMIT_FILE),
@@ -376,14 +388,14 @@ export async function hook(args: string[] = []): Promise<void> {
               timestamp: event.timestamp,
             },
             null,
-            2,
+            JSON_INDENT_SPACES,
           )}\n`,
         );
-        process.stdout.write(JSON.stringify({ decision: "allow" }));
+        process.stdout.write(JSON.stringify({ decision: GEMINI_ALLOW_DECISION }));
         break;
       }
 
-      if (adapter.name === "cursor") {
+      if (adapter.name === AGENT_NAMES.cursor) {
         const headBefore = await readCurrentHead();
         await writeFile(
           join(sessionDir, PENDING_COMMIT_FILE),
@@ -394,7 +406,7 @@ export async function hook(args: string[] = []): Promise<void> {
               timestamp: event.timestamp,
             },
             null,
-            2,
+            JSON_INDENT_SPACES,
           )}\n`,
         );
         process.stdout.write(JSON.stringify({ continue: true }));
@@ -416,7 +428,7 @@ export async function hook(args: string[] = []): Promise<void> {
           process.stdout.write(
             JSON.stringify({
               hookSpecificOutput: {
-                hookEventName: "PreToolUse",
+                hookEventName: CLAUDE_PRE_TOOL_USE_EVENT,
                 updatedInput: {
                   command: updatedCmd,
                 },
@@ -428,8 +440,8 @@ export async function hook(args: string[] = []): Promise<void> {
       break;
     }
 
-    case "post_commit": {
-      if (adapter.name === "cursor" || adapter.name === "gemini") {
+    case NORMALIZED_EVENT_KINDS.postCommit: {
+      if (adapter.name === AGENT_NAMES.cursor || adapter.name === AGENT_NAMES.gemini) {
         const pendingPath = join(sessionDir, PENDING_COMMIT_FILE);
         if (!existsSync(pendingPath)) break;
 

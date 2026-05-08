@@ -53,6 +53,8 @@ export const PENDING_COMMIT_FILE = "pending_commit.json";
 export const MAX_COMMITS = 500;
 /** Number of recent commits inspected by `agent-note status`. */
 export const RECENT_STATUS_COMMIT_LIMIT = 20;
+/** Default number of commits shown by `agent-note log`. */
+export const DEFAULT_LOG_COUNT = 10;
 /** Compact bar width used in terminal and PR table summaries. */
 export const BAR_WIDTH_COMPACT = 5;
 /** Full bar width used in detailed terminal output. */

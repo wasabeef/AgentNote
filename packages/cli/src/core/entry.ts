@@ -89,6 +89,54 @@ export type PromptDetail = "compact" | "full";
 /** Default prompt rendering preset for PR Report output. */
 export const DEFAULT_PROMPT_DETAIL: PromptDetail = "compact";
 
+const LEGACY_PROMPT_SCORE = 100;
+const PERCENT_DENOMINATOR = 100;
+const PRIMARY_SCORE_FLOOR = 80;
+const HIGH_SCORE_THRESHOLD = 75;
+const MEDIUM_SCORE_THRESHOLD = 45;
+const BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE = 55;
+const BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE = 44;
+const ANCHORED_BRIDGE_SCORE_MAX = 65;
+const UNANCHORED_TAIL_SCORE_MAX = 44;
+const SHORT_PROMPT_MAX_CHARS = 120;
+const SHORT_PROMPT_MAX_WORDS = 12;
+
+const PROMPT_ROLE_BASE_SCORES = {
+  primary: 90,
+  direct_anchor: 75,
+  scope: 60,
+  tail: 45,
+  anchored_bridge: 45,
+  bridge: 25,
+  background: 15,
+} as const satisfies Record<PromptSelectionRole, number>;
+
+const PROMPT_ROLE_SCORE_CLAMPS = {
+  primary: [80, 100],
+  direct_anchor: [65, 95],
+  scope: [50, 80],
+  tail: [35, 70],
+  anchored_bridge: [40, 65],
+  bridge: [20, 55],
+  background: [0, 30],
+} as const satisfies Record<PromptSelectionRole, readonly [number, number]>;
+
+const PROMPT_SIGNAL_SCORES = {
+  primary_edit_turn: 0,
+  exact_commit_path: 30,
+  commit_file_basename: 10,
+  diff_identifier: 20,
+  response_exact_commit_path: 18,
+  response_basename_or_identifier: 10,
+  commit_subject_overlap: 4,
+  list_or_checklist_shape: 10,
+  multi_line_instruction: 6,
+  inline_code_or_path_shape: 6,
+  substantive_prompt_shape: 12,
+  before_commit_boundary: 5,
+  between_non_excluded_prompts: 8,
+} as const satisfies Record<PromptSelectionSignal, number>;
+
 /** Current git note schema written for each commit. */
 export interface AgentnoteEntry {
   v: number;
@@ -293,7 +341,7 @@ export function resolvePromptRuntimeSelection(
   selection: InteractionSelection | undefined,
   interaction: Pick<Interaction, "prompt">,
 ): PromptRuntimeSelection {
-  if (!selection) return { score: 100, role: "primary", level: "high" };
+  if (!selection) return { score: LEGACY_PROMPT_SCORE, role: "primary", level: "high" };
   const signals = runtimePromptSelectionSignals(selection.signals, interaction.prompt);
   const role = resolvePromptRuntimeRole(selection.source, signals, interaction.prompt);
   const score = scorePromptRuntime({ role, signals });
@@ -330,14 +378,16 @@ export function scorePromptRuntime(opts: {
   for (const signal of opts.signals) score += signalScore(signal);
   const [min, max] = roleScoreClamp(opts.role);
   score = Math.max(min, Math.min(score, max));
-  if (opts.role === "primary") return Math.max(score, 80);
+  if (opts.role === "primary") return Math.max(score, PRIMARY_SCORE_FLOOR);
   if (opts.role === "bridge") {
-    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape") ? 55 : 44;
+    const maxBridgeScore = opts.signals.includes("substantive_prompt_shape")
+      ? BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE
+      : BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE;
     return Math.min(score, maxBridgeScore);
   }
-  if (opts.role === "anchored_bridge") return Math.min(score, 65);
+  if (opts.role === "anchored_bridge") return Math.min(score, ANCHORED_BRIDGE_SCORE_MAX);
   if (opts.role === "tail" && !hasTailStructuralAnchorSignal(opts.signals)) {
-    return Math.min(score, 44);
+    return Math.min(score, UNANCHORED_TAIL_SCORE_MAX);
   }
   return score;
 }
@@ -348,79 +398,25 @@ export function resolvePromptRuntimeLevel(runtime: {
   role: PromptSelectionRole;
 }): PromptRuntimeLevel {
   if (runtime.role === "primary") return "high";
-  if (runtime.role === "bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.role === "anchored_bridge") return runtime.score >= 45 ? "medium" : "low";
-  if (runtime.score >= 75) return "high";
-  if (runtime.score >= 45) return "medium";
+  if (runtime.role === "bridge") return runtime.score >= MEDIUM_SCORE_THRESHOLD ? "medium" : "low";
+  if (runtime.role === "anchored_bridge") {
+    return runtime.score >= MEDIUM_SCORE_THRESHOLD ? "medium" : "low";
+  }
+  if (runtime.score >= HIGH_SCORE_THRESHOLD) return "high";
+  if (runtime.score >= MEDIUM_SCORE_THRESHOLD) return "medium";
   return "low";
 }
 
 function roleBaseScore(role: PromptSelectionRole): number {
-  switch (role) {
-    case "primary":
-      return 90;
-    case "direct_anchor":
-      return 75;
-    case "scope":
-      return 60;
-    case "tail":
-    case "anchored_bridge":
-      return 45;
-    case "bridge":
-      return 25;
-    case "background":
-      return 15;
-  }
+  return PROMPT_ROLE_BASE_SCORES[role];
 }
 
 function roleScoreClamp(role: PromptSelectionRole): [number, number] {
-  switch (role) {
-    case "primary":
-      return [80, 100];
-    case "direct_anchor":
-      return [65, 95];
-    case "scope":
-      return [50, 80];
-    case "tail":
-      return [35, 70];
-    case "anchored_bridge":
-      return [40, 65];
-    case "bridge":
-      return [20, 55];
-    case "background":
-      return [0, 30];
-  }
+  return [...PROMPT_ROLE_SCORE_CLAMPS[role]];
 }
 
 function signalScore(signal: PromptSelectionSignal): number {
-  switch (signal) {
-    case "primary_edit_turn":
-      return 0;
-    case "exact_commit_path":
-      return 30;
-    case "commit_file_basename":
-      return 10;
-    case "diff_identifier":
-      return 20;
-    case "response_exact_commit_path":
-      return 18;
-    case "response_basename_or_identifier":
-      return 10;
-    case "commit_subject_overlap":
-      return 4;
-    case "list_or_checklist_shape":
-      return 10;
-    case "multi_line_instruction":
-      return 6;
-    case "inline_code_or_path_shape":
-      return 6;
-    case "substantive_prompt_shape":
-      return 12;
-    case "before_commit_boundary":
-      return 5;
-    case "between_non_excluded_prompts":
-      return 8;
-  }
+  return PROMPT_SIGNAL_SCORES[signal];
 }
 
 function hasBridgeAnchorSignal(signals: PromptSelectionSignal[]): boolean {
@@ -449,7 +445,10 @@ function hasScopeSignal(signals: PromptSelectionSignal[]): boolean {
 export function isShortSelectionPrompt(prompt: string): boolean {
   const trimmed = prompt.trim();
   if (!trimmed) return true;
-  return trimmed.length <= 120 && trimmed.split(/\s+/).length <= 12;
+  return (
+    trimmed.length <= SHORT_PROMPT_MAX_CHARS &&
+    trimmed.split(/\s+/).length <= SHORT_PROMPT_MAX_WORDS
+  );
 }
 
 /** Detect substantial prompt shape without language-specific keyword lists. */
@@ -526,11 +525,11 @@ function hasPrimaryEditInteraction(interaction: Interaction): boolean {
  */
 export function calcAiRatio(files: FileEntry[], lineCounts?: LineCounts): number {
   if (lineCounts && lineCounts.totalAddedLines > 0) {
-    return Math.round((lineCounts.aiAddedLines / lineCounts.totalAddedLines) * 100);
+    return Math.round((lineCounts.aiAddedLines / lineCounts.totalAddedLines) * PERCENT_DENOMINATOR);
   }
   const eligible = countAiRatioEligibleFiles(files);
   if (eligible.total === 0) return 0;
-  return Math.round((eligible.ai / eligible.total) * 100);
+  return Math.round((eligible.ai / eligible.total) * PERCENT_DENOMINATOR);
 }
 
 /** Determine attribution method from available data. */

@@ -1,7 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { NOTES_REF_FULL } from "../core/constants.js";
 import { gitSafe } from "../git.js";
 
 const NOTES_PUSH_TIMEOUT_MS = 10_000;
+const GIT_BINARY = "git";
+const ENV_AGENTNOTE_PUSHING = "AGENTNOTE_PUSHING";
+const ENV_GIT_TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT";
+const ENV_TRUE = "1";
+const ENV_FALSE = "0";
 
 /**
  * Push the agentnote notes ref to the same remote as the main code push.
@@ -11,17 +17,17 @@ const NOTES_PUSH_TIMEOUT_MS = 10_000;
 export async function pushNotes(args: string[]): Promise<void> {
   const remote = args[0]?.trim() || "origin";
 
-  const { exitCode } = await gitSafe(["rev-parse", "--verify", "refs/notes/agentnote"]);
+  const { exitCode } = await gitSafe(["rev-parse", "--verify", NOTES_REF_FULL]);
   if (exitCode !== 0) return;
 
   try {
-    execFileSync("git", ["push", remote, "refs/notes/agentnote"], {
+    execFileSync(GIT_BINARY, ["push", remote, NOTES_REF_FULL], {
       stdio: "ignore",
       timeout: NOTES_PUSH_TIMEOUT_MS,
       env: {
         ...process.env,
-        AGENTNOTE_PUSHING: "1",
-        GIT_TERMINAL_PROMPT: "0",
+        [ENV_AGENTNOTE_PUSHING]: ENV_TRUE,
+        [ENV_GIT_TERMINAL_PROMPT]: ENV_FALSE,
       },
     });
   } catch {

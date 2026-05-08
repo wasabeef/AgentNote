@@ -1,40 +1,43 @@
 # Engineering Guidelines
 
-このリポジトリでコードを書くときの実装ルールです。人間にも AI coding agent にも同じ基準で読めるように、判断基準をできるだけ明文化します。
+This file defines implementation rules for this repository. The goal is to make
+the decision criteria explicit enough for both humans and AI coding agents to
+apply the same standards.
 
-`AGENTS.md` / `CLAUDE.md` は作業時の振る舞い、`CONTRIBUTING.md` は contributor の手順、このファイルはコードそのものの品質基準を扱います。
+`AGENTS.md` and `CLAUDE.md` describe working behavior, `CONTRIBUTING.md`
+describes contributor workflow, and this file describes code quality rules.
 
-## 使い方
+## How To Use This File
 
-- 実装前に、触る領域の制約を確認する。
-- PR review で判断が割れたら、このファイルを優先する。
-- ルールを変えたくなったら、コード変更と同じ PR でこのファイルも更新する。
-- 一時的な workaround はここに足さず、恒久ルールに昇格できるものだけを書く。
+- Before implementing a change, check the constraints for the area you are touching.
+- When a PR review has competing opinions, prefer this file as the local rule.
+- If a rule needs to change, update this file in the same PR as the code change.
+- Do not add temporary workarounds here. Only promote rules that should last.
 
-## 基本方針
+## Core Principles
 
-- Source code、コメント、テスト名、CLI output は英語で書く。
-- 明快さを優先し、過度な抽象化で処理の流れを隠さない。
-- 構造変更と動作変更は分ける。リネーム、移動、整形だけの変更に挙動変更を混ぜない。
-- GitHub Action / Dashboard workflow のような CI 上で動く処理は、失敗時にユーザーが原因を追えるログを残す。
-- 現在の挙動を説明する情報は `docs/architecture.md` と `docs/knowledge/` に集約し、古い計画書を current rule として参照しない。
+- Write source code, comments, test names, and CLI output in English.
+- Prefer clarity over abstractions that hide the control flow.
+- Keep structural changes separate from behavior changes. Renames, moves, and formatting must not be mixed with feature or bug-fix behavior.
+- CI code such as GitHub Action and Dashboard workflows must leave enough logs for users to diagnose failures.
+- Keep current-behavior documentation in `docs/architecture.md` and `docs/knowledge/`. Do not use archived plans as current rules.
 
-## 定数化
+## Constants
 
-- magic number、event 名、state 名、branch 名、directory 名、Git ref、GitHub Actions output 名は名前付き定数にする。
-- 1 つのファイル内だけで意味が閉じる値は、そのファイルの先頭に local constant として置く。
-- 複数ファイルで同じ意味を持つ値だけを shared constant にする。共有化で依存関係が太る場合は、同名の local constant を許容する。
-- 正規表現は `const` にするか、すぐ近くに意図が分かる名前を付ける。複雑な正規表現は短いコメントを添える。
-- public API、schema field、persistent storage の値を変える場合は docs と tests を同時に更新する。
+- Use named constants for magic numbers, event names, state names, branch names, directory names, Git refs, and GitHub Actions output names.
+- If a value has meaning only inside one file, define it as a local constant near the top of that file.
+- Use shared constants only when multiple files use the same value with the same meaning. If sharing would create heavy dependencies, duplicate a same-named local constant instead.
+- Put regular expressions in `const` declarations or give them a nearby name that explains their intent. Add a short comment for complex regexes.
+- When changing public API values, schema fields, or persistent storage values, update docs and tests in the same PR.
 
-良い例:
+Good:
 
 ```js
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_BRANCH = "gh-pages";
 ```
 
-避けたい例:
+Avoid:
 
 ```js
 if (eventName === "pull_request") {
@@ -42,16 +45,16 @@ if (eventName === "pull_request") {
 }
 ```
 
-## コメント
+## Comments
 
-- コメントは「何をしているか」よりも「なぜ必要か」を説明する。
-- exported function、workflow entry point、複雑な判定関数には TSDoc/JSDoc 形式の block comment を付ける。
-- Agent Note の `📝 Context` として読まれても意味が通る短い英語コメントを優先する。
-- obvious な代入や関数呼び出しにはコメントを付けない。
-- fallback、heuristic、安全側の判断、永続化 boundary、外部 service 制約にはコメントを付ける。
-- コメントと実装がズレると害が大きいので、挙動変更時は近くのコメントも必ず見直す。
+- Explain why code exists, not what an obvious assignment or function call does.
+- Add TSDoc/JSDoc block comments to exported functions, workflow entry points, and complex decision functions.
+- Prefer short English comments that still make sense when Agent Note surfaces them as `📝 Context`.
+- Do not comment obvious assignments or direct function calls.
+- Comment fallbacks, heuristics, fail-safe choices, persistence boundaries, and external service constraints.
+- Comments become harmful when they drift from behavior, so update nearby comments whenever behavior changes.
 
-良い例:
+Good:
 
 ```js
 /**
@@ -62,28 +65,28 @@ if (eventName === "pull_request") {
  */
 ```
 
-避けたい例:
+Avoid:
 
 ```js
 // Remove files.
 rmSync(path, { force: true });
 ```
 
-## Dashboard workflow
+## Dashboard Workflow
 
-- `packages/dashboard/workflow/*.mjs` は GitHub Actions 上で直接実行されるため、環境変数、output、branch、path は定数名で意味を残す。
-- `gh-pages/dashboard/notes/*.json` は Dashboard の durable store として扱う。PR build は partial snapshot なので、無関係な PR note を消してはいけない。
-- Pages artifact を触る処理は workspace 内に閉じる。dynamic path や workspace 外 path は安全側に倒して skip する。
-- Dashboard note JSON の上限や diff 上限は、Pages artifact size と UI 表示のための制約として定数化し、意図をコメントで残す。
+- `packages/dashboard/workflow/*.mjs` runs directly in GitHub Actions, so environment variables, outputs, branches, and paths must be named constants.
+- Treat `gh-pages/dashboard/notes/*.json` as the Dashboard durable store. PR builds are partial snapshots, so they must not delete unrelated PR notes.
+- Pages artifact logic must stay inside the workspace. Dynamic paths or paths outside the workspace must fail closed and skip the unsafe operation.
+- Dashboard note JSON limits and diff limits exist for Pages artifact size and UI rendering. Keep them as named constants and document the intent.
 
 ## Tests
 
-- Refactor だけでも、影響範囲の unit test を実行する。
-- Dashboard workflow を触ったら `packages/dashboard` の test / build を確認する。
-- PR Report rendering や Action input を触ったら `packages/pr-report` の test / build を確認する。
-- CLI core / agent adapter を触ったら `packages/cli` の build、typecheck、lint、test を確認する。
+- Even for refactors, run the unit tests for the affected area.
+- If you touch Dashboard workflow code, verify the relevant `packages/dashboard` test/build path.
+- If you touch PR Report rendering or Action inputs, verify the relevant `packages/pr-report` test/build path.
+- If you touch CLI core or an agent adapter, verify `packages/cli` build, typecheck, lint, and tests.
 
-## Commit messages and release notes
+## Commit Messages And Release Notes
 
 Release notes are generated from commits by `git-cliff`. Treat every commit
 subject as public copy unless the commit type is intentionally internal.

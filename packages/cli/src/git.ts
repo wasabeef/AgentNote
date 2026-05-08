@@ -3,6 +3,23 @@ import { promisify } from "node:util";
 import { TEXT_ENCODING } from "./core/constants.js";
 
 const execFileAsync = promisify(execFile);
+const GIT_BINARY = "git";
+const GIT_COMMAND_COMMIT = "commit";
+const GIT_COMMAND_ENV = "env";
+const GIT_COMMAND_WRAPPER = "command";
+const GIT_AMEND_FLAG = "--amend";
+const GIT_END_OF_OPTIONS = "--";
+const SHELL_AND_OPERATOR = "&";
+const SHELL_PIPE_OPERATOR = "|";
+const SHELL_SEMICOLON_OPERATOR = ";";
+const SHELL_NEWLINE = "\n";
+const SHELL_ESCAPE = "\\";
+const SHELL_COMMENT = "#";
+const SHELL_SINGLE_QUOTE = "'";
+const SHELL_DOUBLE_QUOTE = '"';
+const ENV_IGNORE_FLAGS = new Set(["-i", "--ignore-environment"]);
+const GIT_OPTIONS_WITH_VALUES = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
+const GIT_OPTIONS_WITH_INLINE_VALUES = ["--git-dir=", "--work-tree=", "--namespace=", "-c="];
 
 type ShellToken = {
   value: string;
@@ -18,7 +35,7 @@ type GitCommitCommand = {
 
 /** Run a git command through `execFile` and return trimmed stdout. */
 export async function git(args: string[], options?: { cwd?: string }): Promise<string> {
-  const { stdout } = await execFileAsync("git", args, {
+  const { stdout } = await execFileAsync(GIT_BINARY, args, {
     cwd: options?.cwd,
     encoding: TEXT_ENCODING,
   });
@@ -51,9 +68,10 @@ export async function repoRoot(): Promise<string> {
 function isShellControlStart(command: string, index: number): number {
   const char = command[index];
   const next = command[index + 1];
-  if (char === "&" && next === "&") return 2;
-  if (char === "|" && next === "|") return 2;
-  if (char === ";" || char === "|" || char === "\n") return 1;
+  if (char === SHELL_AND_OPERATOR && next === SHELL_AND_OPERATOR) return 2;
+  if (char === SHELL_PIPE_OPERATOR && next === SHELL_PIPE_OPERATOR) return 2;
+  if (char === SHELL_SEMICOLON_OPERATOR || char === SHELL_PIPE_OPERATOR || char === SHELL_NEWLINE)
+    return 1;
   return 0;
 }
 
@@ -72,7 +90,7 @@ function isEnvAssignment(value: string): boolean {
 function tokenizeShellCommand(command: string): ShellToken[][] {
   const segments: ShellToken[][] = [[]];
   let token: ShellToken | null = null;
-  let quote: "'" | '"' | null = null;
+  let quote: typeof SHELL_SINGLE_QUOTE | typeof SHELL_DOUBLE_QUOTE | null = null;
   let escaped = false;
   let comment = false;
 
@@ -99,7 +117,7 @@ function tokenizeShellCommand(command: string): ShellToken[][] {
     const char = command[index];
 
     if (comment) {
-      if (char === "\n") {
+      if (char === SHELL_NEWLINE) {
         comment = false;
         finishSegment();
       }
@@ -118,7 +136,7 @@ function tokenizeShellCommand(command: string): ShellToken[][] {
         markTokenEnd(index + 1);
         continue;
       }
-      if (quote === '"' && char === "\\") {
+      if (quote === SHELL_DOUBLE_QUOTE && char === SHELL_ESCAPE) {
         escaped = true;
         continue;
       }
@@ -126,13 +144,13 @@ function tokenizeShellCommand(command: string): ShellToken[][] {
       continue;
     }
 
-    if (char === "\\") {
+    if (char === SHELL_ESCAPE) {
       escaped = true;
       ensureToken(index);
       continue;
     }
 
-    if (char === "'" || char === '"') {
+    if (char === SHELL_SINGLE_QUOTE || char === SHELL_DOUBLE_QUOTE) {
       ensureToken(index);
       quote = char;
       continue;
@@ -140,11 +158,11 @@ function tokenizeShellCommand(command: string): ShellToken[][] {
 
     if (/\s/.test(char)) {
       finishToken(index);
-      if (char === "\n") finishSegment();
+      if (char === SHELL_NEWLINE) finishSegment();
       continue;
     }
 
-    if (char === "#" && !token) {
+    if (char === SHELL_COMMENT && !token) {
       comment = true;
       continue;
     }
@@ -172,7 +190,7 @@ function findSimpleCommandIndex(tokens: ShellToken[]): number {
     index += 1;
   }
 
-  if (tokens[index]?.value === "env") {
+  if (tokens[index]?.value === GIT_COMMAND_ENV) {
     index += 1;
     while (index < tokens.length) {
       const value = tokens[index].value;
@@ -180,7 +198,7 @@ function findSimpleCommandIndex(tokens: ShellToken[]): number {
         index += 1;
         continue;
       }
-      if (value === "-i" || value === "--ignore-environment") {
+      if (ENV_IGNORE_FLAGS.has(value)) {
         index += 1;
         continue;
       }
@@ -188,7 +206,7 @@ function findSimpleCommandIndex(tokens: ShellToken[]): number {
     }
   }
 
-  if (tokens[index]?.value === "command") {
+  if (tokens[index]?.value === GIT_COMMAND_WRAPPER) {
     index += 1;
   }
 
@@ -197,35 +215,30 @@ function findSimpleCommandIndex(tokens: ShellToken[]): number {
 
 /** Return whether a git global option consumes the following token as a value. */
 function gitOptionConsumesValue(value: string): boolean {
-  return ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(value);
+  return GIT_OPTIONS_WITH_VALUES.has(value);
 }
 
 /** Find the `commit` token in a parsed `git commit` command segment. */
 function findGitCommitToken(tokens: ShellToken[]): ShellToken | null {
   let index = findSimpleCommandIndex(tokens);
-  if (tokens[index]?.value !== "git") return null;
+  if (tokens[index]?.value !== GIT_BINARY) return null;
 
   index += 1;
   while (index < tokens.length) {
     const value = tokens[index].value;
-    if (value === "commit") {
+    if (value === GIT_COMMAND_COMMIT) {
       const hasAmend = tokens.slice(index + 1).some((token) => {
-        return token.value === "--amend" || token.value.startsWith("--amend=");
+        return token.value === GIT_AMEND_FLAG || token.value.startsWith(`${GIT_AMEND_FLAG}=`);
       });
       return hasAmend ? null : tokens[index];
     }
 
-    if (value === "--") return null;
+    if (value === GIT_END_OF_OPTIONS) return null;
     if (gitOptionConsumesValue(value)) {
       index += 2;
       continue;
     }
-    if (
-      value.startsWith("--git-dir=") ||
-      value.startsWith("--work-tree=") ||
-      value.startsWith("--namespace=") ||
-      value.startsWith("-c=")
-    ) {
+    if (GIT_OPTIONS_WITH_INLINE_VALUES.some((prefix) => value.startsWith(prefix))) {
       index += 1;
       continue;
     }

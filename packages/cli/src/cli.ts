@@ -8,6 +8,7 @@ import { pushNotes } from "./commands/push-notes.js";
 import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
+import { DEFAULT_LOG_COUNT } from "./core/constants.js";
 
 declare const __VERSION__: string;
 const VERSION = __VERSION__;
@@ -48,7 +49,7 @@ switch (command) {
     await show(args[0]);
     break;
   case "log":
-    await log(args[0] ? parseInt(args[0], 10) : 10);
+    await log(args[0] ? parseInt(args[0], 10) : DEFAULT_LOG_COUNT);
     break;
   case "pr":
     await pr(args);

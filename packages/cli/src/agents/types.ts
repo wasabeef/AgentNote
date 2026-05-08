@@ -1,3 +1,28 @@
+/** Stable agent identifiers used in config files, git notes, and session metadata. */
+export const AGENT_NAMES = {
+  claude: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  gemini: "gemini",
+} as const;
+
+export type AgentName = (typeof AGENT_NAMES)[keyof typeof AGENT_NAMES];
+
+/** Agent-agnostic event kinds written by adapters and consumed by the hook recorder. */
+export const NORMALIZED_EVENT_KINDS = {
+  sessionStart: "session_start",
+  stop: "stop",
+  response: "response",
+  prompt: "prompt",
+  preEdit: "pre_edit",
+  fileChange: "file_change",
+  preCommit: "pre_commit",
+  postCommit: "post_commit",
+} as const;
+
+export type NormalizedEventKind =
+  (typeof NORMALIZED_EVENT_KINDS)[keyof typeof NORMALIZED_EVENT_KINDS];
+
 /** Raw hook input plus sync/async execution metadata from the CLI wrapper. */
 export interface HookInput {
   /** Raw stdin JSON from the agent. */
@@ -30,15 +55,7 @@ export interface TranscriptInteraction {
 
 /** Agent-agnostic event shape consumed by the hook command. */
 export interface NormalizedEvent {
-  kind:
-    | "session_start"
-    | "stop"
-    | "response"
-    | "prompt"
-    | "pre_edit"
-    | "file_change"
-    | "pre_commit"
-    | "post_commit";
+  kind: NormalizedEventKind;
   sessionId: string;
   timestamp: string;
   prompt?: string;
@@ -59,7 +76,7 @@ export interface NormalizedEvent {
 /** Adapter contract for installing hooks and normalizing agent-specific events. */
 export interface AgentAdapter {
   /** Agent identifier (e.g., "claude", "cursor"). */
-  name: string;
+  name: AgentName;
 
   /** Config file path relative to repo root (e.g., ".claude/settings.json"). */
   settingsRelPath: string;
