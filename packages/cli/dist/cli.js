@@ -10,12 +10,13 @@ var __export = (target, all) => {
 };
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, DEFAULT_LOG_COUNT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
+var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_IGNORE_FILE, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, DEFAULT_LOG_COUNT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
 var init_constants = __esm({
   "src/core/constants.ts"() {
     "use strict";
     TRAILER_KEY = "Agentnote-Session";
     AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+    AGENTNOTE_IGNORE_FILE = ".agentnoteignore";
     AGENTNOTE_HOOK_COMMAND = "agent-note hook";
     CLI_JS_HOOK_COMMAND = "cli.js hook";
     NOTES_REF = "agentnote";
@@ -2042,7 +2043,9 @@ function hasGeneratedArtifactMarkers(content) {
   return GENERATED_CONTENT_PATTERNS.some((pattern) => pattern.test(header));
 }
 function filterAiRatioEligibleFiles(files) {
-  return files.filter((file) => !file.generated && !isGeneratedArtifactPath(file.path));
+  return files.filter(
+    (file) => !file.generated && !file.ai_ratio_excluded && !isGeneratedArtifactPath(file.path)
+  );
 }
 function countAiRatioEligibleFiles(files) {
   const eligible = filterAiRatioEligibleFiles(files);
@@ -2217,10 +2220,12 @@ function resolveMethod(lineCounts) {
 }
 function buildEntry(opts) {
   const generatedFiles = new Set(opts.generatedFiles ?? []);
+  const aiRatioExcludedFiles = new Set(opts.aiRatioExcludedFiles ?? []);
   const files = opts.commitFiles.map((path) => ({
     path,
     by_ai: opts.aiFiles.includes(path),
-    ...generatedFiles.has(path) ? { generated: true } : {}
+    ...generatedFiles.has(path) ? { generated: true } : {},
+    ...aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}
   }));
   const method = resolveMethod(opts.lineCounts);
   const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);
@@ -3448,14 +3453,20 @@ async function recordCommitEntry(opts) {
     relevantPromptEntries = promptEntries;
   }
   const generatedFiles = await detectGeneratedFiles(commitSha, commitFiles);
+  const aiRatioIgnoredFiles = await detectAgentnoteIgnoredFiles(commitFiles);
   const attributionCommitFileSet = new Set(
     commitFiles.filter((file) => !generatedFiles.includes(file))
+  );
+  const lineCountCommitFileSet = new Set(
+    commitFiles.filter(
+      (file) => !generatedFiles.includes(file) && !aiRatioIgnoredFiles.includes(file)
+    )
   );
   const lineAttribution = hasTurnData ? await computeLineAttribution({
     sessionDir,
     commitFileSet,
     aiFileSet: new Set(aiFiles),
-    generatedFileSet: new Set(generatedFiles),
+    aiRatioExcludedFileSet: /* @__PURE__ */ new Set([...generatedFiles, ...aiRatioIgnoredFiles]),
     relevantTurns,
     hasTurnData,
     changeEntries
@@ -3555,7 +3566,7 @@ async function recordCommitEntry(opts) {
         )
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
-        attributionCommitFileSet,
+        lineCountCommitFileSet,
         transcriptMatched,
         consumedPromptState
       );
@@ -3655,7 +3666,7 @@ async function recordCommitEntry(opts) {
         )
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
-        attributionCommitFileSet,
+        lineCountCommitFileSet,
         selectableTranscriptMatched,
         consumedPromptState
       );
@@ -3699,6 +3710,7 @@ async function recordCommitEntry(opts) {
     commitFiles,
     aiFiles,
     generatedFiles,
+    aiRatioExcludedFiles: aiRatioIgnoredFiles,
     lineCounts: lineAttribution.counts ?? transcriptLineCounts,
     interactionTools
   });
@@ -4140,6 +4152,76 @@ async function detectGeneratedFiles(commitSha, commitFiles) {
   }
   return [...generated];
 }
+async function detectAgentnoteIgnoredFiles(commitFiles) {
+  const patterns = await readAgentnoteIgnorePatterns();
+  if (patterns.length === 0) return [];
+  return commitFiles.filter((file) => isAgentnoteIgnoredPath(file, patterns));
+}
+async function readAgentnoteIgnorePatterns() {
+  let repoRoot3 = "";
+  try {
+    repoRoot3 = await git(["rev-parse", "--show-toplevel"]);
+  } catch {
+    return [];
+  }
+  let content = "";
+  try {
+    content = await readFile7(join6(repoRoot3, AGENTNOTE_IGNORE_FILE), TEXT_ENCODING);
+  } catch {
+    return [];
+  }
+  return content.split(/\r?\n/).map(compileAgentnoteIgnorePattern).filter((pattern) => pattern !== null);
+}
+function compileAgentnoteIgnorePattern(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) return null;
+  const negated = trimmed.startsWith("!");
+  const rawPattern = negated ? trimmed.slice(1).trim() : trimmed;
+  if (!rawPattern || rawPattern.startsWith("#")) return null;
+  const directoryOnly = rawPattern.endsWith("/");
+  const anchored = rawPattern.startsWith("/");
+  const pattern = rawPattern.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!pattern) return null;
+  const hasSlash = pattern.includes("/");
+  const prefix = anchored || hasSlash ? "^" : "(?:^|/)";
+  const suffix = directoryOnly || !hasSlash ? "(?:/.*)?$" : "$";
+  return {
+    negated,
+    regex: new RegExp(`${prefix}${globPatternToRegex(pattern)}${suffix}`)
+  };
+}
+function globPatternToRegex(pattern) {
+  let regex = "";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    if (char === "*") {
+      if (pattern[index + 1] === "*") {
+        regex += ".*";
+        index += 1;
+      } else {
+        regex += "[^/]*";
+      }
+      continue;
+    }
+    if (char === "?") {
+      regex += "[^/]";
+      continue;
+    }
+    regex += escapeRegExp3(char);
+  }
+  return regex;
+}
+function isAgentnoteIgnoredPath(path, patterns) {
+  const normalized = path.replaceAll("\\", "/");
+  let ignored = false;
+  for (const pattern of patterns) {
+    if (pattern.regex.test(normalized)) ignored = !pattern.negated;
+  }
+  return ignored;
+}
+function escapeRegExp3(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
   return new Promise((resolve6) => {
     const child = spawn("git", ["show", `${commitSha}:${file}`], {
@@ -4219,7 +4301,7 @@ async function computeLineAttribution(opts) {
     sessionDir,
     commitFileSet,
     aiFileSet,
-    generatedFileSet,
+    aiRatioExcludedFileSet,
     relevantTurns,
     hasTurnData,
     changeEntries
@@ -4319,7 +4401,7 @@ async function computeLineAttribution(opts) {
     }
   }
   for (const file of aiFileSet) {
-    if (generatedFileSet.has(file)) continue;
+    if (aiRatioExcludedFileSet.has(file)) continue;
     if (!commitFileSet.has(file)) continue;
     const hasPairs = (turnPairsByFile.get(file) ?? []).length > 0;
     const hasNewFileEdit = (hadNewFileEditTurnsByFile.get(file)?.size ?? 0) > 0;
@@ -4340,7 +4422,7 @@ async function computeLineAttribution(opts) {
   let totalDeleted = 0;
   const contributingTurns = /* @__PURE__ */ new Set();
   for (const file of commitFileSet) {
-    if (generatedFileSet.has(file)) continue;
+    if (aiRatioExcludedFileSet.has(file)) continue;
     const blobs = committedBlobs.get(file);
     if (!blobs) continue;
     const { parentBlob, committedBlob } = blobs;

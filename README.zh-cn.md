@@ -101,6 +101,17 @@ Agent Note 保存 Commit Story：
 
 Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在 `refs/notes/agentnote`，并通过 `git push` 共享。
 
+### 将生成的 Bundle 排除在 AI Ratio 之外
+
+如果提交的 bundle 或 generated output 需要继续显示，但不应影响 AI Ratio，请把它们写入 `.agentnoteignore`：
+
+```gitignore
+packages/cli/dist/**
+packages/pr-report/dist/**
+```
+
+这些文件仍会出现在 PR Report 和 Dashboard 中，只会从 AI Ratio 的分母里排除。
+
 ## Agent Support
 
 | Agent | Status | 显示粒度 | Notes |

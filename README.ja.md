@@ -101,6 +101,17 @@ Agent Note は Commit の文脈を保存します。
 
 一時的な Session Data は `.git/agentnote/` に置かれます。永続的な Record は `refs/notes/agentnote` に保存され、`git push` で共有されます。
 
+### Generated Bundle を AI Ratio から外す
+
+Commit には残したい bundle や generated output を、AI Ratio だけから外したい場合は `.agentnoteignore` に書きます。
+
+```gitignore
+packages/cli/dist/**
+packages/pr-report/dist/**
+```
+
+これらのファイルは PR Report と Dashboard には表示されます。AI Ratio の分母からだけ除外されます。
+
 ## Agent Support
 
 | Agent | Status | 表示できる粒度 | Notes |

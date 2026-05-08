@@ -153,7 +153,7 @@ Agent Note y Entire resuelven problemas relacionados, pero distintos.
 </Aside>
 
 <Aside>
-  Los generated artifacts comunes se excluyen del denominador de `AI ratio` como best effort usando señales específicas, como rutas de framework/cache, nombres o sufijos generados y headers del archivo commiteado. Los nombres genéricos de directorio como `build/`, `dist/`, `gen/`, `generated/` y `target/` no bastan por sí solos.
+  Los generated artifacts comunes se excluyen del denominador de `AI ratio` como best effort usando señales específicas, como rutas de framework/cache, nombres o sufijos generados y headers del archivo commiteado. Los nombres genéricos de directorio como `build/`, `dist/`, `gen/`, `generated/` y `target/` no bastan por sí solos. Si tu repository commitea bundles o generated outputs que deben seguir visibles pero no afectar el AI Ratio, inclúyelos en `.agentnoteignore`.
 </Aside>
 
 ## Ciclo de vida de la sesión

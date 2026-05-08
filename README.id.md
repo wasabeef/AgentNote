@@ -101,6 +101,17 @@ Agent Note menyimpan cerita Commit:
 
 Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `refs/notes/agentnote` dan dibagikan melalui `git push`.
 
+### Keluarkan generated bundle dari AI Ratio
+
+Jika bundle atau generated output yang di-commit harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tambahkan ke `.agentnoteignore`:
+
+```gitignore
+packages/cli/dist/**
+packages/pr-report/dist/**
+```
+
+File tersebut tetap muncul di PR Report dan Dashboard. File hanya dikeluarkan dari denominator AI Ratio.
+
 ## Agent Support
 
 | Agent | Status | Detail | Notes |

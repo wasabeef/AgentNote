@@ -147,7 +147,7 @@ Agent Note と Entire は近い領域ですが、目指している workflow が
 </Aside>
 
 <Aside>
-  代表的な generated artifact は、framework / cache path、generated filename / suffix、committed file header などの具体的な signal で best-effort に `AI ratio` の分母から除外されます。`build/`、`dist/`、`gen/`、`generated/`、`target/` のような汎用ディレクトリ名だけでは generated 扱いしません。
+  代表的な generated artifact は、framework / cache path、generated filename / suffix、committed file header などの具体的な signal で best-effort に `AI ratio` の分母から除外されます。`build/`、`dist/`、`gen/`、`generated/`、`target/` のような汎用ディレクトリ名だけでは generated 扱いしません。Commit には残したい bundle や generated output を AI Ratio だけから外したい場合は、`.agentnoteignore` に書いてください。
 </Aside>
 
 保存範囲、見える人、Agent Note service へ送信しないものは [データとプライバシー](./data-and-privacy/) を参照してください。

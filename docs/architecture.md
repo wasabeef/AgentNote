@@ -224,7 +224,8 @@ Note content per commit:
   ],
   "files": [
     { "path": "src/auth.ts", "by_ai": true },
-    { "path": "CHANGELOG.md", "by_ai": false }
+    { "path": "CHANGELOG.md", "by_ai": false },
+    { "path": "packages/cli/dist/cli.js", "by_ai": false, "ai_ratio_excluded": true }
   ],
   "attribution": {
     "ai_ratio": 73,
@@ -241,7 +242,7 @@ Note content per commit:
 - **`v`**: Schema version. Currently `1`.
 - **`agent`**: Agent adapter that produced the note, such as `claude`, `codex`, `cursor`, or `gemini`.
 - **`model`**: LLM model identifier from SessionStart. `null` for agents that don't expose it.
-- **`files`**: Array of `{path, by_ai}`. `by_ai` is true if any AI tool (Edit/Write) targeted the file.
+- **`files`**: Array of `{path, by_ai}` plus optional flags. `by_ai` is true if any AI tool (Edit/Write) targeted the file. `generated: true` and `ai_ratio_excluded: true` keep the file visible while removing it from the AI ratio denominator.
 - **`attribution`**: AI authorship metrics.
   - **`ai_ratio`**: 0–100 (rounded). Line-level when `method: "line"`, file-count when `method: "file"`, 0 when `method: "none"` (deletion-only).
   - **`method`**: `"line"` (blob-based 3-diff), `"file"` (binary file-count), or `"none"` (deletion-only, no valid ratio).
@@ -709,6 +710,15 @@ Agent Note excludes common generated artifacts from the AI ratio denominator on 
 Generic directory names such as `build/`, `dist/`, `gen/`, `generated/`, and `target/` are intentionally not path-only signals because many repositories keep handwritten source, checked-in bundles, or package entrypoints there.
 
 Generated files still appear in the note's `files[]` list, but they do not drag the file-level `ai_ratio` toward human attribution.
+
+Repositories can also add a root `.agentnoteignore` file when committed bundles or generated outputs should stay visible but not affect AI ratio:
+
+```gitignore
+packages/cli/dist/**
+packages/pr-report/dist/**
+```
+
+`.agentnoteignore` uses gitignore-like patterns with `!` negation and last-match-wins behavior. Matching files still appear in `files[]`, PR Report, and Dashboard. They are only removed from the AI ratio denominator and are marked with `ai_ratio_excluded: true` in the stored note.
 
 ## Multi-agent extensibility
 
