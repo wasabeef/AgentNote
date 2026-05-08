@@ -2298,6 +2298,160 @@ describe("recordCommitEntry", () => {
     assert.equal(files.find((file) => file.path === "src/client.generated.ts")?.generated, true);
   });
 
+  it("excludes .agentnoteignore matches from line-level AI ratio only", async () => {
+    const sourceBlob = hashBlob(repoDir, "export const status = 'done';\n");
+
+    writeFileSync(join(repoDir, ".agentnoteignore"), "# checked-in bundle\ncli.js\n");
+    execSync("git add .agentnoteignore", { cwd: repoDir });
+    execSync('git commit -m "chore: configure agentnoteignore"', { cwd: repoDir });
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"finish source and bundle","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, PRE_BLOBS_FILE),
+      `{"event":"pre_edit","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${EMPTY_BLOB}"}\n`,
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"src/service.ts","turn":1,"tool_use_id":"t1","blob":"${sourceBlob}"}\n`,
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    mkdirSync(join(repoDir, "packages", "cli", "dist"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "service.ts"), "export const status = 'done';\n");
+    writeFileSync(join(repoDir, "packages", "cli", "dist", "cli.js"), "console.log('bundle');\n");
+    execSync("git add src/service.ts packages/cli/dist/cli.js", {
+      cwd: repoDir,
+    });
+    execSync('git commit -m "feat: source and bundle"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const typedNote = note as {
+      attribution: { method: string; ai_ratio: number };
+      files: Array<{ path: string; ai_ratio_excluded?: boolean }>;
+    };
+    assert.equal(typedNote.attribution.method, "line");
+    assert.equal(typedNote.attribution.ai_ratio, 100);
+    assert.equal(
+      typedNote.files.find((file) => file.path === "packages/cli/dist/cli.js")?.ai_ratio_excluded,
+      true,
+    );
+  });
+
+  it("supports .agentnoteignore negation for file-level AI ratio", async () => {
+    writeFileSync(
+      join(repoDir, ".agentnoteignore"),
+      "packages/cli/dist/**\n!packages/cli/dist/keep.js\n",
+    );
+    execSync("git add .agentnoteignore", { cwd: repoDir });
+    execSync('git commit -m "chore: configure agentnoteignore"', { cwd: repoDir });
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update source and bundles","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"src/service.ts","turn":1}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    mkdirSync(join(repoDir, "packages", "cli", "dist"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "service.ts"), "export const status = 'done';\n");
+    writeFileSync(join(repoDir, "packages", "cli", "dist", "cli.js"), "console.log('bundle');\n");
+    writeFileSync(join(repoDir, "packages", "cli", "dist", "keep.js"), "console.log('keep');\n");
+    execSync("git add src/service.ts packages/cli/dist", { cwd: repoDir });
+    execSync('git commit -m "feat: file-level bundle exclusion"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const typedNote = note as {
+      attribution: { method: string; ai_ratio: number };
+      files: Array<{ path: string; ai_ratio_excluded?: boolean }>;
+    };
+    assert.equal(typedNote.attribution.method, "file");
+    assert.equal(typedNote.attribution.ai_ratio, 50);
+    assert.equal(
+      typedNote.files.find((file) => file.path === "packages/cli/dist/cli.js")?.ai_ratio_excluded,
+      true,
+    );
+    assert.equal(
+      typedNote.files.find((file) => file.path === "packages/cli/dist/keep.js")?.ai_ratio_excluded,
+      undefined,
+    );
+  });
+
+  it("ignores overly complex .agentnoteignore patterns while keeping safe patterns", async () => {
+    writeFileSync(
+      join(repoDir, ".agentnoteignore"),
+      `${"a".repeat(201)}\npackages/cli/dist/*.*\ncli.js\n`,
+    );
+    execSync("git add .agentnoteignore", { cwd: repoDir });
+    execSync('git commit -m "chore: configure guarded agentnoteignore"', { cwd: repoDir });
+
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","prompt":"update source and bundles","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"src/service.ts","turn":1}\n',
+    );
+    writeFileSync(join(sessionDir, TURN_FILE), "1\n");
+
+    mkdirSync(join(repoDir, "src"), { recursive: true });
+    mkdirSync(join(repoDir, "packages", "cli", "dist"), { recursive: true });
+    writeFileSync(join(repoDir, "src", "service.ts"), "export const status = 'done';\n");
+    writeFileSync(join(repoDir, "packages", "cli", "dist", "cli.js"), "console.log('bundle');\n");
+    writeFileSync(join(repoDir, "packages", "cli", "dist", "runtime.txt"), "runtime bundle\n");
+    execSync("git add src/service.ts packages/cli/dist", { cwd: repoDir });
+    execSync('git commit -m "feat: guarded bundle exclusion"', { cwd: repoDir });
+
+    const commitSha = execSync("git rev-parse HEAD", {
+      cwd: repoDir,
+      encoding: "utf-8",
+    }).trim();
+
+    await recordCommitEntry({ agentnoteDirPath, sessionId: SESSION_ID });
+
+    const note = await readNote(commitSha);
+    assert.ok(note !== null);
+    const typedNote = note as {
+      attribution: { method: string; ai_ratio: number };
+      files: Array<{ path: string; ai_ratio_excluded?: boolean }>;
+    };
+    assert.equal(typedNote.attribution.method, "file");
+    assert.equal(typedNote.attribution.ai_ratio, 50);
+    assert.equal(
+      typedNote.files.find((file) => file.path === "packages/cli/dist/cli.js")?.ai_ratio_excluded,
+      true,
+    );
+    assert.equal(
+      typedNote.files.find((file) => file.path === "packages/cli/dist/runtime.txt")
+        ?.ai_ratio_excluded,
+      undefined,
+    );
+  });
+
   it("marks generated files from committed content without reading the whole blob into attribution", async () => {
     const source = `// Code generated by sqlc. DO NOT EDIT.\n${"x".repeat(8192)}\n`;
 

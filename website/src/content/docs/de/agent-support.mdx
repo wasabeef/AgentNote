@@ -72,6 +72,6 @@ Gemini CLI nutzt `BeforeTool` / `AfterTool` für Dateien und `BeforeAgent` / `Af
 - Keine Note, wenn Agent Note keine vom Agent bearbeitete Commit-Datei findet.
 - Alte Prompts können ausgelassen werden, wenn sie zu einem anderen Commit-Fenster gehören.
 - Responses können fehlen, wenn der Agent sie nicht bereitstellt.
-- Generated artifacts können aus dem AI ratio denominator entfernt werden.
+- Generated artifacts und Pfade aus der `.agentnoteignore` im Repository-Root bleiben in Notes, PR Report und Dashboard sichtbar; sie werden nur aus dem AI ratio denominator entfernt.
 
 Beginnen Sie die Analyse mit [Troubleshooting](./troubleshooting/).

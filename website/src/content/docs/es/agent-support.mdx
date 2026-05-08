@@ -72,6 +72,6 @@ Gemini CLI usa `BeforeTool` / `AfterTool` para archivos y `BeforeAgent` / `After
 - No se escribe note para commits sin archivos AI-authored.
 - Un prompt antiguo puede omitirse si pertenece a otra ventana de commit.
 - Una response puede faltar si el agent no la expone.
-- Los generated artifacts pueden excluirse del denominador del AI ratio.
+- Los generated artifacts y los paths listados en la `.agentnoteignore` en la raíz del repository siguen visibles en Notes, PR Report y Dashboard; solo se excluyen del denominador del AI ratio.
 
 Para investigar, empieza por [Troubleshooting](./troubleshooting/).

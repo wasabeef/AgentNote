@@ -101,6 +101,17 @@ Agent Note salva a história do Commit:
 
 Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `refs/notes/agentnote` e é compartilhado com `git push`.
 
+### Excluir bundles gerados do AI Ratio
+
+Se bundles ou generated outputs commitados devem continuar visíveis, mas não influenciar o AI Ratio, adicione-os à `.agentnoteignore` na raiz do repository:
+
+```gitignore
+packages/cli/dist/**
+packages/pr-report/dist/**
+```
+
+Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são removidos apenas do denominador do AI Ratio.
+
 ## Agent Support
 
 | Agent | Status | Detalhe | Notes |

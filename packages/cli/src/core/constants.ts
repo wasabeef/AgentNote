@@ -3,6 +3,8 @@
 export const TRAILER_KEY = "Agentnote-Session";
 /** Marker written into managed git hook files so deinit can identify them safely. */
 export const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+/** Repo-root ignore file for files excluded only from AI ratio denominators. */
+export const AGENTNOTE_IGNORE_FILE = ".agentnoteignore";
 /** Public CLI hook command used in agent configuration files. */
 export const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
 /** Local shim hook command used when generated git hooks call the built CLI. */

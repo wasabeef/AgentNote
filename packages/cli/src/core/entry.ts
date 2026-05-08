@@ -5,6 +5,8 @@ export interface FileEntry {
   path: string;
   by_ai: boolean;
   generated?: boolean;
+  /** True when `.agentnoteignore` removes the file from AI ratio only. */
+  ai_ratio_excluded?: boolean;
 }
 
 /** Line-level attribution counts when blob-based attribution is available. */
@@ -254,12 +256,14 @@ export function hasGeneratedArtifactMarkers(content: string): boolean {
   return GENERATED_CONTENT_PATTERNS.some((pattern) => pattern.test(header));
 }
 
-/** Remove generated files from the denominator used by file-level AI ratio. */
+/** Remove generated or user-excluded files from the file-level AI ratio denominator. */
 export function filterAiRatioEligibleFiles(files: FileEntry[]): FileEntry[] {
-  return files.filter((file) => !file.generated && !isGeneratedArtifactPath(file.path));
+  return files.filter(
+    (file) => !file.generated && !file.ai_ratio_excluded && !isGeneratedArtifactPath(file.path),
+  );
 }
 
-/** Count AI-authored and total files after generated artifacts are excluded. */
+/** Count AI-authored and total files after AI ratio exclusions are applied. */
 export function countAiRatioEligibleFiles(files: FileEntry[]): { total: number; ai: number } {
   const eligible = filterAiRatioEligibleFiles(files);
   return {
@@ -548,15 +552,18 @@ export function buildEntry(opts: {
   commitFiles: string[];
   aiFiles: string[];
   generatedFiles?: string[];
+  aiRatioExcludedFiles?: string[];
   lineCounts?: LineCounts;
   /** Per-interaction tools, keyed by interaction index. null = no data. */
   interactionTools?: Map<number, string[] | null>;
 }): AgentnoteEntry {
   const generatedFiles = new Set(opts.generatedFiles ?? []);
+  const aiRatioExcludedFiles = new Set(opts.aiRatioExcludedFiles ?? []);
   const files: FileEntry[] = opts.commitFiles.map((path) => ({
     path,
     by_ai: opts.aiFiles.includes(path),
     ...(generatedFiles.has(path) ? { generated: true } : {}),
+    ...(aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}),
   }));
 
   const method = resolveMethod(opts.lineCounts);

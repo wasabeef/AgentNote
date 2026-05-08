@@ -153,7 +153,7 @@ Agent Note und Entire lösen verwandte, aber unterschiedliche Probleme.
 </Aside>
 
 <Aside>
-  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus.
+  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus. Wenn dein Repository Bundles oder generated outputs committet, die sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, liste sie in der `.agentnoteignore` im Repository-Root.
 </Aside>
 
 ## Sitzungslebenszyklus

@@ -111,6 +111,14 @@ describe("calcAiRatio", () => {
     ];
     assert.equal(calcAiRatio(files), 100);
   });
+
+  it("excludes user-ignored files from file-level ratio", () => {
+    const files: FileEntry[] = [
+      { path: "packages/cli/src/index.ts", by_ai: true },
+      { path: "packages/cli/dist/cli.js", by_ai: false, ai_ratio_excluded: true },
+    ];
+    assert.equal(calcAiRatio(files), 100);
+  });
 });
 
 describe("countAiRatioEligibleFiles", () => {
@@ -128,6 +136,14 @@ describe("countAiRatioEligibleFiles", () => {
     const files: FileEntry[] = [
       { path: "Generated.swift", by_ai: false, generated: true },
       { path: "Sources/App.swift", by_ai: true },
+    ];
+    assert.deepEqual(countAiRatioEligibleFiles(files), { total: 1, ai: 1 });
+  });
+
+  it("respects explicit AI ratio exclusion flags from recorded notes", () => {
+    const files: FileEntry[] = [
+      { path: "packages/pr-report/dist/index.js", by_ai: false, ai_ratio_excluded: true },
+      { path: "packages/pr-report/src/index.ts", by_ai: true },
     ];
     assert.deepEqual(countAiRatioEligibleFiles(files), { total: 1, ai: 1 });
   });
@@ -570,6 +586,22 @@ describe("buildEntry", () => {
       { path: "Sources/App.swift", by_ai: true },
       { path: "Generated.swift", by_ai: false, generated: true },
     ]);
+  });
+
+  it("marks user-ignored files as AI ratio excluded", () => {
+    const entry = buildEntry({
+      sessionId: "sid",
+      interactions: [],
+      commitFiles: ["packages/cli/src/index.ts", "packages/cli/dist/cli.js"],
+      aiFiles: ["packages/cli/src/index.ts"],
+      aiRatioExcludedFiles: ["packages/cli/dist/cli.js"],
+    });
+
+    assert.deepEqual(entry.files, [
+      { path: "packages/cli/src/index.ts", by_ai: true },
+      { path: "packages/cli/dist/cli.js", by_ai: false, ai_ratio_excluded: true },
+    ]);
+    assert.equal(entry.attribution.ai_ratio, 100);
   });
 
   it("inherits tools from interaction when interactionTools has no entry for that index", () => {

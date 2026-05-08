@@ -36428,6 +36428,8 @@ async function readPrBody(prNumber) {
 const TRAILER_KEY = "Agentnote-Session";
 /** Marker written into managed git hook files so deinit can identify them safely. */
 const AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+/** Repo-root ignore file for files excluded only from AI ratio denominators. */
+const AGENTNOTE_IGNORE_FILE = ".agentnoteignore";
 /** Public CLI hook command used in agent configuration files. */
 const AGENTNOTE_HOOK_COMMAND = "agent-note hook";
 /** Local shim hook command used when generated git hooks call the built CLI. */
@@ -36659,11 +36661,11 @@ function hasGeneratedArtifactMarkers(content) {
     const header = content.slice(0, 2048).toLowerCase();
     return GENERATED_CONTENT_PATTERNS.some((pattern) => pattern.test(header));
 }
-/** Remove generated files from the denominator used by file-level AI ratio. */
+/** Remove generated or user-excluded files from the file-level AI ratio denominator. */
 function filterAiRatioEligibleFiles(files) {
-    return files.filter((file) => !file.generated && !isGeneratedArtifactPath(file.path));
+    return files.filter((file) => !file.generated && !file.ai_ratio_excluded && !isGeneratedArtifactPath(file.path));
 }
-/** Count AI-authored and total files after generated artifacts are excluded. */
+/** Count AI-authored and total files after AI ratio exclusions are applied. */
 function countAiRatioEligibleFiles(files) {
     const eligible = filterAiRatioEligibleFiles(files);
     return {
@@ -36907,10 +36909,12 @@ function resolveMethod(lineCounts) {
 /** Build the final git-note entry from collected session, attribution, and prompt data. */
 function buildEntry(opts) {
     const generatedFiles = new Set(opts.generatedFiles ?? []);
+    const aiRatioExcludedFiles = new Set(opts.aiRatioExcludedFiles ?? []);
     const files = opts.commitFiles.map((path) => ({
         path,
         by_ai: opts.aiFiles.includes(path),
         ...(generatedFiles.has(path) ? { generated: true } : {}),
+        ...(aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}),
     }));
     const method = resolveMethod(opts.lineCounts);
     const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);

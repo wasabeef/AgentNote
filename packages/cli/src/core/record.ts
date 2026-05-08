@@ -12,6 +12,7 @@ import {
 import { git, gitSafe } from "../git.js";
 import { computePositionAttribution, countLines, parseUnifiedHunks } from "./attribution.js";
 import {
+  AGENTNOTE_IGNORE_FILE,
   ARCHIVE_ID_RE,
   CHANGES_FILE,
   COMMITTED_PAIRS_FILE,
@@ -49,6 +50,15 @@ type ConsumedTranscriptPromptFile = {
   promptId: string;
   file: string;
 };
+
+type AgentnoteIgnorePattern = {
+  negated: boolean;
+  regex: RegExp;
+};
+
+const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
+const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
+const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -179,15 +189,21 @@ export async function recordCommitEntry(opts: {
   }
 
   const generatedFiles = await detectGeneratedFiles(commitSha, commitFiles);
+  const aiRatioIgnoredFiles = await detectAgentnoteIgnoredFiles(commitFiles);
   const attributionCommitFileSet = new Set(
     commitFiles.filter((file) => !generatedFiles.includes(file)),
+  );
+  const lineCountCommitFileSet = new Set(
+    commitFiles.filter(
+      (file) => !generatedFiles.includes(file) && !aiRatioIgnoredFiles.includes(file),
+    ),
   );
   const lineAttribution = hasTurnData
     ? await computeLineAttribution({
         sessionDir,
         commitFileSet,
         aiFileSet: new Set(aiFiles),
-        generatedFileSet: new Set(generatedFiles),
+        aiRatioExcludedFileSet: new Set([...generatedFiles, ...aiRatioIgnoredFiles]),
         relevantTurns,
         hasTurnData,
         changeEntries,
@@ -361,7 +377,7 @@ export async function recordCommitEntry(opts: {
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
-        attributionCommitFileSet,
+        lineCountCommitFileSet,
         transcriptMatched,
         consumedPromptState,
       );
@@ -478,7 +494,7 @@ export async function recordCommitEntry(opts: {
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
-        attributionCommitFileSet,
+        lineCountCommitFileSet,
         selectableTranscriptMatched,
         consumedPromptState,
       );
@@ -535,6 +551,7 @@ export async function recordCommitEntry(opts: {
     commitFiles,
     aiFiles,
     generatedFiles,
+    aiRatioExcludedFiles: aiRatioIgnoredFiles,
     lineCounts: lineAttribution.counts ?? transcriptLineCounts,
     interactionTools,
   });
@@ -1265,6 +1282,100 @@ async function detectGeneratedFiles(commitSha: string, commitFiles: string[]): P
   return [...generated];
 }
 
+/** Read `.agentnoteignore` and return committed files excluded from AI ratio only. */
+async function detectAgentnoteIgnoredFiles(commitFiles: string[]): Promise<string[]> {
+  const patterns = await readAgentnoteIgnorePatterns();
+  if (patterns.length === 0) return [];
+  return commitFiles.filter((file) => isAgentnoteIgnoredPath(file, patterns));
+}
+
+/** Parse repo-root `.agentnoteignore` patterns with last-match-wins semantics. */
+async function readAgentnoteIgnorePatterns(): Promise<AgentnoteIgnorePattern[]> {
+  let repoRoot = "";
+  try {
+    repoRoot = await git(["rev-parse", "--show-toplevel"]);
+  } catch {
+    return [];
+  }
+
+  let content = "";
+  try {
+    content = await readFile(join(repoRoot, AGENTNOTE_IGNORE_FILE), TEXT_ENCODING);
+  } catch {
+    return [];
+  }
+
+  return content
+    .split(/\r?\n/)
+    .map(compileAgentnoteIgnorePattern)
+    .filter((pattern): pattern is AgentnoteIgnorePattern => pattern !== null);
+}
+
+function compileAgentnoteIgnorePattern(line: string): AgentnoteIgnorePattern | null {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) return null;
+
+  const negated = trimmed.startsWith("!");
+  const rawPattern = negated ? trimmed.slice(1).trim() : trimmed;
+  if (!rawPattern || rawPattern.startsWith("#")) return null;
+
+  const directoryOnly = rawPattern.endsWith("/");
+  const anchored = rawPattern.startsWith("/");
+  const pattern = rawPattern.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!pattern) return null;
+  if (isAgentnoteIgnorePatternTooComplex(pattern)) return null;
+
+  const hasSlash = pattern.includes("/");
+  const prefix = anchored || hasSlash ? "^" : "(?:^|/)";
+  const suffix = directoryOnly || !hasSlash ? "(?:/.*)?$" : "$";
+  return {
+    negated,
+    regex: new RegExp(`${prefix}${globPatternToRegex(pattern)}${suffix}`),
+  };
+}
+
+function isAgentnoteIgnorePatternTooComplex(pattern: string): boolean {
+  if (pattern.length > AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH) return true;
+  const wildcardTokens = pattern.match(/\*\*|\*/g)?.length ?? 0;
+  if (wildcardTokens > AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS) return true;
+  return AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE.test(pattern);
+}
+
+function globPatternToRegex(pattern: string): string {
+  let regex = "";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    if (char === "*") {
+      if (pattern[index + 1] === "*") {
+        regex += ".*";
+        index += 1;
+      } else {
+        regex += "[^/]*";
+      }
+      continue;
+    }
+    if (char === "?") {
+      regex += "[^/]";
+      continue;
+    }
+    regex += escapeRegExp(char);
+  }
+  return regex;
+}
+
+function isAgentnoteIgnoredPath(path: string, patterns: AgentnoteIgnorePattern[]): boolean {
+  const normalized = path.replaceAll("\\", "/");
+  let ignored = false;
+  for (const pattern of patterns) {
+    if (pattern.regex.test(normalized)) ignored = !pattern.negated;
+  }
+  return ignored;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Read a small committed-file prefix for generated marker detection.
  *
@@ -1379,7 +1490,7 @@ async function computeLineAttribution(opts: {
   sessionDir: string;
   commitFileSet: Set<string>;
   aiFileSet: Set<string>;
-  generatedFileSet: Set<string>;
+  aiRatioExcludedFileSet: Set<string>;
   relevantTurns: Set<number>;
   hasTurnData: boolean;
   changeEntries: Record<string, unknown>[];
@@ -1388,7 +1499,7 @@ async function computeLineAttribution(opts: {
     sessionDir,
     commitFileSet,
     aiFileSet,
-    generatedFileSet,
+    aiRatioExcludedFileSet,
     relevantTurns,
     hasTurnData,
     changeEntries,
@@ -1530,7 +1641,7 @@ async function computeLineAttribution(opts: {
   // Having only post blobs (PreToolUse hook not yet active) is not enough — it would
   // produce 0% AI ratio instead of falling back to file-level.
   for (const file of aiFileSet) {
-    if (generatedFileSet.has(file)) continue;
+    if (aiRatioExcludedFileSet.has(file)) continue;
     if (!commitFileSet.has(file)) continue;
     const hasPairs = (turnPairsByFile.get(file) ?? []).length > 0;
     const hasNewFileEdit = (hadNewFileEditTurnsByFile.get(file)?.size ?? 0) > 0;
@@ -1560,7 +1671,7 @@ async function computeLineAttribution(opts: {
   const contributingTurns = new Set<number>();
 
   for (const file of commitFileSet) {
-    if (generatedFileSet.has(file)) continue;
+    if (aiRatioExcludedFileSet.has(file)) continue;
     const blobs = committedBlobs.get(file);
     if (!blobs) continue;
 
