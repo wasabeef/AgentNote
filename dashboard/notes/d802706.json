@@ -816,6 +816,6 @@
   "pull_request": {
     "number": 67,
     "title": "feat(cli): add why command",
-    "state": "open"
+    "state": "merged"
   }
 }
