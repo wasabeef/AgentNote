@@ -118,7 +118,7 @@ packages/pr-report/dist/**
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |
 | Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |
-| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit 数和最终 file 匹配时 |
+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit 数匹配，且最终 file 仍匹配最后一次 AI edit 时 |
 | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |
 
 `Files` 表示 Agent Note 可以显示 Agent 触碰过哪些已提交文件。`Line Estimate` 表示它还可以估算 AI 编写的行，而不是只统计文件。

@@ -118,7 +118,7 @@ packages/pr-report/dist/**
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | 対応 | 対応 | 対応 | 対応 | 既定で表示 |
 | Codex CLI | Supported | 対応 | 対応 | 対応 | 対応 | Codex の patch 履歴が最終 Commit と一致したとき |
-| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 file が一致したとき |
+| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数が一致し、committed file が最後の AI edit と一致したとき |
 | Gemini CLI | Preview | 対応 | 対応 | 対応 | 対応 | 未対応 |
 
 `Files` は、Agent が触った committed file を表示できるという意味です。`Line Estimate` は、file 数だけでなく AI が書いた行の目安も表示できるという意味です。

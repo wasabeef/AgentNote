@@ -118,7 +118,7 @@ Esos archivos siguen apareciendo en Notes, PR Report y Dashboard. Solo se elimin
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | Sí | Sí | Sí | Sí | Por defecto |
 | Codex CLI | Supported | Sí | Sí | Sí | Sí | Cuando el historial de parches de Codex coincide con el Commit final |
-| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit y el archivo final coinciden |
+| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit coinciden y el archivo final aún coincide con el último edit de IA |
 | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |
 
 `Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la IA en lugar de contar solo archivos.

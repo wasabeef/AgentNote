@@ -13,7 +13,7 @@ Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 a
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |
 | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |
-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |
+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 가 맞고 final file 이 마지막 AI edit 와 일치할 때 |
 | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |
 
 <Aside>
@@ -61,7 +61,7 @@ Codex CLI 는 transcript-driven 입니다. local transcript 를 읽고, `apply_p
 
 ### Cursor
 
-Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final file 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.
+Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. edit count 가 맞고 final file 이 마지막 AI edit 와 여전히 맞을 때만 line-level 이 가능합니다.
 
 ### Gemini CLI
 

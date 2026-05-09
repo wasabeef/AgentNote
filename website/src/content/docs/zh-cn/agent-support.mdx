@@ -13,7 +13,7 @@ Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |
 | Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |
-| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 和 final file 匹配时 |
+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时 |
 | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |
 
 <Aside>
@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 读取 local transcript，并仅在
 
 ### Cursor
 
-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。
+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。
 
 ### Gemini CLI
 

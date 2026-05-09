@@ -172,7 +172,7 @@ linked:  3/20 recent commits
   <Card>
     <div class="agent-capability-card">
       <div class="agent-capability-card__title">Cursor</div>
-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 file が一致した file だけ line-level に昇格します。
+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、edit 数が一致し、committed file が最後の AI edit と一致した file だけ line-level に昇格します。
       <img class="agent-capability-card__logo" src="/AgentNote/model-icons/cursor.png" alt="" aria-hidden="true" />
     </div>
   </Card>

@@ -118,7 +118,7 @@ packages/pr-report/dist/**
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | Да | Да | Да | Да | По умолчанию |
 | Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |
-| Cursor | Supported | Да | Да | Да | Да | Когда счётчики edit и итоговый file совпадают |
+| Cursor | Supported | Да | Да | Да | Да | Когда счётчики edit совпадают и итоговый файл всё ещё соответствует последнему AI edit |
 | Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |
 
 `Files` означает, что Agent Note может показать, какие commit-файлы были затронуты Agent. `Line Estimate` означает, что он также может оценить строки, написанные AI, а не только считать файлы.

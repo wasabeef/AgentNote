@@ -118,7 +118,7 @@ Those files still appear in Notes, PR Report, and Dashboard. They are only remov
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | Yes | Yes | Yes | Yes | Default |
 | Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |
-| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final file match |
+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts match and the final file still matches the latest AI edit |
 | Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |
 
 `Files` means Agent Note can show which committed files were touched by the agent. `Line Estimate` means it can also estimate AI-written lines instead of only counting files.

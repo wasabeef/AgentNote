@@ -118,7 +118,7 @@ File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikelu
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |
 | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |
-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit dan file akhir cocok |
+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir |
 | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |
 
 `Files` berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. `Line Estimate` berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file.
