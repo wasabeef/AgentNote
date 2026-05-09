@@ -1,0 +1,30 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T16:57:56.279Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/why-command.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
