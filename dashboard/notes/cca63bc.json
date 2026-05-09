@@ -1,0 +1,107 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T12:51:49.590Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": "**Fixed Threads**\n- CodeRabbit の新規未解決 14 件を修正・resolve 済みです。\n- 非英語 locale の `Agent Support` link / capability matrix の英語残りを横断修正しました。\n- Commit / push 済み: `2fd469d docs: localize capability matrix copy`\n\n**Threads Intentionally Left Unresolved**\n- なし。GraphQL で CodeRabbit 未解決 thread 0 件を確認済み。\n\n**Checks Run**\n- `npm run build --prefix website` pass\n- `git diff --check` pass\n- `gh pr checks 66` 確認\n- CodeRabbit review threads GraphQL 確認\n- `git status --short` clean\n\n**Any Remaining Risk**\n- 通常 CI は全 pass。CodeRabbit check だけまだ `pending / Review in progress` ですが、review thread はすべて resolved 済みです。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "**Fixed Threads** CodeRabbit の新規未解決 14 件を修正・resolve 済みです。 非英語 locale の `Agent Support` link / capability matrix の英語残りを横断修正しました。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "cca63bc4146b405e62825ad429e5876569873225",
+    "short_sha": "cca63bc",
+    "message": "docs: polish capability matrix wording",
+    "date": "2026-05-09T21:51:45+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "website/src/content/docs/ja/index.mdx",
+        "lines": [
+          "index 864eb44..ff95a9f 100644",
+          "--- a/website/src/content/docs/ja/index.mdx",
+          "+++ b/website/src/content/docs/ja/index.mdx",
+          "@@ -196,7 +196,7 @@ linked:  3/20 recent commits",
+          "   <div class=\"capability-row\">",
+          "     <div class=\"capability-label\">行数推定</div>",
+          "     <div class=\"cap-yes\">既定で表示</div>",
+          "-    <div class=\"cap-partial\">Codex patch 履歴が最終 Commit と一致したとき</div>",
+          "+    <div class=\"cap-partial\">Codex patch 履歴が最終 commit と一致したとき</div>",
+          "     <div class=\"cap-partial\">edit 数が一致し、committed file が最後の AI edit と一致したとき</div>",
+          "     <div class=\"cap-no\">未対応</div>",
+          "   </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/index.mdx",
+        "lines": [
+          "index baec106..3328bb2 100644",
+          "--- a/website/src/content/docs/ko/index.mdx",
+          "+++ b/website/src/content/docs/ko/index.mdx",
+          "@@ -196,7 +196,7 @@ linked:  3/20 recent commits",
+          "   </div>",
+          "   <div class=\"capability-row\">",
+          "     <div class=\"capability-label\">라인 추정</div>",
+          "-    <div class=\"cap-yes\">기본 표시</div>",
+          "+    <div class=\"cap-yes\">항상 표시</div>",
+          "     <div class=\"cap-partial\">Codex patch 기록이 최종 Commit 과 일치할 때</div>",
+          "     <div class=\"cap-partial\">edit count 가 맞고 final file 이 마지막 AI edit 와 일치할 때</div>",
+          "     <div class=\"cap-no\">아직 없음</div>"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 66,
+    "title": "docs: clarify AI review and dashboard guidance",
+    "state": "open"
+  }
+}
