@@ -61,4 +61,11 @@ describe("dashboard URL restore source", () => {
     assert.ok(!restoreSource.includes("state.index?.prs?.length"));
     assert.ok(!restoreSource.includes("state.index?.commits?.length"));
   });
+
+  it("shows actionable guidance when requested dashboard data is missing", () => {
+    assert.ok(dashboardSource.includes("function renderMissingSelectionEmpty"));
+    assert.ok(dashboardSource.includes("The PR workflow may not have run yet for this PR."));
+    assert.ok(dashboardSource.includes("GitHub Pages Pull Request Deploys may be blocked by environment protection."));
+    assert.ok(dashboardSource.includes("Confirm git notes were pushed to refs/notes/agentnote."));
+  });
 });

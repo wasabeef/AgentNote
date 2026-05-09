@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent stellt andere Hooks und Transcript-Daten bereit. Diese Seite zeigt, was Sie vor der Einführung im Team erwarten können.
 
-## Support-Matrix
+## Agent-Funktionen
 
-| Agent | Status | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook-native | Standardmäßig line-level |
-| Codex CLI | Supported | Lokales Transcript | Standardmäßig file-level, line-level wenn `apply_patch` Counts passen |
-| Cursor | Supported | Response hook oder lokales Transcript | Standardmäßig file-level, line-level wenn Edit Counts und finaler Blob passen |
-| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` Hooks | File-level |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Ja | Ja | Ja | Ja | Standardmäßig |
+| Codex CLI | Supported | Ja | Ja | Ja | Ja | Wenn die Codex-Patch-Historie zum finalen Commit passt |
+| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit Counts passen und die finale Datei noch zum letzten AI edit passt |
+| Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |
 
 <Aside>
-  Preview bedeutet, dass Agent Note das aktuelle öffentliche Verhalten unterstützt, das lokale Format des Agents aber noch ändern kann.
+  Files bedeutet, dass Agent Note zeigen kann, welche committierten Dateien vom Agent berührt wurden. Line Estimate bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen. Preview bedeutet, dass Agent Note das aktuelle öffentliche Verhalten unterstützt, das lokale Format des Agents aber noch ändern kann.
 </Aside>
 
 ## Empfohlene Einrichtung
@@ -61,7 +61,7 @@ Codex CLI ist transcript-driven. Agent Note liest lokale Transcripts und wechsel
 
 ### Cursor
 
-Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn der finale Blob noch zum letzten AI edit passt.
+Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn Edit Counts passen und die finale Datei noch zum letzten AI edit passt.
 
 ### Gemini CLI
 

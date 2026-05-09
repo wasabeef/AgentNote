@@ -72,3 +72,13 @@ Bahkan repositori baru bisa mulai mengumpulkan data Dashboard sebelum deploy pro
 - GitHub Pages menyajikan Dashboard yang sudah dibangun di `/dashboard/`
 
 Repositori tidak meng-commit contoh JSON Dashboard. Dashboard baru tetap kosong sampai workflow memulihkan atau membuat note file. `pull_request` memublikasikan status Open, lalu push ke `default branch` menggantinya dengan status Merged.
+
+## Saat data tidak muncul
+
+Dashboard sekarang menampilkan petunjuk penyebab, bukan hanya mengatakan bahwa data belum ada.
+
+- Tidak ada data sama sekali: pastikan workflow PR berjalan setelah Agent Note diaktifkan, workflow Dashboard berhasil, dan `refs/notes/agentnote` sudah di-push.
+- `?pr=<number>` tidak menampilkan data: workflow untuk PR itu mungkin belum berjalan, Pull Request Deploy bisa diblokir oleh environment protection GitHub Pages, atau nomor PR di URL tidak cocok dengan data Dashboard yang sudah dipublikasikan.
+- `?commit=<sha>` tidak menampilkan data: Commit itu mungkin tidak punya entry Agent Note, notes mungkin belum di-push, atau SHA berasal dari repository lain.
+
+Jika halaman terbuka tetapi tetap kosong, lihat [Troubleshooting](./troubleshooting/).

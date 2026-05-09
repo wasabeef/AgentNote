@@ -85,6 +85,14 @@ Der PR-Bericht enthält:
   Commit-Hashes im Bericht verlinken direkt auf die Commit-Seite bei GitHub.
 </Aside>
 
+## AI Review Tools
+
+Der `Reviewer Context` wird als versteckter Markdown-Kommentar im PR body gespeichert. Menschliche Reviewer sehen den normalen Bericht, während Tools, die die rohe PR Description lesen, den zusätzlichen Kontext nutzen können.
+
+Dieser Kontext ist deterministisch. Er fasst geänderte Bereiche, Review-Fokus und die neuesten relevanten Intent-Signale aus Agent Note Daten zusammen. Tools wie Copilot, CodeRabbit, Devin und Greptile können dadurch verstehen, warum sich die PR geändert hat, bevor sie den Diff prüfen.
+
+Er ist trotzdem nur Orientierung, kein Beweis. Review Tools sollten den Kontext immer mit dem tatsächlichen Diff, den Tests und dem Code vergleichen.
+
 ## Nächster Schritt
 
 Wenn du zusätzlich eine gemeinsame Pages-Ansicht für offene und gemergte PRs möchtest, geh weiter zur Seite <a href="./dashboard/">Dashboard</a>.

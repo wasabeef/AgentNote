@@ -114,12 +114,14 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r
 
 ## Agent Support
 
-| Agent | Status | Detalhe | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Estimativa por linha por padrão | Usa Native Hooks para recuperar a conversa. |
-| Codex CLI | Supported | Por arquivo por padrão | Pode estimar linhas escritas pela AI apenas quando o histórico de patches do Codex bate com o Commit final. Se o Transcript Local não puder ser lido, Agent Note evita Notes incertas. |
-| Cursor | Supported | Por arquivo por padrão | Usa Cursor Edit Hooks. Pode estimar linhas escritas pela AI apenas quando o arquivo no Commit ainda corresponde ao último Edit da AI. |
-| Gemini CLI | Preview | Por arquivo | Usa Generated Hooks para registrar conversas e execuções normais de `git commit`. |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |
+| Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |
+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições coincide e o arquivo final ainda bate com a última edição da IA |
+| Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
+
+`Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos.
 
 ## Verifique o Setup
 
@@ -186,6 +188,8 @@ $ npx agent-note pr --output description --update 42
 
 Isso publica um AI Session Report na PR Description:
 
+O bloco `agentnote-reviewer-context` é salvo como hidden comment no PR body. AI Review tools que leem a raw PR description, como Copilot, CodeRabbit, Devin e Greptile, podem usá-lo como intent e review focus adicionais.
+
 ```
 ## 🧑💬🤖 Agent Note
 
@@ -247,7 +251,7 @@ Você executa `git push`
 `refs/notes/agentnote` é enviado junto com a Branch
 ```
 
-Para o Flow detalhado, como Agent Note estima o trabalho escrito pela AI e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
+Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
 
 ## Commands
 

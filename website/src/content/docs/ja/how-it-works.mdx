@@ -137,7 +137,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 Agent Note と Entire は近い領域ですが、目指している workflow が違います。
 
-- Agent Note は git commit と、その commit を生んだ AI conversation を紐づけます。Entire は rewind / resume を含む checkpoint product です。
+- Agent Note は git commit と、その commit を生んだ AI との会話を紐づけます。Entire は rewind / resume を含む checkpoint product です。
 - Agent Note の永続データは `refs/notes/agentnote` に保存され、一時データは `.git/agentnote/` に置かれます。Entire は checkpoint metadata と hosted web application を中心にします。
 - Agent Note の Dashboard は git notes を元にした optional static GitHub Pages です。hosted service なしでも使えます。
 - Agent Note は古い workspace state を復元する tool ではありません。commit がなぜ変わったか、どの prompt が関わったか、diff のどれくらいが AI-authored かを review しやすくする tool です。

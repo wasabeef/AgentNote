@@ -55,7 +55,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | Agent Note in einem Repository installieren willst | [Installation](./installation/) |
 | den PR-Bericht für Reviewer hinzufügen willst | [GitHub Action](./github-action/) |
 | eine gemeinsame Team-Ansicht veröffentlichen willst | [Dashboard](./dashboard/) |
-| prüfen willst, was jeder Agent erfassen kann | [Agent Support](./agent-support/) |
+| prüfen willst, was jeder Agent erfassen kann | [Agent-Unterstützung](./agent-support/) |
 | verstehen willst, was gespeichert und sichtbar ist | [Data & Privacy](./data-and-privacy/) |
 | fehlende Notes, Prompts oder Dashboard-Daten beheben willst | [Troubleshooting](./troubleshooting/) |
 
@@ -149,7 +149,7 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Agenten-Unterstützungsmatrix
+## Agent-Funktionen
 
 <div class="capability-matrix">
   <div class="capability-header">
@@ -161,43 +161,48 @@ linked:  3/20 recent commits
   </div>
   <div class="capability-row">
     <div class="capability-label">Status</div>
-    <div class="cap-yes">Stabil</div>
-    <div class="cap-partial">Preview</div>
-    <div class="cap-yes">Stabil</div>
-    <div class="cap-partial">Preview</div>
+    <div class="cap-yes">Vollständig unterstützt</div>
+    <div class="cap-yes">Unterstützt</div>
+    <div class="cap-yes">Unterstützt</div>
+    <div class="cap-partial">Vorschau</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Zeilenweise KI-Zuordnung</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-no">—</div>
+    <div class="capability-label">Prompt</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Prompt / Antwort-Wiederherstellung</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Antwort</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Aufzeichnung per normalem `git commit`</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Dateien</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` als Ausweichweg</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">KI-Anteil</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+    <div class="cap-yes">Ja</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Zeilenschätzung</div>
+    <div class="cap-yes">Standardmäßig</div>
+    <div class="cap-partial">Codex-Patch-Historie passt zum finalen Commit</div>
+    <div class="cap-partial">Edit-Zähler passen und finale Datei passt noch zur letzten KI-Bearbeitung</div>
+    <div class="cap-no">Noch nicht</div>
   </div>
 </div>
 
 <p class="capability-legend">
-  <span><span class="cap-yes">✓</span> Vollständig</span>
-  <span><span class="cap-partial">△</span> Bedingt (erfordert passendes Transcript oder Blob)</span>
-  <span><span class="cap-no">—</span> Nicht verfügbar</span>
+  Details stehen unter <a href="./agent-support/">Agent-Unterstützung</a>.
 </p>

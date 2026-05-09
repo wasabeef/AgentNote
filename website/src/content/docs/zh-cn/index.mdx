@@ -55,7 +55,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | 在仓库中安装 Agent Note | [安装](./installation/) |
 | 添加 PR 中显示的报告 | [GitHub Action](./github-action/) |
 | 发布团队共享的历史页面 | [Dashboard](./dashboard/) |
-| 查看每个 agent 能记录什么 | [Agent Support](./agent-support/) |
+| 查看每个 agent 能记录什么 | [Agent 支持](./agent-support/) |
 | 了解会保存什么、谁能看到 | [Data & Privacy](./data-and-privacy/) |
 | 修复缺失的 notes、prompt 或 Dashboard 数据 | [Troubleshooting](./troubleshooting/) |
 
@@ -149,7 +149,7 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Agent 支持矩阵
+## Agent 能力矩阵
 
 <div class="capability-matrix">
   <div class="capability-header">
@@ -161,43 +161,48 @@ linked:  3/20 recent commits
   </div>
   <div class="capability-row">
     <div class="capability-label">状态</div>
-    <div class="cap-yes">稳定</div>
-    <div class="cap-partial">Preview</div>
-    <div class="cap-yes">稳定</div>
-    <div class="cap-partial">Preview</div>
+    <div class="cap-yes">完全支持</div>
+    <div class="cap-yes">支持</div>
+    <div class="cap-yes">支持</div>
+    <div class="cap-partial">预览</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">行级 AI 归因</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-no">—</div>
+    <div class="capability-label">提示词</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">提示词 / 响应恢复</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">响应</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">通过普通 `git commit` 记录</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">文件</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` 作为备用路径</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">AI 比例</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+    <div class="cap-yes">是</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">行数估算</div>
+    <div class="cap-yes">默认显示</div>
+    <div class="cap-partial">Codex patch 记录与最终 commit 匹配时</div>
+    <div class="cap-partial">edit 数匹配，且最终文件仍匹配最后一次 AI 编辑时</div>
+    <div class="cap-no">尚未支持</div>
   </div>
 </div>
 
 <p class="capability-legend">
-  <span><span class="cap-yes">✓</span> 完整支持</span>
-  <span><span class="cap-partial">△</span> 条件支持（需要匹配的 transcript 或 blob）</span>
-  <span><span class="cap-no">—</span> 不支持</span>
+  详情请查看 <a href="./agent-support/">Agent 支持</a>。
 </p>

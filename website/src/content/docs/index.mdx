@@ -149,7 +149,7 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Agent Support Matrix
+## Agent Capability Matrix
 
 <div class="capability-matrix">
   <div class="capability-header">
@@ -161,45 +161,48 @@ linked:  3/20 recent commits
   </div>
   <div class="capability-row">
     <div class="capability-label">Status</div>
-    <div class="cap-yes">Stable</div>
+    <div class="cap-yes">Full support</div>
+    <div class="cap-yes">Supported</div>
+    <div class="cap-yes">Supported</div>
     <div class="cap-partial">Preview</div>
-    <div class="cap-yes">Stable</div>
-    <div class="cap-partial">Preview</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Line-level AI attribution</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-no">—</div>
+    <div class="capability-label">Prompt</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Prompt / response recovery</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Response</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Record via regular `git commit`</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Files</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` as backup</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">AI Ratio</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+    <div class="cap-yes">Yes</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Line Estimate</div>
+    <div class="cap-yes">Default</div>
+    <div class="cap-partial">Codex patch history matches final Commit</div>
+    <div class="cap-partial">Edit count matches and final file still matches the latest AI edit</div>
+    <div class="cap-no">Not yet</div>
   </div>
 </div>
 
 <p class="capability-legend">
-  <span><span class="cap-yes">✓</span> Full</span>
-  <span><span class="cap-partial">△</span> Conditional (requires matching transcript or blob)</span>
-  <span><span class="cap-no">—</span> Not available</span>
+  For details, see <a href="./agent-support/">Agent Support</a>.
 </p>
-
-For the detailed capture and attribution rules for each agent, see [Agent Support](./agent-support/).

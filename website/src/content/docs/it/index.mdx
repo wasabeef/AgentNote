@@ -55,7 +55,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | Installare Agent Note in un repository | [Installazione](./installation/) |
 | Aggiungere il report visibile nella PR | [GitHub Action](./github-action/) |
 | Pubblicare una vista condivisa per il team | [Dashboard](./dashboard/) |
-| Controllare cosa può acquisire ogni agent | [Agent Support](./agent-support/) |
+| Controllare cosa può acquisire ogni agente | [Supporto degli agenti](./agent-support/) |
 | Capire cosa viene salvato e chi può vederlo | [Data & Privacy](./data-and-privacy/) |
 | Risolvere note, prompt o dati Dashboard mancanti | [Troubleshooting](./troubleshooting/) |
 
@@ -149,11 +149,11 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Matrice di supporto degli agenti
+## Matrice delle capacità degli agenti
 
 <div class="capability-matrix">
   <div class="capability-header">
-    <div class="capability-label">Funzionalità</div>
+    <div class="capability-label">Capacità</div>
     <div>Claude Code</div>
     <div>Codex CLI</div>
     <div>Cursor</div>
@@ -161,43 +161,48 @@ linked:  3/20 recent commits
   </div>
   <div class="capability-row">
     <div class="capability-label">Stato</div>
-    <div class="cap-yes">Stabile</div>
-    <div class="cap-partial">Preview</div>
-    <div class="cap-yes">Stabile</div>
-    <div class="cap-partial">Preview</div>
+    <div class="cap-yes">Supporto completo</div>
+    <div class="cap-yes">Supportato</div>
+    <div class="cap-yes">Supportato</div>
+    <div class="cap-partial">Anteprima</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Attribuzione IA riga per riga</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-no">—</div>
+    <div class="capability-label">Prompt</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Recupero di prompt / risposte</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Risposta</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Registrazione tramite `git commit` normale</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">File</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` come alternativa</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Rapporto IA</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+    <div class="cap-yes">Sì</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Stima righe</div>
+    <div class="cap-yes">Di default</div>
+    <div class="cap-partial">La cronologia patch di Codex corrisponde al commit finale</div>
+    <div class="cap-partial">I conteggi delle modifiche coincidono e il file finale corrisponde ancora all'ultima modifica IA</div>
+    <div class="cap-no">Non ancora</div>
   </div>
 </div>
 
 <p class="capability-legend">
-  <span><span class="cap-yes">✓</span> Completo</span>
-  <span><span class="cap-partial">△</span> Condizionale (richiede transcript o blob corrispondente)</span>
-  <span><span class="cap-no">—</span> Non disponibile</span>
+  Per i dettagli, consulta <a href="./agent-support/">Supporto degli agenti</a>.
 </p>

@@ -85,6 +85,14 @@ PR 리포트에는 다음이 들어갑니다.
   리포트 안의 commit hash 는 GitHub 의 commit 페이지로 바로 연결됩니다.
 </Aside>
 
+## AI Review tool
+
+`Reviewer Context` 는 PR body 안에 숨겨진 Markdown comment 로 저장됩니다. 사람 reviewer 는 일반 report 만 보고, raw PR description 을 읽는 tool 은 추가 context 를 사용할 수 있습니다.
+
+이 context 는 Agent Note data 에서 deterministic 하게 만들어집니다. changed area, review focus, 최신 관련 intent signals 를 요약하므로 Copilot, CodeRabbit, Devin, Greptile 같은 tool 이 diff 를 보기 전에 PR 의 의도를 이해하는 데 도움이 됩니다.
+
+다만 proof 는 아닙니다. review tool 은 실제 diff, test, code 와 반드시 비교해야 합니다.
+
 ## 다음 단계
 
 Open / Merged PR 기록을 Pages 에서 함께 보고 싶다면 <a href="./dashboard/">Dashboard</a> 로 이어서 보세요.

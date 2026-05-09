@@ -55,7 +55,7 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 | Установить Agent Note в репозиторий | [Установка](./installation/) |
 | Добавить отчёт, который виден в PR | [GitHub Action](./github-action/) |
 | Опубликовать общую страницу истории для команды | [Dashboard](./dashboard/) |
-| Проверить, что может записывать каждый agent | [Agent Support](./agent-support/) |
+| Проверить, что может записывать каждый агент | [Поддержка агентов](./agent-support/) |
 | Понять, что сохраняется и кто это видит | [Data & Privacy](./data-and-privacy/) |
 | Исправить отсутствующие notes, prompts или данные Dashboard | [Troubleshooting](./troubleshooting/) |
 
@@ -149,7 +149,7 @@ linked:  3/20 recent commits
   </TabItem>
 </Tabs>
 
-## Матрица поддержки агентов
+## Матрица возможностей агентов
 
 <div class="capability-matrix">
   <div class="capability-header">
@@ -161,43 +161,48 @@ linked:  3/20 recent commits
   </div>
   <div class="capability-row">
     <div class="capability-label">Статус</div>
-    <div class="cap-yes">Стабильный</div>
-    <div class="cap-partial">Preview</div>
-    <div class="cap-yes">Стабильный</div>
-    <div class="cap-partial">Preview</div>
+    <div class="cap-yes">Полная поддержка</div>
+    <div class="cap-yes">Поддерживается</div>
+    <div class="cap-yes">Поддерживается</div>
+    <div class="cap-partial">Предпросмотр</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Построчная атрибуция ИИ</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-no">—</div>
+    <div class="capability-label">Промпт</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Восстановление промптов / ответов</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-partial">△</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Ответ</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Запись через обычный `git commit`</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Файлы</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">`agent-note commit` как запасной путь</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
-    <div class="cap-yes">✓</div>
+    <div class="capability-label">Доля ИИ</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+    <div class="cap-yes">Да</div>
+  </div>
+  <div class="capability-row">
+    <div class="capability-label">Оценка строк</div>
+    <div class="cap-yes">По умолчанию</div>
+    <div class="cap-partial">История patch в Codex совпадает с итоговым commit</div>
+    <div class="cap-partial">Счётчики правок совпадают, а итоговый файл всё ещё соответствует последней правке ИИ</div>
+    <div class="cap-no">Пока нет</div>
   </div>
 </div>
 
 <p class="capability-legend">
-  <span><span class="cap-yes">✓</span> Полная</span>
-  <span><span class="cap-partial">△</span> Условная (требует совпадения transcript или blob)</span>
-  <span><span class="cap-no">—</span> Недоступно</span>
+  Подробности смотрите в <a href="./agent-support/">Поддержке агентов</a>.
 </p>

@@ -114,12 +114,14 @@ packages/pr-report/dist/**
 
 ## Agent Support
 
-| Agent | Status | Детализация | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Оценка по строкам по умолчанию | Использует Native Hooks, чтобы восстановить разговор. |
-| Codex CLI | Supported | Обычно по файлам | Может оценить строки, написанные AI, только когда история patch в Codex совпадает с итоговым Commit. Если локальный Transcript нельзя прочитать, Agent Note не создаёт сомнительную Note. |
-| Cursor | Supported | Обычно по файлам | Использует Cursor Edit Hooks. Может оценить строки, написанные AI, только когда файл в Commit всё ещё совпадает с последним AI Edit. |
-| Gemini CLI | Preview | По файлам | Использует Generated Hooks, чтобы записывать разговоры и обычные запуски `git commit`. |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Да | Да | Да | Да | По умолчанию |
+| Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |
+| Cursor | Supported | Да | Да | Да | Да | Когда счётчики edit совпадают и итоговый файл всё ещё соответствует последнему AI edit |
+| Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |
+
+`Files` означает, что Agent Note может показать, какие commit-файлы были затронуты Agent. `Line Estimate` означает, что он также может оценить строки, написанные AI, а не только считать файлы.
 
 ## Проверка Setup
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 Это публикует AI Session Report в PR Description:
+
+Блок `agentnote-reviewer-context` сохраняется в PR body как hidden comment. AI Review tools, которые читают raw PR description, например Copilot, CodeRabbit, Devin и Greptile, могут использовать его как дополнительный intent и review focus.
 
 ```
 ## 🧑💬🤖 Agent Note

@@ -114,12 +114,14 @@ Questi file restano visibili in Notes, PR Report e Dashboard. Vengono rimossi so
 
 ## Agent Support
 
-| Agent | Stato | Dettaglio | Note |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Stima delle linee scritte dall'AI | Usa Hook nativi per recuperare la conversazione. |
-| Codex CLI | Supported | File modificati di default | Può stimare le linee scritte dall'AI solo quando la cronologia patch di Codex corrisponde al Commit finale. Se il Transcript locale non può essere letto, Agent Note evita Note incerte. |
-| Cursor | Supported | File modificati di default | Usa gli Edit Hook di Cursor. Può stimare le linee scritte dall'AI solo quando il file nel Commit corrisponde ancora all'ultimo Edit AI. |
-| Gemini CLI | Preview | File modificati | Usa Hook generati per catturare conversazioni e normali esecuzioni di `git commit`. |
+| Agent | Stato | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Sì | Sì | Sì | Sì | Di default |
+| Codex CLI | Supported | Sì | Sì | Sì | Sì | Quando la cronologia patch di Codex corrisponde al Commit finale |
+| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit coincidono e il file finale corrisponde ancora all'ultimo edit IA |
+| Gemini CLI | Preview | Sì | Sì | Sì | Sì | Non ancora |
+
+`Files` significa che Agent Note può mostrare quali file committati sono stati toccati dall'Agent. `Line Estimate` significa che può anche stimare le linee scritte dall'AI invece di contare solo i file.
 
 ## Verifica il Setup
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 Questo pubblica un report di sessione AI nella PR Description:
+
+Il blocco `agentnote-reviewer-context` viene salvato nel body della PR come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.
 
 ```
 ## 🧑💬🤖 Agent Note

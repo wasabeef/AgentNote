@@ -72,3 +72,13 @@ Anche un repository nuovo può accumulare dati del Dashboard prima del primo dep
 - GitHub Pages pubblica il Dashboard generato in `/dashboard/`
 
 Il repository non committa esempi JSON del Dashboard. Un nuovo Dashboard resta vuoto finché il workflow non ripristina o genera i note file. `pull_request` pubblica lo stato Open e i push verso `default branch` lo sostituiscono con lo stato Merged.
+
+## Quando non compaiono dati
+
+Il Dashboard ora mostra indizi concreti invece di dire solo che mancano dati.
+
+- Nessun dato: controlla che un workflow PR sia stato eseguito dopo l’attivazione di Agent Note, che il workflow Dashboard sia riuscito e che `refs/notes/agentnote` sia stato pushato.
+- `?pr=<number>` non mostra dati: il workflow di quella PR potrebbe non essere ancora partito, i Pull Request Deploys possono essere bloccati dalla environment protection di GitHub Pages, oppure il numero di PR non corrisponde ai dati pubblicati.
+- `?commit=<sha>` non mostra dati: quel Commit potrebbe non avere una entry Agent Note, le notes potrebbero non essere ancora state pushate, oppure lo SHA può venire da un altro repository.
+
+Se la pagina si apre ma resta vuota, consulta [Troubleshooting](./troubleshooting/).

@@ -72,3 +72,13 @@ git push
 - GitHub Pages 会在 `/dashboard/` 提供构建后的 Dashboard
 
 仓库本身不会提交示例 Dashboard JSON。新的 Dashboard 会一直保持为空，直到 workflow 恢复或生成 note file。`pull_request` 会发布 Open 状态，推送到 `default branch` 后则会替换为 Merged 状态。
+
+## 没有数据显示时
+
+Dashboard 现在会显示可能原因，而不是只提示缺少数据。
+
+- 完全没有数据：确认启用 Agent Note 后是否跑过 PR workflow、Dashboard workflow 是否成功、`refs/notes/agentnote` 是否已经 push。
+- `?pr=<number>` 没有数据：该 PR 的 workflow 可能还没运行，GitHub Pages environment protection 可能阻止了 Pull Request Deploy，或者 URL 里的 PR 编号不属于已发布的 Dashboard data。
+- `?commit=<sha>` 没有数据：该 Commit 可能没有 Agent Note entry，notes 可能还没 push，或者这个 SHA 来自另一个仓库。
+
+如果页面能打开但仍然为空，请查看 [Troubleshooting](./troubleshooting/)。

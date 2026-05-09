@@ -7,17 +7,17 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 Agent Note uses the same git-note format for every agent, but each agent exposes different hooks and transcript data. This page helps you choose what to expect before you enable it for a team.
 
-## Support Matrix
+## Capability Matrix
 
-| Agent | Status | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook-native | Line-level by default |
-| Codex CLI | Supported | Local transcript | File-level by default, line-level when `apply_patch` counts match |
-| Cursor | Supported | Response hook or local transcript | File-level by default, line-level when edit counts and final blob match |
-| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Yes | Yes | Yes | Yes | Default |
+| Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |
+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts match and the final file still matches the latest AI edit |
+| Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |
 
 <Aside>
-  "Preview" means Agent Note supports the current public behavior, but the agent's local hook or transcript format may still change.
+  "Files" means Agent Note can show which committed files were touched by the agent. "Line Estimate" means it can also estimate AI-written lines instead of only counting files. "Preview" means Agent Note supports the current public behavior, but the agent's local hook or transcript format may still change.
 </Aside>
 
 ## Recommended Setup
@@ -70,7 +70,7 @@ Shell-only edits are not guessed from command text. If no reliable transcript is
 
 ### Cursor
 
-Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when the committed blob still matches the latest AI edit.
+Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when edit counts match and the committed file still matches the latest AI edit.
 
 ### Gemini CLI
 

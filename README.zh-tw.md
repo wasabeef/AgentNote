@@ -114,12 +114,14 @@ packages/pr-report/dist/**
 
 ## Agent Support
 
-| Agent | Status | 顯示粒度 | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | 預設顯示到行級估算 | 使用 Native Hooks 還原對話。 |
-| Codex CLI | Supported | 通常為檔案級 | 只有當 Codex patch 記錄與最終 Commit 相符時，才會顯示 AI 編寫行數的估算。無法讀取 Local Transcript 時，Agent Note 不會寫入不確定的 Note。 |
-| Cursor | Supported | 通常為檔案級 | 使用 Cursor Edit Hooks。只有 Commit 中的檔案仍符合最後一次 AI 編輯時，才會顯示 AI 編寫行數的估算。 |
-| Gemini CLI | Preview | 檔案級 | 使用 Generated Hooks 記錄對話和一般 `git commit`。 |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | 是 | 是 | 是 | 是 | 預設顯示 |
+| Codex CLI | Supported | 是 | 是 | 是 | 是 | 當 Codex patch 記錄與最終 Commit 相符時 |
+| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit 數相符，且最終 file 仍符合最後一次 AI edit 時 |
+| Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支援 |
+
+`Files` 表示 Agent Note 可以顯示 Agent 觸碰過哪些已提交檔案。`Line Estimate` 表示它還可以估算 AI 編寫的行，而不是只統計檔案。
 
 ## 檢查設定
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 這會把 AI Session Report 發佈到 PR Description：
+
+`agentnote-reviewer-context` block 會作為 hidden comment 保存在 PR body 中。Copilot、CodeRabbit、Devin、Greptile 等讀取 raw PR description 的 AI Review tool 可以把它作為額外的 intent 和 review focus。
 
 ```
 ## 🧑💬🤖 Agent Note

@@ -114,12 +114,14 @@ File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikelu
 
 ## Agent Support
 
-| Agent | Status | Detail | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Perkiraan per baris secara default | Menggunakan Native Hooks untuk memulihkan percakapan. |
-| Codex CLI | Supported | Biasanya per file | Dapat memperkirakan baris yang ditulis AI hanya saat riwayat patch Codex cocok dengan Commit akhir. Jika Local Transcript tidak dapat dibaca, Agent Note tidak membuat Note yang tidak pasti. |
-| Cursor | Supported | Biasanya per file | Menggunakan Cursor Edit Hooks. Dapat memperkirakan baris yang ditulis AI hanya saat file dalam Commit masih cocok dengan Edit AI terakhir. |
-| Gemini CLI | Preview | Per file | Menggunakan Generated Hooks untuk mencatat percakapan dan `git commit` normal. |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Ya | Ya | Ya | Ya | Default |
+| Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |
+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir |
+| Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |
+
+`Files` berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. `Line Estimate` berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file.
 
 ## Periksa Setup
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 Ini memposting AI Session Report ke PR Description:
+
+Blok `agentnote-reviewer-context` disimpan sebagai hidden comment di PR body. AI Review tool yang membaca raw PR description, seperti Copilot, CodeRabbit, Devin, dan Greptile, dapat menggunakannya sebagai intent dan review focus tambahan.
 
 ```
 ## 🧑💬🤖 Agent Note

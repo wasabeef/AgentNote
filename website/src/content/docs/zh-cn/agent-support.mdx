@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴露的 hook 和 transcript 数据不同。本页帮助你在团队启用前了解预期效果。
 
-## 支持矩阵
+## Agent 能力矩阵
 
-| Agent | 状态 | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | 默认 line-level |
-| Codex CLI | Supported | Local transcript | 默认 file-level，`apply_patch` 计数匹配最终 diff 时为 line-level |
-| Cursor | Supported | Response hook 或 local transcript | 默认 file-level，edit count 和 final blob 匹配时为 line-level |
-| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+| Agent | 状态 | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |
+| Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |
+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时 |
+| Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |
 
 <Aside>
-  Preview 表示 Agent Note 支持当前公开行为，但 agent 的本地 hook 或 transcript 格式仍可能变化。
+  Files 表示 Agent Note 可以显示 Agent 触碰过哪些已提交文件。Line Estimate 表示它还可以估算 AI 编写的行，而不是只统计文件。Preview 表示 Agent Note 支持当前公开行为，但 agent 的本地 hook 或 transcript 格式仍可能变化。
 </Aside>
 
 ## 推荐设置
@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 读取 local transcript，并仅在
 
 ### Cursor
 
-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final blob 仍匹配最后一次 AI edit 时，才可使用 line-level。
+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。
 
 ### Gemini CLI
 

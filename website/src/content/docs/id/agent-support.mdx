@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap agent menyediakan hooks dan transcript yang berbeda. Halaman ini membantu tim memahami ekspektasi sebelum mengaktifkannya.
 
-## Matriks dukungan
+## Matriks Kemampuan Agent
 
-| Agent | Status | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | Line-level secara default |
-| Codex CLI | Supported | Local transcript | File-level secara default, line-level jika count `apply_patch` cocok |
-| Cursor | Supported | Response hook atau local transcript | File-level secara default, line-level jika edit count dan final blob cocok |
-| Gemini CLI | Preview | Hook `BeforeAgent` / `AfterAgent` | File-level |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Ya | Ya | Ya | Ya | Default |
+| Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |
+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir |
+| Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |
 
 <Aside>
-  Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format local hook atau transcript agent masih dapat berubah.
+  Files berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. Line Estimate berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file. Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format hook lokal atau transkrip Agent masih dapat berubah.
 </Aside>
 
 ## Setup yang disarankan
@@ -61,7 +61,7 @@ Codex CLI bersifat transcript-driven. Agent Note membaca local transcript dan na
 
 ### Cursor
 
-Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika final blob masih cocok dengan AI edit terakhir.
+Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau transkrip lokal. Line-level hanya mungkin ketika jumlah edit dan file akhir masih cocok dengan edit AI terakhir.
 
 ### Gemini CLI
 
