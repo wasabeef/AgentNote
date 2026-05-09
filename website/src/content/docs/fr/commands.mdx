@@ -49,13 +49,19 @@ Cherche avec `git blame` le Commit qui a modifié une ligne, puis affiche le con
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts:42:7
 npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why src/middleware/auth.ts#L42-L55
+npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` accepte `path:line`, la forme GitHub `path#Lline`, les GitHub file URLs et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.
+  `why` accepte `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, les GitHub file URLs, `file://...`, `vscode://file...` et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log

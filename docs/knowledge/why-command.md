@@ -21,8 +21,12 @@ Primary command:
 agent-note why packages/cli/src/core/record.ts:291
 agent-note why packages/cli/src/core/record.ts:291-310
 agent-note why packages/cli/src/core/record.ts#L291
+agent-note why packages/cli/src/core/record.ts#L291-L310
+agent-note why packages/cli/src/core/record.ts#L291C5
 agent-note why @packages/cli/src/core/record.ts#L291
 agent-note why https://github.com/owner/repo/blob/main/packages/cli/src/core/record.ts#L291
+agent-note why file:///workspace/repo/packages/cli/src/core/record.ts#L291
+agent-note why vscode://file/workspace/repo/packages/cli/src/core/record.ts:291:5
 ```
 
 Alias:
@@ -142,8 +146,9 @@ Rationale:
 Current behavior:
 
 1. Parse `path:line`, `path:start-end`, `path:line:column`, GitHub-style
-   `path#Lline`, GitHub file URLs, and leading `@` path mentions copied from
-   AI Agent output.
+   `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,
+   `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied
+   from AI Agent output.
 2. Run `git blame --porcelain` for the target line or range.
 3. Read the blame commit's Agent Note.
 4. Prefer interactions whose `files_touched` contains the target path.

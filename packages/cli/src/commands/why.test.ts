@@ -102,6 +102,11 @@ describe("agentnote why", () => {
       files: [{ path: "src/app.ts", by_ai: false }],
       attribution: { ai_ratio: 0, method: "file" },
     });
+
+    mkdirSync(join(testDir, "@scope", "src"), { recursive: true });
+    writeFileSync(join(testDir, "@scope", "src", "app.ts"), "export const scoped = true;\n");
+    git(["add", "@scope/src/app.ts"]);
+    git(["commit", "-m", "chore: add scoped fixture"]);
   });
 
   after(() => {
@@ -149,6 +154,16 @@ describe("agentnote why", () => {
       assert.match(output, targetPattern, target);
       assert.match(output, new RegExp(`commit: ${featureCommit.slice(0, 7)} feat: add label`));
     }
+  });
+
+  it("preserves real @scope paths while still accepting AI-agent @ mentions", () => {
+    const output = execFileSync("node", [cliPath, "why", "@scope/src/app.ts#L1"], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.match(output, /target: @scope\/src\/app\.ts:1/);
+    assert.match(output, /commit: [0-9a-f]{7} chore: add scoped fixture/);
   });
 
   it("keeps missing notes explicit for older blamed lines", () => {

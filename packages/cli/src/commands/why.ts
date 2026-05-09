@@ -212,7 +212,12 @@ function stripPathMentionPrefix(value: string): string {
 }
 
 function realpathIfExists(path: string): string {
-  return existsSync(path) ? realpathSync.native(path) : path;
+  if (!existsSync(path)) return path;
+  try {
+    return realpathSync.native(path);
+  } catch {
+    return path;
+  }
 }
 
 async function stripOptionalPathMentionPrefix(value: string): Promise<string> {

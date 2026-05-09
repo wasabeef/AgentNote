@@ -7076,7 +7076,12 @@ function stripPathMentionPrefix(value) {
   return value.startsWith(AI_PATH_MENTION_PREFIX) ? value.slice(AI_PATH_MENTION_PREFIX.length) : value;
 }
 function realpathIfExists(path) {
-  return existsSync15(path) ? realpathSync.native(path) : path;
+  if (!existsSync15(path)) return path;
+  try {
+    return realpathSync.native(path);
+  } catch {
+    return path;
+  }
 }
 async function stripOptionalPathMentionPrefix(value) {
   if (!value.startsWith(AI_PATH_MENTION_PREFIX)) return value;
