@@ -153,5 +153,5 @@ npx agent-note commit -m "feat: add auth"
 
 <Aside>
   Cursor でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
-  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。
+  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の file がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。
 </Aside>

@@ -118,7 +118,7 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |
 | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |
-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando as contagens de edit e o file final batem |
+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |
 | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
 
 `Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos.

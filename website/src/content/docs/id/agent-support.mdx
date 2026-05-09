@@ -13,11 +13,11 @@ Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap ag
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |
 | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |
-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan file akhir cocok |
+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit dan file akhir cocok |
 | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |
 
 <Aside>
-  Files berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. Line Estimate berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file. Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format local hook atau transcript agent masih dapat berubah.
+  Files berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. Line Estimate berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file. Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format hook lokal atau transkrip Agent masih dapat berubah.
 </Aside>
 
 ## Setup yang disarankan
@@ -61,7 +61,7 @@ Codex CLI bersifat transcript-driven. Agent Note membaca local transcript dan na
 
 ### Cursor
 
-Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika file akhir masih cocok dengan AI edit terakhir.
+Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau transkrip lokal. Line-level hanya mungkin ketika jumlah edit dan file akhir masih cocok dengan edit AI terakhir.
 
 ### Gemini CLI
 

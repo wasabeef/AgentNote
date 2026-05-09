@@ -13,7 +13,7 @@ O Agent Note grava o mesmo formato de git note para todos os agents, mas cada ag
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |
 | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |
-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e arquivo final batem |
+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |
 | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
 
 <Aside>
@@ -61,7 +61,7 @@ Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para 
 
 ### Cursor
 
-Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o arquivo final ainda bate com o último AI edit.
+Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando a contagem de edições e o arquivo final ainda coincidem com a última edição da IA.
 
 ### Gemini CLI
 
