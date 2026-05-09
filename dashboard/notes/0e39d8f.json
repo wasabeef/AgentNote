@@ -1,0 +1,206 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T15:49:43.649Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": "CodeRabbit 指摘 2 件を修正済みです。\n\n- `why.ts` の regex 定数に意図コメントを追加\n- `prompts: none` の場合も `why:` disclaimer を出すように修正\n- 回帰テスト追加\n- `packages/cli/dist/cli.js` 再生成済み\n\n確認済み:\n\n```bash\nnpm run build\nnpm run lint\nnpm run typecheck\nnode --import tsx/esm --test src/commands/why.test.ts\n```\n\nすべて pass です。未追跡の `website/public/model-icons/new-*.png` は触っていません。\n\nコミット・push して、対応済みの CodeRabbit thread 2 件を resolve してよいですか？\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "- commit: `d4224ff test(cli): harden why git fixtures`\n- `why.test.ts` の `execSync(\"git ...\")` を全て `execFileSync(\"git\", args)` に変更\n- `selectRelatedInteractions()` に evidence selection heuristic の短い JSDoc を追加\n- 対応済み thread 2 件は resolve 済み"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "0e39d8fe98d32e9e9466e5e080dc48a136ebc781",
+    "short_sha": "0e39d8f",
+    "message": "fix(cli): keep why context explicit",
+    "date": "2026-05-10T00:49:41+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index b0a2b75..3ed938f 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -7070,6 +7070,7 @@ function printRelatedInteractions(targetPath, entry) {",
+          "   const related = selectRelatedInteractions(targetPath, entry);",
+          "   if (related.length === 0) {",
+          "     console.log(\"  prompts:     none\");",
+          "+    printWhySummary(\"none\");",
+          "     return;",
+          "   }",
+          "   console.log();",
+          "@@ -7078,9 +7079,12 @@ function printRelatedInteractions(targetPath, entry) {",
+          "     const item = related[index];",
+          "     printInteraction(index + 1, item);",
+          "   }",
+          "+  printWhySummary(`${related[0].evidence}-level Agent Note data`);",
+          "+}",
+          "+function printWhySummary(evidence) {",
+          "   console.log();",
+          "   console.log(\"why:\");",
+          "-  console.log(`  evidence: ${related[0].evidence}-level Agent Note data`);",
+          "+  console.log(`  evidence: ${evidence}`);",
+          "   console.log(\"  note:     exact line-to-prompt attribution is not stored yet\");",
+          " }",
+          " function selectRelatedInteractions(targetPath, entry) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.test.ts",
+        "lines": [
+          "index 44ef8a9..ccba8ed 100644",
+          "--- a/packages/cli/src/commands/why.test.ts",
+          "+++ b/packages/cli/src/commands/why.test.ts",
+          "@@ -12,6 +12,7 @@ describe(\"agentnote why\", () => {",
+          "   let featureCommit: string;",
+          "   let contextCommit: string;",
+          "   let malformedCommit: string;",
+          "+  let emptyPromptCommit: string;",
+          "   const cliPath = join(process.cwd(), \"dist\", \"cli.js\");",
+          " ",
+          "   before(() => {",
+          "@@ -83,6 +84,24 @@ describe(\"agentnote why\", () => {",
+          "     git([\"commit\", \"-m\", \"chore: add malformed note line\"]);",
+          "     malformedCommit = gitOutput([\"rev-parse\", \"HEAD\"]);",
+          "     addRawNote(malformedCommit, { v: 1, unexpected: true });",
+          "+",
+          "+    writeFileSync(",
+          "+      join(testDir, \"src\", \"app.ts\"),",
+          "+      \"export const greeting = 'hello';\\nexport const label = 'Agent Note';\\nexport const ready = true;\\nexport const malformed = true;\\nexport const empty = true;\\n\",",
+          "+    );",
+          "+    git([\"add\", \"src/app.ts\"]);",
+          "+    git([\"commit\", \"-m\", \"chore: add empty prompt line\"]);",
+          "+    emptyPromptCommit = gitOutput([\"rev-parse\", \"HEAD\"]);",
+          "+    addNote(emptyPromptCommit, {",
+          "+      v: 1,",
+          "+      agent: \"codex\",",
+          "+      session_id: \"c1b2c3d4-aaaa-4bbb-accc-dddddddddddd\",",
+          "+      timestamp: \"2026-05-09T00:00:00.000Z\",",
+          "+      model: \"gpt-5.4\",",
+          "+      interactions: [],",
+          "+      files: [{ path: \"src/app.ts\", by_ai: false }],",
+          "+      attribution: { ai_ratio: 0, method: \"file\" },",
+          "+    });",
+          "   });",
+          " ",
+          "   after(() => {",
+          "@@ -142,6 +161,21 @@ describe(\"agentnote why\", () => {",
+          "     assert.match(output, /Agent Note payload for this commit is invalid/);",
+          "   });",
+          " ",
+          "+  it(\"keeps the why disclaimer when no prompts are selected\", () => {",
+          "+    const output = execFileSync(\"node\", [cliPath, \"why\", \"src/app.ts:5\"], {",
+          "+      cwd: testDir,",
+          "+      encoding: \"utf-8\",",
+          "+    });",
+          "+",
+          "+    assert.match(",
+          "+      output,",
+          "+      new RegExp(`commit: ${emptyPromptCommit.slice(0, 7)} chore: add empty prompt line`),",
+          "+    );",
+          "+    assert.match(output, /prompts:\\s+none/);",
+          "+    assert.match(output, /why:\\n {2}evidence: none/);",
+          "+    assert.match(output, /exact line-to-prompt attribution is not stored yet/);",
+          "+  });",
+          "+",
+          "   it(\"returns none when git blame cannot resolve the target\", () => {",
+          "     const output = execFileSync(\"node\", [cliPath, \"why\", \"src/missing.ts:1\"], {",
+          "       cwd: testDir,"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.ts",
+        "lines": [
+          "index 250a15a..736ca47 100644",
+          "--- a/packages/cli/src/commands/why.ts",
+          "+++ b/packages/cli/src/commands/why.ts",
+          "@@ -10,9 +10,13 @@ import { readNote } from \"../core/storage.js\";",
+          " import { git, gitSafe, repoRoot } from \"../git.js\";",
+          " import { normalizeEntry } from \"./normalize.js\";",
+          " ",
+          "+// Match git blame's all-zero pseudo SHA for uncommitted lines.",
+          " const ALL_ZERO_COMMIT_RE = /^0{40}$/;",
+          "+// Parse the header line of each `git blame --porcelain` record.",
+          " const BLAME_HEADER_RE = /^([0-9a-f]{40})\\s+\\d+\\s+\\d+(?:\\s+\\d+)?$/i;",
+          "+// Parse CLI targets in `<path>:<line>` or `<path>:<line-end>` form.",
+          " const TARGET_RE = /^(.+):(\\d+)(?:-(\\d+))?$/;",
+          "+// Strip a leading `./` before comparing repository-relative paths.",
+          " const PATH_PREFIX_RE = /^\\.\\//;",
+          " const PERCENT_DENOMINATOR = 100;",
+          " const DEFAULT_CONTEXT_LINES = 2;",
+          "@@ -186,6 +190,7 @@ function printRelatedInteractions(targetPath: string, entry: AgentnoteEntry): vo",
+          "   const related = selectRelatedInteractions(targetPath, entry);",
+          "   if (related.length === 0) {",
+          "     console.log(\"  prompts:     none\");",
+          "+    printWhySummary(\"none\");",
+          "     return;",
+          "   }",
+          " ",
+          "@@ -196,9 +201,13 @@ function printRelatedInteractions(targetPath: string, entry: AgentnoteEntry): vo",
+          "     printInteraction(index + 1, item);",
+          "   }",
+          " ",
+          "+  printWhySummary(`${related[0].evidence}-level Agent Note data`);",
+          "+}",
+          "+",
+          "+function printWhySummary(evidence: string): void {",
+          "   console.log();",
+          "   console.log(\"why:\");",
+          "-  console.log(`  evidence: ${related[0].evidence}-level Agent Note data`);",
+          "+  console.log(`  evidence: ${evidence}`);",
+          "   console.log(\"  note:     exact line-to-prompt attribution is not stored yet\");",
+          " }"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 67,
+    "title": "feat(cli): add why command",
+    "state": "open"
+  }
+}
