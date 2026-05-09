@@ -1,0 +1,210 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T07:34:47.731Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "Agent",
+      "response": "中断後の続きとして CodeRabbit 対応を再開します。いま見えている指摘は全部 docs copy / locale parity の範囲なので、対象箇所だけ最小修正して、検証後に修正済み thread を resolve します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "中断後の続きとして CodeRabbit 対応を再開します。 いま見えている指摘は全部 docs copy / locale parity の範囲なので、対象箇所だけ最小修正して、検証後に修正済み thread を resolve します。"
+        }
+      ],
+      "files_touched": [
+        "packages/dashboard/src/pages/index.astro",
+        "README.ko.md",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "README.de.md",
+        "website/src/content/docs/de/agent-support.mdx",
+        "README.es.md",
+        "website/src/content/docs/es/agent-support.mdx",
+        "README.it.md",
+        "website/src/content/docs/it/github-action.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
