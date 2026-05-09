@@ -79,4 +79,12 @@ A brand-new Repository can accumulate Dashboard note data before the Dashboard i
 
 The Repository does not commit sample JSON for the Dashboard. A new Dashboard stays empty until the workflow restores or generates note files. Pull Request runs publish the Open state, and `default branch` pushes replace it with the Merged state.
 
+## Empty States
+
+If the Dashboard opens but shows no data, the page now points at the likely cause instead of only saying that data is missing.
+
+- No data at all: check that a PR ran after Agent Note was enabled, the Dashboard workflow succeeded, and `refs/notes/agentnote` was pushed.
+- `?pr=<number>` shows no data: the PR workflow may not have run yet, Pull Request Deploys may be blocked by GitHub Pages environment protection, or the PR number may not belong to the published Dashboard data.
+- `?commit=<sha>` shows no data: the commit may not have an Agent Note entry, notes may not have been pushed, or the SHA may come from another repository.
+
 If the page opens but data is missing, see [Troubleshooting](./troubleshooting/).

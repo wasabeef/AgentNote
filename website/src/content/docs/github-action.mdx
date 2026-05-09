@@ -106,6 +106,14 @@ The PR Report includes:
   Commit hashes in the report are linked to their GitHub commit page.
 </Aside>
 
+## AI Review Tools
+
+The `Reviewer Context` block is stored as a hidden Markdown comment in the PR body. Human reviewers see the normal report, while tools that read the raw PR description can use the extra context.
+
+That context is deterministic. It summarizes changed areas, review focus, and the latest relevant author intent signals from Agent Note data. Tools such as Copilot, CodeRabbit, Devin, and Greptile can use it to understand why the PR changed before they review the diff.
+
+It is still guidance, not proof. Review tools should compare the context with the actual diff, tests, and code.
+
 ## Notes Sharing
 
 The action fetches `refs/notes/agentnote` from the remote. The `pre-push` git hook installed by `agent-note init` auto-pushes notes on every `git push` — no manual push needed.

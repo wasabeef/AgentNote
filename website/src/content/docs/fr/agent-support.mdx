@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note écrit le même format de git note pour tous les agents, mais chaque agent expose des hooks et transcripts différents. Cette page résume ce que vous pouvez attendre avant de l’activer pour une équipe.
 
-## Matrice de support
+## Capability Matrix
 
-| Agent | Statut | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | Line-level par défaut |
-| Codex CLI | Supported | Transcript local | File-level par défaut, line-level si les comptes `apply_patch` correspondent |
-| Cursor | Supported | Response hook ou transcript local | File-level par défaut, line-level si les edits et le blob final correspondent |
-| Gemini CLI | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+| Agent | Statut | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Oui | Oui | Oui | Oui | Par défaut |
+| Codex CLI | Supported | Oui | Oui | Oui | Oui | Quand l'historique de patch Codex correspond au Commit final |
+| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit et le blob final correspondent |
+| Gemini CLI | Preview | Oui | Oui | Oui | Oui | Pas encore |
 
 <Aside>
-  Preview signifie que l’implémentation suit le comportement public actuel, mais le format local de l’agent peut encore évoluer.
+  Files signifie qu'Agent Note peut montrer quels fichiers commités ont été touchés par l'Agent. Line Estimate signifie qu'il peut aussi estimer les lignes écrites par l'AI au lieu de seulement compter les fichiers. Preview signifie que l’implémentation suit le comportement public actuel, mais le format local de l’agent peut encore évoluer.
 </Aside>
 
 ## Configuration recommandée

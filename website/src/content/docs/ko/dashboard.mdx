@@ -72,3 +72,13 @@ git push
 - GitHub Pages 가 build 된 Dashboard 를 `/dashboard/` 에서 제공합니다
 
 리포지토리 자체에는 Dashboard 용 sample JSON 을 commit 하지 않습니다. 새 Dashboard 는 workflow 가 note file 을 복원하거나 생성할 때까지 비어 있습니다. `pull_request` 는 Open 상태를 공개하고, `default branch` 로의 push 는 이를 Merged 상태로 바꿉니다.
+
+## 데이터가 보이지 않을 때
+
+Dashboard 는 이제 단순히 데이터가 없다고만 말하지 않고, 확인할 원인을 함께 보여줍니다.
+
+- 데이터가 전혀 없음: Agent Note 를 켠 뒤 PR workflow 가 실행됐는지, Dashboard workflow 가 성공했는지, `refs/notes/agentnote` 가 push 됐는지 확인합니다.
+- `?pr=<number>` 에 데이터가 없음: 해당 PR workflow 가 아직 실행되지 않았거나, GitHub Pages environment protection 이 Pull Request Deploy 를 막고 있거나, URL 의 PR 번호가 공개된 Dashboard data 와 맞지 않을 수 있습니다.
+- `?commit=<sha>` 에 데이터가 없음: 해당 Commit 에 Agent Note entry 가 없거나, notes 가 아직 push 되지 않았거나, 다른 리포지토리의 SHA 일 수 있습니다.
+
+페이지는 열리지만 비어 있다면 [Troubleshooting](./troubleshooting/) 을 확인하세요.

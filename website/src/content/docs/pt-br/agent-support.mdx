@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 O Agent Note grava o mesmo formato de git note para todos os agents, mas cada agent expõe hooks e transcripts diferentes. Esta página mostra o que esperar antes de ativar para um time.
 
-## Matriz de suporte
+## Capability Matrix
 
-| Agent | Status | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | Line-level por padrão |
-| Codex CLI | Supported | Local transcript | File-level por padrão, line-level quando os counts de `apply_patch` batem |
-| Cursor | Supported | Response hook ou local transcript | File-level por padrão, line-level quando edit count e final blob batem |
-| Gemini CLI | Preview | Hooks `BeforeAgent` / `AfterAgent` | File-level |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |
+| Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |
+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e final blob batem |
+| Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
 
 <Aside>
-  Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
+  Files significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. Line Estimate significa que ele também pode estimar linhas escritas pela AI, em vez de apenas contar arquivos. Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
 </Aside>
 
 ## Setup recomendado

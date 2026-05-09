@@ -114,12 +114,14 @@ Diese Dateien erscheinen weiterhin in Notes, PR Report und Dashboard. Sie werden
 
 ## Agent Support
 
-| Agent | Status | Detail | Hinweise |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Schätzung KI-geschriebener Zeilen | Nutzt Native Hooks, um die Unterhaltung wiederherzustellen. |
-| Codex CLI | Supported | Geänderte Dateien standardmäßig | Kann KI-geschriebene Zeilen nur schätzen, wenn die Codex-Patch-Historie zum finalen Commit passt. Wenn das lokale Transcript nicht gelesen werden kann, schreibt Agent Note keine unsichere Note. |
-| Cursor | Supported | Geänderte Dateien standardmäßig | Nutzt Cursor-Edit-Hooks. Kann KI-geschriebene Zeilen nur schätzen, wenn die Datei im Commit noch zum letzten KI-Edit passt. |
-| Gemini CLI | Preview | Geänderte Dateien | Nutzt generierte Hooks, um Unterhaltungen und normale `git commit`-Läufe zu erfassen. |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Ja | Ja | Ja | Ja | Standardmäßig |
+| Codex CLI | Supported | Ja | Ja | Ja | Ja | Wenn die Codex-Patch-Historie zum finalen Commit passt |
+| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit-Zähler und finale Datei passen |
+| Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |
+
+`Files` bedeutet, dass Agent Note zeigen kann, welche commiteten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen.
 
 ## Setup prüfen
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 Dies postet einen KI-Session-Report in die PR Description:
+
+Der `agentnote-reviewer-context` block wird im PR body als hidden comment gespeichert. AI Review tools, die die raw PR description lesen, etwa Copilot, CodeRabbit, Devin und Greptile, können ihn als zusätzliche intent und review focus nutzen.
 
 ```
 ## 🧑💬🤖 Agent Note

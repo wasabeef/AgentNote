@@ -1453,6 +1453,25 @@ const dashboardIndex = buildDashboardIndex();
         color: var(--muted);
       }
       .empty .big { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+      .empty-title {
+        color: var(--text);
+        font-weight: 800;
+        font-size: 1.05rem;
+        margin-bottom: 0.45rem;
+      }
+      .empty-detail {
+        max-width: 38rem;
+        margin: 0 auto 1rem;
+        line-height: 1.65;
+      }
+      .empty-list {
+        display: inline-block;
+        max-width: 42rem;
+        margin: 0.4rem auto 0;
+        padding-left: 1.2rem;
+        text-align: left;
+        line-height: 1.65;
+      }
 
       /* Toast */
       .toast {
@@ -1613,7 +1632,8 @@ const dashboardIndex = buildDashboardIndex();
           <div id="root">
             <div class="empty">
               <div class="big">💬</div>
-              Pick a commit from the sidebar.
+              <div class="empty-title">Pick a commit or PR</div>
+              <div class="empty-detail">Dashboard data is loading. Choose a PR or commit from the sidebar to read the story.</div>
             </div>
           </div>
           <div class="main-footer" id="main-footer"></div>
@@ -2859,19 +2879,11 @@ const dashboardIndex = buildDashboardIndex();
         }
         if (!state.current) {
           if (state.missingSelection) {
-            root.appendChild(h("div", { className: "empty" }, [
-              h("div", { className: "big" }, "📭"),
-              `No dashboard data found for ${state.missingSelection}.`,
-            ]));
+            root.appendChild(renderMissingSelectionEmpty(state.missingSelection));
             return;
           }
           const hasNotes = (state.index?.commits?.length || 0) > 0;
-          root.appendChild(h("div", { className: "empty" }, [
-            h("div", { className: "big" }, hasNotes ? "💬" : "📭"),
-            hasNotes
-              ? "Pick a commit from the sidebar."
-              : "No dashboard data yet. Push a branch with agent-note history to start populating this dashboard.",
-          ]));
+          root.appendChild(hasNotes ? renderPickSelectionEmpty() : renderNoDashboardDataEmpty());
           return;
         }
         if (state.current.mode === "commit") {
@@ -2904,6 +2916,53 @@ const dashboardIndex = buildDashboardIndex();
           const el = document.querySelector(window.location.hash);
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
         }
+      }
+
+      function renderEmptyState(icon, title, detail, checks = []) {
+        return h("div", { className: "empty" }, [
+          h("div", { className: "big" }, icon),
+          h("div", { className: "empty-title" }, title),
+          h("div", { className: "empty-detail" }, detail),
+          checks.length
+            ? h("ul", { className: "empty-list" }, checks.map((check) => h("li", {}, check)))
+            : null,
+        ]);
+      }
+
+      function renderNoDashboardDataEmpty() {
+        return renderEmptyState(
+          "📭",
+          "No dashboard data yet",
+          "The Dashboard is published, but it has not found any Agent Note data to show.",
+          [
+            "Open or update a PR after Agent Note is enabled.",
+            "Check that the Agent Note Dashboard workflow completed successfully.",
+            "Confirm git notes were pushed to refs/notes/agentnote.",
+            "If this is the first deploy, wait for GitHub Pages to finish publishing.",
+          ],
+        );
+      }
+
+      function renderMissingSelectionEmpty(label) {
+        return renderEmptyState(
+          "🔎",
+          `No dashboard data found for ${label}`,
+          "The URL points to a specific PR or commit, but that selection is not available in the current Dashboard data.",
+          [
+            "The PR workflow may not have run yet for this PR.",
+            "GitHub Pages Pull Request Deploys may be blocked by environment protection.",
+            "The PR number or commit SHA in the URL may be wrong or from another repository.",
+            "The commit may not have an Agent Note entry, or notes may not have been pushed yet.",
+          ],
+        );
+      }
+
+      function renderPickSelectionEmpty() {
+        return renderEmptyState(
+          "💬",
+          "Pick a commit or PR",
+          "Dashboard data is available. Choose a PR or commit from the sidebar to read the story.",
+        );
       }
 
       function renderRail() {

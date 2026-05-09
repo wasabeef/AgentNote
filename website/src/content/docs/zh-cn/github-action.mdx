@@ -85,6 +85,14 @@ PR 报告包含：
   报告里的 commit hash 会直接链接到 GitHub 上对应的 commit 页面。
 </Aside>
 
+## AI Review tool
+
+`Reviewer Context` 会作为 hidden Markdown comment 保存在 PR body 中。人类 reviewer 只会看到普通报告，而读取 raw PR description 的工具可以使用这段额外 context。
+
+这段 context 是确定性生成的。它会从 Agent Note data 中总结 changed area、review focus 和最近相关的 intent signals。Copilot、CodeRabbit、Devin、Greptile 等工具可以在阅读 diff 前先理解 PR 为什么发生变化。
+
+它仍然只是指导，不是证明。review tool 应该把它和实际 diff、test、code 对照使用。
+
 ## 下一步
 
 如果你还想要一个共享的 Pages 视图来查看 open 和 merged 的 PR 历史，请继续阅读 <a href="./dashboard/">Dashboard</a>。

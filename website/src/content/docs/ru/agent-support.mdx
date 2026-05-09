@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note использует один формат git note для всех agents, но каждый agent предоставляет разные hooks и transcript данные. Эта страница помогает понять ожидания перед включением в команде.
 
-## Матрица поддержки
+## Capability Matrix
 
-| Agent | Статус | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | Line-level по умолчанию |
-| Codex CLI | Supported | Local transcript | File-level по умолчанию, line-level если `apply_patch` counts совпадают |
-| Cursor | Supported | Response hook или local transcript | File-level по умолчанию, line-level если edit counts и final blob совпадают |
-| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hooks | File-level |
+| Agent | Статус | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | Да | Да | Да | Да | По умолчанию |
+| Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |
+| Cursor | Supported | Да | Да | Да | Да | Когда edit counts и final blob совпадают |
+| Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |
 
 <Aside>
-  Preview означает поддержку текущего публичного поведения. Локальный формат agent hooks или transcripts может измениться.
+  Files означает, что Agent Note может показать, какие commit-файлы были затронуты Agent. Line Estimate означает, что он также может оценить строки, написанные AI, а не только считать файлы. Preview означает поддержку текущего публичного поведения. Локальный формат agent hooks или transcripts может измениться.
 </Aside>
 
 ## Рекомендуемая настройка

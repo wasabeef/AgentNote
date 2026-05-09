@@ -114,12 +114,14 @@ packages/pr-report/dist/**
 
 ## Agent Support
 
-| Agent | Status | 表示できる粒度 | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | AI が書いた行の目安まで表示 | Native Hooks で会話を復元します。 |
-| Codex CLI | Supported | 通常は変更ファイルまで表示 | Codex の patch 履歴が最終 Commit と合う場合だけ、AI が書いた行の目安も表示できます。Local Transcript を読めない場合は、不確かな Note を作りません。 |
-| Cursor | Supported | 通常は変更ファイルまで表示 | Cursor の Edit Hooks を使います。Commit に入ったファイルが最後の AI 編集と一致する場合だけ、AI が書いた行の目安も表示できます。 |
-| Gemini CLI | Preview | 変更ファイルまで表示 | Generated Hooks で会話と通常の `git commit` を記録します。 |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | 対応 | 対応 | 対応 | 対応 | 既定で表示 |
+| Codex CLI | Supported | 対応 | 対応 | 対応 | 対応 | Codex の patch 履歴が最終 Commit と一致したとき |
+| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 file が一致したとき |
+| Gemini CLI | Preview | 対応 | 対応 | 対応 | 対応 | 未対応 |
+
+`Files` は、Agent が触った committed file を表示できるという意味です。`Line Estimate` は、file 数だけでなく AI が書いた行の目安も表示できるという意味です。
 
 ## Setup を確認する
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 これは AI Session Report を PR Description に投稿します。
+
+`agentnote-reviewer-context` block は PR body 上では hidden comment として保存されます。Copilot、CodeRabbit、Devin、Greptile のように raw PR description を読む AI Review tool は、これを intent と review focus として利用できます。
 
 ```
 ## 🧑💬🤖 Agent Note

@@ -72,3 +72,13 @@ Auch ein neues Repository kann schon vor dem ersten Production-Deploy Dashboard-
 - GitHub Pages liefert das gebaute Dashboard unter `/dashboard/` aus
 
 Das Repository committet keine Beispiel-JSONs für das Dashboard. Ein neues Dashboard bleibt leer, bis der Workflow note files wiederherstellt oder erzeugt. `pull_request` veröffentlicht den Open-Status, und Pushes auf `default branch` ersetzen ihn durch den Merged-Status.
+
+## Wenn keine Daten angezeigt werden
+
+Das Dashboard zeigt jetzt konkrete Hinweise, statt nur zu sagen, dass Daten fehlen.
+
+- Gar keine Daten: Prüfe, ob nach dem Aktivieren von Agent Note ein PR-Workflow gelaufen ist, der Dashboard-Workflow erfolgreich war und `refs/notes/agentnote` gepusht wurde.
+- `?pr=<number>` zeigt nichts: Der Workflow für diese PR ist vielleicht noch nicht gelaufen, Pull Request Deploys können durch GitHub Pages environment protection blockiert sein, oder die PR-Nummer passt nicht zu den veröffentlichten Dashboard-Daten.
+- `?commit=<sha>` zeigt nichts: Der Commit hat möglicherweise keinen Agent Note Eintrag, notes wurden noch nicht gepusht, oder der SHA stammt aus einem anderen Repository.
+
+Wenn die Seite öffnet, aber leer bleibt, siehe [Troubleshooting](./troubleshooting/).

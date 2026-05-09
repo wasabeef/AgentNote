@@ -114,12 +114,14 @@ Ces fichiers restent visibles dans Notes, PR Report et Dashboard. Ils sont seule
 
 ## Agent Support
 
-| Agent | Statut | Détail | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Estimation des lignes écrites par l'IA | Utilise des Hooks natifs pour retrouver la conversation. |
-| Codex CLI | Supported | Fichiers modifiés par défaut | Peut estimer les lignes écrites par l'IA seulement quand l'historique de patch Codex correspond au Commit final. Si le Transcript Local ne peut pas être lu, Agent Note évite d'écrire une Note incertaine. |
-| Cursor | Supported | Fichiers modifiés par défaut | Utilise les Hooks d'édition Cursor. Peut estimer les lignes écrites par l'IA seulement quand le fichier Commité correspond encore à la dernière édition IA. |
-| Gemini CLI | Preview | Fichiers modifiés | Utilise les Hooks générés pour capturer les conversations et les `git commit` normaux. |
+| Agent | Statut | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Oui | Oui | Oui | Oui | Par défaut |
+| Codex CLI | Supported | Oui | Oui | Oui | Oui | Quand l'historique de patch Codex correspond au Commit final |
+| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit et le fichier final correspondent |
+| Gemini CLI | Preview | Oui | Oui | Oui | Oui | Pas encore |
+
+`Files` signifie qu'Agent Note peut montrer quels fichiers commités ont été touchés par l'Agent. `Line Estimate` signifie qu'il peut aussi estimer les lignes écrites par l'AI au lieu de seulement compter les fichiers.
 
 ## Vérifier la configuration
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 Cela poste un rapport de Session IA dans la description de la PR:
+
+Le bloc `agentnote-reviewer-context` est enregistré comme hidden comment dans le PR body. Les AI Review tools qui lisent la raw PR description, comme Copilot, CodeRabbit, Devin et Greptile, peuvent l'utiliser comme intent et review focus supplémentaires.
 
 ```
 ## 🧑💬🤖 Agent Note

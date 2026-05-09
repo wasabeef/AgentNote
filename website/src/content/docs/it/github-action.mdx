@@ -85,6 +85,14 @@ Il report della PR include:
   Gli hash dei commit nel report puntano direttamente alla pagina del commit su GitHub.
 </Aside>
 
+## AI Review tools
+
+Il `Reviewer Context` viene salvato come commento Markdown nascosto nel PR body. I reviewer umani vedono il report normale, mentre gli strumenti che leggono la descrizione grezza della PR possono usare quel contesto aggiuntivo.
+
+Il contesto è deterministico. Riassume aree modificate, focus di review e gli ultimi segnali d'intento rilevanti dai dati Agent Note. Strumenti come Copilot, CodeRabbit, Devin e Greptile possono usarlo per capire perché la PR è cambiata prima di leggere il diff.
+
+Resta comunque una guida, non una prova. Gli strumenti di review devono confrontarlo con il diff reale, i test e il codice.
+
 ## Passo successivo
 
 Se vuoi anche una vista Pages condivisa per PR aperte e mergeate, continua con <a href="./dashboard/">Dashboard</a>.

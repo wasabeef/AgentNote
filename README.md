@@ -114,12 +114,14 @@ Those files still appear in Notes, PR Report, and Dashboard. They are only remov
 
 ## Agent Support
 
-| Agent | Status | Detail | Notes |
-| --- | --- | --- | --- |
-| Claude Code | Full support | Line estimates by default | Uses native hooks to recover the conversation. |
-| Codex CLI | Supported | Changed files by default | Can estimate AI-written lines only when Codex patch history matches the final commit. If the local transcript cannot be read, Agent Note skips uncertain notes. |
-| Cursor | Supported | Changed files by default | Uses Cursor edit hooks. Can estimate AI-written lines only when the committed file still matches the last AI edit. |
-| Gemini CLI | Preview | Changed files | Uses generated hooks to capture conversations and normal `git commit` runs. |
+| Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | Full support | Yes | Yes | Yes | Yes | Default |
+| Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |
+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final file match |
+| Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |
+
+`Files` means Agent Note can show which committed files were touched by the agent. `Line Estimate` means it can also estimate AI-written lines instead of only counting files.
 
 ## Check Your Setup
 
@@ -185,6 +187,8 @@ $ npx agent-note pr --output description --update 42
 ```
 
 This posts an AI session report to the PR description:
+
+The `agentnote-reviewer-context` block is hidden from the rendered PR body. AI review tools that read the raw PR description, such as Copilot, CodeRabbit, Devin, and Greptile, can use it as extra intent and review focus.
 
 ```
 ## 🧑💬🤖 Agent Note

@@ -72,3 +72,13 @@ git push
 - GitHub Pages отдаёт собранный Dashboard по адресу `/dashboard/`
 
 Репозиторий не коммитит примерный JSON для Dashboard. Новый Dashboard остаётся пустым, пока workflow не восстановит или не сгенерирует note files. `pull_request` публикует состояние Open, а push в `default branch` заменяет его состоянием Merged.
+
+## Если данные не отображаются
+
+Dashboard теперь показывает возможные причины, а не только сообщает, что данных нет.
+
+- Данных нет совсем: проверьте, запускался ли PR workflow после включения Agent Note, успешно ли прошёл Dashboard workflow и был ли отправлен `refs/notes/agentnote`.
+- `?pr=<number>` не показывает данные: workflow для этой PR мог ещё не запускаться, Pull Request Deploys могут быть заблокированы protection rules окружения GitHub Pages, или номер PR в URL не соответствует опубликованным данным Dashboard.
+- `?commit=<sha>` не показывает данные: у этого Commit может не быть записи Agent Note, notes могли ещё не быть отправлены, или SHA может относиться к другому репозиторию.
+
+Если страница открывается, но остаётся пустой, смотрите [Troubleshooting](./troubleshooting/).

@@ -79,4 +79,12 @@ git push
 
 リポジトリ自体には Dashboard 用の sample JSON をコミットしません。新しい Dashboard は workflow が note file を復元または生成するまで空です。`pull_request` で Open 状態を公開し、`default branch` への push で Merged 状態に置き換えます。
 
+## データが表示されないとき
+
+Dashboard は、空の状態でも原因の候補を表示します。まずは次を確認してください。
+
+- まったく data がない: Agent Note を有効化したあとに PR workflow が実行されたか、Dashboard workflow が成功したか、`refs/notes/agentnote` が push されているかを確認します。
+- `?pr=<number>` で data がない: その PR の workflow がまだ実行されていない、GitHub Pages の environment protection で Pull Request Deploy が止まっている、または URL の PR 番号が公開済み Dashboard data と一致していない可能性があります。
+- `?commit=<sha>` で data がない: その Commit に Agent Note entry がない、notes がまだ push されていない、または別リポジトリの SHA を見ている可能性があります。
+
 ページは開くのに data が出ない場合は [Troubleshooting](./troubleshooting/) を確認してください。

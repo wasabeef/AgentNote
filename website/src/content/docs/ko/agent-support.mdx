@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 agent 가 제공하는 hook 과 transcript 정보는 다릅니다. 팀에 적용하기 전에 기대할 수 있는 범위를 확인하세요.
 
-## 지원 매트릭스
+## Capability Matrix
 
-| Agent | 상태 | Prompt / Response | Attribution |
-|---|---|---|---|
-| Claude Code | Full support | Hook native | 기본 line-level |
-| Codex CLI | Supported | Local transcript | 기본 file-level, `apply_patch` count 가 최종 diff 와 맞으면 line-level |
-| Cursor | Supported | Response hook 또는 local transcript | 기본 file-level, edit count 와 final blob 이 맞으면 line-level |
-| Gemini CLI | Preview | `BeforeAgent` / `AfterAgent` hook | File-level |
+| Agent | 상태 | Prompt | Response | Files | AI Ratio | Line Estimate |
+|---|---|---|---|---|---|---|
+| Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |
+| Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |
+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final blob 이 일치할 때 |
+| Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |
 
 <Aside>
-  Preview 는 현재 공개된 동작을 지원한다는 뜻입니다. agent 의 local hook 또는 transcript 형식은 바뀔 수 있습니다.
+  Files 는 Agent 가 건드린 committed file 을 표시할 수 있다는 뜻입니다. Line Estimate 는 file 개수만 세는 대신 AI 가 작성한 줄의 추정치도 표시할 수 있다는 뜻입니다. Preview 는 현재 공개된 동작을 지원한다는 뜻이며, agent 의 local hook 또는 transcript 형식은 바뀔 수 있습니다.
 </Aside>
 
 ## 권장 설정

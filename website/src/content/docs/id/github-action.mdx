@@ -85,6 +85,14 @@ Laporan PR berisi:
   Hash commit di laporan langsung menaut ke halaman commit di GitHub.
 </Aside>
 
+## AI Review tool
+
+`Reviewer Context` disimpan sebagai komentar Markdown tersembunyi di PR body. Reviewer manusia melihat laporan normal, sementara tool yang membaca raw PR description dapat memakai context tambahan ini.
+
+Context ini deterministik. Isinya merangkum area yang berubah, fokus review, dan sinyal intent terbaru yang relevan dari data Agent Note. Tool seperti Copilot, CodeRabbit, Devin, dan Greptile dapat menggunakannya untuk memahami alasan perubahan sebelum membaca diff.
+
+Ini tetap panduan, bukan bukti. Review tool harus membandingkannya dengan diff, test, dan code yang sebenarnya.
+
 ## Langkah berikutnya
 
 Jika Anda juga ingin tampilan Pages bersama untuk PR terbuka dan merged, lanjutkan ke <a href="./dashboard/">Dashboard</a>.
