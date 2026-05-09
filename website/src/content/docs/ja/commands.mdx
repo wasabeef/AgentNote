@@ -10,6 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 ## よく使うコマンド
 
 - 最初のセットアップ: `agent-note init`
+- Agent Note をリポジトリから削除する: `agent-note deinit`
 - hook と有効な adapter を確認する: `agent-note status`
 - 最近の活動を一覧する: `agent-note log`
 - コミットに何が記録されたか見る: `agent-note show`
@@ -37,6 +38,20 @@ npx agent-note init --agent claude
 | `--no-notes` | Skip notes auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+
+## agent-note deinit
+
+1 つ以上の Agent の hooks と config を削除します。
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| フラグ | 説明 |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | PR Report と Dashboard の workflow も削除 |
+| `--keep-notes` | Notes auto-fetch 設定を残す |
 
 ## agent-note status
 

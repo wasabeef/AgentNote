@@ -53,7 +53,7 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Agent 에 맞게 `--agent` 값을 `codex`, `claude-code`, `cursor`, `gemini-cli` 중에서 고르세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `status`, `log`, `show`, `why` 다섯 개뿐입니다.
+Agent 에 맞게 `--agent` 값을 `codex`, `claude-code`, `cursor`, `gemini-cli` 중에서 고르세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
 
 ## Quick Start
 
@@ -264,6 +264,7 @@ Agent Note 가 해당 Commit 에 Git Note 를 씁니다
 | Command | What it does |
 | --- | --- |
 | `agent-note init` | Hooks, Workflow, Git Hooks, Notes auto-fetch 를 설정합니다 |
+| `agent-note deinit` | Agent Note hooks 와 config 를 제거합니다 |
 | `agent-note status` | Tracking state 를 보여줍니다 |
 | `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |
 | `agent-note show [commit]` | `HEAD` 또는 Commit SHA 뒤의 AI Session 을 보여줍니다 |

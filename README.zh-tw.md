@@ -53,7 +53,7 @@ Agent Note 會為每個 Commit 保存與 AI 的對話和變更檔案。資訊足
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-依照 Agent 選擇對應的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。Skill 通常只會引導 agent 使用五個公開命令: `init`、`status`、`log`、`show`、`why`。
+依照 Agent 選擇對應的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。Skill 通常只會引導 agent 使用六個公開命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
 
 ## Quick Start
 
@@ -264,6 +264,7 @@ Agent Note 為該 Commit 寫入 Git Note
 | Command | 作用 |
 | --- | --- |
 | `agent-note init` | 設定 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |
+| `agent-note deinit` | 移除 Agent Note hooks 和 config |
 | `agent-note status` | 顯示 Tracking state |
 | `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
 | `agent-note show [commit]` | 顯示 `HEAD` 或 Commit SHA 背後的 AI Session |

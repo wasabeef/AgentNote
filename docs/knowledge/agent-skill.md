@@ -12,6 +12,7 @@ Users should not need to remember every Agent Note command, workflow input, or
 diagnostic path. They should be able to ask their AI coding agent for outcomes:
 
 - "Set up Agent Note in this repository."
+- "Remove Agent Note from this repository."
 - "Enable PR Report."
 - "Enable Dashboard."
 - "Why did this line change?"
@@ -177,6 +178,7 @@ for Agent Note outcomes, not merely for generic words like `git`, `PR`,
 | --- | --- | --- | --- |
 | "Set up Agent Note" | `agent-note init` | Detect likely agent, suggest explicit `--agent` values, run init only after checking repo state. | Public |
 | "Set up Agent Note for Claude / Codex / Cursor / Gemini" | `agent-note init --agent ...` | Use the named agent, explain generated hook files, and remind the user to review config changes. | Public |
+| "Remove Agent Note" | `agent-note deinit` | Remove generated hooks and agent config for the named agents. Use `--remove-workflow` only when the user also wants generated workflows removed, and `--keep-notes` when notes auto-fetch should remain. | Public |
 | "Enable PR Report" | GitHub Action inputs | Add or update the workflow that uses `wasabeef/AgentNote@v0`. Do not ask the user to run the PR renderer locally. | Public workflow setup |
 | "Enable Dashboard" | GitHub Action `dashboard: true` and Pages output | Add or update Dashboard workflow settings, explain Pages requirements, and verify `permissions` / `pages` behavior. | Public workflow setup |
 | "Why did this line change?" | `agent-note why <target>` | Accept `path:line`, `path#Lline`, GitHub URLs, editor URLs, and `@path` mentions copied from AI output. Run the command and summarize evidence level. | Public |
@@ -195,13 +197,14 @@ The skill should clearly separate public commands from internal plumbing.
 Public commands:
 
 - `agent-note init`
+- `agent-note deinit`
 - `agent-note status`
 - `agent-note log`
 - `agent-note show`
 - `agent-note why`
 
-These are the only Agent Note CLI commands the skill should present as normal
-user actions.
+These are the Agent Note CLI commands the skill should present as normal user
+actions.
 
 Internal or automation-facing commands:
 

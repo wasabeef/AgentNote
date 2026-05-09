@@ -10,6 +10,7 @@ Diese Seite zeigt die Befehle, die Nutzer direkt ausführen. Für das erste Setu
 ## Häufige Aufgaben
 
 - Erstes Setup: `agent-note init`
+- Agent Note aus dem Repository entfernen: `agent-note deinit`
 - Status prüfen: `agent-note status`
 - Neue Aktivität prüfen: `agent-note log`
 - Commit-Daten anzeigen: `agent-note show`
@@ -37,6 +38,20 @@ npx agent-note init --agent claude
 | `--no-notes` | Skip notes auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+
+## agent-note deinit
+
+Entfernt Agent-Note-Hooks und Konfiguration für einen oder mehrere Agents.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Flag | Beschreibung |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | Entfernt auch die PR-Report- und Dashboard-Workflows |
+| `--keep-notes` | Behält die notes-auto-fetch-Konfiguration |
 
 ## agent-note status
 

@@ -140,7 +140,7 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/`) — public user commands are `agent-note init`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Automation-facing commands such as `agent-note pr`, `agent-note hook`, `agent-note record`, `agent-note commit`, and `agent-note push-notes` are kept for generated workflows and hooks.
+1. **CLI** (`packages/cli/`) — public user commands are `agent-note init`, `agent-note deinit`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Automation-facing commands such as `agent-note pr`, `agent-note hook`, `agent-note record`, `agent-note commit`, and `agent-note push-notes` are kept for generated workflows and hooks.
 2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.
 
 ### Data flow
@@ -410,6 +410,7 @@ When an existing hook file is found, agent-note chains to it — the original ho
 
 ```
 agent-note init              add hooks to agent config (commit to share with team)
+agent-note deinit            remove Agent Note hooks and generated config
 agent-note status            show current tracking state
 agent-note log [n]           list recent commits with session info
 agent-note show [commit]     show session details for HEAD or a commit SHA

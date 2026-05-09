@@ -10,6 +10,7 @@ Halaman ini hanya berisi command yang dijalankan langsung oleh pengguna. Untuk s
 ## Tugas umum
 
 - Setup pertama: `agent-note init`
+- Menghapus Agent Note dari repository: `agent-note deinit`
 - Memeriksa status: `agent-note status`
 - Melihat aktivitas terbaru: `agent-note log`
 - Menampilkan data commit: `agent-note show`
@@ -37,6 +38,20 @@ npx agent-note init --agent claude
 | `--no-notes` | Skip notes auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+
+## agent-note deinit
+
+Menghapus hooks dan config Agent Note untuk satu atau beberapa agent.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Flag | Deskripsi |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | Juga menghapus workflow PR Report dan Dashboard |
+| `--keep-notes` | Mempertahankan konfigurasi notes auto-fetch |
 
 ## agent-note status
 

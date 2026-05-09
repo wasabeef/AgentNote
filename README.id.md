@@ -53,7 +53,7 @@ Jika AI Agent Anda mendukung GitHub Agent Skills, pasang Agent Note Skill agar A
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`. Skill biasanya hanya mengarahkan agent ke lima command publik: `init`, `status`, `log`, `show`, dan `why`.
+Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`. Skill biasanya hanya mengarahkan agent ke enam command publik: `init`, `deinit`, `status`, `log`, `show`, dan `why`.
 
 ## Quick Start
 
@@ -264,6 +264,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | Command | Fungsi |
 | --- | --- |
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
+| `agent-note deinit` | Menghapus hooks dan config Agent Note |
 | `agent-note status` | Menampilkan Tracking state |
 | `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
 | `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |

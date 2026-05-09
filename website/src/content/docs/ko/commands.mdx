@@ -10,6 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 ## 자주 쓰는 작업
 
 - 첫 setup: `agent-note init`
+- repository 에서 Agent Note 제거: `agent-note deinit`
 - 상태 확인: `agent-note status`
 - 최근 활동 확인: `agent-note log`
 - commit 데이터 보기: `agent-note show`
@@ -37,6 +38,20 @@ npx agent-note init --agent claude
 | `--no-notes` | Skip notes auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+
+## agent-note deinit
+
+하나 이상의 Agent hooks 와 config 를 제거합니다.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Flag | 설명 |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | PR Report 와 Dashboard workflow 도 제거 |
+| `--keep-notes` | notes auto-fetch 설정 유지 |
 
 ## agent-note status
 

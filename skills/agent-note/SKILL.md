@@ -18,6 +18,7 @@ commit by storing data in git notes.
 Use this skill when the user asks to:
 
 - Set up Agent Note in a repository.
+- Remove Agent Note hooks and config from a repository.
 - Check whether Agent Note is recording correctly.
 - Inspect recent Agent Note history.
 - Show the Agent Note data behind a commit.
@@ -40,6 +41,7 @@ Only present these commands as normal user actions:
 
 ```text
 agent-note init
+agent-note deinit
 agent-note status
 agent-note log
 agent-note show
@@ -60,6 +62,18 @@ Those commands are internal or automation-facing.
    `npx agent-note init --agent <name> --dashboard`.
 5. Review the generated agent config, GitHub workflow, and git hook changes
    before asking the user to commit.
+
+## Deinit Workflow
+
+Use `agent-note deinit` when the user wants to remove Agent Note from a
+repository.
+
+1. Identify the target coding agent or agents.
+2. Run `npx agent-note deinit --agent <name>` for those agents.
+3. Use `--remove-workflow` only when the user also wants generated PR Report
+   and Dashboard workflows removed.
+4. Use `--keep-notes` when the user wants to keep notes auto-fetch config.
+5. Review changed hook, workflow, and agent config files before committing.
 
 ## PR Report Workflow
 

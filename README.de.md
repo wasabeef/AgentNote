@@ -53,7 +53,7 @@ Wenn dein AI Agent GitHub Agent Skills unterstützt, installiere den Agent Note 
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Wähle den passenden `--agent` Wert: `codex`, `claude-code`, `cursor` oder `gemini-cli`. Der Skill führt den Agent normalerweise nur zu fünf öffentlichen Befehlen: `init`, `status`, `log`, `show` und `why`.
+Wähle den passenden `--agent` Wert: `codex`, `claude-code`, `cursor` oder `gemini-cli`. Der Skill führt den Agent normalerweise nur zu sechs öffentlichen Befehlen: `init`, `deinit`, `status`, `log`, `show` und `why`.
 
 ## Quick Start
 
@@ -264,6 +264,7 @@ Den detaillierten Flow, die Schätzung von KI-geschriebener Arbeit und das gespe
 | Command | Was es tut |
 | --- | --- |
 | `agent-note init` | Richtet Hooks, Workflow, Git Hooks und Notes auto-fetch ein |
+| `agent-note deinit` | Entfernt Agent-Note-Hooks und Konfiguration |
 | `agent-note status` | Zeigt den Tracking state |
 | `agent-note log [n]` | Listet aktuelle Commits mit AI Ratio |
 | `agent-note show [commit]` | Zeigt die KI-Session hinter `HEAD` oder einem Commit SHA |

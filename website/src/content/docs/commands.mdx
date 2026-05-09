@@ -10,6 +10,7 @@ Use this page when you already know what Agent Note is and need the exact user-f
 ## Common Tasks
 
 - First setup: `agent-note init`
+- Remove Agent Note from a repository: `agent-note deinit`
 - Verify hooks and the active adapter: `agent-note status`
 - Review recent activity: `agent-note log`
 - Check what a commit recorded: `agent-note show`
@@ -37,6 +38,20 @@ npx agent-note init --agent claude
 | `--no-notes` | Skip notes auto-fetch config |
 | `--hooks` | Only install agent hooks |
 | `--action` | Only create workflow |
+
+## agent-note deinit
+
+Remove Agent Note hooks and configuration for one or more agents.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Flag | Description |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--remove-workflow` | Also remove the PR Report and Dashboard workflows |
+| `--keep-notes` | Keep notes auto-fetch config |
 
 ## agent-note status
 
