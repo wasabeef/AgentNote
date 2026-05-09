@@ -1,0 +1,1045 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T07:34:47.731Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "commit_subject_overlap",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "Agent",
+      "response": "中断後の続きとして CodeRabbit 対応を再開します。いま見えている指摘は全部 docs copy / locale parity の範囲なので、対象箇所だけ最小修正して、検証後に修正済み thread を resolve します。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "中断後の続きとして CodeRabbit 対応を再開します。 いま見えている指摘は全部 docs copy / locale parity の範囲なので、対象箇所だけ最小修正して、検証後に修正済み thread を resolve します。"
+        }
+      ],
+      "files_touched": [
+        "packages/dashboard/src/pages/index.astro",
+        "README.ko.md",
+        "website/src/content/docs/ko/agent-support.mdx",
+        "website/src/content/docs/ko/index.mdx",
+        "README.de.md",
+        "website/src/content/docs/de/agent-support.mdx",
+        "README.es.md",
+        "website/src/content/docs/es/agent-support.mdx",
+        "README.it.md",
+        "website/src/content/docs/it/github-action.mdx",
+        "website/src/content/docs/it/agent-support.mdx",
+        "website/src/content/docs/ja/agent-support.mdx",
+        "website/src/content/docs/ru/agent-support.mdx",
+        "website/src/content/docs/zh-tw/agent-support.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "response_basename_or_identifier",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/github-action.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "dc3a4e0c8dd00d1fe759856e14612432f793b64a",
+    "short_sha": "dc3a4e0",
+    "message": "docs: address review copy feedback",
+    "date": "2026-05-09T16:34:45+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.de.md",
+        "lines": [
+          "index fbf4ece..358578f 100644",
+          "--- a/README.de.md",
+          "+++ b/README.de.md",
+          "@@ -121,7 +121,7 @@ Diese Dateien erscheinen weiterhin in Notes, PR Report und Dashboard. Sie werden",
+          " | Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit-Zähler und finale Datei passen |",
+          " | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |",
+          " ",
+          "-`Files` bedeutet, dass Agent Note zeigen kann, welche commiteten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen.",
+          "+`Files` bedeutet, dass Agent Note zeigen kann, welche committierten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen.",
+          " ",
+          " ## Setup prüfen",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.es.md",
+        "lines": [
+          "index 6c0a5bc..a9bd98d 100644",
+          "--- a/README.es.md",
+          "+++ b/README.es.md",
+          "@@ -121,7 +121,7 @@ Esos archivos siguen apareciendo en Notes, PR Report y Dashboard. Solo se elimin",
+          " | Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit y el archivo final coinciden |",
+          " | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |",
+          " ",
+          "-`Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la AI en lugar de contar solo archivos.",
+          "+`Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la IA en lugar de contar solo archivos.",
+          " ",
+          " ## Verifica tu Setup",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index 3255220..54ced18 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -188,7 +188,7 @@ $ npx agent-note pr --output description --update 42",
+          " ",
+          " Questo pubblica un report di sessione AI nella PR Description:",
+          " ",
+          "-Il blocco `agentnote-reviewer-context` viene salvato nel PR body come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.",
+          "+Il blocco `agentnote-reviewer-context` viene salvato nel body della PR come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.",
+          " ",
+          " ```",
+          " ## 🧑💬🤖 Agent Note"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 5234abc..75137b0 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |",
+          " | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |",
+          "-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit 수와 최종 file 이 일치할 때 |",
+          "+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |",
+          " | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |",
+          " ",
+          " `Files` 는 Agent 가 건드린 committed file 을 표시할 수 있다는 뜻입니다. `Line Estimate` 는 file 개수만 세는 대신 AI 가 작성한 줄의 추정치도 표시할 수 있다는 뜻입니다."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 5ececa6..0ecf4f7 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -121,7 +121,7 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r",
+          " | Cursor | Supported | Sim | Sim | Sim | Sim | Quando as contagens de edit e o file final batem |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          "-`Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela AI, em vez de apenas contar arquivos.",
+          "+`Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos.",
+          " ",
+          " ## Verifique o Setup",
+          " ",
+          "@@ -251,7 +251,7 @@ Você executa `git push`",
+          " `refs/notes/agentnote` é enviado junto com a Branch",
+          " ```",
+          " ",
+          "-Para o Flow detalhado, como Agent Note estima o trabalho escrito pela AI e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).",
+          "+Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).",
+          " ",
+          " ## Commands",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/src/pages/index.astro",
+        "lines": [
+          "index 0e76782..bf7466f 100644",
+          "--- a/packages/dashboard/src/pages/index.astro",
+          "+++ b/packages/dashboard/src/pages/index.astro",
+          "@@ -1633,7 +1633,7 @@ const dashboardIndex = buildDashboardIndex();",
+          "             <div class=\"empty\">",
+          "               <div class=\"big\">💬</div>",
+          "               <div class=\"empty-title\">Pick a commit or PR</div>",
+          "-              <div class=\"empty-detail\">Dashboard data is loading. Choose a PR or commit from the sidebar to read the story.</div>",
+          "+              <div class=\"empty-detail\">Dashboard data is available. Choose a PR or commit from the sidebar to read the story.</div>",
+          "             </div>",
+          "           </div>",
+          "           <div class=\"main-footer\" id=\"main-footer\"></div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/agent-support.mdx",
+        "lines": [
+          "index 1e25a18..e8a7334 100644",
+          "--- a/website/src/content/docs/agent-support.mdx",
+          "+++ b/website/src/content/docs/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note uses the same git-note format for every agent, but each agent exposes",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Yes | Yes | Yes | Yes | Default |",
+          " | Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |",
+          "-| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final blob match |",
+          "+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final file match |",
+          " | Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |",
+          " ",
+          " <Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/agent-support.mdx",
+        "lines": [
+          "index 8ad7264..b8537e2 100644",
+          "--- a/website/src/content/docs/de/agent-support.mdx",
+          "+++ b/website/src/content/docs/de/agent-support.mdx",
+          "@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent stellt andere Hooks und Transcript-Daten bereit. Diese Seite zeigt, was Sie vor der Einführung im Team erwarten können.",
+          " ",
+          "-## Capability Matrix",
+          "+## Agent-Funktionen",
+          " ",
+          " | Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          "@@ -17,7 +17,7 @@ Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent",
+          " | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |",
+          " ",
+          " <Aside>",
+          "-  Files bedeutet, dass Agent Note zeigen kann, welche commiteten Dateien vom Agent berührt wurden. Line Estimate bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen. Preview bedeutet, dass Agent Note das aktuelle öffentliche Verhalten unterstützt, das lokale Format des Agents aber noch ändern kann.",
+          "+  Files bedeutet, dass Agent Note zeigen kann, welche committierten Dateien vom Agent berührt wurden. Line Estimate bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen. Preview bedeutet, dass Agent Note das aktuelle öffentliche Verhalten unterstützt, das lokale Format des Agents aber noch ändern kann.",
+          " </Aside>",
+          " ",
+          " ## Empfohlene Einrichtung"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/how-it-works.mdx",
+        "lines": [
+          "index 5f96a74..6e4426e 100644",
+          "--- a/website/src/content/docs/de/how-it-works.mdx",
+          "+++ b/website/src/content/docs/de/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi",
+          " ",
+          " Agent Note und Entire lösen verwandte, aber unterschiedliche Probleme.",
+          " ",
+          "-- Agent Note verbindet git commits mit der AI conversation, die sie erzeugt hat. Entire ist ein breiteres checkpoint product mit rewind / resume workflows.",
+          "+- Agent Note verbindet git commits mit dem Gespräch mit der KI, das sie erzeugt hat. Entire ist ein breiteres checkpoint product mit rewind / resume workflows.",
+          " - Agent Note speichert den permanenten Record in `refs/notes/agentnote`; temporäre Session-Dateien bleiben unter `.git/agentnote/`. Entire stellt checkpoint metadata und eine hosted web application in den Mittelpunkt.",
+          " - Das Agent Note Dashboard ist optionales static GitHub Pages, gestützt auf git notes. Agent Note kann ohne hosted service genutzt werden.",
+          " - Agent Note stellt keinen alten workspace state wieder her. Es optimiert reviewability: warum ein commit geändert wurde, welche prompts beteiligt waren und wie viel diff AI-authored ist."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/index.mdx",
+        "lines": [
+          "index 23442f8..10b5df9 100644",
+          "--- a/website/src/content/docs/de/index.mdx",
+          "+++ b/website/src/content/docs/de/index.mdx",
+          "@@ -149,7 +149,7 @@ linked:  3/20 recent commits",
+          "   </TabItem>",
+          " </Tabs>",
+          " ",
+          "-## Agent Capability Matrix",
+          "+## Agent-Funktionen",
+          " ",
+          " <div class=\"capability-matrix\">",
+          "   <div class=\"capability-header\">"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/agent-support.mdx",
+        "lines": [
+          "index 54ca6ec..5fb63e1 100644",
+          "--- a/website/src/content/docs/es/agent-support.mdx",
+          "+++ b/website/src/content/docs/es/agent-support.mdx",
+          "@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note guarda el mismo formato de git note para todos los agents, pero cada agent expone hooks y transcripts distintos. Esta página resume qué esperar antes de activarlo para un equipo.",
+          " ",
+          "-## Capability Matrix",
+          "+## Matriz de capacidades",
+          " ",
+          " | Agent | Estado | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          "@@ -17,7 +17,7 @@ Agent Note guarda el mismo formato de git note para todos los agents, pero cada",
+          " | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |",
+          " ",
+          " <Aside>",
+          "-  Files significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. Line Estimate significa que también puede estimar líneas escritas por la AI en lugar de contar solo archivos. Preview significa que Agent Note sigue el comportamiento público actual, pero el formato local del agent puede cambiar.",
+          "+  Files significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. Line Estimate significa que también puede estimar líneas escritas por la IA en lugar de contar solo archivos. Preview significa que Agent Note sigue el comportamiento público actual, pero el formato local del agent puede cambiar.",
+          " </Aside>",
+          " ",
+          " ## Setup recomendado"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/how-it-works.mdx",
+        "lines": [
+          "index b992cc3..a64f34f 100644",
+          "--- a/website/src/content/docs/es/how-it-works.mdx",
+          "+++ b/website/src/content/docs/es/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Con los git hooks generados instalados, en la mayoría de los repos basta con se",
+          " ",
+          " Agent Note y Entire resuelven problemas relacionados, pero distintos.",
+          " ",
+          "-- Agent Note vincula git commits con la AI conversation que los produjo. Entire es un checkpoint product más amplio con workflows de rewind / resume.",
+          "+- Agent Note vincula git commits con la conversación de IA que los produjo. Entire es un checkpoint product más amplio con workflows de rewind / resume.",
+          " - Agent Note guarda el registro permanente en `refs/notes/agentnote`; los archivos temporales de sesión quedan en `.git/agentnote/`. Entire se centra en checkpoint metadata y una hosted web application.",
+          " - El Dashboard de Agent Note es static GitHub Pages opcional respaldado por git notes. Puedes usar Agent Note sin hosted service.",
+          " - Agent Note no intenta restaurar un workspace state antiguo. Se centra en reviewability: por qué cambió un commit, qué prompts participaron y qué parte del diff fue AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/agent-support.mdx",
+        "lines": [
+          "index fe51cfa..ff7ead5 100644",
+          "--- a/website/src/content/docs/fr/agent-support.mdx",
+          "+++ b/website/src/content/docs/fr/agent-support.mdx",
+          "@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note écrit le même format de git note pour tous les agents, mais chaque agent expose des hooks et transcripts différents. Cette page résume ce que vous pouvez attendre avant de l’activer pour une équipe.",
+          " ",
+          "-## Capability Matrix",
+          "+## Matrice des capacités des agents",
+          " ",
+          " | Agent | Statut | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/how-it-works.mdx",
+        "lines": [
+          "index dd2d6ba..1783fdb 100644",
+          "--- a/website/src/content/docs/fr/how-it-works.mdx",
+          "+++ b/website/src/content/docs/fr/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co",
+          " ",
+          " Agent Note et Entire résolvent des problèmes proches, mais différents.",
+          " ",
+          "-- Agent Note relie les git commits à l’AI conversation qui les a produits. Entire est un checkpoint product plus large avec des workflows rewind / resume.",
+          "+- Agent Note relie les git commits à la conversation avec l’IA qui les a produits. Entire est un checkpoint product plus large avec des workflows rewind / resume.",
+          " - Agent Note stocke l’enregistrement permanent dans `refs/notes/agentnote`; les fichiers temporaires de session restent sous `.git/agentnote/`. Entire se concentre sur la checkpoint metadata et une hosted web application.",
+          " - Le Dashboard d’Agent Note est un static GitHub Pages optionnel, alimenté par les git notes. Vous pouvez utiliser Agent Note sans hosted service.",
+          " - Agent Note ne cherche pas à restaurer un ancien workspace state. Il optimise la reviewability: pourquoi un commit a changé, quels prompts sont intervenus et quelle part du diff est AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/agent-support.mdx",
+        "lines": [
+          "index 78b1f19..37fe14e 100644",
+          "--- a/website/src/content/docs/id/agent-support.mdx",
+          "+++ b/website/src/content/docs/id/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap agent menyediakan hooks dan transcript yang berbeda. Halaman ini membantu tim memahami ekspektasi sebelum mengaktifkannya.",
+          " ",
+          "-## Capability Matrix",
+          "+## Matriks Kemampuan Agent",
+          " ",
+          " | Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |",
+          " | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |",
+          "-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan final blob cocok |",
+          "+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan file akhir cocok |",
+          " | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI bersifat transcript-driven. Agent Note membaca local transcript dan na",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika final blob masih cocok dengan AI edit terakhir.",
+          "+Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika file akhir masih cocok dengan AI edit terakhir.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/how-it-works.mdx",
+        "lines": [
+          "index 84b2d73..ab508c9 100644",
+          "--- a/website/src/content/docs/id/how-it-works.mdx",
+          "+++ b/website/src/content/docs/id/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus",
+          " ",
+          " Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.",
+          " ",
+          "-- Agent Note menghubungkan git commit dengan AI conversation yang membuatnya. Entire adalah checkpoint product yang lebih luas dengan workflow rewind / resume.",
+          "+- Agent Note menghubungkan git commit dengan percakapan AI yang membuatnya. Entire adalah checkpoint product yang lebih luas dengan workflow rewind / resume.",
+          " - Agent Note menyimpan record permanen di `refs/notes/agentnote`; file sementara sesi tetap berada di `.git/agentnote/`. Entire berpusat pada checkpoint metadata dan hosted web application.",
+          " - Dashboard Agent Note adalah static GitHub Pages opsional yang didukung git notes. Agent Note tetap bisa dipakai tanpa hosted service.",
+          " - Agent Note tidak mencoba memulihkan workspace state lama. Fokusnya adalah reviewability: mengapa commit berubah, prompt mana yang terlibat, dan seberapa besar diff yang AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/installation.mdx",
+        "lines": [
+          "index 53d9c8e..4d2134c 100644",
+          "--- a/website/src/content/docs/installation.mdx",
+          "+++ b/website/src/content/docs/installation.mdx",
+          "@@ -172,7 +172,7 @@ This is the quick view. For the detailed capture and attribution rules, see [Age",
+          "   <Card>",
+          "     <div class=\"agent-capability-card\">",
+          "       <div class=\"agent-capability-card__title\">Cursor</div>",
+          "-      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final blob still match.",
+          "+      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final file still matches.",
+          "       <img class=\"agent-capability-card__logo\" src=\"/AgentNote/model-icons/cursor.png\" alt=\"\" aria-hidden=\"true\" />",
+          "     </div>",
+          "   </Card>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/agent-support.mdx",
+        "lines": [
+          "index 9a1a8c4..4f9007f 100644",
+          "--- a/website/src/content/docs/it/agent-support.mdx",
+          "+++ b/website/src/content/docs/it/agent-support.mdx",
+          "@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note usa lo stesso formato di git note per tutti gli agent, ma ogni agent espone hook e transcript diversi. Questa pagina chiarisce cosa aspettarsi prima di abilitarlo per un team.",
+          " ",
+          "-## Capability Matrix",
+          "+## Matrice delle capacità degli Agent",
+          " ",
+          " | Agent | Stato | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/github-action.mdx",
+        "lines": [
+          "index e209215..656c45e 100644",
+          "--- a/website/src/content/docs/it/github-action.mdx",
+          "+++ b/website/src/content/docs/it/github-action.mdx",
+          "@@ -87,7 +87,7 @@ Il report della PR include:",
+          " ",
+          " ## AI Review tools",
+          " ",
+          "-Il `Reviewer Context` viene salvato come commento Markdown nascosto nel PR body. I reviewer umani vedono il report normale, mentre gli strumenti che leggono la descrizione grezza della PR possono usare quel contesto aggiuntivo.",
+          "+Il `Reviewer Context` viene salvato come commento Markdown nascosto nel body della PR. I reviewer umani vedono il report normale, mentre gli strumenti che leggono la descrizione grezza della PR possono usare quel contesto aggiuntivo.",
+          " ",
+          " Il contesto è deterministico. Riassume aree modificate, focus di review e gli ultimi segnali d'intento rilevanti dai dati Agent Note. Strumenti come Copilot, CodeRabbit, Devin e Greptile possono usarlo per capire perché la PR è cambiata prima di leggere il diff.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/how-it-works.mdx",
+        "lines": [
+          "index c8e86c3..58918bd 100644",
+          "--- a/website/src/content/docs/it/how-it-works.mdx",
+          "+++ b/website/src/content/docs/it/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Quando i git hook generati sono installati, nella maggior parte dei repository b",
+          " ",
+          " Agent Note ed Entire risolvono problemi collegati, ma diversi.",
+          " ",
+          "-- Agent Note collega i git commit alla AI conversation che li ha prodotti. Entire è un checkpoint product più ampio con workflow di rewind / resume.",
+          "+- Agent Note collega i git commit alla conversazione con l'AI che li ha prodotti. Entire è un checkpoint product più ampio con workflow di rewind / resume.",
+          " - Agent Note salva il record permanente in `refs/notes/agentnote`; i file temporanei della sessione restano in `.git/agentnote/`. Entire mette al centro checkpoint metadata e una hosted web application.",
+          " - La Dashboard di Agent Note è static GitHub Pages opzionale basata su git notes. Puoi usare Agent Note senza hosted service.",
+          " - Agent Note non prova a ripristinare un vecchio workspace state. Si concentra sulla reviewability: perché un commit è cambiato, quali prompt sono coinvolti e quanta parte del diff è AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/agent-support.mdx",
+        "lines": [
+          "index 7f2d967..c1f8139 100644",
+          "--- a/website/src/content/docs/ja/agent-support.mdx",
+          "+++ b/website/src/content/docs/ja/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note はどの agent でも同じ git note 形式で保存します。ただし、各 agent が提供する hook や transcript の情報量は異なります。このページでは、チームで有効化する前に期待できる範囲を確認できます。",
+          " ",
+          "-## Capability Matrix",
+          "+## 各 Agent の機能",
+          " ",
+          " | Agent | 状態 | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 対応 | 対応 | 対応 | 対応 | 既定で表示 |",
+          " | Codex CLI | Supported | 対応 | 対応 | 対応 | 対応 | Codex の patch 履歴が最終 Commit と一致したとき |",
+          "-| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 blob が一致したとき |",
+          "+| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 file が一致したとき |",
+          " | Gemini CLI | Preview | 対応 | 対応 | 対応 | 対応 | 未対応 |",
+          " ",
+          " <Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/how-it-works.mdx",
+        "lines": [
+          "index aeed2a1..33a7a4f 100644",
+          "--- a/website/src/content/docs/ja/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ja/how-it-works.mdx",
+          "@@ -137,7 +137,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note と Entire は近い領域ですが、目指している workflow が違います。",
+          " ",
+          "-- Agent Note は git commit と、その commit を生んだ AI conversation を紐づけます。Entire は rewind / resume を含む checkpoint product です。",
+          "+- Agent Note は git commit と、その commit を生んだ AI との会話を紐づけます。Entire は rewind / resume を含む checkpoint product です。",
+          " - Agent Note の永続データは `refs/notes/agentnote` に保存され、一時データは `.git/agentnote/` に置かれます。Entire は checkpoint metadata と hosted web application を中心にします。",
+          " - Agent Note の Dashboard は git notes を元にした optional static GitHub Pages です。hosted service なしでも使えます。",
+          " - Agent Note は古い workspace state を復元する tool ではありません。commit がなぜ変わったか、どの prompt が関わったか、diff のどれくらいが AI-authored かを review しやすくする tool です。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/installation.mdx",
+        "lines": [
+          "index 7b37959..ec99f4f 100644",
+          "--- a/website/src/content/docs/ja/installation.mdx",
+          "+++ b/website/src/content/docs/ja/installation.mdx",
+          "@@ -172,7 +172,7 @@ linked:  3/20 recent commits",
+          "   <Card>",
+          "     <div class=\"agent-capability-card\">",
+          "       <div class=\"agent-capability-card__title\">Cursor</div>",
+          "-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 blob が一致した file だけ line-level に昇格します。",
+          "+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 file が一致した file だけ line-level に昇格します。",
+          "       <img class=\"agent-capability-card__logo\" src=\"/AgentNote/model-icons/cursor.png\" alt=\"\" aria-hidden=\"true\" />",
+          "     </div>",
+          "   </Card>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/troubleshooting.mdx",
+        "lines": [
+          "index d0edff4..1892f94 100644",
+          "--- a/website/src/content/docs/ja/troubleshooting.mdx",
+          "+++ b/website/src/content/docs/ja/troubleshooting.mdx",
+          "@@ -110,7 +110,7 @@ git hook は `.git/` 内にあるため、agent config file が commit されて",
+          " ",
+          " - Claude Code は通常 line-level に必要な edit history を持っています。",
+          " - Codex CLI は transcript patch 行数が最終 commit diff と一致したときだけ昇格します。",
+          "-- Cursor は edit 行数が一致し、最終 blob が最後の AI edit と一致したときだけ昇格します。",
+          "+- Cursor は edit 行数が一致し、最終 file が最後の AI edit と一致したときだけ昇格します。",
+          " - Gemini CLI は現在 file-level attribution です。",
+          " ",
+          " 証拠が足りない場合、Agent Note は推測せず、安全な判定に戻します。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/agent-support.mdx",
+        "lines": [
+          "index 5327596..f59d7a7 100644",
+          "--- a/website/src/content/docs/ko/agent-support.mdx",
+          "+++ b/website/src/content/docs/ko/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 agent 가 제공하는 hook 과 transcript 정보는 다릅니다. 팀에 적용하기 전에 기대할 수 있는 범위를 확인하세요.",
+          " ",
+          "-## Capability Matrix",
+          "+## Agent 기능 매트릭스",
+          " ",
+          " | Agent | 상태 | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |",
+          " | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |",
+          "-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final blob 이 일치할 때 |",
+          "+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |",
+          " | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 는 transcript-driven 입니다. local transcript 를 읽고, `apply_p",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final blob 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.",
+          "+Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final file 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/how-it-works.mdx",
+        "lines": [
+          "index 078601f..93a6a95 100644",
+          "--- a/website/src/content/docs/ko/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ko/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 와 Entire 는 비슷한 문제를 다루지만 목표 workflow 가 다릅니다.",
+          " ",
+          "-- Agent Note 는 git commit 과 그 commit 을 만든 AI conversation 을 연결합니다. Entire 는 rewind / resume workflow 를 포함하는 더 넓은 checkpoint product 입니다.",
+          "+- Agent Note 는 git commit 과 그 commit 을 만든 AI 대화를 연결합니다. Entire 는 rewind / resume workflow 를 포함하는 더 넓은 checkpoint product 입니다.",
+          " - Agent Note 의 영구 record 는 `refs/notes/agentnote` 에 저장되고, 임시 session file 은 `.git/agentnote/` 아래에 남습니다. Entire 는 checkpoint metadata 와 hosted web application 을 중심으로 합니다.",
+          " - Agent Note Dashboard 는 git notes 기반의 optional static GitHub Pages 입니다. hosted service 없이도 Agent Note 를 사용할 수 있습니다.",
+          " - Agent Note 는 과거 workspace state 를 복원하려는 tool 이 아닙니다. commit 이 왜 바뀌었는지, 어떤 prompt 가 관련됐는지, diff 중 어느 정도가 AI-authored 인지 review 하기 쉽게 만드는 데 집중합니다."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/index.mdx",
+        "lines": [
+          "index 93df9ac..947f00b 100644",
+          "--- a/website/src/content/docs/ko/index.mdx",
+          "+++ b/website/src/content/docs/ko/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">기본 표시</div>",
+          "     <div class=\"cap-partial\">Codex patch 기록이 최종 Commit 과 일치할 때</div>",
+          "-    <div class=\"cap-partial\">edit 수와 최종 file 이 일치할 때</div>",
+          "+    <div class=\"cap-partial\">edit count 와 final file 이 일치할 때</div>",
+          "     <div class=\"cap-no\">아직 없음</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/agent-support.mdx",
+        "lines": [
+          "index 6e18497..1705014 100644",
+          "--- a/website/src/content/docs/pt-br/agent-support.mdx",
+          "+++ b/website/src/content/docs/pt-br/agent-support.mdx",
+          "@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " O Agent Note grava o mesmo formato de git note para todos os agents, mas cada agent expõe hooks e transcripts diferentes. Esta página mostra o que esperar antes de ativar para um time.",
+          " ",
+          "-## Capability Matrix",
+          "+## Matriz de capacidades dos agents",
+          " ",
+          " | Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |",
+          " | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |",
+          "-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e final blob batem |",
+          "+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e arquivo final batem |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          " <Aside>",
+          "-  Files significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. Line Estimate significa que ele também pode estimar linhas escritas pela AI, em vez de apenas contar arquivos. Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.",
+          "+  Files significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. Line Estimate significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos. Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.",
+          " </Aside>",
+          " ",
+          " ## Setup recomendado",
+          "@@ -61,7 +61,7 @@ Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o final blob ainda bate com o último AI edit.",
+          "+Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o arquivo final ainda bate com o último AI edit.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/how-it-works.mdx",
+        "lines": [
+          "index 5c85271..813127e 100644",
+          "--- a/website/src/content/docs/pt-br/how-it-works.mdx",
+          "+++ b/website/src/content/docs/pt-br/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast",
+          " ",
+          " Agent Note e Entire resolvem problemas relacionados, mas diferentes.",
+          " ",
+          "-- Agent Note conecta git commits à AI conversation que os produziu. Entire é um checkpoint product mais amplo com workflows de rewind / resume.",
+          "+- Agent Note conecta git commits à conversa com a IA que os produziu. Entire é um checkpoint product mais amplo com workflows de rewind / resume.",
+          " - Agent Note guarda o registro permanente em `refs/notes/agentnote`; arquivos temporários da sessão ficam em `.git/agentnote/`. Entire é centrado em checkpoint metadata e uma hosted web application.",
+          " - O Dashboard do Agent Note é static GitHub Pages opcional, apoiado por git notes. Você pode continuar usando Agent Note sem hosted service.",
+          " - Agent Note não tenta restaurar um workspace state antigo. Ele foca em reviewability: por que um commit mudou, quais prompts participaram e quanto do diff foi AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/agent-support.mdx",
+        "lines": [
+          "index 2b32366..720db08 100644",
+          "--- a/website/src/content/docs/ru/agent-support.mdx",
+          "+++ b/website/src/content/docs/ru/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note использует один формат git note для всех agents, но каждый agent предоставляет разные hooks и transcript данные. Эта страница помогает понять ожидания перед включением в команде.",
+          " ",
+          "-## Capability Matrix",
+          "+## Матрица возможностей агентов",
+          " ",
+          " | Agent | Статус | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Да | Да | Да | Да | По умолчанию |",
+          " | Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |",
+          "-| Cursor | Supported | Да | Да | Да | Да | Когда edit counts и final blob совпадают |",
+          "+| Cursor | Supported | Да | Да | Да | Да | Когда edit counts и итоговый файл совпадают |",
+          " | Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI работает через transcripts. Agent Note читает local",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor использует `afterFileEdit` / `afterTabFileEdit`, а также response hooks или local transcripts. Line-level возможен только если final blob всё еще совпадает с последним AI edit.",
+          "+Cursor использует `afterFileEdit` / `afterTabFileEdit`, а также response hooks или local transcripts. Line-level возможен только если итоговый файл всё еще совпадает с последним AI edit.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/how-it-works.mdx",
+        "lines": [
+          "index 89be1f5..304ddc2 100644",
+          "--- a/website/src/content/docs/ru/how-it-works.mdx",
+          "+++ b/website/src/content/docs/ru/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note и Entire решают похожие, но разные задачи.",
+          " ",
+          "-- Agent Note связывает git commits с AI conversation, которая их создала. Entire — более широкий checkpoint product с workflow rewind / resume.",
+          "+- Agent Note связывает git commits с диалогом с AI, который их создал. Entire — более широкий checkpoint product с workflow rewind / resume.",
+          " - Agent Note хранит постоянную запись в `refs/notes/agentnote`; временные файлы сессии остаются в `.git/agentnote/`. Entire строится вокруг checkpoint metadata и hosted web application.",
+          " - Dashboard Agent Note — это optional static GitHub Pages на основе git notes. Agent Note можно использовать без hosted service.",
+          " - Agent Note не пытается восстановить старый workspace state. Он фокусируется на reviewability: почему commit изменился, какие prompts участвовали и какая часть diff была AI-authored."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/troubleshooting.mdx",
+        "lines": [
+          "index 944d368..0845014 100644",
+          "--- a/website/src/content/docs/troubleshooting.mdx",
+          "+++ b/website/src/content/docs/troubleshooting.mdx",
+          "@@ -110,7 +110,7 @@ This is usually expected.",
+          " ",
+          " - Claude Code usually has enough edit history for line-level attribution.",
+          " - Codex CLI upgrades only when transcript patch counts match the final commit diff.",
+          "-- Cursor upgrades only when edit counts match and the final blob still matches the latest AI edit.",
+          "+- Cursor upgrades only when edit counts match and the final file still matches the latest AI edit.",
+          " - Gemini CLI currently records file-level attribution.",
+          " ",
+          " When evidence is incomplete, Agent Note falls back instead of guessing."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+        "lines": [
+          "index af800e8..8e53ed0 100644",
+          "--- a/website/src/content/docs/zh-cn/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-cn/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴露的 hook 和 transcript 数据不同。本页帮助你在团队启用前了解预期效果。",
+          " ",
+          "-## Capability Matrix",
+          "+## Agent 能力矩阵",
+          " ",
+          " | Agent | 状态 | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 和 final blob 匹配时 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 和 final file 匹配时 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 读取 local transcript，并仅在",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final blob 仍匹配最后一次 AI edit 时，才可使用 line-level。",
+          "+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/how-it-works.mdx",
+        "lines": [
+          "index ca7941d..18937e7 100644",
+          "--- a/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-cn/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 和 Entire 解决的是相关但不同的问题。",
+          " ",
+          "-- Agent Note 将 git commit 与产生该 commit 的 AI conversation 关联起来。Entire 是更广义的 checkpoint product，包含 rewind / resume workflow。",
+          "+- Agent Note 将 git commit 与产生该 commit 的 AI 对话关联起来。Entire 是更广义的 checkpoint product，包含 rewind / resume workflow。",
+          " - Agent Note 将永久记录保存在 `refs/notes/agentnote`；临时 session 文件保留在 `.git/agentnote/` 下。Entire 以 checkpoint metadata 和 hosted web application 为中心。",
+          " - Agent Note 的 Dashboard 是基于 git notes 的 optional static GitHub Pages。即使没有 hosted service，也可以继续使用 Agent Note。",
+          " - Agent Note 不尝试恢复旧的 workspace state。它专注于 reviewability：commit 为什么变化、哪些 prompt 参与其中，以及 diff 中有多少是 AI-authored。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+        "lines": [
+          "index 1c75e79..de9c41d 100644",
+          "--- a/website/src/content/docs/zh-tw/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-tw/agent-support.mdx",
+          "@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 對所有 agent 使用相同的 git note 格式，但每個 agent 暴露的 hook 與 transcript 資料不同。本頁協助你在團隊啟用前了解預期範圍。",
+          " ",
+          "-## Capability Matrix",
+          "+## Agent 能力矩陣",
+          " ",
+          " | Agent | 狀態 | Prompt | Response | Files | AI Ratio | Line Estimate |",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 預設顯示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 當 Codex patch 記錄與最終 Commit 相符時 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 與 final blob 相符時 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 與 final file 相符時 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支援 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 讀取 local transcript，只有在",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final blob 仍符合最後一次 AI edit 時，才可使用 line-level。",
+          "+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍符合最後一次 AI edit 時，才可使用 line-level。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/how-it-works.mdx",
+        "lines": [
+          "index a935f8b..06a0fc1 100644",
+          "--- a/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "+++ b/website/src/content/docs/zh-tw/how-it-works.mdx",
+          "@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';",
+          " ",
+          " Agent Note 和 Entire 解決的是相關但不同的問題。",
+          " ",
+          "-- Agent Note 會把 git commit 與產生該 commit 的 AI conversation 關聯起來。Entire 是更廣義的 checkpoint product，包含 rewind / resume workflow。",
+          "+- Agent Note 會把 git commit 與產生該 commit 的 AI 對話關聯起來。Entire 是更廣義的 checkpoint product，包含 rewind / resume workflow。",
+          " - Agent Note 會把永久記錄保存到 `refs/notes/agentnote`；暫時 session 檔案保留在 `.git/agentnote/` 下。Entire 以 checkpoint metadata 和 hosted web application 為中心。",
+          " - Agent Note 的 Dashboard 是以 git notes 為基礎的 optional static GitHub Pages。即使沒有 hosted service，也可以繼續使用 Agent Note。",
+          " - Agent Note 不嘗試還原舊的 workspace state。它專注於 reviewability：commit 為什麼改變、哪些 prompt 參與其中，以及 diff 中有多少是 AI-authored。"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 66,
+    "title": "docs: clarify product value docs",
+    "state": "open"
+  }
+}
