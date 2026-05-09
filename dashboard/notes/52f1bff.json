@@ -1,0 +1,67 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T16:57:56.279Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/why-command.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "52f1bff4bbc2a0954d4baac9a6fe74b6109ac62b",
+    "short_sha": "52f1bff",
+    "message": "docs: document why target resolution heuristics",
+    "date": "2026-05-10T01:57:54+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/why-command.md",
+        "lines": [
+          "index 4c7b69d..a54cc3c 100644",
+          "--- a/docs/knowledge/why-command.md",
+          "+++ b/docs/knowledge/why-command.md",
+          "@@ -149,6 +149,10 @@ Current behavior:",
+          "    `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,",
+          "    `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied",
+          "    from AI Agent output.",
+          "+   Normalize `@`, `file://`, and `vscode:` forms before repository-relative",
+          "+   resolution; GitHub file URLs prefer existing repo paths so branch names that",
+          "+   contain `/` stay part of the ref, and ambiguous `@scope/...` paths are kept",
+          "+   when they exist in the repo.",
+          " 2. Run `git blame --porcelain` for the target line or range.",
+          " 3. Read the blame commit's Agent Note.",
+          " 4. Prefer interactions whose `files_touched` contains the target path."
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 68,
+    "title": "feat(cli): support why line link targets",
+    "state": "open"
+  }
+}
