@@ -128,7 +128,17 @@ async function printBlamedCommit(target: WhyTarget, sha: string): Promise<void> 
     return;
   }
 
-  const entry = normalizeEntry(raw);
+  let entry: AgentnoteEntry;
+  try {
+    entry = normalizeEntry(raw);
+  } catch {
+    console.log();
+    console.log("agent note:");
+    console.log("  evidence: none");
+    console.log("  reason:   Agent Note payload for this commit is invalid");
+    return;
+  }
+
   printEntrySummary(entry);
   printRelatedInteractions(target.path, entry);
 }

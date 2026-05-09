@@ -25,6 +25,8 @@ usage:
   agent-note show [commit]          show session details for a commit
   agent-note why <path>:<line[-end]>
                                     explain the Agent Note context behind a line
+  agent-note blame <path>:<line[-end]>
+                                    alias of why
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]
                                     generate PR report or update PR description/comment

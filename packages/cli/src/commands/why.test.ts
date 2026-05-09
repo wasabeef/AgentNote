@@ -11,6 +11,7 @@ describe("agentnote why", () => {
   let baseCommit: string;
   let featureCommit: string;
   let contextCommit: string;
+  let malformedCommit: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
@@ -73,6 +74,15 @@ describe("agentnote why", () => {
       files: [{ path: "src/app.ts", by_ai: false }],
       attribution: { ai_ratio: 0, method: "file" },
     });
+
+    writeFileSync(
+      join(testDir, "src", "app.ts"),
+      "export const greeting = 'hello';\nexport const label = 'Agent Note';\nexport const ready = true;\nexport const malformed = true;\n",
+    );
+    execSync("git add src/app.ts", { cwd: testDir });
+    execSync("git commit -m 'chore: add malformed note line'", { cwd: testDir });
+    malformedCommit = execSync("git rev-parse HEAD", { cwd: testDir, encoding: "utf-8" }).trim();
+    addRawNote(malformedCommit, { v: 1, unexpected: true });
   });
 
   after(() => {
@@ -118,6 +128,20 @@ describe("agentnote why", () => {
     assert.match(output, /prompt:\s+Mark the app shell as ready/);
   });
 
+  it("keeps malformed note payloads explicit", () => {
+    const output = execFileSync("node", [cliPath, "why", "src/app.ts:4"], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.match(
+      output,
+      new RegExp(`commit: ${malformedCommit.slice(0, 7)} chore: add malformed note line`),
+    );
+    assert.match(output, /evidence: none/);
+    assert.match(output, /Agent Note payload for this commit is invalid/);
+  });
+
   it("returns none when git blame cannot resolve the target", () => {
     const output = execFileSync("node", [cliPath, "why", "src/missing.ts:1"], {
       cwd: testDir,
@@ -141,6 +165,10 @@ describe("agentnote why", () => {
   });
 
   function addNote(commitSha: string, entry: AgentnoteEntry): void {
+    addRawNote(commitSha, entry);
+  }
+
+  function addRawNote(commitSha: string, entry: unknown): void {
     execFileSync(
       "git",
       ["notes", "--ref=agentnote", "add", "-f", "-m", JSON.stringify(entry), commitSha],

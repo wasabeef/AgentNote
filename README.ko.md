@@ -260,7 +260,7 @@ Agent Note 가 해당 Commit 에 Git Note 를 씁니다
 | `agent-note init` | Hooks, Workflow, Git Hooks, Notes auto-fetch 를 설정합니다 |
 | `agent-note deinit` | Agent Hooks 와 Config 를 제거합니다 |
 | `agent-note show [commit]` | `HEAD` 또는 Commit SHA 뒤의 AI Session 을 보여줍니다 |
-| `agent-note why <path>:<line>` | 파일 한 줄을 마지막으로 바꾼 Commit 의 Agent Note context 를 보여줍니다 |
+| `agent-note why <path>:<line[-end]>` | 파일 한 줄 또는 범위를 마지막으로 바꾼 Commit 의 Agent Note context 를 보여줍니다 |
 | `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |
 | `agent-note pr [base]` | PR Report 를 생성합니다 (Markdown 또는 JSON) |
 | `agent-note session <id>` | 하나의 Session 에 연결된 모든 Commit 을 보여줍니다 |

@@ -7023,7 +7023,16 @@ async function printBlamedCommit(target, sha) {
     console.log("  reason:   no Agent Note data exists for this commit");
     return;
   }
-  const entry = normalizeEntry(raw);
+  let entry;
+  try {
+    entry = normalizeEntry(raw);
+  } catch {
+    console.log();
+    console.log("agent note:");
+    console.log("  evidence: none");
+    console.log("  reason:   Agent Note payload for this commit is invalid");
+    return;
+  }
   printEntrySummary(entry);
   printRelatedInteractions(target.path, entry);
 }
@@ -7122,6 +7131,8 @@ usage:
   agent-note show [commit]          show session details for a commit
   agent-note why <path>:<line[-end]>
                                     explain the Agent Note context behind a line
+  agent-note blame <path>:<line[-end]>
+                                    alias of why
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]
                                     generate PR report or update PR description/comment

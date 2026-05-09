@@ -53,7 +53,7 @@ shorten the manual workflow:
 target line
   -> git blame
   -> blame commit
-  -> git note
+  -> git notes --ref=agentnote show <commit>
   -> related Agent Note interactions / files / files_touched
 ```
 
@@ -78,9 +78,9 @@ agent note:
 
 related prompts:
   1. evidence: file
-     context: packages/cli と dashboard package split の方針を受けて、PR Report と Dashboard の責務を分離する作業。
-     prompt:  はい、その構成でお願い
-     response: この方針で進めます。まず dashboard を独立 package に切り出すために...
+     context: Based on the package split plan, separate PR Report and Dashboard responsibilities.
+     prompt:  Yes, please proceed with that structure.
+     response: Got it. I will proceed with that approach, starting by extracting the Dashboard into an independent package...
      file:    packages/cli/src/core/record.ts
 
 why:
