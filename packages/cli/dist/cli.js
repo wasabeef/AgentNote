@@ -6944,7 +6944,7 @@ init_constants();
 init_entry();
 init_storage();
 init_git();
-import { isAbsolute as isAbsolute5, relative as relative3 } from "node:path";
+import { isAbsolute as isAbsolute5, posix, relative as relative3 } from "node:path";
 var ALL_ZERO_COMMIT_RE = /^0{40}$/;
 var BLAME_HEADER_RE = /^([0-9a-f]{40})\s+\d+\s+\d+(?:\s+\d+)?$/i;
 var TARGET_RE = /^(.+):(\d+)(?:-(\d+))?$/;
@@ -6993,6 +6993,10 @@ async function normalizeTargetPath(path) {
   const root2 = await repoRoot();
   return relative3(root2, normalized).replaceAll("\\", "/");
 }
+function normalizeComparablePath(path) {
+  const normalized = posix.normalize(path.replaceAll("\\", "/").replace(PATH_PREFIX_RE, ""));
+  return normalized === "." ? "" : normalized.replace(PATH_PREFIX_RE, "");
+}
 async function blameTarget(target) {
   const range = `${target.startLine},${target.endLine}`;
   const result = await gitSafe(["blame", "--porcelain", "-L", range, "--", target.path]);
@@ -7038,7 +7042,7 @@ async function printBlamedCommit(target, sha) {
 }
 async function readBlamedCommit(sha) {
   const output = await git(["show", "-s", `--format=${COMMIT_FORMAT}`, "--date=short", sha]);
-  const [fullSha, shortSha, subject, date, author] = output.split("\0");
+  const [fullSha, shortSha, subject, date, author] = output.split("\0").map((value) => value.trim());
   return {
     sha: fullSha || sha,
     shortSha: shortSha || sha.slice(0, 7),
@@ -7080,7 +7084,12 @@ function printRelatedInteractions(targetPath, entry) {
   console.log("  note:     exact line-to-prompt attribution is not stored yet");
 }
 function selectRelatedInteractions(targetPath, entry) {
-  const fileMatches = entry.interactions.filter((interaction) => interaction.files_touched?.includes(targetPath)).map((interaction) => ({ interaction, evidence: "file" }));
+  const normalizedTargetPath = normalizeComparablePath(targetPath);
+  const fileMatches = entry.interactions.filter(
+    (interaction) => (interaction.files_touched ?? []).some(
+      (filePath) => normalizeComparablePath(filePath) === normalizedTargetPath
+    )
+  ).map((interaction) => ({ interaction, evidence: "file" }));
   if (fileMatches.length > 0) {
     return fileMatches.slice(0, DEFAULT_RELATED_INTERACTION_LIMIT);
   }

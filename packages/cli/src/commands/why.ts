@@ -1,4 +1,4 @@
-import { isAbsolute, relative } from "node:path";
+import { isAbsolute, posix, relative } from "node:path";
 import { TRUNCATE_PROMPT, TRUNCATE_RESPONSE_SHOW } from "../core/constants.js";
 import {
   type AgentnoteEntry,
@@ -93,6 +93,11 @@ async function normalizeTargetPath(path: string): Promise<string> {
   return relative(root, normalized).replaceAll("\\", "/");
 }
 
+function normalizeComparablePath(path: string): string {
+  const normalized = posix.normalize(path.replaceAll("\\", "/").replace(PATH_PREFIX_RE, ""));
+  return normalized === "." ? "" : normalized.replace(PATH_PREFIX_RE, "");
+}
+
 async function blameTarget(target: WhyTarget): Promise<string[]> {
   const range = `${target.startLine},${target.endLine}`;
   const result = await gitSafe(["blame", "--porcelain", "-L", range, "--", target.path]);
@@ -145,7 +150,9 @@ async function printBlamedCommit(target: WhyTarget, sha: string): Promise<void> 
 
 async function readBlamedCommit(sha: string): Promise<BlamedCommit> {
   const output = await git(["show", "-s", `--format=${COMMIT_FORMAT}`, "--date=short", sha]);
-  const [fullSha, shortSha, subject, date, author] = output.split("\0");
+  const [fullSha, shortSha, subject, date, author] = output
+    .split("\0")
+    .map((value) => value.trim());
   return {
     sha: fullSha || sha,
     shortSha: shortSha || sha.slice(0, 7),
@@ -199,8 +206,13 @@ function selectRelatedInteractions(
   targetPath: string,
   entry: AgentnoteEntry,
 ): RelatedInteraction[] {
+  const normalizedTargetPath = normalizeComparablePath(targetPath);
   const fileMatches = entry.interactions
-    .filter((interaction) => interaction.files_touched?.includes(targetPath))
+    .filter((interaction) =>
+      (interaction.files_touched ?? []).some(
+        (filePath) => normalizeComparablePath(filePath) === normalizedTargetPath,
+      ),
+    )
     .map((interaction) => ({ interaction, evidence: "file" as const }));
 
   if (fileMatches.length > 0) {

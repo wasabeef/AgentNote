@@ -37,14 +37,14 @@ describe("agentnote why", () => {
     addNote(featureCommit, {
       v: 1,
       agent: "codex",
-      session_id: "a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd",
+      session_id: "a1b2c3d4-aaaa-4bbb-8ccc-dddddddddddd",
       timestamp: "2026-05-09T00:00:00.000Z",
       model: "gpt-5.4",
       interactions: [
         {
           prompt: "Add the Agent Note label to the app shell.",
           response: "I added the label export in src/app.ts.",
-          files_touched: ["src/app.ts"],
+          files_touched: ["./src\\app.ts"],
         },
       ],
       files: [{ path: "src/app.ts", by_ai: true }],
@@ -62,7 +62,7 @@ describe("agentnote why", () => {
     addNote(contextCommit, {
       v: 1,
       agent: "codex",
-      session_id: "b1b2c3d4-aaaa-bbbb-cccc-dddddddddddd",
+      session_id: "b1b2c3d4-aaaa-4bbb-9ccc-dddddddddddd",
       timestamp: "2026-05-09T00:00:00.000Z",
       model: "gpt-5.4",
       interactions: [
@@ -102,7 +102,7 @@ describe("agentnote why", () => {
     assert.match(output, /evidence: file/);
     assert.match(output, /evidence: file-level Agent Note data/);
     assert.match(output, /prompt:\s+Add the Agent Note label/);
-    assert.match(output, /file:\s+src\/app\.ts/);
+    assert.match(output, /file:\s+\.\/src\\app\.ts/);
   });
 
   it("keeps missing notes explicit for older blamed lines", () => {
