@@ -1,0 +1,374 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T16:41:32.985Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "commit push ok",
+      "response": "新しい未解決 thread が 1 件出ています。`zh-tw` の `why` 説明だけ `path:line-end` が抜けている指摘なので、他 locale も同じ観点で揃えてから commit / push します。\n`zh-tw` は指摘どおり抜けています。検索コマンドの quote を踏んだので、範囲を絞って全 locale の該当文を取り直します。\n全 locale の説明文が例の `:42-55` とズレています。`zh-tw` だけでなく全言語の同じ文に `path:line-end` を足して、locale parity を保ちます。\n指摘箇所だけでなく、全言語の同じ説明文に `path:line-end` を追加しました。次は docs の整合性確認と website build を回します。\nwebsite build を回しています。今回は docs 文言だけなので、ここが通れば commit / push して CodeRabbit thread を resolve します。\n変更は docs の 1 語追加だけに収まっています。`website` build も通ったので、このまま commit / push して thread を解決します。",
+      "files_touched": [
+        "docs/knowledge/why-command.md",
+        "website/src/content/docs/commands.mdx",
+        "website/src/content/docs/ja/commands.mdx",
+        "website/src/content/docs/es/commands.mdx",
+        "website/src/content/docs/fr/commands.mdx",
+        "website/src/content/docs/de/commands.mdx",
+        "website/src/content/docs/it/commands.mdx",
+        "website/src/content/docs/ko/commands.mdx",
+        "website/src/content/docs/zh-cn/commands.mdx",
+        "website/src/content/docs/zh-tw/commands.mdx",
+        "website/src/content/docs/ru/commands.mdx",
+        "website/src/content/docs/id/commands.mdx",
+        "website/src/content/docs/pt-br/commands.mdx"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/why-command.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/commands.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "791902d85b2eb2d920efe0e82d662ea04c3e1c3a",
+    "short_sha": "791902d",
+    "message": "docs: clarify why range target format",
+    "date": "2026-05-10T01:41:30+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/why-command.md",
+        "lines": [
+          "index bdce76a..4c7b69d 100644",
+          "--- a/docs/knowledge/why-command.md",
+          "+++ b/docs/knowledge/why-command.md",
+          "@@ -145,7 +145,7 @@ Rationale:",
+          " ",
+          " Current behavior:",
+          " ",
+          "-1. Parse `path:line`, `path:start-end`, `path:line:column`, GitHub-style",
+          "+1. Parse `path:line`, `path:line-end`, `path:line:column`, GitHub-style",
+          "    `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,",
+          "    `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied",
+          "    from AI Agent output."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/commands.mdx",
+        "lines": [
+          "index 1c6ead7..8747545 100644",
+          "--- a/website/src/content/docs/commands.mdx",
+          "+++ b/website/src/content/docs/commands.mdx",
+          "@@ -82,7 +82,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accepts `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...`, and leading `@` path mentions copied from AI Agent output. It shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow.",
+          "+  `why` accepts `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...`, and leading `@` path mentions copied from AI Agent output. It shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/commands.mdx",
+        "lines": [
+          "index 8d5e4fd..a571671 100644",
+          "--- a/website/src/content/docs/de/commands.mdx",
+          "+++ b/website/src/content/docs/de/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` akzeptiert `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` akzeptiert `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/commands.mdx",
+        "lines": [
+          "index d65f719..41aabb3 100644",
+          "--- a/website/src/content/docs/es/commands.mdx",
+          "+++ b/website/src/content/docs/es/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` acepta `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` acepta `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/commands.mdx",
+        "lines": [
+          "index bbf5d33..0073ba0 100644",
+          "--- a/website/src/content/docs/fr/commands.mdx",
+          "+++ b/website/src/content/docs/fr/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accepte `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, les GitHub file URLs, `file://...`, `vscode://file...` et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` accepte `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, les GitHub file URLs, `file://...`, `vscode://file...` et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/commands.mdx",
+        "lines": [
+          "index 94bc822..5a762d9 100644",
+          "--- a/website/src/content/docs/id/commands.mdx",
+          "+++ b/website/src/content/docs/id/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` menerima `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, dan path dengan awalan `@` yang disalin dari output AI Agent. Command ini mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` menerima `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, dan path dengan awalan `@` yang disalin dari output AI Agent. Command ini mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/commands.mdx",
+        "lines": [
+          "index 61859ee..f962c96 100644",
+          "--- a/website/src/content/docs/it/commands.mdx",
+          "+++ b/website/src/content/docs/it/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accetta `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e path con `@` iniziale copiati dall'output di un AI Agent. Evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` accetta `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e path con `@` iniziale copiati dall'output di un AI Agent. Evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/commands.mdx",
+        "lines": [
+          "index d5720b2..13204e5 100644",
+          "--- a/website/src/content/docs/ja/commands.mdx",
+          "+++ b/website/src/content/docs/ja/commands.mdx",
+          "@@ -77,7 +77,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` は `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。`git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。",
+          "+  `why` は `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。`git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/commands.mdx",
+        "lines": [
+          "index 8b70fcc..e3ff427 100644",
+          "--- a/website/src/content/docs/ko/commands.mdx",
+          "+++ b/website/src/content/docs/ko/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 는 `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.",
+          "+  `why` 는 `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/commands.mdx",
+        "lines": [
+          "index b910ab8..5662877 100644",
+          "--- a/website/src/content/docs/pt-br/commands.mdx",
+          "+++ b/website/src/content/docs/pt-br/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` aceita `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e paths com `@` inicial copiados da saída de um AI Agent. Ele encurta o fluxo manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` aceita `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e paths com `@` inicial copiados da saída de um AI Agent. Ele encurta o fluxo manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/commands.mdx",
+        "lines": [
+          "index f5a983a..a37a16e 100644",
+          "--- a/website/src/content/docs/ru/commands.mdx",
+          "+++ b/website/src/content/docs/ru/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` принимает `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` принимает `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/commands.mdx",
+        "lines": [
+          "index 91cdf1e..9f65e99 100644",
+          "--- a/website/src/content/docs/zh-cn/commands.mdx",
+          "+++ b/website/src/content/docs/zh-cn/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 支持 `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及从 AI Agent 输出复制的前置 `@` path。它缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          "+  `why` 支持 `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及从 AI Agent 输出复制的前置 `@` path。它缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/commands.mdx",
+        "lines": [
+          "index eba23b8..0071d9c 100644",
+          "--- a/website/src/content/docs/zh-tw/commands.mdx",
+          "+++ b/website/src/content/docs/zh-tw/commands.mdx",
+          "@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 支援 `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          "+  `why` 支援 `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 68,
+    "title": "feat(cli): support why line link targets",
+    "state": "open"
+  }
+}
