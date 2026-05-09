@@ -5,7 +5,7 @@ description: Öffentliche CLI-Befehle für Agent Note.
 
 import { Aside } from '@astrojs/starlight/components';
 
-Diese Seite zeigt die Befehle, die Nutzer direkt ausführen. Für das erste Setup starte mit [Installation](./installation/).
+Diese Seite zeigt die Befehle, die Nutzer direkt ausführen. Für das erste Setup beginnen Sie mit [Installation](./installation/).
 
 ## Häufige Aufgaben
 
@@ -55,7 +55,7 @@ npx agent-note deinit --agent claude
 
 ## agent-note status
 
-Zeigt den Tracking state.
+Zeigt den Tracking-Status.
 
 ```bash
 npx agent-note status
@@ -118,7 +118,7 @@ prompts: 2
 
 ## agent-note why
 
-Zeigt den Agent Note context hinter einer geänderten Zeile.
+Zeigt den Agent-Note-Kontext hinter einer geänderten Zeile.
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -134,12 +134,12 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` akzeptiert `path:line`, `path#Lline`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@` aus AI-Agent-Ausgaben.
+  `why` akzeptiert `path:line`, `path#Lline`, GitHub file URLs, `file://...`, `vscode://file...` und Pfade mit führendem `@` aus AI-Agent-Ausgaben.
 </Aside>
 
 ## AI Agent Skill
 
-Installiere den Agent Note Skill, um diese Aufgaben in natürlicher Sprache anzustoßen.
+Installieren Sie den Agent Note Skill, um diese Aufgaben in natürlicher Sprache anzustoßen.
 
 ```bash
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user

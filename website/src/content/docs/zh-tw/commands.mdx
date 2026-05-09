@@ -47,7 +47,7 @@ npx agent-note init --agent claude
 npx agent-note deinit --agent claude
 ```
 
-| Flag | 說明 |
+| 參數 | 說明 |
 |---|---|
 | `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
 | `--remove-workflow` | 同時刪除 PR Report 和 Dashboard workflow |
@@ -55,7 +55,7 @@ npx agent-note deinit --agent claude
 
 ## agent-note status
 
-顯示 tracking state。
+顯示追蹤狀態。
 
 ```bash
 npx agent-note status
@@ -118,7 +118,7 @@ prompts: 2
 
 ## agent-note why
 
-顯示某一行背後的 Agent Note context。
+顯示某一行背後的 Agent Note 脈絡。
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42

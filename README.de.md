@@ -265,10 +265,10 @@ Den detaillierten Flow, die Schätzung von KI-geschriebener Arbeit und das gespe
 | --- | --- |
 | `agent-note init` | Richtet Hooks, Workflow, Git Hooks und Notes auto-fetch ein |
 | `agent-note deinit` | Entfernt Agent-Note-Hooks und Konfiguration |
-| `agent-note status` | Zeigt den Tracking state |
+| `agent-note status` | Zeigt den Tracking-Status |
 | `agent-note log [n]` | Listet aktuelle Commits mit AI Ratio |
 | `agent-note show [commit]` | Zeigt die KI-Session hinter `HEAD` oder einem Commit SHA |
-| `agent-note why <target>` | Zeigt den Agent Note context hinter einer Datei-Zeile oder einem Bereich |
+| `agent-note why <target>` | Zeigt den Agent-Note-Kontext hinter einer Datei-Zeile oder einem Bereich |
 
 ## GitHub Action
 

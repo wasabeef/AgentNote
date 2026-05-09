@@ -151,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` menunjukkan Agent Adapters yang aktif. `capture:` merangkum apa yang dikumpulkan Active Agent Hooks. `git:` menunjukkan apakah Managed Repository-Local Git Hooks sudah terpasang. `commit:` memberi tahu apakah `git commit` biasa adalah Primary Tracking Path.
+`agent:` menunjukkan agent adapters yang aktif. `capture:` merangkum data yang dikumpulkan hooks aktif. `git:` menunjukkan apakah Git Hooks repository-local yang dikelola sudah terpasang. `commit:` memberi tahu apakah `git commit` biasa adalah jalur tracking utama.
 
 ## Yang Anda dapatkan
 
@@ -265,9 +265,9 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | --- | --- |
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
 | `agent-note deinit` | Menghapus hooks dan config Agent Note |
-| `agent-note status` | Menampilkan Tracking state |
-| `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
-| `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |
+| `agent-note status` | Menampilkan status pelacakan |
+| `agent-note log [n]` | Mendaftar commit terbaru dengan Rasio AI |
+| `agent-note show [commit]` | Menampilkan sesi AI di balik `HEAD` atau Commit SHA |
 | `agent-note why <target>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |
 
 ## GitHub Action
