@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,23 +16,23 @@ describe("agentnote why", () => {
 
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-why-"));
-    execSync("git init", { cwd: testDir });
-    execSync("git config user.email test@test.com", { cwd: testDir });
-    execSync("git config user.name Test", { cwd: testDir });
+    git(["init"]);
+    git(["config", "user.email", "test@test.com"]);
+    git(["config", "user.name", "Test"]);
 
     mkdirSync(join(testDir, "src"), { recursive: true });
     writeFileSync(join(testDir, "src", "app.ts"), "export const greeting = 'hello';\n");
-    execSync("git add src/app.ts", { cwd: testDir });
-    execSync("git commit -m 'chore: add app shell'", { cwd: testDir });
-    baseCommit = execSync("git rev-parse HEAD", { cwd: testDir, encoding: "utf-8" }).trim();
+    git(["add", "src/app.ts"]);
+    git(["commit", "-m", "chore: add app shell"]);
+    baseCommit = gitOutput(["rev-parse", "HEAD"]);
 
     writeFileSync(
       join(testDir, "src", "app.ts"),
       "export const greeting = 'hello';\nexport const label = 'Agent Note';\n",
     );
-    execSync("git add src/app.ts", { cwd: testDir });
-    execSync("git commit -m 'feat: add label'", { cwd: testDir });
-    featureCommit = execSync("git rev-parse HEAD", { cwd: testDir, encoding: "utf-8" }).trim();
+    git(["add", "src/app.ts"]);
+    git(["commit", "-m", "feat: add label"]);
+    featureCommit = gitOutput(["rev-parse", "HEAD"]);
 
     addNote(featureCommit, {
       v: 1,
@@ -55,9 +55,9 @@ describe("agentnote why", () => {
       join(testDir, "src", "app.ts"),
       "export const greeting = 'hello';\nexport const label = 'Agent Note';\nexport const ready = true;\n",
     );
-    execSync("git add src/app.ts", { cwd: testDir });
-    execSync("git commit -m 'feat: mark app ready'", { cwd: testDir });
-    contextCommit = execSync("git rev-parse HEAD", { cwd: testDir, encoding: "utf-8" }).trim();
+    git(["add", "src/app.ts"]);
+    git(["commit", "-m", "feat: mark app ready"]);
+    contextCommit = gitOutput(["rev-parse", "HEAD"]);
 
     addNote(contextCommit, {
       v: 1,
@@ -79,9 +79,9 @@ describe("agentnote why", () => {
       join(testDir, "src", "app.ts"),
       "export const greeting = 'hello';\nexport const label = 'Agent Note';\nexport const ready = true;\nexport const malformed = true;\n",
     );
-    execSync("git add src/app.ts", { cwd: testDir });
-    execSync("git commit -m 'chore: add malformed note line'", { cwd: testDir });
-    malformedCommit = execSync("git rev-parse HEAD", { cwd: testDir, encoding: "utf-8" }).trim();
+    git(["add", "src/app.ts"]);
+    git(["commit", "-m", "chore: add malformed note line"]);
+    malformedCommit = gitOutput(["rev-parse", "HEAD"]);
     addRawNote(malformedCommit, { v: 1, unexpected: true });
   });
 
@@ -169,12 +169,19 @@ describe("agentnote why", () => {
   }
 
   function addRawNote(commitSha: string, entry: unknown): void {
-    execFileSync(
-      "git",
-      ["notes", "--ref=agentnote", "add", "-f", "-m", JSON.stringify(entry), commitSha],
-      {
-        cwd: testDir,
-      },
-    );
+    git(["notes", "--ref=agentnote", "add", "-f", "-m", JSON.stringify(entry), commitSha]);
+  }
+
+  function git(args: string[]): void {
+    execFileSync("git", args, {
+      cwd: testDir,
+    });
+  }
+
+  function gitOutput(args: string[]): string {
+    return execFileSync("git", args, {
+      cwd: testDir,
+      encoding: "utf-8",
+    }).trim();
   }
 });

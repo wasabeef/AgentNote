@@ -202,6 +202,7 @@ function printRelatedInteractions(targetPath: string, entry: AgentnoteEntry): vo
   console.log("  note:     exact line-to-prompt attribution is not stored yet");
 }
 
+/** Prefer normalized file-level matches, then capped compact commit context as weaker evidence. */
 function selectRelatedInteractions(
   targetPath: string,
   entry: AgentnoteEntry,
