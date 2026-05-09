@@ -1,0 +1,614 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T16:33:29.168Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": "CodeRabbit 指摘はすべて妥当だったので、ローカルで修正しました。\n\nFixed locally:\n- `docs/knowledge/why-command.md`: `#Lstart-Lend`, `#LlineCcol`, `file://`, `vscode:` まで明記\n- `why.test.ts`: real `@scope/...` path を `@` mention と区別して保持する regression test を追加\n- `why.ts`: `realpathSync.native()` を `try/catch` で防御\n- `website` 全 12 locale: `why` の supported target examples と説明を実装に合わせて拡張\n- `packages/cli/dist/cli.js`: 再 build 済み\n\nChecks:\n- `npm run build` (`packages/cli`)\n- `npm run lint` (`packages/cli`)\n- `npm run typecheck` (`packages/cli`)\n- `node --import tsx/esm --test src/commands/why.test.ts`\n- `npm run build` (`website`)\n\nまだ commit / push / thread resolve はしていません。コミット・push して、修正済み CodeRabbit thread を resolve してよいですか？\n\nMay the Force be with you.",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "入れた対応:\n- `agent-note why src/app.ts#L42`\n- `agent-note why src/app.ts#L42-L55`\n- `agent-note why @src/app.ts#L42`\n- `agent-note why src/app.ts:42:7`\n- `agent-note why https://github.com/owner/repo/blob/main/src/app.ts#L42`\n- `agent-note why file:///.../src/app.ts#L42`\n- `agent-note why vscode://file/.../src/app.ts:42:7`"
+        },
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "CodeRabbit 指摘はすべて妥当だったので、ローカルで修正しました。 Fixed locally: `docs/knowledge/why-command.md`: `#Lstart-Lend`, `#LlineCcol`, `file://`, `vscode:` まで明記 `why.test.ts`: real `@scope/...` path を `@` mention と区別して保持する regression test を追加 `why.ts`: `realpathSync.native()` を `try/catch` で防御 `website` 全 12 locale: `why` の supported target examples と説明を実装に合わせて拡張 `packages/cli/dist/cli.js`: 再 build 済み Checks: `npm run build` (`packages/cli`) `npm run lint` (`packages/cli`)"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "response_exact_commit_path",
+          "response_basename_or_identifier"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/why-command.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/commands.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "b9803b3ae9fe61f71d7523c068d37381540475f3",
+    "short_sha": "b9803b3",
+    "message": "fix(cli): document why target variants",
+    "date": "2026-05-10T01:33:22+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/why-command.md",
+        "lines": [
+          "index b067a6d..bdce76a 100644",
+          "--- a/docs/knowledge/why-command.md",
+          "+++ b/docs/knowledge/why-command.md",
+          "@@ -21,8 +21,12 @@ Primary command:",
+          " agent-note why packages/cli/src/core/record.ts:291",
+          " agent-note why packages/cli/src/core/record.ts:291-310",
+          " agent-note why packages/cli/src/core/record.ts#L291",
+          "+agent-note why packages/cli/src/core/record.ts#L291-L310",
+          "+agent-note why packages/cli/src/core/record.ts#L291C5",
+          " agent-note why @packages/cli/src/core/record.ts#L291",
+          " agent-note why https://github.com/owner/repo/blob/main/packages/cli/src/core/record.ts#L291",
+          "+agent-note why file:///workspace/repo/packages/cli/src/core/record.ts#L291",
+          "+agent-note why vscode://file/workspace/repo/packages/cli/src/core/record.ts:291:5",
+          " ```",
+          " ",
+          " Alias:",
+          "@@ -142,8 +146,9 @@ Rationale:",
+          " Current behavior:",
+          " ",
+          " 1. Parse `path:line`, `path:start-end`, `path:line:column`, GitHub-style",
+          "-   `path#Lline`, GitHub file URLs, and leading `@` path mentions copied from",
+          "-   AI Agent output.",
+          "+   `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,",
+          "+   `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied",
+          "+   from AI Agent output.",
+          " 2. Run `git blame --porcelain` for the target line or range.",
+          " 3. Read the blame commit's Agent Note.",
+          " 4. Prefer interactions whose `files_touched` contains the target path."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index aefd975..075276a 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -7076,7 +7076,12 @@ function stripPathMentionPrefix(value) {",
+          "   return value.startsWith(AI_PATH_MENTION_PREFIX) ? value.slice(AI_PATH_MENTION_PREFIX.length) : value;",
+          " }",
+          " function realpathIfExists(path) {",
+          "-  return existsSync15(path) ? realpathSync.native(path) : path;",
+          "+  if (!existsSync15(path)) return path;",
+          "+  try {",
+          "+    return realpathSync.native(path);",
+          "+  } catch {",
+          "+    return path;",
+          "+  }",
+          " }",
+          " async function stripOptionalPathMentionPrefix(value) {",
+          "   if (!value.startsWith(AI_PATH_MENTION_PREFIX)) return value;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.test.ts",
+        "lines": [
+          "index b189307..2337488 100644",
+          "--- a/packages/cli/src/commands/why.test.ts",
+          "+++ b/packages/cli/src/commands/why.test.ts",
+          "@@ -102,6 +102,11 @@ describe(\"agentnote why\", () => {",
+          "       files: [{ path: \"src/app.ts\", by_ai: false }],",
+          "       attribution: { ai_ratio: 0, method: \"file\" },",
+          "     });",
+          "+",
+          "+    mkdirSync(join(testDir, \"@scope\", \"src\"), { recursive: true });",
+          "+    writeFileSync(join(testDir, \"@scope\", \"src\", \"app.ts\"), \"export const scoped = true;\\n\");",
+          "+    git([\"add\", \"@scope/src/app.ts\"]);",
+          "+    git([\"commit\", \"-m\", \"chore: add scoped fixture\"]);",
+          "   });",
+          " ",
+          "   after(() => {",
+          "@@ -151,6 +156,16 @@ describe(\"agentnote why\", () => {",
+          "     }",
+          "   });",
+          " ",
+          "+  it(\"preserves real @scope paths while still accepting AI-agent @ mentions\", () => {",
+          "+    const output = execFileSync(\"node\", [cliPath, \"why\", \"@scope/src/app.ts#L1\"], {",
+          "+      cwd: testDir,",
+          "+      encoding: \"utf-8\",",
+          "+    });",
+          "+",
+          "+    assert.match(output, /target: @scope\\/src\\/app\\.ts:1/);",
+          "+    assert.match(output, /commit: [0-9a-f]{7} chore: add scoped fixture/);",
+          "+  });",
+          "+",
+          "   it(\"keeps missing notes explicit for older blamed lines\", () => {",
+          "     const output = execFileSync(\"node\", [cliPath, \"why\", \"src/app.ts:1\"], {",
+          "       cwd: testDir,"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.ts",
+        "lines": [
+          "index 963cc7b..083d589 100644",
+          "--- a/packages/cli/src/commands/why.ts",
+          "+++ b/packages/cli/src/commands/why.ts",
+          "@@ -212,7 +212,12 @@ function stripPathMentionPrefix(value: string): string {",
+          " }",
+          " ",
+          " function realpathIfExists(path: string): string {",
+          "-  return existsSync(path) ? realpathSync.native(path) : path;",
+          "+  if (!existsSync(path)) return path;",
+          "+  try {",
+          "+    return realpathSync.native(path);",
+          "+  } catch {",
+          "+    return path;",
+          "+  }",
+          " }",
+          " ",
+          " async function stripOptionalPathMentionPrefix(value: string): Promise<string> {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/commands.mdx",
+        "lines": [
+          "index cfd6dda..1c6ead7 100644",
+          "--- a/website/src/content/docs/commands.mdx",
+          "+++ b/website/src/content/docs/commands.mdx",
+          "@@ -70,13 +70,19 @@ Show the Agent Note context behind the commit that last changed a file line.",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accepts `path:line`, GitHub-style `path#Lline`, GitHub file URLs, and leading `@` path mentions copied from AI Agent output. It shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow.",
+          "+  `why` accepts `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...`, and leading `@` path mentions copied from AI Agent output. It shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/commands.mdx",
+        "lines": [
+          "index a504ded..8d5e4fd 100644",
+          "--- a/website/src/content/docs/de/commands.mdx",
+          "+++ b/website/src/content/docs/de/commands.mdx",
+          "@@ -49,13 +49,19 @@ Findet mit `git blame` den Commit, der eine Zeile zuletzt geändert hat, und zei",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` akzeptiert `path:line`, die GitHub-Form `path#Lline`, GitHub file URLs und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` akzeptiert `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/commands.mdx",
+        "lines": [
+          "index d698ccc..d65f719 100644",
+          "--- a/website/src/content/docs/es/commands.mdx",
+          "+++ b/website/src/content/docs/es/commands.mdx",
+          "@@ -49,13 +49,19 @@ Usa `git blame` para encontrar el Commit que cambió una línea y muestra el con",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` acepta `path:line`, el formato GitHub `path#Lline`, GitHub file URLs y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` acepta `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/commands.mdx",
+        "lines": [
+          "index af8c0db..bbf5d33 100644",
+          "--- a/website/src/content/docs/fr/commands.mdx",
+          "+++ b/website/src/content/docs/fr/commands.mdx",
+          "@@ -49,13 +49,19 @@ Cherche avec `git blame` le Commit qui a modifié une ligne, puis affiche le con",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accepte `path:line`, la forme GitHub `path#Lline`, les GitHub file URLs et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` accepte `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, les GitHub file URLs, `file://...`, `vscode://file...` et les paths préfixés par `@` copiés depuis une sortie d'AI Agent. Il évite le chemin manuel `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/commands.mdx",
+        "lines": [
+          "index 488a5b0..94bc822 100644",
+          "--- a/website/src/content/docs/id/commands.mdx",
+          "+++ b/website/src/content/docs/id/commands.mdx",
+          "@@ -49,13 +49,19 @@ Menggunakan `git blame` untuk menemukan Commit yang terakhir mengubah satu baris",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` menerima `path:line`, format GitHub `path#Lline`, GitHub file URL, dan path dengan awalan `@` yang disalin dari output AI Agent. Command ini mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` menerima `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, dan path dengan awalan `@` yang disalin dari output AI Agent. Command ini mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/commands.mdx",
+        "lines": [
+          "index 9990158..61859ee 100644",
+          "--- a/website/src/content/docs/it/commands.mdx",
+          "+++ b/website/src/content/docs/it/commands.mdx",
+          "@@ -49,13 +49,19 @@ Usa `git blame` per trovare il Commit che ha cambiato una riga e mostra il conte",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` accetta `path:line`, il formato GitHub `path#Lline`, GitHub file URLs e path con `@` iniziale copiati dall'output di un AI Agent. Evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` accetta `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e path con `@` iniziale copiati dall'output di un AI Agent. Evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/commands.mdx",
+        "lines": [
+          "index 68ec08b..d5720b2 100644",
+          "--- a/website/src/content/docs/ja/commands.mdx",
+          "+++ b/website/src/content/docs/ja/commands.mdx",
+          "@@ -65,13 +65,19 @@ files:   5 changed, 3 by AI",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` は `path:line`、GitHub 風の `path#Lline`、GitHub file URL、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。`git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。",
+          "+  `why` は `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。`git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/commands.mdx",
+        "lines": [
+          "index 79053ea..8b70fcc 100644",
+          "--- a/website/src/content/docs/ko/commands.mdx",
+          "+++ b/website/src/content/docs/ko/commands.mdx",
+          "@@ -49,13 +49,19 @@ commit 의 prompts, responses, touched files, agent, model, attribution 을 표",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 는 `path:line`, GitHub 형식의 `path#Lline`, GitHub file URL, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.",
+          "+  `why` 는 `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/commands.mdx",
+        "lines": [
+          "index 55b8ec8..b910ab8 100644",
+          "--- a/website/src/content/docs/pt-br/commands.mdx",
+          "+++ b/website/src/content/docs/pt-br/commands.mdx",
+          "@@ -49,13 +49,19 @@ Usa `git blame` para encontrar o Commit que alterou uma linha e mostra o context",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` aceita `path:line`, o formato GitHub `path#Lline`, GitHub file URLs e paths com `@` inicial copiados da saída de um AI Agent. Ele encurta o fluxo manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` aceita `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` e paths com `@` inicial copiados da saída de um AI Agent. Ele encurta o fluxo manual `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/commands.mdx",
+        "lines": [
+          "index cc8ef9b..f5a983a 100644",
+          "--- a/website/src/content/docs/ru/commands.mdx",
+          "+++ b/website/src/content/docs/ru/commands.mdx",
+          "@@ -49,13 +49,19 @@ npx agent-note show abc1234",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` принимает `path:line`, GitHub-форму `path#Lline`, GitHub file URLs и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.",
+          "+  `why` принимает `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/commands.mdx",
+        "lines": [
+          "index 57342cb..91cdf1e 100644",
+          "--- a/website/src/content/docs/zh-cn/commands.mdx",
+          "+++ b/website/src/content/docs/zh-cn/commands.mdx",
+          "@@ -49,13 +49,19 @@ npx agent-note show abc1234",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 支持 `path:line`、GitHub 风格的 `path#Lline`、GitHub file URL，以及从 AI Agent 输出复制的前置 `@` path。它缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          "+  `why` 支持 `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及从 AI Agent 输出复制的前置 `@` path。它缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/commands.mdx",
+        "lines": [
+          "index 0fb0cac..eba23b8 100644",
+          "--- a/website/src/content/docs/zh-tw/commands.mdx",
+          "+++ b/website/src/content/docs/zh-tw/commands.mdx",
+          "@@ -49,13 +49,19 @@ npx agent-note show abc1234",
+          " ```bash",
+          " npx agent-note why src/middleware/auth.ts:42",
+          " npx agent-note why src/middleware/auth.ts:42-55",
+          "+npx agent-note why src/middleware/auth.ts:42:7",
+          " npx agent-note why src/middleware/auth.ts#L42",
+          "+npx agent-note why src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why src/middleware/auth.ts#L42C7",
+          " npx agent-note why @src/middleware/auth.ts#L42",
+          " npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42",
+          "+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55",
+          "+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42",
+          "+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 支援 `path:line`、GitHub 風格的 `path#Lline`、GitHub file URL，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          "+  `why` 支援 `path:line`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 68,
+    "title": "feat(cli): support why line link targets",
+    "state": "open"
+  }
+}
