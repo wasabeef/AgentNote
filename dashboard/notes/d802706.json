@@ -1,0 +1,821 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T15:02:38.750Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "PR まで作成して",
+      "response": "PR 作成まで進めます。まず対象差分を今回の `why` 実装だけに絞って、無関係な `model-icons/new-*.png` は巻き込まずに commit → push → PR 作成の順で進めます。\n`common:pr-create` の手順に沿って進めます。対象は `why` command と docs のみで、未追跡の `website/public/model-icons/new-*.png` は PR に含めません。\nステージ対象を確認しました。`new-*.png` は含まれておらず、`why` 実装・テスト・docs・dist のみです。これで commit します。\npush できました。PR 本文は変更内容・検証結果・正直な制限事項が伝わるように作って、Draft ではなく open の PR として作成します。\nPR 作成しました: https://github.com/wasabeef/AgentNote/pull/67\n\nOpen PR です。`feat/why-command` → `main`、Draft ではありません。未追跡の `website/public/model-icons/new-*.png` は含めていません。",
+      "contexts": [
+        {
+          "kind": "reference",
+          "source": "previous_response",
+          "text": "- `why` の evidence 表示が file match でも `commit-level` 固定だったので、実際の `file` / `commit` に合わせました。\n- docs に未実装 option が現行機能のように見えていたので、`Possible future options` に修正しました。\n- commit-level fallback のテストを追加しました。\n- `git blame` が対象 file / range を解決できない場合に crash せず `evidence: none` を返すようにしました。\n- range 指定で複数 commit が出ることを再確認しました。\n- `agent-note blame` alias もテスト済みです。\n- README 全言語に command を追加済みです。\n- website commands 全 12 locale に説明を追加済みです。\n- `docs/knowledge/why-command.md` は実装済み MVP と future schema の位置づけに整理済みです。\n- 既存 CLI 全体の regression を full test で確認済みです。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "$coderabbit-review",
+      "response": "修正と検証は完了しています。コミット実行は確認必須なので、OK なら `y` で進めます。",
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "commit_subject_overlap",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/why-command.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/cli.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/commands.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "d8027060833a4042d46fe214c65e288a0bf51804",
+    "short_sha": "d802706",
+    "message": "fix(cli): address why review feedback",
+    "date": "2026-05-10T00:02:36+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.de.md",
+        "lines": [
+          "index 0f04efc..4383919 100644",
+          "--- a/README.de.md",
+          "+++ b/README.de.md",
+          "@@ -260,7 +260,7 @@ Den detaillierten Flow, die Schätzung von KI-geschriebener Arbeit und das gespe",
+          " | `agent-note init` | Richtet Hooks, Workflow, Git Hooks und Notes auto-fetch ein |",
+          " | `agent-note deinit` | Entfernt Hooks und Config für einen Agent |",
+          " | `agent-note show [commit]` | Zeigt die KI-Session hinter `HEAD` oder einem Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Zeigt den Agent Note context hinter einer Datei-Zeile |",
+          "+| `agent-note why <path>:<line[-end]>` | Zeigt den Agent Note context hinter einer Datei-Zeile oder einem Bereich |",
+          " | `agent-note log [n]` | Listet aktuelle Commits mit AI Ratio |",
+          " | `agent-note pr [base]` | Generiert PR Report (Markdown oder JSON) |",
+          " | `agent-note session <id>` | Zeigt alle Commits, die mit einer Session verbunden sind |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.es.md",
+        "lines": [
+          "index 84c7d53..c3c2f05 100644",
+          "--- a/README.es.md",
+          "+++ b/README.es.md",
+          "@@ -260,7 +260,7 @@ Para el Flow detallado, cómo Agent Note estima el trabajo escrito por IA y el S",
+          " | `agent-note init` | Configura Hooks, Workflow, Git Hooks y Notes auto-fetch |",
+          " | `agent-note deinit` | Elimina Hooks y Config para un Agent |",
+          " | `agent-note show [commit]` | Muestra la sesión AI detrás de `HEAD` o un Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Explica el contexto de Agent Note detrás de una línea de archivo |",
+          "+| `agent-note why <path>:<line[-end]>` | Explica el contexto de Agent Note detrás de una línea o rango de archivo |",
+          " | `agent-note log [n]` | Lista Commits recientes con AI Ratio |",
+          " | `agent-note pr [base]` | Genera PR Report (Markdown o JSON) |",
+          " | `agent-note session <id>` | Muestra todos los Commits vinculados a una sesión |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.fr.md",
+        "lines": [
+          "index 090785a..141f706 100644",
+          "--- a/README.fr.md",
+          "+++ b/README.fr.md",
+          "@@ -260,7 +260,7 @@ Pour le Flow détaillé, la façon dont Agent Note estime le travail écrit par",
+          " | `agent-note init` | Configure Hooks, Workflow, Git Hooks et Notes auto-fetch |",
+          " | `agent-note deinit` | Supprime Hooks et Config pour un Agent |",
+          " | `agent-note show [commit]` | Affiche la Session IA derrière `HEAD` ou un Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Explique le contexte Agent Note derrière une ligne de fichier |",
+          "+| `agent-note why <path>:<line[-end]>` | Explique le contexte Agent Note derrière une ligne ou une plage de fichier |",
+          " | `agent-note log [n]` | Liste les Commits récents avec AI Ratio |",
+          " | `agent-note pr [base]` | Génère un PR Report (Markdown ou JSON) |",
+          " | `agent-note session <id>` | Affiche tous les Commits liés à une Session |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.id.md",
+        "lines": [
+          "index b66e1f0..93533cb 100644",
+          "--- a/README.id.md",
+          "+++ b/README.id.md",
+          "@@ -260,7 +260,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan",
+          " | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |",
+          " | `agent-note deinit` | Menghapus Hooks dan Config untuk Agent |",
+          " | `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Menjelaskan konteks Agent Note di balik satu baris file |",
+          "+| `agent-note why <path>:<line[-end]>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |",
+          " | `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |",
+          " | `agent-note pr [base]` | Membuat PR Report (Markdown atau JSON) |",
+          " | `agent-note session <id>` | Menampilkan semua Commits yang terkait dengan satu Session |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index 4029166..7365453 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -260,7 +260,7 @@ Per il Flow dettagliato, come Agent Note stima il lavoro scritto dall'AI e lo Sc",
+          " | `agent-note init` | Configura Hooks, Workflow, Git Hooks e Notes auto-fetch |",
+          " | `agent-note deinit` | Rimuove Hooks e Config per un Agent |",
+          " | `agent-note show [commit]` | Mostra la sessione AI dietro `HEAD` o un Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Mostra il contesto Agent Note dietro una riga di file |",
+          "+| `agent-note why <path>:<line[-end]>` | Mostra il contesto Agent Note dietro una riga o un intervallo di file |",
+          " | `agent-note log [n]` | Elenca Commit recenti con AI Ratio |",
+          " | `agent-note pr [base]` | Genera PR Report (Markdown o JSON) |",
+          " | `agent-note session <id>` | Mostra tutti i Commit collegati a una sessione |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ja.md",
+        "lines": [
+          "index 4b46303..317f5f9 100644",
+          "--- a/README.ja.md",
+          "+++ b/README.ja.md",
+          "@@ -260,7 +260,7 @@ Agent Note がその Commit に Git Note を書く",
+          " | `agent-note init` | Hooks、Workflow、Git Hooks、Notes auto-fetch を設定します |",
+          " | `agent-note deinit` | Agent の Hooks と Config を削除します |",
+          " | `agent-note show [commit]` | `HEAD` または Commit SHA の AI Session を表示します |",
+          "-| `agent-note why <path>:<line>` | 指定行を最後に変更した Commit の Agent Note context を表示します |",
+          "+| `agent-note why <path>:<line[-end]>` | 指定行または範囲を最後に変更した Commit の Agent Note context を表示します |",
+          " | `agent-note log [n]` | Recent Commits と AI Ratio を一覧します |",
+          " | `agent-note pr [base]` | PR Report を生成します (Markdown または JSON) |",
+          " | `agent-note session <id>` | 1 つの Session に紐づく全 Commit を表示します |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 8350602..25d4492 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -260,7 +260,7 @@ Agent Note 가 해당 Commit 에 Git Note 를 씁니다",
+          " | `agent-note init` | Hooks, Workflow, Git Hooks, Notes auto-fetch 를 설정합니다 |",
+          " | `agent-note deinit` | Agent Hooks 와 Config 를 제거합니다 |",
+          " | `agent-note show [commit]` | `HEAD` 또는 Commit SHA 뒤의 AI Session 을 보여줍니다 |",
+          "-| `agent-note why <path>:<line>` | 파일 한 줄을 마지막으로 바꾼 Commit 의 Agent Note context 를 보여줍니다 |",
+          "+| `agent-note why <path>:<line[-end]>` | 파일 한 줄 또는 범위를 마지막으로 바꾼 Commit 의 Agent Note context 를 보여줍니다 |",
+          " | `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |",
+          " | `agent-note pr [base]` | PR Report 를 생성합니다 (Markdown 또는 JSON) |",
+          " | `agent-note session <id>` | 하나의 Session 에 연결된 모든 Commit 을 보여줍니다 |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.md",
+        "lines": [
+          "index fc3c0df..59fa523 100644",
+          "--- a/README.md",
+          "+++ b/README.md",
+          "@@ -260,7 +260,7 @@ For the detailed flow, how Agent Note estimates AI-written work, and the stored",
+          " | `agent-note init` | Set up hooks, workflow, git hooks, and notes auto-fetch |",
+          " | `agent-note deinit` | Remove hooks and config for an agent |",
+          " | `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |",
+          "-| `agent-note why <path>:<line>` | Explain the Agent Note context behind a file line |",
+          "+| `agent-note why <path>:<line[-end]>` | Explain the Agent Note context behind a file line or range |",
+          " | `agent-note log [n]` | List recent commits with AI ratio |",
+          " | `agent-note pr [base]` | Generate PR Report (markdown or JSON) |",
+          " | `agent-note session <id>` | Show all commits linked to one session |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 553e554..059f717 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -260,7 +260,7 @@ Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Sch",
+          " | `agent-note init` | Configura Hooks, Workflow, Git Hooks e Notes auto-fetch |",
+          " | `agent-note deinit` | Remove Hooks e Config de um Agent |",
+          " | `agent-note show [commit]` | Mostra a AI Session por trás de `HEAD` ou de um Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Explica o contexto do Agent Note por trás de uma linha de arquivo |",
+          "+| `agent-note why <path>:<line[-end]>` | Explica o contexto do Agent Note por trás de uma linha ou intervalo de arquivo |",
+          " | `agent-note log [n]` | Lista Recent Commits com AI Ratio |",
+          " | `agent-note pr [base]` | Gera PR Report (Markdown ou JSON) |",
+          " | `agent-note session <id>` | Mostra todos os Commits vinculados a uma Session |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ru.md",
+        "lines": [
+          "index 635ece0..41ab51e 100644",
+          "--- a/README.ru.md",
+          "+++ b/README.ru.md",
+          "@@ -260,7 +260,7 @@ Agent Note записывает Git Note для этого Commit",
+          " | `agent-note init` | Настраивает Hooks, Workflow, Git Hooks и Notes auto-fetch |",
+          " | `agent-note deinit` | Удаляет Hooks и Config для Agent |",
+          " | `agent-note show [commit]` | Показывает AI Session за `HEAD` или Commit SHA |",
+          "-| `agent-note why <path>:<line>` | Показывает контекст Agent Note для строки файла |",
+          "+| `agent-note why <path>:<line[-end]>` | Показывает контекст Agent Note для строки или диапазона файла |",
+          " | `agent-note log [n]` | Список Recent Commits с AI Ratio |",
+          " | `agent-note pr [base]` | Генерирует PR Report (Markdown или JSON) |",
+          " | `agent-note session <id>` | Показывает все Commits, связанные с одной Session |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-cn.md",
+        "lines": [
+          "index 0ac6b76..5ade213 100644",
+          "--- a/README.zh-cn.md",
+          "+++ b/README.zh-cn.md",
+          "@@ -260,7 +260,7 @@ Agent Note 为该 Commit 写入 Git Note",
+          " | `agent-note init` | 设置 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |",
+          " | `agent-note deinit` | 移除某个 Agent 的 Hooks 和 Config |",
+          " | `agent-note show [commit]` | 显示 `HEAD` 或 Commit SHA 背后的 AI Session |",
+          "-| `agent-note why <path>:<line>` | 显示最后修改某一行的 Commit 的 Agent Note context |",
+          "+| `agent-note why <path>:<line[-end]>` | 显示最后修改某一行或范围的 Commit 的 Agent Note context |",
+          " | `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |",
+          " | `agent-note pr [base]` | 生成 PR Report (Markdown 或 JSON) |",
+          " | `agent-note session <id>` | 显示关联到某个 Session 的所有 Commits |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-tw.md",
+        "lines": [
+          "index 8adcf2e..187a77e 100644",
+          "--- a/README.zh-tw.md",
+          "+++ b/README.zh-tw.md",
+          "@@ -260,7 +260,7 @@ Agent Note 為該 Commit 寫入 Git Note",
+          " | `agent-note init` | 設定 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |",
+          " | `agent-note deinit` | 移除某個 Agent 的 Hooks 和 Config |",
+          " | `agent-note show [commit]` | 顯示 `HEAD` 或 Commit SHA 背後的 AI Session |",
+          "-| `agent-note why <path>:<line>` | 顯示最後修改某一行的 Commit 的 Agent Note context |",
+          "+| `agent-note why <path>:<line[-end]>` | 顯示最後修改某一行或範圍的 Commit 的 Agent Note context |",
+          " | `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |",
+          " | `agent-note pr [base]` | 產生 PR Report (Markdown 或 JSON) |",
+          " | `agent-note session <id>` | 顯示關聯到某個 Session 的所有 Commits |"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/why-command.md",
+        "lines": [
+          "index 1d9fded..782ff03 100644",
+          "--- a/docs/knowledge/why-command.md",
+          "+++ b/docs/knowledge/why-command.md",
+          "@@ -53,7 +53,7 @@ shorten the manual workflow:",
+          " target line",
+          "   -> git blame",
+          "   -> blame commit",
+          "-  -> git note",
+          "+  -> git notes --ref=agentnote show <commit>",
+          "   -> related Agent Note interactions / files / files_touched",
+          " ```",
+          " ",
+          "@@ -78,9 +78,9 @@ agent note:",
+          " ",
+          " related prompts:",
+          "   1. evidence: file",
+          "-     context: packages/cli と dashboard package split の方針を受けて、PR Report と Dashboard の責務を分離する作業。",
+          "-     prompt:  はい、その構成でお願い",
+          "-     response: この方針で進めます。まず dashboard を独立 package に切り出すために...",
+          "+     context: Based on the package split plan, separate PR Report and Dashboard responsibilities.",
+          "+     prompt:  Yes, please proceed with that structure.",
+          "+     response: Got it. I will proceed with that approach, starting by extracting the Dashboard into an independent package...",
+          "      file:    packages/cli/src/core/record.ts",
+          " ",
+          " why:"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 9967827..b107d88 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -7023,7 +7023,16 @@ async function printBlamedCommit(target, sha) {",
+          "     console.log(\"  reason:   no Agent Note data exists for this commit\");",
+          "     return;",
+          "   }",
+          "-  const entry = normalizeEntry(raw);",
+          "+  let entry;",
+          "+  try {",
+          "+    entry = normalizeEntry(raw);",
+          "+  } catch {",
+          "+    console.log();",
+          "+    console.log(\"agent note:\");",
+          "+    console.log(\"  evidence: none\");",
+          "+    console.log(\"  reason:   Agent Note payload for this commit is invalid\");",
+          "+    return;",
+          "+  }",
+          "   printEntrySummary(entry);",
+          "   printRelatedInteractions(target.path, entry);",
+          " }",
+          "@@ -7122,6 +7131,8 @@ usage:",
+          "   agent-note show [commit]          show session details for a commit",
+          "   agent-note why <path>:<line[-end]>",
+          "                                     explain the Agent Note context behind a line",
+          "+  agent-note blame <path>:<line[-end]>",
+          "+                                    alias of why",
+          "   agent-note log [n]                list recent commits with session info",
+          "   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]",
+          "                                     generate PR report or update PR description/comment"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/cli.ts",
+        "lines": [
+          "index 0fbc68d..2677a79 100644",
+          "--- a/packages/cli/src/cli.ts",
+          "+++ b/packages/cli/src/cli.ts",
+          "@@ -25,6 +25,8 @@ usage:",
+          "   agent-note show [commit]          show session details for a commit",
+          "   agent-note why <path>:<line[-end]>",
+          "                                     explain the Agent Note context behind a line",
+          "+  agent-note blame <path>:<line[-end]>",
+          "+                                    alias of why",
+          "   agent-note log [n]                list recent commits with session info",
+          "   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]",
+          "                                     generate PR report or update PR description/comment"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.test.ts",
+        "lines": [
+          "index dfe41a5..4df75a0 100644",
+          "--- a/packages/cli/src/commands/why.test.ts",
+          "+++ b/packages/cli/src/commands/why.test.ts",
+          "@@ -11,6 +11,7 @@ describe(\"agentnote why\", () => {",
+          "   let baseCommit: string;",
+          "   let featureCommit: string;",
+          "   let contextCommit: string;",
+          "+  let malformedCommit: string;",
+          "   const cliPath = join(process.cwd(), \"dist\", \"cli.js\");",
+          " ",
+          "   before(() => {",
+          "@@ -73,6 +74,15 @@ describe(\"agentnote why\", () => {",
+          "       files: [{ path: \"src/app.ts\", by_ai: false }],",
+          "       attribution: { ai_ratio: 0, method: \"file\" },",
+          "     });",
+          "+",
+          "+    writeFileSync(",
+          "+      join(testDir, \"src\", \"app.ts\"),",
+          "+      \"export const greeting = 'hello';\\nexport const label = 'Agent Note';\\nexport const ready = true;\\nexport const malformed = true;\\n\",",
+          "+    );",
+          "+    execSync(\"git add src/app.ts\", { cwd: testDir });",
+          "+    execSync(\"git commit -m 'chore: add malformed note line'\", { cwd: testDir });",
+          "+    malformedCommit = execSync(\"git rev-parse HEAD\", { cwd: testDir, encoding: \"utf-8\" }).trim();",
+          "+    addRawNote(malformedCommit, { v: 1, unexpected: true });",
+          "   });",
+          " ",
+          "   after(() => {",
+          "@@ -118,6 +128,20 @@ describe(\"agentnote why\", () => {",
+          "     assert.match(output, /prompt:\\s+Mark the app shell as ready/);",
+          "   });",
+          " ",
+          "+  it(\"keeps malformed note payloads explicit\", () => {",
+          "+    const output = execFileSync(\"node\", [cliPath, \"why\", \"src/app.ts:4\"], {",
+          "+      cwd: testDir,",
+          "+      encoding: \"utf-8\",",
+          "+    });",
+          "+",
+          "+    assert.match(",
+          "+      output,",
+          "+      new RegExp(`commit: ${malformedCommit.slice(0, 7)} chore: add malformed note line`),",
+          "+    );",
+          "+    assert.match(output, /evidence: none/);",
+          "+    assert.match(output, /Agent Note payload for this commit is invalid/);",
+          "+  });",
+          "+",
+          "   it(\"returns none when git blame cannot resolve the target\", () => {",
+          "     const output = execFileSync(\"node\", [cliPath, \"why\", \"src/missing.ts:1\"], {",
+          "       cwd: testDir,",
+          "@@ -141,6 +165,10 @@ describe(\"agentnote why\", () => {",
+          "   });",
+          " ",
+          "   function addNote(commitSha: string, entry: AgentnoteEntry): void {",
+          "+    addRawNote(commitSha, entry);",
+          "+  }",
+          "+",
+          "+  function addRawNote(commitSha: string, entry: unknown): void {",
+          "     execFileSync(",
+          "       \"git\",",
+          "       [\"notes\", \"--ref=agentnote\", \"add\", \"-f\", \"-m\", JSON.stringify(entry), commitSha],"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.ts",
+        "lines": [
+          "index cf79241..058f46f 100644",
+          "--- a/packages/cli/src/commands/why.ts",
+          "+++ b/packages/cli/src/commands/why.ts",
+          "@@ -128,7 +128,17 @@ async function printBlamedCommit(target: WhyTarget, sha: string): Promise<void>",
+          "     return;",
+          "   }",
+          " ",
+          "-  const entry = normalizeEntry(raw);",
+          "+  let entry: AgentnoteEntry;",
+          "+  try {",
+          "+    entry = normalizeEntry(raw);",
+          "+  } catch {",
+          "+    console.log();",
+          "+    console.log(\"agent note:\");",
+          "+    console.log(\"  evidence: none\");",
+          "+    console.log(\"  reason:   Agent Note payload for this commit is invalid\");",
+          "+    return;",
+          "+  }",
+          "+",
+          "   printEntrySummary(entry);",
+          "   printRelatedInteractions(target.path, entry);",
+          " }"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/commands.mdx",
+        "lines": [
+          "index ff389f0..7bd2317 100644",
+          "--- a/website/src/content/docs/commands.mdx",
+          "+++ b/website/src/content/docs/commands.mdx",
+          "@@ -73,7 +73,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` shortens the manual `git blame` → git note lookup flow. It shows commit-level or file-level prompt evidence and stays explicit that exact line-to-prompt attribution is not stored yet.",
+          "+  `why` shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow. It shows commit-level or file-level prompt evidence and stays explicit that exact line-to-prompt attribution is not stored yet.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/commands.mdx",
+        "lines": [
+          "index 2b4f668..1f27ee7 100644",
+          "--- a/website/src/content/docs/de/commands.mdx",
+          "+++ b/website/src/content/docs/de/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` verkürzt den manuellen Weg `git blame` → git note. Es zeigt prompt evidence auf Commit- oder Datei-Ebene, behauptet aber nicht, den exakten prompt für diese Zeile zu kennen.",
+          "+  `why` verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`. Es zeigt prompt evidence auf Commit- oder Datei-Ebene, behauptet aber nicht, den exakten prompt für diese Zeile zu kennen.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/commands.mdx",
+        "lines": [
+          "index 33b3535..d65c9aa 100644",
+          "--- a/website/src/content/docs/es/commands.mdx",
+          "+++ b/website/src/content/docs/es/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` evita hacer manualmente el flujo `git blame` → git note. Muestra evidence a nivel de Commit o archivo, sin afirmar que conoce el prompt exacto que escribió esa línea.",
+          "+  `why` evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`. Muestra evidence a nivel de Commit o archivo, sin afirmar que conoce el prompt exacto que escribió esa línea.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/commands.mdx",
+        "lines": [
+          "index 5a218a0..3bc42c5 100644",
+          "--- a/website/src/content/docs/fr/commands.mdx",
+          "+++ b/website/src/content/docs/fr/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` évite de faire à la main le chemin `git blame` → git note. Il affiche une preuve au niveau du Commit ou du fichier, sans prétendre connaître le prompt exact qui a écrit cette ligne.",
+          "+  `why` évite de faire à la main le chemin `git blame` → `git notes --ref=agentnote show <commit>`. Il affiche une preuve au niveau du Commit ou du fichier, sans prétendre connaître le prompt exact qui a écrit cette ligne.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/commands.mdx",
+        "lines": [
+          "index 914aa08..3957d06 100644",
+          "--- a/website/src/content/docs/id/commands.mdx",
+          "+++ b/website/src/content/docs/id/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` mempersingkat alur manual `git blame` → git note. Command ini menampilkan evidence tingkat Commit atau file, tanpa mengklaim tahu prompt persis yang menulis baris tersebut.",
+          "+  `why` mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`. Command ini menampilkan evidence tingkat Commit atau file, tanpa mengklaim tahu prompt persis yang menulis baris tersebut.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/commands.mdx",
+        "lines": [
+          "index f93b4b3..efd9396 100644",
+          "--- a/website/src/content/docs/it/commands.mdx",
+          "+++ b/website/src/content/docs/it/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` evita il percorso manuale `git blame` → git note. Mostra evidence a livello di Commit o file, senza affermare di conoscere il prompt esatto che ha scritto quella riga.",
+          "+  `why` evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`. Mostra evidence a livello di Commit o file, senza affermare di conoscere il prompt esatto che ha scritto quella riga.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/commands.mdx",
+        "lines": [
+          "index dab2559..dcb9edd 100644",
+          "--- a/website/src/content/docs/ja/commands.mdx",
+          "+++ b/website/src/content/docs/ja/commands.mdx",
+          "@@ -68,7 +68,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` は `git blame` から git note を手で探す流れを短縮します。表示できるのは commit 単位または file 単位の prompt evidence で、正確な「この行を書いた prompt」まではまだ保存していません。",
+          "+  `why` は `git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。表示できるのは Commit 単位または file 単位の prompt evidence で、正確な「この行を書いた prompt」まではまだ保存していません。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/commands.mdx",
+        "lines": [
+          "index 2a2e398..6694f3d 100644",
+          "--- a/website/src/content/docs/ko/commands.mdx",
+          "+++ b/website/src/content/docs/ko/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 는 `git blame` → git note 를 손으로 따라가는 흐름을 줄여줍니다. Commit 또는 file 수준의 prompt evidence 를 보여주지만, 정확히 그 줄을 쓴 prompt 를 안다고 말하지는 않습니다.",
+          "+  `why` 는 `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다. Commit 또는 file 수준의 prompt evidence 를 보여주지만, 정확히 그 줄을 쓴 prompt 를 안다고 말하지는 않습니다.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/commands.mdx",
+        "lines": [
+          "index 4f7993c..8a1d013 100644",
+          "--- a/website/src/content/docs/pt-br/commands.mdx",
+          "+++ b/website/src/content/docs/pt-br/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` encurta o fluxo manual `git blame` → git note. Ele mostra evidência no nível do Commit ou do arquivo, sem afirmar que sabe o prompt exato que escreveu aquela linha.",
+          "+  `why` encurta o fluxo manual `git blame` → `git notes --ref=agentnote show <commit>`. Ele mostra evidência no nível do Commit ou do arquivo, sem afirmar que sabe o prompt exato que escreveu aquela linha.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/commands.mdx",
+        "lines": [
+          "index 76b09d0..2faac66 100644",
+          "--- a/website/src/content/docs/ru/commands.mdx",
+          "+++ b/website/src/content/docs/ru/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` заменяет ручной путь `git blame` → git note. Он показывает evidence на уровне Commit или файла, но не утверждает, что знает точный prompt, написавший эту строку.",
+          "+  `why` заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`. Он показывает evidence на уровне Commit или файла, но не утверждает, что знает точный prompt, написавший эту строку.",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/commands.mdx",
+        "lines": [
+          "index 5543d60..0437819 100644",
+          "--- a/website/src/content/docs/zh-cn/commands.mdx",
+          "+++ b/website/src/content/docs/zh-cn/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 缩短了手动执行 `git blame` → git note 的流程。它显示 Commit 或 file 级别的 prompt evidence，但不会声称知道写下该行的精确 prompt。",
+          "+  `why` 缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。它显示 Commit 或 file 级别的 prompt evidence，但不会声称知道写下该行的精确 prompt。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/commands.mdx",
+        "lines": [
+          "index 3dfa20d..3c2aee4 100644",
+          "--- a/website/src/content/docs/zh-tw/commands.mdx",
+          "+++ b/website/src/content/docs/zh-tw/commands.mdx",
+          "@@ -52,7 +52,7 @@ npx agent-note why src/middleware/auth.ts:42-55",
+          " ```",
+          " ",
+          " <Aside>",
+          "-  `why` 縮短了手動執行 `git blame` → git note 的流程。它顯示 Commit 或 file 層級的 prompt evidence，但不會宣稱知道寫下該行的精確 prompt。",
+          "+  `why` 縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。它顯示 Commit 或 file 層級的 prompt evidence，但不會宣稱知道寫下該行的精確 prompt。",
+          " </Aside>",
+          " ",
+          " ## agent-note log"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 67,
+    "title": "feat(cli): add why command",
+    "state": "open"
+  }
+}
