@@ -1,0 +1,378 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T11:53:54.958Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "a0149dd111b15ac21d040175d430cdd64e2477f6",
+    "short_sha": "a0149dd",
+    "message": "docs: polish agent support terminology",
+    "date": "2026-05-09T20:53:53+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index 54ced18..36efe74 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -118,7 +118,7 @@ Questi file restano visibili in Notes, PR Report e Dashboard. Vengono rimossi so",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Sì | Sì | Sì | Sì | Di default |",
+          " | Codex CLI | Supported | Sì | Sì | Sì | Sì | Quando la cronologia patch di Codex corrisponde al Commit finale |",
+          "-| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi edit e il file finale corrispondono |",
+          "+| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit e il file finale coincidono |",
+          " | Gemini CLI | Preview | Sì | Sì | Sì | Sì | Non ancora |",
+          " ",
+          " `Files` significa che Agent Note può mostrare quali file committati sono stati toccati dall'Agent. `Line Estimate` significa che può anche stimare le linee scritte dall'AI invece di contare solo i file."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 0ecf4f7..0a3c08a 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -118,7 +118,7 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |",
+          " | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |",
+          "-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando as contagens de edit e o file final batem |",
+          "+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          " `Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/agent-support.mdx",
+        "lines": [
+          "index e8a7334..1c5858c 100644",
+          "--- a/website/src/content/docs/agent-support.mdx",
+          "+++ b/website/src/content/docs/agent-support.mdx",
+          "@@ -70,7 +70,7 @@ Shell-only edits are not guessed from command text. If no reliable transcript is",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when the committed blob still matches the latest AI edit.",
+          "+Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when the committed file still matches the latest AI edit.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/commands.mdx",
+        "lines": [
+          "index 63297b4..46fac31 100644",
+          "--- a/website/src/content/docs/commands.mdx",
+          "+++ b/website/src/content/docs/commands.mdx",
+          "@@ -176,5 +176,5 @@ npx agent-note commit -m \"feat: add auth\"",
+          " ",
+          " <Aside>",
+          "   Cursor preview tracks plain `git commit` normally when the generated git hooks are installed.",
+          "-  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed blob still matches the last AI edit. `agent-note commit` remains a useful fallback wrapper when git hooks are unavailable.",
+          "+  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed file still matches the last AI edit. `agent-note commit` remains a useful fallback wrapper when git hooks are unavailable.",
+          " </Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/agent-support.mdx",
+        "lines": [
+          "index b8537e2..b4001a7 100644",
+          "--- a/website/src/content/docs/de/agent-support.mdx",
+          "+++ b/website/src/content/docs/de/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Ja | Ja | Ja | Ja | Standardmäßig |",
+          " | Codex CLI | Supported | Ja | Ja | Ja | Ja | Wenn die Codex-Patch-Historie zum finalen Commit passt |",
+          "-| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit Counts und finaler Blob passen |",
+          "+| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit Counts und finale Datei passen |",
+          " | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI ist transcript-driven. Agent Note liest lokale Transcripts und wechsel",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn der finale Blob noch zum letzten AI edit passt.",
+          "+Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn die finale Datei noch zum letzten AI edit passt.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/agent-support.mdx",
+        "lines": [
+          "index 37fe14e..fde1dfb 100644",
+          "--- a/website/src/content/docs/id/agent-support.mdx",
+          "+++ b/website/src/content/docs/id/agent-support.mdx",
+          "@@ -13,11 +13,11 @@ Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap ag",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |",
+          " | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |",
+          "-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan file akhir cocok |",
+          "+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit dan file akhir cocok |",
+          " | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |",
+          " ",
+          " <Aside>",
+          "-  Files berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. Line Estimate berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file. Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format local hook atau transcript agent masih dapat berubah.",
+          "+  Files berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. Line Estimate berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file. Preview berarti Agent Note mendukung perilaku publik saat ini, tetapi format hook lokal atau transkrip Agent masih dapat berubah.",
+          " </Aside>",
+          " ",
+          " ## Setup yang disarankan",
+          "@@ -61,7 +61,7 @@ Codex CLI bersifat transcript-driven. Agent Note membaca local transcript dan na",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika file akhir masih cocok dengan AI edit terakhir.",
+          "+Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau transkrip lokal. Line-level hanya mungkin ketika jumlah edit dan file akhir masih cocok dengan edit AI terakhir.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/how-it-works.mdx",
+        "lines": [
+          "index ab508c9..1ae4b18 100644",
+          "--- a/website/src/content/docs/id/how-it-works.mdx",
+          "+++ b/website/src/content/docs/id/how-it-works.mdx",
+          "@@ -115,7 +115,7 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus",
+          "   <Card>",
+          "     <div class=\"agent-attribution-card\">",
+          "       <div class=\"agent-attribution-card__title\">Cursor</div>",
+          "-      <p>Mulai sebagai file-level. Naik ke line-level hanya ketika jumlah edit cocok dan file final masih sama dengan edit AI terakhir.</p>",
+          "+      <p>Mulai sebagai file-level. Naik ke line-level hanya ketika jumlah edit cocok dan file akhir masih sama dengan edit AI terakhir.</p>",
+          "       <img class=\"agent-attribution-card__logo\" src=\"/AgentNote/model-icons/cursor.png\" alt=\"\" aria-hidden=\"true\" />",
+          "     </div>",
+          "   </Card>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/agent-support.mdx",
+        "lines": [
+          "index 4f9007f..38bd74a 100644",
+          "--- a/website/src/content/docs/it/agent-support.mdx",
+          "+++ b/website/src/content/docs/it/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note usa lo stesso formato di git note per tutti gli agent, ma ogni agent",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sì | Sì | Sì | Sì | Di default |",
+          " | Codex CLI | Supported | Sì | Sì | Sì | Sì | Quando la cronologia patch di Codex corrisponde al Commit finale |",
+          "-| Cursor | Supported | Sì | Sì | Sì | Sì | Quando edit count e blob finale coincidono |",
+          "+| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit e il file finale coincidono |",
+          " | Gemini CLI | Preview | Sì | Sì | Sì | Sì | Non ancora |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI è transcript-driven. Agent Note legge transcript locali e passa a lin",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor usa `afterFileEdit` / `afterTabFileEdit`, più response hooks o transcript locali. Line-level è possibile solo se il blob finale coincide ancora con l’ultimo edit IA.",
+          "+Cursor usa `afterFileEdit` / `afterTabFileEdit`, più response hooks o transcript locali. Line-level è possibile solo se il file finale coincide ancora con l’ultimo edit IA.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/index.mdx",
+        "lines": [
+          "index b96c01a..940ad94 100644",
+          "--- a/website/src/content/docs/it/index.mdx",
+          "+++ b/website/src/content/docs/it/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Di default</div>",
+          "     <div class=\"cap-partial\">La cronologia patch di Codex corrisponde al Commit finale</div>",
+          "-    <div class=\"cap-partial\">I conteggi edit e il file finale corrispondono</div>",
+          "+    <div class=\"cap-partial\">I conteggi degli edit e il file finale coincidono</div>",
+          "     <div class=\"cap-no\">Non ancora</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/agent-support.mdx",
+        "lines": [
+          "index c1f8139..d6afe0a 100644",
+          "--- a/website/src/content/docs/ja/agent-support.mdx",
+          "+++ b/website/src/content/docs/ja/agent-support.mdx",
+          "@@ -70,7 +70,7 @@ shell-only edit は command 文字列だけから推測しません。信頼で",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor は `afterFileEdit` / `afterTabFileEdit` hook と response hook または local transcript を使います。line-level は、committed blob が最後の AI edit とまだ一致しているときだけ可能です。",
+          "+Cursor は `afterFileEdit` / `afterTabFileEdit` hook と response hook または local transcript を使います。line-level は、committed file が最後の AI edit とまだ一致しているときだけ可能です。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/commands.mdx",
+        "lines": [
+          "index 58ef7dc..1b0bf72 100644",
+          "--- a/website/src/content/docs/ja/commands.mdx",
+          "+++ b/website/src/content/docs/ja/commands.mdx",
+          "@@ -153,5 +153,5 @@ npx agent-note commit -m \"feat: add auth\"",
+          " ",
+          " <Aside>",
+          "   Cursor でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。",
+          "-  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の blob がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。",
+          "+  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の file がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。",
+          " </Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/agent-support.mdx",
+        "lines": [
+          "index 1705014..0de7c84 100644",
+          "--- a/website/src/content/docs/pt-br/agent-support.mdx",
+          "+++ b/website/src/content/docs/pt-br/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ O Agent Note grava o mesmo formato de git note para todos os agents, mas cada ag",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |",
+          " | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |",
+          "-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e arquivo final batem |",
+          "+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o arquivo final ainda bate com o último AI edit.",
+          "+Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando a contagem de edições e o arquivo final ainda coincidem com a última edição da IA.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/index.mdx",
+        "lines": [
+          "index 81f6f50..a277b12 100644",
+          "--- a/website/src/content/docs/pt-br/index.mdx",
+          "+++ b/website/src/content/docs/pt-br/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Por padrão</div>",
+          "     <div class=\"cap-partial\">O histórico de patches do Codex bate com o Commit final</div>",
+          "-    <div class=\"cap-partial\">As contagens de edit e o file final batem</div>",
+          "+    <div class=\"cap-partial\">A contagem de edições e o arquivo final coincidem</div>",
+          "     <div class=\"cap-no\">Ainda não</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 66,
+    "title": "docs: clarify AI review and dashboard guidance",
+    "state": "open"
+  }
+}
