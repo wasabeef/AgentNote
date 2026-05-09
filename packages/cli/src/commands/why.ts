@@ -10,9 +10,13 @@ import { readNote } from "../core/storage.js";
 import { git, gitSafe, repoRoot } from "../git.js";
 import { normalizeEntry } from "./normalize.js";
 
+// Match git blame's all-zero pseudo SHA for uncommitted lines.
 const ALL_ZERO_COMMIT_RE = /^0{40}$/;
+// Parse the header line of each `git blame --porcelain` record.
 const BLAME_HEADER_RE = /^([0-9a-f]{40})\s+\d+\s+\d+(?:\s+\d+)?$/i;
+// Parse CLI targets in `<path>:<line>` or `<path>:<line-end>` form.
 const TARGET_RE = /^(.+):(\d+)(?:-(\d+))?$/;
+// Strip a leading `./` before comparing repository-relative paths.
 const PATH_PREFIX_RE = /^\.\//;
 const PERCENT_DENOMINATOR = 100;
 const DEFAULT_CONTEXT_LINES = 2;
@@ -186,6 +190,7 @@ function printRelatedInteractions(targetPath: string, entry: AgentnoteEntry): vo
   const related = selectRelatedInteractions(targetPath, entry);
   if (related.length === 0) {
     console.log("  prompts:     none");
+    printWhySummary("none");
     return;
   }
 
@@ -196,9 +201,13 @@ function printRelatedInteractions(targetPath: string, entry: AgentnoteEntry): vo
     printInteraction(index + 1, item);
   }
 
+  printWhySummary(`${related[0].evidence}-level Agent Note data`);
+}
+
+function printWhySummary(evidence: string): void {
   console.log();
   console.log("why:");
-  console.log(`  evidence: ${related[0].evidence}-level Agent Note data`);
+  console.log(`  evidence: ${evidence}`);
   console.log("  note:     exact line-to-prompt attribution is not stored yet");
 }
 

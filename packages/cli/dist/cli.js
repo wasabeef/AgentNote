@@ -7070,6 +7070,7 @@ function printRelatedInteractions(targetPath, entry) {
   const related = selectRelatedInteractions(targetPath, entry);
   if (related.length === 0) {
     console.log("  prompts:     none");
+    printWhySummary("none");
     return;
   }
   console.log();
@@ -7078,9 +7079,12 @@ function printRelatedInteractions(targetPath, entry) {
     const item = related[index];
     printInteraction(index + 1, item);
   }
+  printWhySummary(`${related[0].evidence}-level Agent Note data`);
+}
+function printWhySummary(evidence) {
   console.log();
   console.log("why:");
-  console.log(`  evidence: ${related[0].evidence}-level Agent Note data`);
+  console.log(`  evidence: ${evidence}`);
   console.log("  note:     exact line-to-prompt attribution is not stored yet");
 }
 function selectRelatedInteractions(targetPath, entry) {

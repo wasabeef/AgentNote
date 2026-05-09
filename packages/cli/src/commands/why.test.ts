@@ -12,6 +12,7 @@ describe("agentnote why", () => {
   let featureCommit: string;
   let contextCommit: string;
   let malformedCommit: string;
+  let emptyPromptCommit: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
@@ -83,6 +84,24 @@ describe("agentnote why", () => {
     git(["commit", "-m", "chore: add malformed note line"]);
     malformedCommit = gitOutput(["rev-parse", "HEAD"]);
     addRawNote(malformedCommit, { v: 1, unexpected: true });
+
+    writeFileSync(
+      join(testDir, "src", "app.ts"),
+      "export const greeting = 'hello';\nexport const label = 'Agent Note';\nexport const ready = true;\nexport const malformed = true;\nexport const empty = true;\n",
+    );
+    git(["add", "src/app.ts"]);
+    git(["commit", "-m", "chore: add empty prompt line"]);
+    emptyPromptCommit = gitOutput(["rev-parse", "HEAD"]);
+    addNote(emptyPromptCommit, {
+      v: 1,
+      agent: "codex",
+      session_id: "c1b2c3d4-aaaa-4bbb-accc-dddddddddddd",
+      timestamp: "2026-05-09T00:00:00.000Z",
+      model: "gpt-5.4",
+      interactions: [],
+      files: [{ path: "src/app.ts", by_ai: false }],
+      attribution: { ai_ratio: 0, method: "file" },
+    });
   });
 
   after(() => {
@@ -140,6 +159,21 @@ describe("agentnote why", () => {
     );
     assert.match(output, /evidence: none/);
     assert.match(output, /Agent Note payload for this commit is invalid/);
+  });
+
+  it("keeps the why disclaimer when no prompts are selected", () => {
+    const output = execFileSync("node", [cliPath, "why", "src/app.ts:5"], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.match(
+      output,
+      new RegExp(`commit: ${emptyPromptCommit.slice(0, 7)} chore: add empty prompt line`),
+    );
+    assert.match(output, /prompts:\s+none/);
+    assert.match(output, /why:\n {2}evidence: none/);
+    assert.match(output, /exact line-to-prompt attribution is not stored yet/);
   });
 
   it("returns none when git blame cannot resolve the target", () => {
