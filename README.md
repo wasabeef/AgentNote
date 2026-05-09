@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-The GitHub Action posts an AI session report to the PR description:
+By default, the GitHub Action posts an AI session report to the PR description:
 
 The `agentnote-reviewer-context` block is hidden from the rendered PR body. AI review tools that read the raw PR description, such as Copilot, CodeRabbit, Devin, and Greptile, can use it as extra intent and review focus.
 

@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-La GitHub Action poste un rapport de Session IA dans la description de la PR:
+Par défaut, la GitHub Action poste un rapport de Session IA dans la description de la PR:
 
 Le bloc `agentnote-reviewer-context` est enregistré comme hidden comment dans le PR body. Les AI Review tools qui lisent la raw PR description, comme Copilot, CodeRabbit, Devin et Greptile, peuvent l'utiliser comme intent et review focus supplémentaires.
 

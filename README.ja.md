@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-GitHub Action が AI Session Report を PR Description に投稿します。
+GitHub Action はデフォルトで AI Session Report を PR Description に投稿します。
 
 `agentnote-reviewer-context` block は PR body 上では hidden comment として保存されます。Copilot、CodeRabbit、Devin、Greptile のように raw PR description を読む AI Review tool は、これを intent と review focus として利用できます。
 

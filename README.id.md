@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-GitHub Action memposting AI Session Report ke PR Description:
+Secara default, GitHub Action memposting AI Session Report ke PR Description:
 
 Blok `agentnote-reviewer-context` disimpan sebagai hidden comment di PR body. AI Review tool yang membaca raw PR description, seperti Copilot, CodeRabbit, Devin, dan Greptile, dapat menggunakannya sebagai intent dan review focus tambahan.
 

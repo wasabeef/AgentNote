@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-GitHub Action 預設會把 AI Session Report 發佈到 PR Description（也可設定為發佈 comment）：
+預設情況下，GitHub Action 會把 AI Session Report 發佈到 PR Description：
 
 `agentnote-reviewer-context` block 會作為 hidden comment 保存在 PR body 中。Copilot、CodeRabbit、Devin、Greptile 等讀取 raw PR description 的 AI Review tool 可以把它作為額外的 intent 和 review focus。
 
