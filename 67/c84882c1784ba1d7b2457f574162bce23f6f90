@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T12:18:43.070Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
