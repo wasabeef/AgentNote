@@ -2,46 +2,57 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Agent Note, please report it responsibly.
+If you discover a security vulnerability in Agent Note, please report it
+responsibly.
 
 **Do not open a public issue for security vulnerabilities.**
 
-Instead, please send a report via [GitHub Security Advisories](https://github.com/wasabeef/AgentNote/security/advisories/new) or email the maintainer directly.
+Use GitHub Security Advisories:
 
-### What to Include
+https://github.com/wasabeef/AgentNote/security/advisories/new
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if you have one)
+## What to Include
 
-### Response Timeline
+- A clear description of the vulnerability.
+- Steps to reproduce.
+- Potential impact.
+- A suggested fix, if you have one.
 
-- **Acknowledgment**: Within 48 hours
-- **Initial assessment**: Within 1 week
-- **Fix and disclosure**: Coordinated with reporter
+## Response Timeline
+
+- **Acknowledgment**: within 48 hours.
+- **Initial assessment**: within 1 week.
+- **Fix and disclosure**: coordinated with the reporter.
 
 ## Security Design
 
-Agent Note is designed with a security-first approach:
+Agent Note is local-first:
 
-- **Local-first**: All session data stays in `.git/agentnote/` on your machine. Nothing is sent to external services.
-- **No telemetry**: Zero analytics, tracking, or usage data collection.
-- **No auth/accounts**: No login, no tokens, no external service dependencies.
-- **Read-only transcript access**: Agent Note reads Claude Code's transcript files but never writes to or deletes them.
-- **Git hooks only via Claude Code**: Agent Note never installs or modifies native git hooks (`.git/hooks/`). It only registers hooks in `.claude/settings.json`.
+- Session data is written under `.git/agentnote/` in your repository.
+- Permanent records are stored as git notes under `refs/notes/agentnote`.
+- Agent Note does not send telemetry, analytics, prompts, responses, or code to
+  a hosted service.
+- Agent Note does not require an account or service token.
+- Agent transcript files are read only when the selected agent exposes local
+  transcript data. Agent Note does not modify or delete those transcript files.
+- `agent-note init` installs repository-local git hooks and agent hook
+  configuration. Existing git hooks are backed up and chained instead of being
+  overwritten.
 
-## Scope
+## In Scope
 
-Security issues that are in scope:
+- Data leakage from `.git/agentnote/` or git notes to unintended locations.
+- Unintended modification or deletion of user files.
+- Command injection through hook event data, commit messages, or generated
+  hooks.
+- Unsafe handling of agent transcript paths.
+- Exposure of sensitive prompt or response content beyond the configured git
+  notes, PR Report, or Dashboard outputs.
 
-- Data leakage from `.git/agentnote/` to unintended locations
-- Unintended modification or deletion of user files
-- Command injection via hook event data
-- Exposure of sensitive content from transcripts
+## Out of Scope
 
-Issues that are out of scope:
-
-- Vulnerabilities in Claude Code itself
-- Issues requiring local machine access (agent-note's data is local by design)
-- Social engineering attacks
+- Vulnerabilities in third-party coding agents, GitHub, npm, or Git itself.
+- Attacks that require full local machine compromise.
+- Social engineering attacks.
+- Public data intentionally committed, pushed, or published by the repository
+  owner.
