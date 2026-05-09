@@ -876,6 +876,6 @@
   "pull_request": {
     "number": 64,
     "title": "chore: add coderabbit review workflow",
-    "state": "open"
+    "state": "merged"
   }
 }
