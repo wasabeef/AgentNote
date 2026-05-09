@@ -62,6 +62,6 @@
   "pull_request": {
     "number": 68,
     "title": "feat(cli): support why line link targets",
-    "state": "open"
+    "state": "merged"
   }
 }
