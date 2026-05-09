@@ -1,0 +1,233 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T15:19:16.157Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "PR #67 レビュー\n\n  CI: ✅ Test / Lint / PR Report / Dashboard / Website / deploy 全 pass\n  CodeRabbit: skipped\n\n  ---\n  変更の全体像\n\n  ┌───────────────────────────────┬────────────────────────────────────────────────────────────────────┐\n  │           ファイル            │                              変更内容                              │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ commands/why.ts               │ 新規 253行。git blame → git note → interaction を 1 コマンドで短縮 │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ cli.ts                        │ why / blame コマンド登録                                           │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ why.test.ts                   │ 統合テスト 6 ケース                                                │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ README × 12                   │ コマンド一覧に why を 1 行追加                                     │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ docs/knowledge/why-command.md │ 設計メモ（MVP 仕様、将来の schema v2 案）                          │\n  ├───────────────────────────────┼────────────────────────────────────────────────────────────────────┤\n  │ commands.mdx × 12             │ agent-note why セクション追加                                      │\n  └───────────────────────────────┴────────────────────────────────────────────────────────────────────┘\n\n  ---\n  実装評価\n\n  ✅ 入力バリデーション\n\n  TARGET_RE = /^(.+):(\\d+)(?:-(\\d+))?$/ + Number.isInteger() + startLine > 0 && endLine >= startLine\n  で不正入力を全て printUsageAndExit() (never 型) に落とす。パスにコロンが含まれる場合（例: C:\\foo.ts:42）も greedy\n   .+ + 末尾 \\d+ で正しくパース。\n\n  ✅ shell injection なし\n\n  blameTarget / readBlamedCommit は execFile ベースの gitSafe / git を使う。引数は配列渡し。\n\n  ✅ all-zero SHA ガード\n\n  未コミット/staged 行を ALL_ZERO_COMMIT_RE = /^0{40}$/ で除外。git blame --porcelain の uncommitted 行は全 0 SHA\n  で表される。\n\n  ✅ BLAME_HEADER_RE の porcelain 形式対応\n\n  /^([0-9a-f]{40})\\s+\\d+\\s+\\d+(?:\\s+\\d+)?$/i - group size は最初の行にのみ存在し (?:\\s+\\d+)? で両方をカバー。\n\n  ✅ evidence level の誠実な表現\n\n  file evidence がある場合は file-level、ない場合は commit-level にフォールバック。\"exact line-to-prompt\n  attribution is not stored yet\" と明示している点が設計として正直。\n\n  ✅ テストカバレッジ\n\n  ┌────────────────────────────┬────────┐\n  │           ケース           │ テスト │\n  ├────────────────────────────┼────────┤\n  │ file evidence あり         │ ✅     │\n  ├────────────────────────────┼────────┤\n  │ note なし（古い commit）   │ ✅     │\n  ├────────────────────────────┼────────┤\n  │ commit-level fallback      │ ✅     │\n  ├────────────────────────────┼────────┤\n  │ malformed note             │ ✅     │\n  ├────────────────────────────┼────────┤\n  │ blame が空（ファイル不在） │ ✅     │\n  ├────────────────────────────┼────────┤\n  │ range + blame alias        │ ✅     │\n  └────────────────────────────┴────────┘\n\n  ---\n  指摘事項\n\n  🟢 low.nits — readBlamedCommit の author に末尾 \\n が残る可能性\n\n  const [fullSha, shortSha, subject, date, author] = output.split(\"\\0\");\n\n  git show -s --format=... の末尾には \\n が付くため、author フィールドが \"Test\\n\" になる。コンソール出力が\n  author: Test\\n + 空行になる場合がある。修正案:\n\n  const [fullSha, shortSha, subject, date, author] = output.split(\"\\0\").map(s => s.trim());\n\n  ---\n  🔵 info.q — 大きな range での commit 数上限なし\n\n  :1-100 のような広い range は最大 100 個の distinct SHA を返す可能性があり、各 SHA につき git show + readNote\n  を実行する。実用上は問題ないが、将来的に上限を設けておくと安全。現 MVP の scope では許容範囲。\n\n  ---\n  総評\n\n  read-only の MVP として scope が明確で、既存の record / hook / attribution\n  ロジックに一切触れていない。normalizeEntry / filterInteractionsByPromptDetail / normalizeInteractionContexts\n  等の既存関数を再利用しており、重複実装もない。nit 1 件（author trim）のみ。",
+      "response": "レビューありがとう。`author` の trailing newline は小さいけど出力品質として直しておく価値があります。いま full test がまだ走っているので、完了を待ってから `readBlamedCommit()` の split 後 trim を入れて、追加分も含めて再検証します。\nレビュー nit の `author` trim も入れました。ここは CLI 出力だけの改善なので、build/lint/typecheck と `why` の targeted test をもう一度通します。\n追加修正は 3 ファイルだけです。full `npm test` は 415 pass、`author` trim 後に `build` / `lint` / `typecheck` / `why.test.ts` を再実行して通しています。\n\nコミット・push して、追加の CodeRabbit thread 2 件を resolve してよいですか？ May the Force be with you.\n`y` で進めます。",
+      "files_touched": [
+        "packages/cli/src/commands/why.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "commit_file_basename",
+          "diff_identifier",
+          "response_basename_or_identifier",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape"
+        ]
+      },
+      "tools": [
+        "write_stdin",
+        "apply_patch",
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "9acf9f76638651b5d3586b5220c690767fa18b26",
+    "short_sha": "9acf9f7",
+    "message": "fix(cli): normalize why path evidence",
+    "date": "2026-05-10T00:19:13+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index b107d88..b0a2b75 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -6944,7 +6944,7 @@ init_constants();",
+          " init_entry();",
+          " init_storage();",
+          " init_git();",
+          "-import { isAbsolute as isAbsolute5, relative as relative3 } from \"node:path\";",
+          "+import { isAbsolute as isAbsolute5, posix, relative as relative3 } from \"node:path\";",
+          " var ALL_ZERO_COMMIT_RE = /^0{40}$/;",
+          " var BLAME_HEADER_RE = /^([0-9a-f]{40})\\s+\\d+\\s+\\d+(?:\\s+\\d+)?$/i;",
+          " var TARGET_RE = /^(.+):(\\d+)(?:-(\\d+))?$/;",
+          "@@ -6993,6 +6993,10 @@ async function normalizeTargetPath(path) {",
+          "   const root2 = await repoRoot();",
+          "   return relative3(root2, normalized).replaceAll(\"\\\\\", \"/\");",
+          " }",
+          "+function normalizeComparablePath(path) {",
+          "+  const normalized = posix.normalize(path.replaceAll(\"\\\\\", \"/\").replace(PATH_PREFIX_RE, \"\"));",
+          "+  return normalized === \".\" ? \"\" : normalized.replace(PATH_PREFIX_RE, \"\");",
+          "+}",
+          " async function blameTarget(target) {",
+          "   const range = `${target.startLine},${target.endLine}`;",
+          "   const result = await gitSafe([\"blame\", \"--porcelain\", \"-L\", range, \"--\", target.path]);",
+          "@@ -7038,7 +7042,7 @@ async function printBlamedCommit(target, sha) {",
+          " }",
+          " async function readBlamedCommit(sha) {",
+          "   const output = await git([\"show\", \"-s\", `--format=${COMMIT_FORMAT}`, \"--date=short\", sha]);",
+          "-  const [fullSha, shortSha, subject, date, author] = output.split(\"\\0\");",
+          "+  const [fullSha, shortSha, subject, date, author] = output.split(\"\\0\").map((value) => value.trim());",
+          "   return {",
+          "     sha: fullSha || sha,",
+          "     shortSha: shortSha || sha.slice(0, 7),",
+          "@@ -7080,7 +7084,12 @@ function printRelatedInteractions(targetPath, entry) {",
+          "   console.log(\"  note:     exact line-to-prompt attribution is not stored yet\");",
+          " }",
+          " function selectRelatedInteractions(targetPath, entry) {",
+          "-  const fileMatches = entry.interactions.filter((interaction) => interaction.files_touched?.includes(targetPath)).map((interaction) => ({ interaction, evidence: \"file\" }));",
+          "+  const normalizedTargetPath = normalizeComparablePath(targetPath);",
+          "+  const fileMatches = entry.interactions.filter(",
+          "+    (interaction) => (interaction.files_touched ?? []).some(",
+          "+      (filePath) => normalizeComparablePath(filePath) === normalizedTargetPath",
+          "+    )",
+          "+  ).map((interaction) => ({ interaction, evidence: \"file\" }));",
+          "   if (fileMatches.length > 0) {",
+          "     return fileMatches.slice(0, DEFAULT_RELATED_INTERACTION_LIMIT);",
+          "   }"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.test.ts",
+        "lines": [
+          "index 4df75a0..5a8b7bc 100644",
+          "--- a/packages/cli/src/commands/why.test.ts",
+          "+++ b/packages/cli/src/commands/why.test.ts",
+          "@@ -37,14 +37,14 @@ describe(\"agentnote why\", () => {",
+          "     addNote(featureCommit, {",
+          "       v: 1,",
+          "       agent: \"codex\",",
+          "-      session_id: \"a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd\",",
+          "+      session_id: \"a1b2c3d4-aaaa-4bbb-8ccc-dddddddddddd\",",
+          "       timestamp: \"2026-05-09T00:00:00.000Z\",",
+          "       model: \"gpt-5.4\",",
+          "       interactions: [",
+          "         {",
+          "           prompt: \"Add the Agent Note label to the app shell.\",",
+          "           response: \"I added the label export in src/app.ts.\",",
+          "-          files_touched: [\"src/app.ts\"],",
+          "+          files_touched: [\"./src\\\\app.ts\"],",
+          "         },",
+          "       ],",
+          "       files: [{ path: \"src/app.ts\", by_ai: true }],",
+          "@@ -62,7 +62,7 @@ describe(\"agentnote why\", () => {",
+          "     addNote(contextCommit, {",
+          "       v: 1,",
+          "       agent: \"codex\",",
+          "-      session_id: \"b1b2c3d4-aaaa-bbbb-cccc-dddddddddddd\",",
+          "+      session_id: \"b1b2c3d4-aaaa-4bbb-9ccc-dddddddddddd\",",
+          "       timestamp: \"2026-05-09T00:00:00.000Z\",",
+          "       model: \"gpt-5.4\",",
+          "       interactions: [",
+          "@@ -102,7 +102,7 @@ describe(\"agentnote why\", () => {",
+          "     assert.match(output, /evidence: file/);",
+          "     assert.match(output, /evidence: file-level Agent Note data/);",
+          "     assert.match(output, /prompt:\\s+Add the Agent Note label/);",
+          "-    assert.match(output, /file:\\s+src\\/app\\.ts/);",
+          "+    assert.match(output, /file:\\s+\\.\\/src\\\\app\\.ts/);",
+          "   });",
+          " ",
+          "   it(\"keeps missing notes explicit for older blamed lines\", () => {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/why.ts",
+        "lines": [
+          "index 058f46f..fc8f27b 100644",
+          "--- a/packages/cli/src/commands/why.ts",
+          "+++ b/packages/cli/src/commands/why.ts",
+          "@@ -1,4 +1,4 @@",
+          "-import { isAbsolute, relative } from \"node:path\";",
+          "+import { isAbsolute, posix, relative } from \"node:path\";",
+          " import { TRUNCATE_PROMPT, TRUNCATE_RESPONSE_SHOW } from \"../core/constants.js\";",
+          " import {",
+          "   type AgentnoteEntry,",
+          "@@ -93,6 +93,11 @@ async function normalizeTargetPath(path: string): Promise<string> {",
+          "   return relative(root, normalized).replaceAll(\"\\\\\", \"/\");",
+          " }",
+          " ",
+          "+function normalizeComparablePath(path: string): string {",
+          "+  const normalized = posix.normalize(path.replaceAll(\"\\\\\", \"/\").replace(PATH_PREFIX_RE, \"\"));",
+          "+  return normalized === \".\" ? \"\" : normalized.replace(PATH_PREFIX_RE, \"\");",
+          "+}",
+          "+",
+          " async function blameTarget(target: WhyTarget): Promise<string[]> {",
+          "   const range = `${target.startLine},${target.endLine}`;",
+          "   const result = await gitSafe([\"blame\", \"--porcelain\", \"-L\", range, \"--\", target.path]);",
+          "@@ -145,7 +150,9 @@ async function printBlamedCommit(target: WhyTarget, sha: string): Promise<void>",
+          " ",
+          " async function readBlamedCommit(sha: string): Promise<BlamedCommit> {",
+          "   const output = await git([\"show\", \"-s\", `--format=${COMMIT_FORMAT}`, \"--date=short\", sha]);",
+          "-  const [fullSha, shortSha, subject, date, author] = output.split(\"\\0\");",
+          "+  const [fullSha, shortSha, subject, date, author] = output",
+          "+    .split(\"\\0\")",
+          "+    .map((value) => value.trim());",
+          "   return {",
+          "     sha: fullSha || sha,",
+          "     shortSha: shortSha || sha.slice(0, 7),",
+          "@@ -199,8 +206,13 @@ function selectRelatedInteractions(",
+          "   targetPath: string,",
+          "   entry: AgentnoteEntry,",
+          " ): RelatedInteraction[] {",
+          "+  const normalizedTargetPath = normalizeComparablePath(targetPath);",
+          "   const fileMatches = entry.interactions",
+          "-    .filter((interaction) => interaction.files_touched?.includes(targetPath))",
+          "+    .filter((interaction) =>",
+          "+      (interaction.files_touched ?? []).some(",
+          "+        (filePath) => normalizeComparablePath(filePath) === normalizedTargetPath,",
+          "+      ),",
+          "+    )",
+          "     .map((interaction) => ({ interaction, evidence: \"file\" as const }));",
+          " ",
+          "   if (fileMatches.length > 0) {"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 67,
+    "title": "feat(cli): add why command",
+    "state": "open"
+  }
+}
