@@ -3,6 +3,8 @@ description: Fetch CodeRabbit review comments, fix actionable items, verify chan
 argument-hint: [pr-number]
 ---
 
+# CodeRabbit Fix Workflow
+
 Use the repo-local CodeRabbit review skill.
 
 1. Determine the PR first. Use the provided PR number when present; otherwise use the current branch via `gh pr view --json number,url`, with `gh pr list --head "$(git branch --show-current)" --json number,url,state` as a fallback.

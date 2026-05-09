@@ -20,11 +20,13 @@ Fetch review threads with GraphQL, then keep only unresolved CodeRabbit-authored
 
 ```bash
 gh api graphql \
-  -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated path line startLine comments(first:50){nodes{id databaseId body url author{login}}}}}}}}' \
+  -f query='query($owner:String!,$repo:String!,$number:Int!,$after:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated path line startLine comments(first:50){nodes{id databaseId body url author{login}}}}}}}}' \
   -F owner=<owner> \
   -F repo=<repo> \
   -F number=<pr-number>
 ```
+
+For later pages, rerun the same command with `-F after=<endCursor>`.
 
 Fetch CodeRabbit summary comments when useful:
 
