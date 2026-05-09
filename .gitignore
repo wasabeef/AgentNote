@@ -1,6 +1,10 @@
 node_modules/
 packages/cli/dist/
 
+# Generated during npm pack/publish from the repository root files.
+packages/cli/README.md
+packages/cli/LICENSE
+
 # action dist is committed(GitHub Action requirement)
 # !packages/action/dist/
 

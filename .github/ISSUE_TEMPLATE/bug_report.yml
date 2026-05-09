@@ -1,0 +1,70 @@
+name: Bug report
+description: Report something that is broken or surprising.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include enough detail
+        for us to reproduce the issue without access to your private repository.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: A minimal sequence of commands, config, or repository shape.
+      placeholder: |
+        1. Run `npx agent-note init --agent ...`
+        2. Commit ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      multiple: true
+      options:
+        - Claude Code
+        - Codex CLI
+        - Cursor
+        - Gemini CLI
+        - Not sure / other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Agent Note version
+      description: Output of `npx agent-note version`, if available.
+      placeholder: "0.2.3"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version, Git version, and relevant CI provider.
+      placeholder: |
+        OS:
+        Node.js:
+        Git:
+        CI:
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Remove secrets, tokens, private prompts, and proprietary code before posting.
+      render: shell

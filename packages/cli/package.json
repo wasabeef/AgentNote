@@ -2,6 +2,7 @@
   "name": "agent-note",
   "version": "0.2.3",
   "description": "Remember why your code changed. Link AI agent sessions to git commits.",
+  "author": "Daichi Furiya (wasabeef)",
   "type": "module",
   "bin": {
     "agent-note": "./dist/cli.js"
@@ -15,10 +16,14 @@
     "typecheck": "tsc --noEmit",
     "test": "find src -name '*.test.ts' | xargs node --import tsx/esm --test",
     "test:coverage": "find src -name '*.test.ts' | xargs node --import tsx/esm --test --experimental-test-coverage",
+    "prepack": "node scripts/prepare-package-files.mjs",
+    "postpack": "node scripts/clean-package-files.mjs",
     "prepublishOnly": "npm run build && npx publint"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "claude-code",

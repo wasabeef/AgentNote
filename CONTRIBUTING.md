@@ -1,329 +1,210 @@
 # Contributing to Agent Note
 
-Thank you for your interest in contributing to Agent Note! This document provides guidelines and information for contributors.
-
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [How to Contribute](#how-to-contribute)
-- [Development Setup](#development-setup)
-- [Project Structure](#project-structure)
-- [Coding Standards](#coding-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Submitting Changes](#submitting-changes)
+Thank you for helping improve Agent Note. This guide explains how to set up the
+repository, where the main pieces live, and what we expect before a pull request
+is ready for review.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). By
+participating, you agree to keep discussions respectful and constructive.
 
-## How to Contribute
+## Ways to Contribute
 
-### Types of Contributions
+- Report bugs with a minimal reproduction and the agent you were using.
+- Suggest improvements to the CLI, PR Report, Dashboard, or documentation.
+- Add tests for agent adapters and edge cases around git hooks.
+- Improve translations without changing technical meaning.
+- Help keep generated bundles, workflows, and release notes accurate.
 
-We welcome various types of contributions:
-
-- **Bug Reports**: Help us identify and fix issues
-- **Feature Requests**: Suggest new features or improvements
-- **Code Contributions**: Bug fixes, new features, performance improvements
-- **Documentation**: Improve or expand documentation
-- **Testing**: Add or improve test coverage
-
-### Before You Start
-
-1. **Check existing issues**: Look for existing bug reports or feature requests
-2. **Create an issue**: For new features or significant changes, create an issue first to discuss
-3. **Fork the repository**: Create a personal fork to work on changes
-4. **Create a branch**: Use descriptive branch names like `feature/session-export` or `fix/trailer-parsing`
+For larger changes, open an issue first so we can agree on scope before you
+spend time on implementation.
 
 ## Development Setup
 
 ### Prerequisites
 
-- **Node.js** >= 22.12.0 for repository development, docs, and Dashboard builds
-- The published `agent-note` CLI package still supports Node.js >= 20
-- **Git**
-- **Claude Code** (for testing hooks integration)
+- Node.js 22.12.0 or later for repository development, docs, and Dashboard
+  builds.
+- Git.
+- At least one supported coding agent if you are testing hook integration:
+  Claude Code, Codex CLI, Cursor, or Gemini CLI.
+
+The published `agent-note` CLI package supports Node.js 20 or later.
 
 ### Initial Setup
 
 ```bash
-# Clone your fork
 git clone https://github.com/your-username/AgentNote.git
 cd AgentNote
-
-# Add upstream remote
 git remote add upstream https://github.com/wasabeef/AgentNote.git
 
-# Install CLI dependencies
+npm ci
 cd packages/cli
-npm install
-
-# Build
 npm run build
-
-# Run tests
 npm test
-
-# Lint (Biome)
-npm run lint
-
-# Type check
-npm run typecheck
 ```
 
-### Useful Commands
-
-All CLI commands run from `packages/cli/`:
+Most CLI checks run from `packages/cli/`:
 
 ```bash
 cd packages/cli
-
-# Run a specific command during development
-npx tsx src/cli.ts help
-
-# Run tests with coverage
-npm run test:coverage
-
-# Lint (Biome)
-npm run lint
-
-# Type check without emitting
-npm run typecheck
-
-# Build the bundle
 npm run build
-
-# Test the built CLI
-node dist/cli.js version
+npm run typecheck
+npm run lint
+npm test
 ```
 
-## Project Structure
+Website and Dashboard checks run from their own package directories:
 
-This is a monorepo with two packages:
-
+```bash
+npm run build --prefix website
+npm run build --prefix packages/dashboard
 ```
+
+## Repository Structure
+
+```text
 packages/
-├── cli/                           # agent-note — npm package
-│   ├── src/
-│   │   ├── cli.ts                 # Entry point and command routing
-│   │   ├── git.ts                 # Git CLI wrapper (execFile-based, no libraries)
-│   │   ├── paths.ts               # Path resolution for .git/agentnote/ and .claude/
-│   │   ├── core/                  # Agent-agnostic logic
-│   │   │   ├── entry.ts           # Build entry JSON, calc ai_ratio
-│   │   │   ├── jsonl.ts           # JSONL read/append helpers
-│   │   │   ├── record.ts          # Shared recordCommitEntry() for hook + commit
-│   │   │   ├── rotate.ts          # Log rotation after commit
-│   │   │   └── storage.ts         # Git notes read/write
-│   │   ├── agents/                # One file per agent
-│   │   │   ├── types.ts           # AgentAdapter interface
-│   │   │   └── claude.ts          # Claude Code adapter
-│   │   └── commands/              # User-facing, delegates to agents/ + core/
-│   │       ├── init.ts
-│   │       ├── hook.ts
-│   │       ├── commit.ts
-│   │       ├── session.ts
-│   │       ├── show.ts
-│   │       ├── log.ts
-│   │       ├── pr.ts
-│   │       └── status.ts
-│   ├── package.json
-│   └── tsconfig.json
-│
-└── action/                        # GitHub Action (Marketplace)
-    ├── action.yml
-    ├── src/index.ts
-    ├── dist/index.js              # ncc-bundled (committed)
-    └── package.json
+├── cli/          # agent-note CLI package
+├── pr-report/    # PR Description renderer and root GitHub Action bundle
+└── dashboard/    # Dashboard viewer and Dashboard workflow helpers
 
-action.yml                         # Root pointer → packages/pr-report/dist/index.js
+website/          # Astro Starlight documentation site
+docs/             # Maintainer docs and design notes
+action.yml        # Marketplace action entrypoint
 ```
 
-### Key Design Decisions
+Useful maintainer references:
 
-- **Zero runtime dependencies for CLI**: Only devDependencies for build and test tooling
-- **Git CLI only**: All git operations go through the `git` command, never through libraries
-- **Claude Code hooks**: All data collection happens via Claude Code's hook system, never touching git hooks
-- **Git notes for storage**: Entries stored as `refs/notes/agentnote`, not files. Pushable and shareable.
-- **JSONL for append-heavy files**: Prompts and changes use JSONL for crash-safe append
-- **Input validation**: Session IDs validated as UUID v4. Transcript paths restricted to `~/.claude/`.
+- [docs/README.md](docs/README.md): maintainer documentation map.
+- [docs/architecture.md](docs/architecture.md): data flow and storage model.
+- [docs/engineering.md](docs/engineering.md): coding rules for contributors
+  and AI agents.
+- [docs/knowledge/](docs/knowledge/): prompt selection, context, and
+  investigation history.
 
-### Data Flow
+## Architecture Notes
 
-```
-Claude Code hooks → agent-note hook (stdin JSON) → .git/agentnote/sessions/
-git commit → PreToolUse injects --trailer → PostToolUse records entry to git notes
-agent-note show/log → reads git notes --ref=agentnote
+Agent Note has two runtime paths:
+
+- The CLI path handles user commands such as `init`, `status`, `show`, `log`,
+  `pr`, `commit`, and `record`.
+- The hook path receives JSON events from supported coding agents and records
+  local session data under `.git/agentnote/`.
+
+`agent-note init` installs repository-local git hooks and agent hook
+configuration. The git hooks connect normal `git commit` and `git push` to
+`refs/notes/agentnote` so the recorded note follows the branch.
+
+The high-level flow is:
+
+```text
+Agent hook event
+  -> agent-note hook
+  -> .git/agentnote/sessions/<id>/*.jsonl
+  -> git commit
+  -> agent-note record
+  -> refs/notes/agentnote
+  -> PR Report / Dashboard
 ```
 
 ## Coding Standards
 
-### General
+- Source code, comments, test names, and CLI output are written in English.
+- End-user docs can be localized; keep technical terms consistent across
+  languages.
+- Keep functions small and explicit. Prefer early returns over deep nesting.
+- Avoid magic numbers and hard-coded strings. Use named constants or documented
+  local constants.
+- Do not add runtime dependencies to the CLI package.
+- All git operations must go through the Git CLI wrapper in `packages/cli/src/`.
+- Agent Note must never make `git commit` fail because recording failed.
 
-- All source code, comments, and documentation must be in **English**
-- Use `npm run lint` (`biome check`) for code style and formatting (run from `packages/cli/`)
-- Use `npm run typecheck` (`tsc --noEmit`) to catch type errors (run from `packages/cli/`)
-- Keep functions focused and short
-- No runtime dependencies allowed for the CLI package
+Separate structural and behavioral changes when possible:
 
-### TypeScript Style
+- Structural changes move, rename, format, or reorganize code without behavior
+  changes.
+- Behavioral changes add, fix, or remove behavior and should include tests.
 
-- Use strict mode (enforced by tsconfig)
-- Prefer `async/await` over raw promises
-- Use explicit return types for exported functions
-- Avoid `any` where possible; use it sparingly for JSON parsing
+## Testing Guidelines
 
-### Error Handling
+Tests live next to the source files they cover and use `node:test` with
+`node:assert/strict`.
 
-- Never let agent-note errors break a git commit
-- Use try/catch at command boundaries
-- Return early for missing/invalid data instead of throwing
+Before opening a pull request, run:
 
-```typescript
-// Good: graceful degradation
-if (!existsSync(entryFile)) {
-  console.log("entry: not found");
-  return;
-}
-
-// Good: commit must succeed even if agent-note fails
-try {
-  await writeNote(commitSha, entry);
-} catch (err: any) {
-  console.error(`agent-note: warning: ${err.message}`);
-}
+```bash
+cd packages/cli
+npm run build
+npm run typecheck
+npm run lint
+npm test
 ```
 
-### Commit Messages
+Run package-specific checks when touching those areas:
 
-Use conventional commit format:
-
+```bash
+npm test --workspace packages/pr-report
+npm run build --workspace packages/pr-report
+npm run build --prefix packages/dashboard
+npm run build --prefix website
 ```
+
+Add or update tests for:
+
+- Agent hook event parsing.
+- Git hook behavior.
+- Prompt selection and AI Ratio calculations.
+- PR Report rendering.
+- Dashboard data and rendering behavior.
+- Security-sensitive path or shell handling.
+
+## Commit Messages
+
+Use Conventional Commits:
+
+```text
 type(scope): description
 ```
 
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
+Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `ci`,
+`build`, `chore`.
 
 Examples:
 
-```
-feat(hook): capture AI responses from transcript
-fix(commit): handle missing session file gracefully
-test(init): add legacy hook migration test
-docs(readme): add example output section
+```text
+feat(report): add reviewer context
+fix(record): keep shell-only Codex prompts
+docs(readme): clarify dashboard setup
+test(init): cover existing hook chaining
 ```
 
-Release notes are generated from commit messages. If a change should appear
-in the next release, prefer a user-facing `feat:`, `fix:`, or `perf:` subject.
-Internal commits (`docs:`, `test:`, `refactor:`, `ci:`, `chore:`, `build:`)
-are hidden from release notes unless their body includes a public summary:
+Release notes are generated from commit messages. User-facing `feat:`,
+`fix:`, and `perf:` commits are included by default. Internal commits are hidden
+unless their body contains:
 
-```
-Release note: Compact PR reports now hide absorbed external review prompts.
+```text
+Release note: <public summary>
 ```
 
 Use `Release note: skip` when a public-looking commit should stay out of the
 release notes.
 
-## Testing Guidelines
+## Pull Request Checklist
 
-### Running Tests
-
-```bash
-cd packages/cli
-
-# Run all tests
-npm test
-
-# Run with coverage
-npm run test:coverage
-```
-
-### Test Structure
-
-Tests live next to the source files they test:
-
-```
-packages/cli/src/
-├── git.ts
-├── git.test.ts               # Unit tests for git wrapper
-└── commands/
-    ├── init.ts
-    ├── init.test.ts         # Integration tests for agent-note init
-    ├── hook.ts
-    └── hook.test.ts           # Tests for hook event handling
-```
-
-### Writing Tests
-
-- Use `node:test` (built-in test runner) with `node:assert/strict`
-- Each test creates its own temp git repo for isolation
-- Clean up temp directories in `after()` hooks
-- Test both success and failure paths
-- Use UUID format for session IDs in tests (e.g., `a1b2c3d4-0001-0001-0001-000000000001`)
-
-```typescript
-import { describe, it, before, after } from "node:test";
-import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-
-describe("agent-note init", () => {
-  let testDir: string;
-
-  before(() => {
-    testDir = mkdtempSync(join(tmpdir(), "agentnote-test-"));
-    execSync("git init", { cwd: testDir });
-  });
-
-  after(() => {
-    rmSync(testDir, { recursive: true, force: true });
-  });
-
-  it("registers hooks in settings.json", () => {
-    // test implementation
-  });
-});
-```
-
-### What to Test
-
-- **Commands**: Each command gets integration tests that run the built CLI
-- **Hook handling**: Test each event type with simulated JSON input
-- **Edge cases**: Missing files, empty sessions, invalid JSON, non-UUID session IDs
-- **Idempotency**: Running `init` twice should not duplicate hooks
-- **Legacy support**: Upgrading from old hook format should work cleanly
-
-## Submitting Changes
-
-### Pull Request Process
-
-1. Update your fork from upstream
-2. Create a feature branch
-3. Make your changes
-4. Run the full check suite:
-   ```bash
-   cd packages/cli && npm run lint && npm run typecheck && npm run build && npm test
-   ```
-5. Push and create a pull request
-
-### PR Checklist
-
-- [ ] Code is in English (comments, docs, output)
-- [ ] `npm run lint` passes with no errors (in `packages/cli/`)
-- [ ] `npm run typecheck` passes with no errors (in `packages/cli/`)
-- [ ] `npm test` passes with no failures (in `packages/cli/`)
-- [ ] Tests added for new functionality
-- [ ] No new runtime dependencies added to CLI
-- [ ] Commit messages follow conventional format
-
-### Review Process
-
-- **Initial response**: Within a few days
-- **Full review**: Within a week
-- Address feedback in additional commits
-- Once approved, maintainers will merge
+- [ ] The change is scoped and easy to review.
+- [ ] Source code, comments, tests, and CLI output are in English.
+- [ ] Local checks pass for the packages touched.
+- [ ] New behavior has tests.
+- [ ] Documentation, README files, and website pages are updated when behavior
+      changes.
+- [ ] Generated bundles are rebuilt when their source changes.
+- [ ] No new CLI runtime dependency was added.
+- [ ] Commit messages follow the release-note rules above.
 
 ## Getting Help
 
-- **Issues**: For bug reports and feature requests
-- **Discussions**: For questions and ideas
-- **Pull Requests**: For code review discussions
+- Use GitHub Issues for bugs and feature requests.
+- Use Pull Request comments for implementation review.
+- Use GitHub Security Advisories for security reports.

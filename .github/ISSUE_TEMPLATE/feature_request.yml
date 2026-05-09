@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would a good solution look like?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or different designs you considered?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - CLI
+        - Git hooks
+        - Agent adapter
+        - PR Report
+        - Dashboard
+        - Documentation
+        - Release / packaging
+        - Other
+    validations:
+      required: true
