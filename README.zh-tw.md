@@ -260,7 +260,7 @@ Agent Note 為該 Commit 寫入 Git Note
 | `agent-note init` | 設定 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |
 | `agent-note deinit` | 移除某個 Agent 的 Hooks 和 Config |
 | `agent-note show [commit]` | 顯示 `HEAD` 或 Commit SHA 背後的 AI Session |
-| `agent-note why <path>:<line[-end]>` | 顯示最後修改某一行或範圍的 Commit 的 Agent Note context |
+| `agent-note why <target>` | 顯示最後修改某一行或範圍的 Commit 的 Agent Note context |
 | `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
 | `agent-note pr [base]` | 產生 PR Report (Markdown 或 JSON) |
 | `agent-note session <id>` | 顯示關聯到某個 Session 的所有 Commits |

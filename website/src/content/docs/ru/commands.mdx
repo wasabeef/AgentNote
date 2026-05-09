@@ -49,10 +49,19 @@ npx agent-note show abc1234
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts:42:7
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why src/middleware/auth.ts#L42-L55
+npx agent-note why src/middleware/auth.ts#L42C7
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`. Он показывает evidence на уровне Commit или файла, но не утверждает, что знает точный prompt, написавший эту строку.
+  `why` принимает `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log

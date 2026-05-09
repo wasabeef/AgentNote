@@ -102,6 +102,11 @@ describe("agentnote why", () => {
       files: [{ path: "src/app.ts", by_ai: false }],
       attribution: { ai_ratio: 0, method: "file" },
     });
+
+    mkdirSync(join(testDir, "@scope", "src"), { recursive: true });
+    writeFileSync(join(testDir, "@scope", "src", "app.ts"), "export const scoped = true;\n");
+    git(["add", "@scope/src/app.ts"]);
+    git(["commit", "-m", "chore: add scoped fixture"]);
   });
 
   after(() => {
@@ -122,6 +127,43 @@ describe("agentnote why", () => {
     assert.match(output, /evidence: file-level Agent Note data/);
     assert.match(output, /prompt:\s+Add the Agent Note label/);
     assert.match(output, /file:\s+\.\/src\\app\.ts/);
+  });
+
+  it("accepts GitHub, editor, and AI-agent path target formats", () => {
+    const appPath = join(testDir, "src", "app.ts");
+    const cases = [
+      ["src/app.ts#L2", /target: src\/app\.ts:2/],
+      ["@src/app.ts#L2", /target: src\/app\.ts:2/],
+      ["src/app.ts#L2-L3", /target: src\/app\.ts:2-3/],
+      ["src/app.ts:2:7", /target: src\/app\.ts:2/],
+      ["https://github.com/wasabeef/AgentNote/blob/main/src/app.ts#L2", /target: src\/app\.ts:2/],
+      [
+        "https://github.com/wasabeef/AgentNote/blob/feature/why-targets/src/app.ts?plain=1#L2",
+        /target: src\/app\.ts:2/,
+      ],
+      [`file://${appPath}#L2`, /target: src\/app\.ts:2/],
+      [`vscode://file${appPath}:2:7`, /target: src\/app\.ts:2/],
+    ] as const;
+
+    for (const [target, targetPattern] of cases) {
+      const output = execFileSync("node", [cliPath, "why", target], {
+        cwd: testDir,
+        encoding: "utf-8",
+      });
+
+      assert.match(output, targetPattern, target);
+      assert.match(output, new RegExp(`commit: ${featureCommit.slice(0, 7)} feat: add label`));
+    }
+  });
+
+  it("preserves real @scope paths while still accepting AI-agent @ mentions", () => {
+    const output = execFileSync("node", [cliPath, "why", "@scope/src/app.ts#L1"], {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+
+    assert.match(output, /target: @scope\/src\/app\.ts:1/);
+    assert.match(output, /commit: [0-9a-f]{7} chore: add scoped fixture/);
   });
 
   it("keeps missing notes explicit for older blamed lines", () => {

@@ -49,10 +49,19 @@ commit 의 prompts, responses, touched files, agent, model, attribution 을 표�
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts:42:7
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why src/middleware/auth.ts#L42-L55
+npx agent-note why src/middleware/auth.ts#L42C7
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` 는 `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다. Commit 또는 file 수준의 prompt evidence 를 보여주지만, 정확히 그 줄을 쓴 prompt 를 안다고 말하지는 않습니다.
+  `why` 는 `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.
 </Aside>
 
 ## agent-note log

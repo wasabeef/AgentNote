@@ -20,6 +20,13 @@ Primary command:
 ```bash
 agent-note why packages/cli/src/core/record.ts:291
 agent-note why packages/cli/src/core/record.ts:291-310
+agent-note why packages/cli/src/core/record.ts#L291
+agent-note why packages/cli/src/core/record.ts#L291-L310
+agent-note why packages/cli/src/core/record.ts#L291C5
+agent-note why @packages/cli/src/core/record.ts#L291
+agent-note why https://github.com/owner/repo/blob/main/packages/cli/src/core/record.ts#L291
+agent-note why file:///workspace/repo/packages/cli/src/core/record.ts#L291
+agent-note why vscode://file/workspace/repo/packages/cli/src/core/record.ts:291:5
 ```
 
 Alias:
@@ -138,7 +145,14 @@ Rationale:
 
 Current behavior:
 
-1. Parse `path:line` or `path:start-end`.
+1. Parse `path:line`, `path:line-end`, `path:line:column`, GitHub-style
+   `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,
+   `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied
+   from AI Agent output.
+   Normalize `@`, `file://`, and `vscode:` forms before repository-relative
+   resolution; GitHub file URLs prefer existing repo paths so branch names that
+   contain `/` stay part of the ref, and ambiguous `@scope/...` paths are kept
+   when they exist in the repo.
 2. Run `git blame --porcelain` for the target line or range.
 3. Read the blame commit's Agent Note.
 4. Prefer interactions whose `files_touched` contains the target path.

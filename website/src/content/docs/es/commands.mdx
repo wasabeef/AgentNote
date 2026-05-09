@@ -49,10 +49,19 @@ Usa `git blame` para encontrar el Commit que cambió una línea y muestra el con
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts:42:7
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why src/middleware/auth.ts#L42-L55
+npx agent-note why src/middleware/auth.ts#L42C7
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`. Muestra evidence a nivel de Commit o archivo, sin afirmar que conoce el prompt exacto que escribió esa línea.
+  `why` acepta `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log
