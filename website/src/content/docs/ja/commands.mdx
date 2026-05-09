@@ -11,6 +11,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 - 最初のセットアップ: `agent-note init`
 - コミットに何が記録されたか見る: `agent-note show`
+- その行がなぜ変わったか見る: `agent-note why`
 - 最近の活動を一覧する: `agent-note log`
 - PR レポートを作る: `agent-note pr`
 - hook と有効な adapter を確認する: `agent-note status`
@@ -56,6 +57,19 @@ files:   5 changed, 3 by AI
   src/types/token.ts  🤖
   CHANGELOG.md  👤
 ```
+
+## agent-note why
+
+指定した行を最後に変更した Commit を `git blame` で調べ、その Commit に紐づく Agent Note context を表示します。
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` は `git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。表示できるのは Commit 単位または file 単位の prompt evidence で、正確な「この行を書いた prompt」まではまだ保存していません。
+</Aside>
 
 ## agent-note log
 

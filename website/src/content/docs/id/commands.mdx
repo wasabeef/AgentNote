@@ -11,6 +11,7 @@ Gunakan halaman ini ketika Anda sudah memahami alur Agent Note dan membutuhkan c
 
 - Setup pertama: `agent-note init`
 - Melihat data yang direkam commit: `agent-note show`
+- Memahami mengapa satu baris berubah: `agent-note why`
 - Melihat aktivitas terbaru: `agent-note log`
 - Membuat PR Report: `agent-note pr`
 - Memeriksa hooks dan active adapter: `agent-note status`
@@ -40,6 +41,19 @@ npx agent-note show abc1234
 ```
 
 Menampilkan prompts, responses, touched files, agent, model, dan attribution untuk commit.
+
+## agent-note why
+
+Menggunakan `git blame` untuk menemukan Commit yang terakhir mengubah satu baris, lalu menampilkan konteks Agent Note yang terkait.
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`. Command ini menampilkan evidence tingkat Commit atau file, tanpa mengklaim tahu prompt persis yang menulis baris tersebut.
+</Aside>
 
 ## agent-note log
 
@@ -99,4 +113,3 @@ npx agent-note commit -m "feat: add auth"
 <Aside type="tip">
   Tidak diperlukan jika git hooks sudah terpasang. `git commit` biasa sudah merekam hal yang sama.
 </Aside>
-

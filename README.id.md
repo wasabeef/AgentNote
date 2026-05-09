@@ -260,6 +260,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
 | `agent-note deinit` | Menghapus Hooks dan Config untuk Agent |
 | `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |
+| `agent-note why <path>:<line[-end]>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |
 | `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
 | `agent-note pr [base]` | Membuat PR Report (Markdown atau JSON) |
 | `agent-note session <id>` | Menampilkan semua Commits yang terkait dengan satu Session |

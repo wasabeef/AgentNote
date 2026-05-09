@@ -11,6 +11,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 - Первый setup: `agent-note init`
 - Посмотреть данные commit: `agent-note show`
+- Понять, почему изменилась строка: `agent-note why`
 - Проверить недавнюю активность: `agent-note log`
 - Сгенерировать PR Report: `agent-note pr`
 - Проверить hooks и active adapter: `agent-note status`
@@ -40,6 +41,19 @@ npx agent-note show abc1234
 ```
 
 Показывает prompts, responses, touched files, agent, model и attribution для commit.
+
+## agent-note why
+
+Через `git blame` находит Commit, который последним изменил строку, и показывает связанный контекст Agent Note.
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`. Он показывает evidence на уровне Commit или файла, но не утверждает, что знает точный prompt, написавший эту строку.
+</Aside>
 
 ## agent-note log
 
@@ -99,4 +113,3 @@ npx agent-note commit -m "feat: add auth"
 <Aside type="tip">
   Не нужно, если git hooks установлены. Обычный `git commit` уже выполняет такую же запись.
 </Aside>
-

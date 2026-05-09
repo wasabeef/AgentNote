@@ -11,6 +11,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 - 首次 setup: `agent-note init`
 - 查看 commit 记录了什么: `agent-note show`
+- 查看某一行为什么改变: `agent-note why`
 - 查看最近活动: `agent-note log`
 - 生成 PR Report: `agent-note pr`
 - 检查 hooks 和 active adapter: `agent-note status`
@@ -40,6 +41,19 @@ npx agent-note show abc1234
 ```
 
 显示某个 commit 的 prompts、responses、touched files、agent、model 和 attribution。
+
+## agent-note why
+
+使用 `git blame` 找到最后修改某一行的 Commit，并显示该 Commit 对应的 Agent Note context。
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` 缩短了手动执行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。它显示 Commit 或 file 级别的 prompt evidence，但不会声称知道写下该行的精确 prompt。
+</Aside>
 
 ## agent-note log
 
@@ -99,4 +113,3 @@ npx agent-note commit -m "feat: add auth"
 <Aside type="tip">
   如果 git hooks 已安装，则不需要它。普通 `git commit` 已经会记录同样的数据。
 </Aside>
-

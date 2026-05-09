@@ -260,6 +260,7 @@ Den detaillierten Flow, die Schätzung von KI-geschriebener Arbeit und das gespe
 | `agent-note init` | Richtet Hooks, Workflow, Git Hooks und Notes auto-fetch ein |
 | `agent-note deinit` | Entfernt Hooks und Config für einen Agent |
 | `agent-note show [commit]` | Zeigt die KI-Session hinter `HEAD` oder einem Commit SHA |
+| `agent-note why <path>:<line[-end]>` | Zeigt den Agent Note context hinter einer Datei-Zeile oder einem Bereich |
 | `agent-note log [n]` | Listet aktuelle Commits mit AI Ratio |
 | `agent-note pr [base]` | Generiert PR Report (Markdown oder JSON) |
 | `agent-note session <id>` | Zeigt alle Commits, die mit einer Session verbunden sind |

@@ -260,6 +260,7 @@ Agent Note записывает Git Note для этого Commit
 | `agent-note init` | Настраивает Hooks, Workflow, Git Hooks и Notes auto-fetch |
 | `agent-note deinit` | Удаляет Hooks и Config для Agent |
 | `agent-note show [commit]` | Показывает AI Session за `HEAD` или Commit SHA |
+| `agent-note why <path>:<line[-end]>` | Показывает контекст Agent Note для строки или диапазона файла |
 | `agent-note log [n]` | Список Recent Commits с AI Ratio |
 | `agent-note pr [base]` | Генерирует PR Report (Markdown или JSON) |
 | `agent-note session <id>` | Показывает все Commits, связанные с одной Session |

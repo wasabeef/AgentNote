@@ -260,6 +260,7 @@ Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Sch
 | `agent-note init` | Configura Hooks, Workflow, Git Hooks e Notes auto-fetch |
 | `agent-note deinit` | Remove Hooks e Config de um Agent |
 | `agent-note show [commit]` | Mostra a AI Session por trás de `HEAD` ou de um Commit SHA |
+| `agent-note why <path>:<line[-end]>` | Explica o contexto do Agent Note por trás de uma linha ou intervalo de arquivo |
 | `agent-note log [n]` | Lista Recent Commits com AI Ratio |
 | `agent-note pr [base]` | Gera PR Report (Markdown ou JSON) |
 | `agent-note session <id>` | Mostra todos os Commits vinculados a uma Session |

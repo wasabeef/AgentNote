@@ -260,6 +260,7 @@ Agent Note がその Commit に Git Note を書く
 | `agent-note init` | Hooks、Workflow、Git Hooks、Notes auto-fetch を設定します |
 | `agent-note deinit` | Agent の Hooks と Config を削除します |
 | `agent-note show [commit]` | `HEAD` または Commit SHA の AI Session を表示します |
+| `agent-note why <path>:<line[-end]>` | 指定行または範囲を最後に変更した Commit の Agent Note context を表示します |
 | `agent-note log [n]` | Recent Commits と AI Ratio を一覧します |
 | `agent-note pr [base]` | PR Report を生成します (Markdown または JSON) |
 | `agent-note session <id>` | 1 つの Session に紐づく全 Commit を表示します |

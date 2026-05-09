@@ -8,6 +8,7 @@ import { pushNotes } from "./commands/push-notes.js";
 import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
+import { why } from "./commands/why.js";
 import { DEFAULT_LOG_COUNT } from "./core/constants.js";
 
 declare const __VERSION__: string;
@@ -22,6 +23,10 @@ usage:
   agent-note deinit --agent <name...>
                                     remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
+  agent-note why <path>:<line[-end]>
+                                    explain the Agent Note context behind a line
+  agent-note blame <path>:<line[-end]>
+                                    alias of why
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]
                                     generate PR report or update PR description/comment
@@ -56,6 +61,10 @@ switch (command) {
     break;
   case "show":
     await show(args[0]);
+    break;
+  case "why":
+  case "blame":
+    await why(args);
     break;
   case "log":
     await log(parseLogCountArg(args[0]));
