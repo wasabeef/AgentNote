@@ -1046,6 +1046,6 @@
   "pull_request": {
     "number": 65,
     "title": "docs: prepare repository for OSS launch",
-    "state": "open"
+    "state": "merged"
   }
 }
