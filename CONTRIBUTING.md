@@ -145,6 +145,7 @@ npm test
 Run package-specific checks when touching those areas:
 
 ```bash
+cd /path/to/AgentNote
 npm test --workspace packages/pr-report
 npm run build --workspace packages/pr-report
 npm run build --prefix packages/dashboard
