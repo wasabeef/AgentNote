@@ -1,0 +1,32 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T15:28:46.778Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": "`y` で進めます。",
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": []
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/src/commands/why.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/why.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
