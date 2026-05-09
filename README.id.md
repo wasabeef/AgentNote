@@ -45,6 +45,16 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 - Node.js 20 atau lebih baru
 - Coding Agent yang didukung, sudah terpasang dan terautentikasi
 
+## AI Agent Skill
+
+Jika AI Agent Anda mendukung GitHub Agent Skills, pasang Agent Note Skill agar Anda bisa meminta tugas Agent Note dengan bahasa natural.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`. Skill biasanya hanya mengarahkan agent ke lima command publik: `init`, `status`, `log`, `show`, dan `why`.
+
 ## Quick Start
 
 1. Aktifkan Agent Note untuk Coding Agent Anda.
@@ -85,7 +95,7 @@ git push
 
 3. Terus gunakan Workflow `git commit` normal.
 
-Dengan Git Hooks yang dibuat, Agent Note merekam Commit secara otomatis. Gunakan `agent-note commit -m "..."` hanya sebagai Fallback saat Git Hooks tidak tersedia.
+Dengan Git Hooks yang dibuat, Agent Note otomatis merekam Commit dari `git commit` biasa.
 
 ## Data yang disimpan
 
@@ -141,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` menunjukkan Agent Adapters yang aktif. `capture:` merangkum apa yang dikumpulkan Active Agent Hooks. `git:` menunjukkan apakah Managed Repository-Local Git Hooks sudah terpasang. `commit:` memberi tahu Primary Tracking Path: `git commit` normal saat Git Hooks aktif, atau Fallback Mode saat sebaiknya memakai `agent-note commit`.
+`agent:` menunjukkan Agent Adapters yang aktif. `capture:` merangkum apa yang dikumpulkan Active Agent Hooks. `git:` menunjukkan apakah Managed Repository-Local Git Hooks sudah terpasang. `commit:` memberi tahu apakah `git commit` biasa adalah Primary Tracking Path.
 
 ## Yang Anda dapatkan
 
@@ -182,11 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-```
-$ npx agent-note pr --output description --update 42
-```
-
-Ini memposting AI Session Report ke PR Description:
+GitHub Action memposting AI Session Report ke PR Description:
 
 Blok `agentnote-reviewer-context` disimpan sebagai hidden comment di PR body. AI Review tool yang membaca raw PR description, seperti Copilot, CodeRabbit, Devin, dan Greptile, dapat menggunakannya sebagai intent dan review focus tambahan.
 
@@ -258,14 +264,10 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | Command | Fungsi |
 | --- | --- |
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
-| `agent-note deinit` | Menghapus Hooks dan Config untuk Agent |
+| `agent-note status` | Menampilkan Tracking state |
+| `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
 | `agent-note show [commit]` | Menampilkan AI Session di balik `HEAD` atau Commit SHA |
 | `agent-note why <target>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |
-| `agent-note log [n]` | Mendaftar Recent Commits dengan AI Ratio |
-| `agent-note pr [base]` | Membuat PR Report (Markdown atau JSON) |
-| `agent-note session <id>` | Menampilkan semua Commits yang terkait dengan satu Session |
-| `agent-note commit [args]` | Fallback wrapper untuk `git commit` saat Git Hooks tidak tersedia |
-| `agent-note status` | Menampilkan Tracking state |
 
 ## GitHub Action
 

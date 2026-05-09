@@ -8,6 +8,7 @@ This directory stores focused knowledge for Agent Note maintainers and AI coding
 - `prompt-context.md` — how `📝 Context` is selected and rendered.
 - `prompt-selection.md` — how prompt evidence is stored, scored at render time, and filtered by `prompt_detail`.
 - `why-command.md` — implemented `agent-note why` / blame-style command and future schema direction.
+- `agent-skill.md` — how `gh skill` should map natural-language user requests to Agent Note features.
 - `agent-support-policy.md` — support-tier gates for non-Claude adapters.
 - `investigations.md` — resolved investigations and regression notes.
 

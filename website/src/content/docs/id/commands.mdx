@@ -1,50 +1,109 @@
 ---
 title: Commands
-description: Referensi command CLI Agent Note.
+description: Command CLI publik Agent Note.
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-Gunakan halaman ini ketika Anda sudah memahami alur Agent Note dan membutuhkan command atau flag tertentu. Untuk setup pertama, mulai dari [Instalasi](./installation/).
+Halaman ini hanya berisi command yang dijalankan langsung oleh pengguna. Untuk setup pertama, mulai dari [Instalasi](./installation/).
 
 ## Tugas umum
 
 - Setup pertama: `agent-note init`
-- Melihat data yang direkam commit: `agent-note show`
-- Memahami mengapa satu baris berubah: `agent-note why`
+- Memeriksa status: `agent-note status`
 - Melihat aktivitas terbaru: `agent-note log`
-- Membuat PR Report: `agent-note pr`
-- Memeriksa hooks dan active adapter: `agent-note status`
+- Menampilkan data commit: `agent-note show`
+- Memahami mengapa satu baris berubah: `agent-note why`
+
+<Aside>
+  PR Report dan Dashboard adalah fitur GitHub Action. Biasanya keduanya dibuat oleh `agent-note init`, bukan dengan menjalankan command report internal.
+</Aside>
 
 ## agent-note init
+
+Menyiapkan Agent Note di repository.
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-| Flag | Deskripsi |
+| Flag | Description |
 |---|---|
-| `--agent <name...>` | Wajib. Satu atau beberapa adapter: `claude`, `codex`, `cursor`, `gemini` |
-| `--dashboard` | Juga membuat workflow shared Dashboard |
-| `--no-hooks` | Melewati konfigurasi agent hooks |
-| `--no-git-hooks` | Melewati instalasi git hooks |
-| `--no-action` | Melewati pembuatan workflow |
-| `--no-notes` | Melewati konfigurasi notes auto-fetch |
-| `--hooks` | Hanya memasang agent hooks |
-| `--action` | Hanya membuat workflow |
+| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
+| `--dashboard` | Also create the shared Dashboard workflow |
+| `--no-hooks` | Skip agent hook configuration |
+| `--no-git-hooks` | Skip git hook installation |
+| `--no-action` | Skip workflow creation |
+| `--no-notes` | Skip notes auto-fetch config |
+| `--hooks` | Only install agent hooks |
+| `--action` | Only create workflow |
+
+## agent-note status
+
+Menampilkan tracking state.
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+## agent-note log
+
+Menampilkan commit terbaru dengan AI Ratio.
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
 ## agent-note show
+
+Menampilkan AI Session untuk commit.
 
 ```bash
 npx agent-note show
 npx agent-note show abc1234
 ```
 
-Menampilkan prompts, responses, touched files, agent, model, dan attribution untuk commit.
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   5 changed, 3 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
 
 ## agent-note why
 
-Menggunakan `git blame` untuk menemukan Commit yang terakhir mengubah satu baris, lalu menampilkan konteks Agent Note yang terkait.
+Menampilkan konteks Agent Note di balik baris yang berubah.
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -55,70 +114,20 @@ npx agent-note why src/middleware/auth.ts#L42-L55
 npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
 npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
 npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` menerima `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, dan path dengan awalan `@` yang disalin dari output AI Agent. Command ini mempersingkat alur manual `git blame` → `git notes --ref=agentnote show <commit>`.
+  `why` menerima `path:line`, `path#Lline`, GitHub file URL, `file://...`, `vscode://file...`, dan path dengan awalan `@` dari output AI Agent.
 </Aside>
 
-## agent-note log
+## AI Agent Skill
+
+Pasang Agent Note Skill untuk meminta tugas ini dengan bahasa natural.
 
 ```bash
-npx agent-note log
-npx agent-note log 20
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Menampilkan commit terbaru dengan AI ratio dan jumlah prompt yang tersimpan.
-
-## agent-note pr
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  `compact` menjaga PR Report tetap fokus pada prompt yang menjelaskan commit. `full` menampilkan semua prompt yang tersimpan.
-</Aside>
-
-## agent-note status
-
-```bash
-npx agent-note status
-```
-
-Memeriksa active adapter, apa yang dikumpulkan hooks, status git hooks, dan jalur commit.
-
-## agent-note deinit
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Tambahkan `--remove-workflow` untuk menghapus workflow PR Report dan Dashboard juga.
-
-## agent-note commit
-
-```bash
-npx agent-note commit -m "feat: add auth"
-```
-
-<Aside type="tip">
-  Tidak diperlukan jika git hooks sudah terpasang. `git commit` biasa sudah merekam hal yang sama.
-</Aside>
+Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`.

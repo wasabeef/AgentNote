@@ -39,8 +39,7 @@ Esta página é o caminho prático. Ao final, o repositório poderá registrar d
    Codex CLI adiciona `.codex/config.toml` e `.codex/hooks.json`. Cursor adiciona `.cursor/hooks.json`. Gemini CLI adiciona `.gemini/settings.json`. Com `--dashboard`, adicione também `.github/workflows/agentnote-dashboard.yml`.
 
 3. Trabalhe normalmente com seu agent.
-
-   Se os git hooks gerados estão instalados, `git commit` basta. Use `agent-note commit -m "..."` apenas quando git hooks não estiverem disponíveis.
+   Se os git hooks gerados estão instalados, `git commit` basta.
 </Steps>
 
 ## Cada clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 Se o PR Report estiver vazio ou os prompts parecerem curtos demais, abra [Troubleshooting](./troubleshooting/).
-
-## Desinstalar
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Adicione `--remove-workflow` para remover também os workflows de PR Report e Dashboard.
-

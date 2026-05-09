@@ -45,6 +45,16 @@ Piensa en ello como <code>git log</code> más la conversación AI detrás del ca
 - Node.js 20 o superior
 - Un Coding Agent compatible, instalado y autenticado
 
+## AI Agent Skill
+
+Si tu AI Agent admite GitHub Agent Skills, instala el Skill de Agent Note para pedir tareas de Agent Note en lenguaje natural.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+Elige el valor `--agent` adecuado: `codex`, `claude-code`, `cursor` o `gemini-cli`. El Skill normalmente guía al agent hacia solo cinco comandos públicos: `init`, `status`, `log`, `show` y `why`.
+
 ## Quick Start
 
 1. Habilita Agent Note para tu Coding Agent.
@@ -85,7 +95,7 @@ git push
 
 3. Sigue usando tu Workflow normal de `git commit`.
 
-Con los Git Hooks generados instalados, Agent Note registra Commits automáticamente. Usa `agent-note commit -m "..."` solo como Fallback cuando los Git Hooks no están disponibles.
+Con los Git Hooks generados instalados, Agent Note registra automáticamente los Commits hechos con `git commit`.
 
 ## Datos guardados
 
@@ -141,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` muestra qué adapters de Agent están habilitados. `capture:` resume qué recopilan los Hooks del Agent activo. `git:` muestra si los Git Hooks locales gestionados están instalados. `commit:` indica la ruta principal de Tracking: `git commit` normal cuando los Git Hooks están activos, o Fallback Mode cuando conviene preferir `agent-note commit`.
+`agent:` muestra qué adapters de Agent están habilitados. `capture:` resume qué recopilan los Hooks del Agent activo. `git:` muestra si los Git Hooks locales gestionados están instalados. `commit:` indica si `git commit` es la ruta principal de Tracking.
 
 ## Qué obtienes
 
@@ -182,11 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-```
-$ npx agent-note pr --output description --update 42
-```
-
-Esto publica un reporte de sesión AI en la PR Description:
+La GitHub Action publica un reporte de sesión AI en la PR Description:
 
 El bloque `agentnote-reviewer-context` se guarda como hidden comment en el PR body. Las AI Review tools que leen la raw PR description, como Copilot, CodeRabbit, Devin y Greptile, pueden usarlo como intent y review focus adicional.
 
@@ -258,14 +264,10 @@ Para el Flow detallado, cómo Agent Note estima el trabajo escrito por IA y el S
 | Command | Qué hace |
 | --- | --- |
 | `agent-note init` | Configura Hooks, Workflow, Git Hooks y Notes auto-fetch |
-| `agent-note deinit` | Elimina Hooks y Config para un Agent |
+| `agent-note status` | Muestra el estado de Tracking |
+| `agent-note log [n]` | Lista Commits recientes con AI Ratio |
 | `agent-note show [commit]` | Muestra la sesión AI detrás de `HEAD` o un Commit SHA |
 | `agent-note why <target>` | Explica el contexto de Agent Note detrás de una línea o rango de archivo |
-| `agent-note log [n]` | Lista Commits recientes con AI Ratio |
-| `agent-note pr [base]` | Genera PR Report (Markdown o JSON) |
-| `agent-note session <id>` | Muestra todos los Commits vinculados a una sesión |
-| `agent-note commit [args]` | Fallback wrapper alrededor de `git commit` cuando los Git Hooks no están disponibles |
-| `agent-note status` | Muestra el estado de Tracking |
 
 ## GitHub Action
 

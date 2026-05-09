@@ -140,7 +140,7 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/`) — `agent-note init`, `agent-note show`, `agent-note log`, `agent-note pr`. Run by users and CI.
+1. **CLI** (`packages/cli/`) — public user commands are `agent-note init`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Automation-facing commands such as `agent-note pr`, `agent-note hook`, `agent-note record`, `agent-note commit`, and `agent-note push-notes` are kept for generated workflows and hooks.
 2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.
 
 ### Data flow
@@ -410,14 +410,21 @@ When an existing hook file is found, agent-note chains to it — the original ho
 
 ```
 agent-note init              add hooks to agent config (commit to share with team)
+agent-note status            show current tracking state
+agent-note log [n]           list recent commits with session info
+agent-note show [commit]     show session details for HEAD or a commit SHA
+agent-note why <target>      explain the Agent Note context behind a file line
+```
 
-agent-note commit [args]       git commit with session context (convenience wrapper)
-agent-note show [commit]       show session details for HEAD or a commit SHA
-agent-note log [n]             list recent commits with session info
+Automation-facing commands exist for generated workflows and hooks, but should
+not be presented as normal user actions:
+
+```text
 agent-note pr [base] [--json] [--output description|comment] [--update <PR#>] [--prompt-detail compact|full]
-agent-note status              show current tracking state
-agent-note hook                handle agent hook events (internal, via stdin, agent-specific)
-agent-note record <session-id> record git note for HEAD (internal, used by post-commit hook)
+agent-note hook
+agent-note record <session-id>
+agent-note commit [args]
+agent-note push-notes [remote]
 ```
 
 ### init model
@@ -433,7 +440,8 @@ Flags: `--agent <name...>`, `--dashboard`, `--no-hooks`, `--no-git-hooks`, `--no
 
 ### PR Report
 
-`agent-note pr` produces markdown or structured JSON reports.
+The automation-facing PR renderer produces markdown or structured JSON reports
+for the GitHub Action.
 
 ```bash
 agent-note pr                              # markdown report (table format)
@@ -593,7 +601,6 @@ git push
 # Cursor repositories commit `.cursor/hooks.json` instead.
 # With `--dashboard`, also commit `.github/workflows/agentnote-dashboard.yml`.
 # Plain `git commit` works when the generated git hooks are installed.
-# `agent-note commit -m "..."` remains a useful fallback wrapper.
 
 # 2. New clone setup (per developer, per clone)
 git clone <repo> && cd <repo>
@@ -642,7 +649,7 @@ Agent Note records prompts, optional display-only context excerpts, and AI respo
 ### Recommendations for users
 
 - **Be aware that `agent-note init` installs a `pre-push` hook that auto-pushes notes** on every `git push`. On public repositories, this means prompts and AI responses will be visible. Use `--no-git-hooks` to skip git hook installation if this is a concern.
-- Use `agent-note pr --json | jq '.commits[].interactions[].prompt'` to review what will be shared.
+- Use `git notes --ref=agentnote show <commit>` or `agent-note show <commit>` to review what will be shared.
 
 ## Known limitations
 

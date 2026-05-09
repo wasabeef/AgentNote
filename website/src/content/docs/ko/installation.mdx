@@ -39,8 +39,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    Codex CLI 는 `.codex/config.toml` 과 `.codex/hooks.json` 을 추가합니다. Cursor 는 `.cursor/hooks.json` 을 추가합니다. Gemini CLI 는 `.gemini/settings.json` 을 추가합니다. `--dashboard` 를 쓰면 `.github/workflows/agentnote-dashboard.yml` 도 추가합니다.
 
 3. 평소처럼 agent 와 작업합니다.
-
-   생성된 git hook 이 설치되어 있으면 `git commit` 만으로 충분합니다. git hook 을 쓸 수 없는 환경에서만 `agent-note commit -m "..."` 을 사용하세요.
+   생성된 git hook 이 설치되어 있으면 `git commit` 만으로 충분합니다.
 </Steps>
 
 ## 각 clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 PR Report 가 비어 있거나 prompt 가 너무 짧아 보이면 [Troubleshooting](./troubleshooting/) 을 확인하세요.
-
-## 제거
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-PR Report 와 Dashboard workflow 까지 지우려면 `--remove-workflow` 를 추가하세요.
-

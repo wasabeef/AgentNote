@@ -1,50 +1,109 @@
 ---
 title: Befehle
-description: CLI-Referenz für Agent Note.
+description: Öffentliche CLI-Befehle für Agent Note.
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-Nutze diese Seite, wenn du den Agent-Note-Ablauf schon kennst und einen konkreten Befehl oder Flag suchst. Für das erste Setup starte mit [Installation](./installation/).
+Diese Seite zeigt die Befehle, die Nutzer direkt ausführen. Für das erste Setup starte mit [Installation](./installation/).
 
 ## Häufige Aufgaben
 
 - Erstes Setup: `agent-note init`
-- Aufgezeichnete Daten eines Commits ansehen: `agent-note show`
-- Verstehen, warum eine Zeile geändert wurde: `agent-note why`
+- Status prüfen: `agent-note status`
 - Neue Aktivität prüfen: `agent-note log`
-- PR Report erzeugen: `agent-note pr`
-- Hooks und aktiven Adapter prüfen: `agent-note status`
+- Commit-Daten anzeigen: `agent-note show`
+- Verstehen, warum eine Zeile geändert wurde: `agent-note why`
+
+<Aside>
+  PR Report und Dashboard sind GitHub-Action-Funktionen. Sie werden normalerweise durch `agent-note init` erzeugt, nicht durch interne Report-Befehle.
+</Aside>
 
 ## agent-note init
+
+Richtet Agent Note im Repository ein.
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-| Flag | Beschreibung |
+| Flag | Description |
 |---|---|
-| `--agent <name...>` | Erforderlich. Ein oder mehrere Adapter: `claude`, `codex`, `cursor`, `gemini` |
-| `--dashboard` | Erstellt zusätzlich den Workflow für das gemeinsame Dashboard |
-| `--no-hooks` | Überspringt die Agent-Hook-Konfiguration |
-| `--no-git-hooks` | Überspringt die Installation der git hooks |
-| `--no-action` | Überspringt die Workflow-Erstellung |
-| `--no-notes` | Überspringt notes auto-fetch |
-| `--hooks` | Installiert nur Agent-Hooks |
-| `--action` | Erstellt nur den Workflow |
+| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
+| `--dashboard` | Also create the shared Dashboard workflow |
+| `--no-hooks` | Skip agent hook configuration |
+| `--no-git-hooks` | Skip git hook installation |
+| `--no-action` | Skip workflow creation |
+| `--no-notes` | Skip notes auto-fetch config |
+| `--hooks` | Only install agent hooks |
+| `--action` | Only create workflow |
+
+## agent-note status
+
+Zeigt den Tracking state.
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+## agent-note log
+
+Listet aktuelle Commits mit AI Ratio.
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
 ## agent-note show
+
+Zeigt die KI-Session eines Commits.
 
 ```bash
 npx agent-note show
 npx agent-note show abc1234
 ```
 
-Zeigt prompts, responses, berührte Dateien, agent, model und attribution für einen Commit.
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-90ab-cdef-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   5 changed, 3 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
 
 ## agent-note why
 
-Findet mit `git blame` den Commit, der eine Zeile zuletzt geändert hat, und zeigt den dazugehörigen Agent Note context.
+Zeigt den Agent Note context hinter einer geänderten Zeile.
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -55,70 +114,20 @@ npx agent-note why src/middleware/auth.ts#L42-L55
 npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
 npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
 npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` akzeptiert `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.
+  `why` akzeptiert `path:line`, `path#Lline`, GitHub file URLs, `file://...`, `vscode://file...` und paths mit führendem `@` aus AI-Agent-Ausgaben.
 </Aside>
 
-## agent-note log
+## AI Agent Skill
+
+Installiere den Agent Note Skill, um diese Aufgaben in natürlicher Sprache anzustoßen.
 
 ```bash
-npx agent-note log
-npx agent-note log 20
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Listet aktuelle Commits mit KI-Anteil und gespeicherter Prompt-Anzahl.
-
-## agent-note pr
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  `compact` hält den PR Report auf die Prompts fokussiert, die den Commit erklären. `full` zeigt alle gespeicherten Prompts.
-</Aside>
-
-## agent-note status
-
-```bash
-npx agent-note status
-```
-
-Prüft aktiven Adapter, Hook-Capture, git-hook-Zustand und den aktuellen Commit-Pfad.
-
-## agent-note deinit
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Mit `--remove-workflow` entfernst du auch die PR-Report- und Dashboard-Workflows.
-
-## agent-note commit
-
-```bash
-npx agent-note commit -m "feat: add auth"
-```
-
-<Aside type="tip">
-  Nicht nötig, wenn git hooks installiert sind. Ein normales `git commit` zeichnet bereits dasselbe auf.
-</Aside>
+Wähle den passenden `--agent` Wert: `codex`, `claude-code`, `cursor` oder `gemini-cli`.

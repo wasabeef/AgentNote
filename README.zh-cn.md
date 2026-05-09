@@ -45,6 +45,16 @@ Agent Note 会为每个 Commit 保存与 AI 的对话和变更文件。信息足
 - Node.js 20 或更高版本
 - 已安装并认证的受支持 Coding Agent
 
+## AI Agent Skill
+
+如果你的 AI Agent 支持 GitHub Agent Skills，可以安装 Agent Note Skill，用自然语言请求 Agent Note 相关任务。
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+根据 Agent 选择对应的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。Skill 通常只会引导 agent 使用五个公开命令: `init`、`status`、`log`、`show`、`why`。
+
 ## Quick Start
 
 1. 为你的 Coding Agent 启用 Agent Note。
@@ -85,7 +95,7 @@ git push
 
 3. 继续使用平常的 `git commit` Workflow。
 
-安装生成的 Git Hooks 后，Agent Note 会自动记录 Commits。只有当 Git Hooks 不可用时，才把 `agent-note commit -m "..."` 作为 Fallback 使用。
+安装生成的 Git Hooks 后，Agent Note 会自动记录普通 `git commit`。
 
 ## 保存的数据
 
@@ -141,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 显示已启用的 Agent Adapters。`capture:` 概述 Active Agent Hooks 会收集什么。`git:` 显示 Managed Repository-Local Git Hooks 是否已安装。`commit:` 显示 Primary Tracking Path：Git Hooks Active 时是普通 `git commit`，Fallback Mode 时应优先使用 `agent-note commit`。
+`agent:` 显示已启用的 Agent Adapters。`capture:` 概述 Active Agent Hooks 会收集什么。`git:` 显示 Managed Repository-Local Git Hooks 是否已安装。`commit:` 显示普通 `git commit` 是否是 Primary Tracking Path。
 
 ## 你会得到什么
 
@@ -182,11 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-```
-$ npx agent-note pr --output description --update 42
-```
-
-这会把 AI Session Report 发布到 PR Description：
+GitHub Action 会把 AI Session Report 发布到 PR Description：
 
 `agentnote-reviewer-context` block 会作为 hidden comment 保存在 PR body 中。Copilot、CodeRabbit、Devin、Greptile 等读取 raw PR description 的 AI Review tool 可以把它作为额外的 intent 和 review focus。
 
@@ -258,14 +264,10 @@ Agent Note 为该 Commit 写入 Git Note
 | Command | 作用 |
 | --- | --- |
 | `agent-note init` | 设置 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |
-| `agent-note deinit` | 移除某个 Agent 的 Hooks 和 Config |
+| `agent-note status` | 显示 Tracking state |
+| `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
 | `agent-note show [commit]` | 显示 `HEAD` 或 Commit SHA 背后的 AI Session |
 | `agent-note why <target>` | 显示最后修改某一行或范围的 Commit 的 Agent Note context |
-| `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
-| `agent-note pr [base]` | 生成 PR Report (Markdown 或 JSON) |
-| `agent-note session <id>` | 显示关联到某个 Session 的所有 Commits |
-| `agent-note commit [args]` | Git Hooks 不可用时的 `git commit` Fallback wrapper |
-| `agent-note status` | 显示 Tracking state |
 
 ## GitHub Action
 
