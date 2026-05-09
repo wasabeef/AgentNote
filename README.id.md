@@ -53,7 +53,7 @@ Jika AI Agent Anda mendukung GitHub Agent Skills, pasang Agent Note Skill agar A
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`. Skill biasanya hanya mengarahkan agent ke enam command publik: `init`, `deinit`, `status`, `log`, `show`, dan `why`.
+Untuk `gh skill install`, pilih identifier agent yang sesuai: `codex`, `claude-code`, `cursor` or `gemini-cli`. Skill biasanya hanya mengarahkan agent ke enam command publik: `init`, `deinit`, `status`, `log`, `show`, dan `why`.
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514

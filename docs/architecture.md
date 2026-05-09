@@ -370,7 +370,7 @@ Every recordable commit made during an AI session gets a trailer:
 ```
 feat: add auth middleware
 
-Agentnote-Session: a1b2c3d4-5678-90ab-cdef-111122223333
+Agentnote-Session: a1b2c3d4-5678-4abc-8def-111122223333
 ```
 
 Injected via two parallel paths:

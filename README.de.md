@@ -47,13 +47,13 @@ Stellen Sie es sich als <code>git log</code> plus die KI-Unterhaltung hinter der
 
 ## AI Agent Skill
 
-Wenn dein AI Agent GitHub Agent Skills unterstützt, installiere den Agent Note Skill, damit du Agent-Note-Aufgaben in natürlicher Sprache anstoßen kannst.
+Wenn Ihr AI Agent GitHub Agent Skills unterstützt, installieren Sie den Agent Note Skill, damit Sie Agent-Note-Aufgaben in natürlicher Sprache anstoßen können.
 
 ```bash
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Wähle den passenden `--agent` Wert: `codex`, `claude-code`, `cursor` oder `gemini-cli`. Der Skill führt den Agent normalerweise nur zu sechs öffentlichen Befehlen: `init`, `deinit`, `status`, `log`, `show` und `why`.
+Für `gh skill install` wählen Sie den passenden Agent-Identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`. Der Skill führt den Agent normalerweise nur zu sechs öffentlichen Befehlen: `init`, `deinit`, `status`, `log`, `show` und `why`.
 
 ## Quick Start
 
@@ -95,7 +95,7 @@ git push
 
 3. Verwenden Sie weiter Ihren normalen `git commit` Workflow.
 
-Mit den generierten Git Hooks zeichnet Agent Note normale `git commit` Commits automatisch auf.
+Mit den generierten Git Hooks zeichnet Agent Note normale `git commit`-Vorgänge automatisch auf.
 
 ## Gespeicherte Daten
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514

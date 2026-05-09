@@ -53,7 +53,7 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Agent 에 맞게 `--agent` 값을 `codex`, `claude-code`, `cursor`, `gemini-cli` 중에서 고르세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
+`gh skill install` 의 `--agent` 에는 Agent 에 맞는 identifier 인 `codex`, `claude-code`, `cursor` or `gemini-cli` 를 지정하세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514

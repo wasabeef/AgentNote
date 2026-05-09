@@ -53,7 +53,7 @@ Agent Note 會為每個 Commit 保存與 AI 的對話和變更檔案。資訊足
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-依照 Agent 選擇對應的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。Skill 通常只會引導 agent 使用六個公開命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
+對於 `gh skill install`，請依照 Agent 選擇對應的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。Skill 通常只會引導 agent 使用六個公開命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-GitHub Action 會把 AI Session Report 發佈到 PR Description：
+GitHub Action 預設會把 AI Session Report 發佈到 PR Description（也可設定為發佈 comment）：
 
 `agentnote-reviewer-context` block 會作為 hidden comment 保存在 PR body 中。Copilot、CodeRabbit、Devin、Greptile 等讀取 raw PR description 的 AI Review tool 可以把它作為額外的 intent 和 review focus。
 

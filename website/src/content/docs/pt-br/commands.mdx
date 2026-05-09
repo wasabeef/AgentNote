@@ -17,7 +17,7 @@ Esta página mostra apenas os comandos que usuários executam diretamente. Para 
 - Entender por que uma linha mudou: `agent-note why`
 
 <Aside>
-  PR Report e Dashboard são recursos do GitHub Action. Normalmente eles são gerados por `agent-note init`, não por comandos internos de report.
+  PR Report e Dashboard são recursos do GitHub Action. `agent-note init` normalmente cria os arquivos de workflow; os relatórios e o Dashboard são gerados depois por esses workflows.
 </Aside>
 
 ## agent-note init
@@ -28,16 +28,16 @@ Configura o Agent Note no repositório.
 npx agent-note init --agent claude
 ```
 
-| Flag | Description |
+| Flag | Descrição |
 |---|---|
-| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
-| `--dashboard` | Also create the shared Dashboard workflow |
-| `--no-hooks` | Skip agent hook configuration |
-| `--no-git-hooks` | Skip git hook installation |
-| `--no-action` | Skip workflow creation |
-| `--no-notes` | Skip notes auto-fetch config |
-| `--hooks` | Only install agent hooks |
-| `--action` | Only create workflow |
+| `--agent <name...>` | Escolha um ou mais adaptadores de agent: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | Também cria o workflow do Dashboard compartilhado |
+| `--no-hooks` | Pula a configuração de hooks do agent |
+| `--no-git-hooks` | Pula a instalação de Git Hooks |
+| `--no-action` | Pula a criação de workflows |
+| `--no-notes` | Pula a configuração de notes auto-fetch |
+| `--hooks` | Instala apenas hooks do agent |
+| `--action` | Cria apenas workflows |
 
 ## agent-note deinit
 
@@ -49,7 +49,7 @@ npx agent-note deinit --agent claude
 
 | Flag | Descrição |
 |---|---|
-| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
 | `--remove-workflow` | Também remove os workflows de PR Report e Dashboard |
 | `--keep-notes` | Mantém a configuração de notes auto-fetch |
 
@@ -99,7 +99,7 @@ npx agent-note show abc1234
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -145,4 +145,4 @@ Instale o Agent Note Skill para pedir essas tarefas em linguagem natural.
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Escolha o valor `--agent` correto: `codex`, `claude-code`, `cursor` ou `gemini-cli`.
+Para `gh skill install`, escolha o identificador de agent correto: `codex`, `claude-code`, `cursor` or `gemini-cli`.

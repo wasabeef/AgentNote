@@ -17,7 +17,7 @@ Halaman ini hanya berisi command yang dijalankan langsung oleh pengguna. Untuk s
 - Memahami mengapa satu baris berubah: `agent-note why`
 
 <Aside>
-  PR Report dan Dashboard adalah fitur GitHub Action. Biasanya keduanya dibuat oleh `agent-note init`, bukan dengan menjalankan command report internal.
+  PR Report dan Dashboard adalah fitur GitHub Action. `agent-note init` biasanya membuat file workflow; report dan Dashboard dibuat nanti saat workflow tersebut berjalan.
 </Aside>
 
 ## agent-note init
@@ -28,16 +28,16 @@ Menyiapkan Agent Note di repository.
 npx agent-note init --agent claude
 ```
 
-| Flag | Description |
+| Flag | Deskripsi |
 |---|---|
-| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
-| `--dashboard` | Also create the shared Dashboard workflow |
-| `--no-hooks` | Skip agent hook configuration |
-| `--no-git-hooks` | Skip git hook installation |
-| `--no-action` | Skip workflow creation |
-| `--no-notes` | Skip notes auto-fetch config |
-| `--hooks` | Only install agent hooks |
-| `--action` | Only create workflow |
+| `--agent <name...>` | Pilih satu atau beberapa adapter agent: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | Juga buat workflow Dashboard bersama |
+| `--no-hooks` | Lewati konfigurasi hooks agent |
+| `--no-git-hooks` | Lewati instalasi Git Hooks |
+| `--no-action` | Lewati pembuatan workflow |
+| `--no-notes` | Lewati konfigurasi notes auto-fetch |
+| `--hooks` | Hanya instal hooks agent |
+| `--action` | Hanya buat workflow |
 
 ## agent-note deinit
 
@@ -49,7 +49,7 @@ npx agent-note deinit --agent claude
 
 | Flag | Deskripsi |
 |---|---|
-| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
 | `--remove-workflow` | Juga menghapus workflow PR Report dan Dashboard |
 | `--keep-notes` | Mempertahankan konfigurasi notes auto-fetch |
 
@@ -99,7 +99,7 @@ npx agent-note show abc1234
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -145,4 +145,4 @@ Pasang Agent Note Skill untuk meminta tugas ini dengan bahasa natural.
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Pilih nilai `--agent` yang sesuai: `codex`, `claude-code`, `cursor`, atau `gemini-cli`.
+Untuk `gh skill install`, pilih identifier agent yang sesuai: `codex`, `claude-code`, `cursor` or `gemini-cli`.

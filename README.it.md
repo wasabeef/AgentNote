@@ -53,7 +53,7 @@ Se il tuo AI Agent supporta GitHub Agent Skills, installa lo Skill Agent Note pe
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Scegli il valore `--agent` corretto: `codex`, `claude-code`, `cursor` o `gemini-cli`. Lo Skill guida normalmente l'agent verso solo sei comandi pubblici: `init`, `deinit`, `status`, `log`, `show` e `why`.
+Per `gh skill install`, scegli l'identificatore agent corretto: `codex`, `claude-code`, `cursor` or `gemini-cli`. Lo Skill guida normalmente l'agent verso solo sei comandi pubblici: `init`, `deinit`, `status`, `log`, `show` e `why`.
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -192,7 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-La GitHub Action pubblica un report di sessione AI nella PR Description:
+La GitHub Action pubblica un report di sessione AI nella descrizione della PR:
 
 Il blocco `agentnote-reviewer-context` viene salvato nel body della PR come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.
 

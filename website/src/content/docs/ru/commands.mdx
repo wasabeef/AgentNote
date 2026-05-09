@@ -17,7 +17,7 @@ import { Aside } from '@astrojs/starlight/components';
 - Понять, почему изменилась строка: `agent-note why`
 
 <Aside>
-  PR Report и Dashboard — это функции GitHub Action. Обычно их создает `agent-note init`, а не внутренние report-команды.
+  PR Report и Dashboard — это функции GitHub Action. `agent-note init` обычно создает файлы workflow; отчеты и Dashboard появляются позже при запуске этих workflows.
 </Aside>
 
 ## agent-note init
@@ -28,16 +28,16 @@ import { Aside } from '@astrojs/starlight/components';
 npx agent-note init --agent claude
 ```
 
-| Flag | Description |
+| Флаг | Описание |
 |---|---|
-| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
-| `--dashboard` | Also create the shared Dashboard workflow |
-| `--no-hooks` | Skip agent hook configuration |
-| `--no-git-hooks` | Skip git hook installation |
-| `--no-action` | Skip workflow creation |
-| `--no-notes` | Skip notes auto-fetch config |
-| `--hooks` | Only install agent hooks |
-| `--action` | Only create workflow |
+| `--agent <name...>` | Выбрать один или несколько agent adapters: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | Также создать workflow для общего Dashboard |
+| `--no-hooks` | Пропустить настройку hooks для agent |
+| `--no-git-hooks` | Пропустить установку Git Hooks |
+| `--no-action` | Пропустить создание workflows |
+| `--no-notes` | Пропустить настройку notes auto-fetch |
+| `--hooks` | Установить только hooks для agent |
+| `--action` | Создать только workflows |
 
 ## agent-note deinit
 
@@ -49,9 +49,9 @@ npx agent-note deinit --agent claude
 
 | Flag | Описание |
 |---|---|
-| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
 | `--remove-workflow` | Также удаляет workflows PR Report и Dashboard |
-| `--keep-notes` | Оставляет notes auto-fetch config |
+| `--keep-notes` | Оставить настройку notes auto-fetch |
 
 ## agent-note status
 
@@ -99,7 +99,7 @@ npx agent-note show abc1234
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -145,4 +145,4 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Выберите подходящее значение `--agent`: `codex`, `claude-code`, `cursor` или `gemini-cli`.
+Для `gh skill install` выберите подходящий идентификатор agent: `codex`, `claude-code`, `cursor` or `gemini-cli`.

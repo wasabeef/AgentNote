@@ -53,7 +53,7 @@ If your AI coding agent supports GitHub Agent Skills, install the Agent Note ski
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Use the matching `--agent` value: `codex`, `claude-code`, `cursor`, or `gemini-cli`. The skill guides the agent to the public commands: `init`, `deinit`, `status`, `log`, `show`, and `why`.
+For `gh skill install`, use the matching agent identifier: `codex`, `claude-code`, `cursor`, or `gemini-cli`. The skill guides the agent to the public commands: `init`, `deinit`, `status`, `log`, `show`, and `why`.
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514

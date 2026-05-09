@@ -53,7 +53,7 @@ Agent Note 会为每个 Commit 保存与 AI 的对话和变更文件。信息足
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-根据 Agent 选择对应的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。Skill 通常只会引导 agent 使用六个公开命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
+对于 `gh skill install`，请根据 Agent 选择对应的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。Skill 通常只会引导 agent 使用六个公开命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514

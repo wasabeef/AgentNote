@@ -17,7 +17,7 @@ import { Aside } from '@astrojs/starlight/components';
 - 查看某一行为什么改变: `agent-note why`
 
 <Aside>
-  PR Report 和 Dashboard 是 GitHub Action 功能。它们通常由 `agent-note init` 生成，而不是直接运行内部 report 命令。
+  PR Report 和 Dashboard 是 GitHub Action 功能。`agent-note init` 通常创建 workflow 文件；报告和 Dashboard 会在这些 workflow 运行后生成。
 </Aside>
 
 ## agent-note init
@@ -28,16 +28,16 @@ import { Aside } from '@astrojs/starlight/components';
 npx agent-note init --agent claude
 ```
 
-| Flag | Description |
+| 参数 | 说明 |
 |---|---|
-| `--agent <name...>` | Choose one or more agent adapters: `claude`, `codex`, `cursor`, or `gemini` |
-| `--dashboard` | Also create the shared Dashboard workflow |
-| `--no-hooks` | Skip agent hook configuration |
-| `--no-git-hooks` | Skip git hook installation |
-| `--no-action` | Skip workflow creation |
-| `--no-notes` | Skip notes auto-fetch config |
-| `--hooks` | Only install agent hooks |
-| `--action` | Only create workflow |
+| `--agent <name...>` | 选择一个或多个 agent adapters: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | 同时创建共享 Dashboard workflow |
+| `--no-hooks` | 跳过 agent hooks 配置 |
+| `--no-git-hooks` | 跳过 Git Hooks 安装 |
+| `--no-action` | 跳过 workflow 创建 |
+| `--no-notes` | 跳过 notes auto-fetch 配置 |
+| `--hooks` | 仅安装 agent hooks |
+| `--action` | 仅创建 workflow |
 
 ## agent-note deinit
 
@@ -49,7 +49,7 @@ npx agent-note deinit --agent claude
 
 | Flag | 说明 |
 |---|---|
-| `--agent <name...>` | `claude`, `codex`, `cursor`, or `gemini` |
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
 | `--remove-workflow` | 同时删除 PR Report 和 Dashboard workflow |
 | `--keep-notes` | 保留 notes auto-fetch 配置 |
 
@@ -99,7 +99,7 @@ npx agent-note show abc1234
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
@@ -145,4 +145,4 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-根据 Agent 选择对应的 `--agent` 值: `codex`、`claude-code`、`cursor` 或 `gemini-cli`。
+对于 `gh skill install`，请根据 Agent 选择对应的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。
