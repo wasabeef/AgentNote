@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T12:51:49.590Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": "**Fixed Threads**\n- CodeRabbit の新規未解決 14 件を修正・resolve 済みです。\n- 非英語 locale の `Agent Support` link / capability matrix の英語残りを横断修正しました。\n- Commit / push 済み: `2fd469d docs: localize capability matrix copy`\n\n**Threads Intentionally Left Unresolved**\n- なし。GraphQL で CodeRabbit 未解決 thread 0 件を確認済み。\n\n**Checks Run**\n- `npm run build --prefix website` pass\n- `git diff --check` pass\n- `gh pr checks 66` 確認\n- CodeRabbit review threads GraphQL 確認\n- `git status --short` clean\n\n**Any Remaining Risk**\n- 通常 CI は全 pass。CodeRabbit check だけまだ `pending / Review in progress` ですが、review thread はすべて resolved 済みです。",
+      "contexts": [
+        {
+          "kind": "scope",
+          "source": "current_response",
+          "text": "**Fixed Threads** CodeRabbit の新規未解決 14 件を修正・resolve 済みです。 非英語 locale の `Agent Support` link / capability matrix の英語残りを横断修正しました。"
+        }
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
