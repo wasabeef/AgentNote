@@ -124,6 +124,33 @@ describe("agentnote why", () => {
     assert.match(output, /file:\s+\.\/src\\app\.ts/);
   });
 
+  it("accepts GitHub, editor, and AI-agent path target formats", () => {
+    const appPath = join(testDir, "src", "app.ts");
+    const cases = [
+      ["src/app.ts#L2", /target: src\/app\.ts:2/],
+      ["@src/app.ts#L2", /target: src\/app\.ts:2/],
+      ["src/app.ts#L2-L3", /target: src\/app\.ts:2-3/],
+      ["src/app.ts:2:7", /target: src\/app\.ts:2/],
+      ["https://github.com/wasabeef/AgentNote/blob/main/src/app.ts#L2", /target: src\/app\.ts:2/],
+      [
+        "https://github.com/wasabeef/AgentNote/blob/feature/why-targets/src/app.ts?plain=1#L2",
+        /target: src\/app\.ts:2/,
+      ],
+      [`file://${appPath}#L2`, /target: src\/app\.ts:2/],
+      [`vscode://file${appPath}:2:7`, /target: src\/app\.ts:2/],
+    ] as const;
+
+    for (const [target, targetPattern] of cases) {
+      const output = execFileSync("node", [cliPath, "why", target], {
+        cwd: testDir,
+        encoding: "utf-8",
+      });
+
+      assert.match(output, targetPattern, target);
+      assert.match(output, new RegExp(`commit: ${featureCommit.slice(0, 7)} feat: add label`));
+    }
+  });
+
   it("keeps missing notes explicit for older blamed lines", () => {
     const output = execFileSync("node", [cliPath, "why", "src/app.ts:1"], {
       cwd: testDir,

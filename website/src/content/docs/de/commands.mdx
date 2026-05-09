@@ -49,10 +49,13 @@ Findet mit `git blame` den Commit, der eine Zeile zuletzt geändert hat, und zei
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
 ```
 
 <Aside>
-  `why` verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`. Es zeigt prompt evidence auf Commit- oder Datei-Ebene, behauptet aber nicht, den exakten prompt für diese Zeile zu kennen.
+  `why` akzeptiert `path:line`, die GitHub-Form `path#Lline`, GitHub file URLs und paths mit führendem `@`, die aus AI Agent output kopiert wurden. Es verkürzt den manuellen Weg `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log

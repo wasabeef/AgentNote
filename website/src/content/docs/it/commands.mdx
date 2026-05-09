@@ -49,10 +49,13 @@ Usa `git blame` per trovare il Commit che ha cambiato una riga e mostra il conte
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
 ```
 
 <Aside>
-  `why` evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`. Mostra evidence a livello di Commit o file, senza affermare di conoscere il prompt esatto che ha scritto quella riga.
+  `why` accetta `path:line`, il formato GitHub `path#Lline`, GitHub file URLs e path con `@` iniziale copiati dall'output di un AI Agent. Evita il percorso manuale `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log

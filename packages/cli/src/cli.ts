@@ -23,9 +23,9 @@ usage:
   agent-note deinit --agent <name...>
                                     remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
-  agent-note why <path>:<line[-end]>
+  agent-note why <target>
                                     explain the Agent Note context behind a line
-  agent-note blame <path>:<line[-end]>
+  agent-note blame <target>
                                     alias of why
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]

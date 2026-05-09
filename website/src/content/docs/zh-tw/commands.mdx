@@ -49,10 +49,13 @@ npx agent-note show abc1234
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
 ```
 
 <Aside>
-  `why` 縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。它顯示 Commit 或 file 層級的 prompt evidence，但不會宣稱知道寫下該行的精確 prompt。
+  `why` 支援 `path:line`、GitHub 風格的 `path#Lline`、GitHub file URL，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。
 </Aside>
 
 ## agent-note log

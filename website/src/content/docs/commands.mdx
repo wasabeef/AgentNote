@@ -70,10 +70,13 @@ Show the Agent Note context behind the commit that last changed a file line.
 ```bash
 npx agent-note why src/middleware/auth.ts:42
 npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
 ```
 
 <Aside>
-  `why` shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow. It shows commit-level or file-level prompt evidence and stays explicit that exact line-to-prompt attribution is not stored yet.
+  `why` accepts `path:line`, GitHub-style `path#Lline`, GitHub file URLs, and leading `@` path mentions copied from AI Agent output. It shortens the manual `git blame` → `git notes --ref=agentnote show <commit>` lookup flow.
 </Aside>
 
 ## agent-note log
