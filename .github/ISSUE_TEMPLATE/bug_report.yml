@@ -51,7 +51,7 @@ body:
     attributes:
       label: Agent Note version
       description: Output of `npx agent-note version`, if available.
-      placeholder: "0.2.3"
+      placeholder: "1.0.0"
   - type: textarea
     id: environment
     attributes:
