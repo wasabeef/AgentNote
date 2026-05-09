@@ -1,0 +1,78 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T11:53:54.958Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/how-it-works.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
