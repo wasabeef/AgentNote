@@ -188,7 +188,7 @@ $ npx agent-note pr --output description --update 42
 
 Questo pubblica un report di sessione AI nella PR Description:
 
-Il blocco `agentnote-reviewer-context` viene salvato nel PR body come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.
+Il blocco `agentnote-reviewer-context` viene salvato nel body della PR come hidden comment. Gli AI Review tools che leggono la raw PR description, come Copilot, CodeRabbit, Devin e Greptile, possono usarlo come intent e review focus aggiuntivi.
 
 ```
 ## 🧑💬🤖 Agent Note

@@ -7,17 +7,17 @@ import { Aside } from '@astrojs/starlight/components';
 
 O Agent Note grava o mesmo formato de git note para todos os agents, mas cada agent expõe hooks e transcripts diferentes. Esta página mostra o que esperar antes de ativar para um time.
 
-## Capability Matrix
+## Matriz de capacidades dos agents
 
 | Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |
 | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |
-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e final blob batem |
+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando edit count e arquivo final batem |
 | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
 
 <Aside>
-  Files significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. Line Estimate significa que ele também pode estimar linhas escritas pela AI, em vez de apenas contar arquivos. Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
+  Files significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. Line Estimate significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos. Preview significa que o Agent Note acompanha o comportamento público atual, mas o formato local do agent ainda pode mudar.
 </Aside>
 
 ## Setup recomendado
@@ -61,7 +61,7 @@ Codex CLI é transcript-driven. O Agent Note lê transcripts locais e sobe para 
 
 ### Cursor
 
-Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o final blob ainda bate com o último AI edit.
+Cursor usa `afterFileEdit` / `afterTabFileEdit`, além de response hooks ou transcripts locais. Line-level só é possível quando o arquivo final ainda bate com o último AI edit.
 
 ### Gemini CLI
 

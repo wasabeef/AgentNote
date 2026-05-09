@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap agent menyediakan hooks dan transcript yang berbeda. Halaman ini membantu tim memahami ekspektasi sebelum mengaktifkannya.
 
-## Capability Matrix
+## Matriks Kemampuan Agent
 
 | Agent | Status | Prompt | Response | Files | AI Ratio | Line Estimate |
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |
 | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |
-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan final blob cocok |
+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat edit count dan file akhir cocok |
 | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |
 
 <Aside>
@@ -61,7 +61,7 @@ Codex CLI bersifat transcript-driven. Agent Note membaca local transcript dan na
 
 ### Cursor
 
-Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika final blob masih cocok dengan AI edit terakhir.
+Cursor memakai `afterFileEdit` / `afterTabFileEdit`, serta response hooks atau local transcripts. Line-level hanya mungkin ketika file akhir masih cocok dengan AI edit terakhir.
 
 ### Gemini CLI
 

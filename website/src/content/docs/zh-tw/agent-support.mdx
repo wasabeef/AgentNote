@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';
 
 Agent Note 對所有 agent 使用相同的 git note 格式，但每個 agent 暴露的 hook 與 transcript 資料不同。本頁協助你在團隊啟用前了解預期範圍。
 
-## Capability Matrix
+## Agent 能力矩陣
 
 | Agent | 狀態 | Prompt | Response | Files | AI Ratio | Line Estimate |
 |---|---|---|---|---|---|---|
 | Claude Code | Full support | 是 | 是 | 是 | 是 | 預設顯示 |
 | Codex CLI | Supported | 是 | 是 | 是 | 是 | 當 Codex patch 記錄與最終 Commit 相符時 |
-| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 與 final blob 相符時 |
+| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 與 final file 相符時 |
 | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支援 |
 
 <Aside>
@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 讀取 local transcript，只有在
 
 ### Cursor
 
-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final blob 仍符合最後一次 AI edit 時，才可使用 line-level。
+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍符合最後一次 AI edit 時，才可使用 line-level。
 
 ### Gemini CLI
 

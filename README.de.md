@@ -121,7 +121,7 @@ Diese Dateien erscheinen weiterhin in Notes, PR Report und Dashboard. Sie werden
 | Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit-Zähler und finale Datei passen |
 | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |
 
-`Files` bedeutet, dass Agent Note zeigen kann, welche commiteten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen.
+`Files` bedeutet, dass Agent Note zeigen kann, welche committierten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen.
 
 ## Setup prüfen
 

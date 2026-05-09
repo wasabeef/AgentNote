@@ -143,7 +143,7 @@ Une fois les git hooks générés installés, la plupart des dépôts peuvent co
 
 Agent Note et Entire résolvent des problèmes proches, mais différents.
 
-- Agent Note relie les git commits à l’AI conversation qui les a produits. Entire est un checkpoint product plus large avec des workflows rewind / resume.
+- Agent Note relie les git commits à la conversation avec l’IA qui les a produits. Entire est un checkpoint product plus large avec des workflows rewind / resume.
 - Agent Note stocke l’enregistrement permanent dans `refs/notes/agentnote`; les fichiers temporaires de session restent sous `.git/agentnote/`. Entire se concentre sur la checkpoint metadata et une hosted web application.
 - Le Dashboard d’Agent Note est un static GitHub Pages optionnel, alimenté par les git notes. Vous pouvez utiliser Agent Note sans hosted service.
 - Agent Note ne cherche pas à restaurer un ancien workspace state. Il optimise la reviewability: pourquoi un commit a changé, quels prompts sont intervenus et quelle part du diff est AI-authored.

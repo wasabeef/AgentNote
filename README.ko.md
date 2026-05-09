@@ -118,7 +118,7 @@ packages/pr-report/dist/**
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |
 | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |
-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit 수와 최종 file 이 일치할 때 |
+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |
 | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |
 
 `Files` 는 Agent 가 건드린 committed file 을 표시할 수 있다는 뜻입니다. `Line Estimate` 는 file 개수만 세는 대신 AI 가 작성한 줄의 추정치도 표시할 수 있다는 뜻입니다.

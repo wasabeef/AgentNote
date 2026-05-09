@@ -121,7 +121,7 @@ Esos archivos siguen apareciendo en Notes, PR Report y Dashboard. Solo se elimin
 | Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit y el archivo final coinciden |
 | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |
 
-`Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la AI en lugar de contar solo archivos.
+`Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la IA en lugar de contar solo archivos.
 
 ## Verifica tu Setup
 

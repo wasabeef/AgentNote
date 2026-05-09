@@ -121,7 +121,7 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r
 | Cursor | Supported | Sim | Sim | Sim | Sim | Quando as contagens de edit e o file final batem |
 | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |
 
-`Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela AI, em vez de apenas contar arquivos.
+`Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos.
 
 ## Verifique o Setup
 
@@ -251,7 +251,7 @@ Você executa `git push`
 `refs/notes/agentnote` é enviado junto com a Branch
 ```
 
-Para o Flow detalhado, como Agent Note estima o trabalho escrito pela AI e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
+Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Schema salvo, veja [Como funciona](https://wasabeef.github.io/AgentNote/pt-br/how-it-works/).
 
 ## Commands
 

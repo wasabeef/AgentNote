@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 Agent Note и Entire решают похожие, но разные задачи.
 
-- Agent Note связывает git commits с AI conversation, которая их создала. Entire — более широкий checkpoint product с workflow rewind / resume.
+- Agent Note связывает git commits с диалогом с AI, который их создал. Entire — более широкий checkpoint product с workflow rewind / resume.
 - Agent Note хранит постоянную запись в `refs/notes/agentnote`; временные файлы сессии остаются в `.git/agentnote/`. Entire строится вокруг checkpoint metadata и hosted web application.
 - Dashboard Agent Note — это optional static GitHub Pages на основе git notes. Agent Note можно использовать без hosted service.
 - Agent Note не пытается восстановить старый workspace state. Он фокусируется на reviewability: почему commit изменился, какие prompts участвовали и какая часть diff была AI-authored.

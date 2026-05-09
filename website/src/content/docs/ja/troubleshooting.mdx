@@ -110,7 +110,7 @@ git hook は `.git/` 内にあるため、agent config file が commit されて
 
 - Claude Code は通常 line-level に必要な edit history を持っています。
 - Codex CLI は transcript patch 行数が最終 commit diff と一致したときだけ昇格します。
-- Cursor は edit 行数が一致し、最終 blob が最後の AI edit と一致したときだけ昇格します。
+- Cursor は edit 行数が一致し、最終 file が最後の AI edit と一致したときだけ昇格します。
 - Gemini CLI は現在 file-level attribution です。
 
 証拠が足りない場合、Agent Note は推測せず、安全な判定に戻します。

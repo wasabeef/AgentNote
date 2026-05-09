@@ -143,7 +143,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 Agent Note 和 Entire 解決的是相關但不同的問題。
 
-- Agent Note 會把 git commit 與產生該 commit 的 AI conversation 關聯起來。Entire 是更廣義的 checkpoint product，包含 rewind / resume workflow。
+- Agent Note 會把 git commit 與產生該 commit 的 AI 對話關聯起來。Entire 是更廣義的 checkpoint product，包含 rewind / resume workflow。
 - Agent Note 會把永久記錄保存到 `refs/notes/agentnote`；暫時 session 檔案保留在 `.git/agentnote/` 下。Entire 以 checkpoint metadata 和 hosted web application 為中心。
 - Agent Note 的 Dashboard 是以 git notes 為基礎的 optional static GitHub Pages。即使沒有 hosted service，也可以繼續使用 Agent Note。
 - Agent Note 不嘗試還原舊的 workspace state。它專注於 reviewability：commit 為什麼改變、哪些 prompt 參與其中，以及 diff 中有多少是 AI-authored。
