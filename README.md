@@ -260,6 +260,7 @@ For the detailed flow, how Agent Note estimates AI-written work, and the stored 
 | `agent-note init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
 | `agent-note deinit` | Remove hooks and config for an agent |
 | `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
+| `agent-note why <path>:<line>` | Explain the Agent Note context behind a file line |
 | `agent-note log [n]` | List recent commits with AI ratio |
 | `agent-note pr [base]` | Generate PR Report (markdown or JSON) |
 | `agent-note session <id>` | Show all commits linked to one session |

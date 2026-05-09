@@ -6939,6 +6939,175 @@ async function resolveHookDir2(repoRoot3) {
   return join15(resolvedGitDir, "hooks");
 }
 
+// src/commands/why.ts
+init_constants();
+init_entry();
+init_storage();
+init_git();
+import { isAbsolute as isAbsolute5, relative as relative3 } from "node:path";
+var ALL_ZERO_COMMIT_RE = /^0{40}$/;
+var BLAME_HEADER_RE = /^([0-9a-f]{40})\s+\d+\s+\d+(?:\s+\d+)?$/i;
+var TARGET_RE = /^(.+):(\d+)(?:-(\d+))?$/;
+var PATH_PREFIX_RE = /^\.\//;
+var PERCENT_DENOMINATOR5 = 100;
+var DEFAULT_CONTEXT_LINES = 2;
+var DEFAULT_RELATED_INTERACTION_LIMIT = 3;
+var RATIO_BAR_WIDTH = 8;
+var COMMIT_FORMAT = "%H%x00%h%x00%s%x00%ad%x00%an";
+async function why(args2) {
+  const target = await parseWhyTarget(args2[0]);
+  const blamedShas = await blameTarget(target);
+  printTarget(target);
+  if (blamedShas.length === 0) {
+    console.log("evidence: none");
+    console.log("reason:   git blame did not return a committed line");
+    return;
+  }
+  for (let index = 0; index < blamedShas.length; index += 1) {
+    if (index > 0) console.log();
+    await printBlamedCommit(target, blamedShas[index]);
+  }
+}
+async function parseWhyTarget(value) {
+  if (!value) {
+    printUsageAndExit();
+  }
+  const match = TARGET_RE.exec(value);
+  if (!match) {
+    printUsageAndExit();
+  }
+  const startLine = Number(match[2]);
+  const endLine = match[3] ? Number(match[3]) : startLine;
+  if (!Number.isInteger(startLine) || !Number.isInteger(endLine) || startLine <= 0 || endLine < startLine) {
+    printUsageAndExit();
+  }
+  return {
+    path: await normalizeTargetPath(match[1]),
+    startLine,
+    endLine
+  };
+}
+async function normalizeTargetPath(path) {
+  const normalized = path.replaceAll("\\", "/").replace(PATH_PREFIX_RE, "");
+  if (!isAbsolute5(normalized)) return normalized;
+  const root2 = await repoRoot();
+  return relative3(root2, normalized).replaceAll("\\", "/");
+}
+async function blameTarget(target) {
+  const range = `${target.startLine},${target.endLine}`;
+  const result = await gitSafe(["blame", "--porcelain", "-L", range, "--", target.path]);
+  if (result.exitCode !== 0) return [];
+  const shas = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const line of result.stdout.split("\n")) {
+    const match = BLAME_HEADER_RE.exec(line);
+    if (!match) continue;
+    const sha = match[1];
+    if (ALL_ZERO_COMMIT_RE.test(sha) || seen.has(sha)) continue;
+    seen.add(sha);
+    shas.push(sha);
+  }
+  return shas;
+}
+async function printBlamedCommit(target, sha) {
+  const commit2 = await readBlamedCommit(sha);
+  console.log("blame:");
+  console.log(`  commit: ${commit2.shortSha} ${commit2.subject}`);
+  console.log(`  author: ${commit2.author}`);
+  console.log(`  date:   ${commit2.date}`);
+  const raw = await readNote(commit2.sha);
+  if (!raw) {
+    console.log();
+    console.log("agent note:");
+    console.log("  evidence: none");
+    console.log("  reason:   no Agent Note data exists for this commit");
+    return;
+  }
+  const entry = normalizeEntry(raw);
+  printEntrySummary(entry);
+  printRelatedInteractions(target.path, entry);
+}
+async function readBlamedCommit(sha) {
+  const output = await git(["show", "-s", `--format=${COMMIT_FORMAT}`, "--date=short", sha]);
+  const [fullSha, shortSha, subject, date, author] = output.split("\0");
+  return {
+    sha: fullSha || sha,
+    shortSha: shortSha || sha.slice(0, 7),
+    subject: subject || "(no subject)",
+    date: date || "-",
+    author: author || "-"
+  };
+}
+function printTarget(target) {
+  const lineSuffix = target.startLine === target.endLine ? String(target.startLine) : `${target.startLine}-${target.endLine}`;
+  console.log(`target: ${target.path}:${lineSuffix}`);
+  console.log();
+}
+function printEntrySummary(entry) {
+  console.log();
+  console.log("agent note:");
+  console.log(`  agent:       ${entry.agent ?? "-"}`);
+  console.log(`  model:       ${entry.model ?? "-"}`);
+  console.log(
+    `  ai ratio:    ${entry.attribution.ai_ratio}% ${renderRatioBar2(entry.attribution.ai_ratio)}`
+  );
+  console.log(`  attribution: ${entry.attribution.method}`);
+}
+function printRelatedInteractions(targetPath, entry) {
+  const related = selectRelatedInteractions(targetPath, entry);
+  if (related.length === 0) {
+    console.log("  prompts:     none");
+    return;
+  }
+  console.log();
+  console.log("related prompts:");
+  for (let index = 0; index < related.length; index += 1) {
+    const item = related[index];
+    printInteraction(index + 1, item);
+  }
+  console.log();
+  console.log("why:");
+  console.log(`  evidence: ${related[0].evidence}-level Agent Note data`);
+  console.log("  note:     exact line-to-prompt attribution is not stored yet");
+}
+function selectRelatedInteractions(targetPath, entry) {
+  const fileMatches = entry.interactions.filter((interaction) => interaction.files_touched?.includes(targetPath)).map((interaction) => ({ interaction, evidence: "file" }));
+  if (fileMatches.length > 0) {
+    return fileMatches.slice(0, DEFAULT_RELATED_INTERACTION_LIMIT);
+  }
+  return filterInteractionsByPromptDetail(entry.interactions, "compact").slice(0, DEFAULT_RELATED_INTERACTION_LIMIT).map((interaction) => ({ interaction, evidence: "commit" }));
+}
+function printInteraction(index, item) {
+  const interaction = item.interaction;
+  console.log(`  ${index}. evidence: ${item.evidence}`);
+  const contexts = normalizeInteractionContexts(interaction).slice(0, DEFAULT_CONTEXT_LINES);
+  for (const context of contexts) {
+    console.log(`     context: ${truncateLines2(context.text, TRUNCATE_RESPONSE_SHOW)}`);
+  }
+  console.log(`     prompt:  ${truncateLines2(interaction.prompt, TRUNCATE_PROMPT)}`);
+  if (interaction.response) {
+    console.log(`     response: ${truncateLines2(interaction.response, TRUNCATE_RESPONSE_SHOW)}`);
+  }
+  for (const file of interaction.files_touched ?? []) {
+    console.log(`     file:    ${file}`);
+  }
+}
+function renderRatioBar2(ratio) {
+  const clamped = Math.min(PERCENT_DENOMINATOR5, Math.max(0, ratio));
+  const filled = Math.round(clamped / PERCENT_DENOMINATOR5 * RATIO_BAR_WIDTH);
+  return `[${"\u2588".repeat(filled)}${"\u2591".repeat(RATIO_BAR_WIDTH - filled)}]`;
+}
+function truncateLines2(text, maxLen) {
+  const compact = text.split("\n").map((line) => line.trim()).filter(Boolean).join(" ");
+  if (compact.length <= maxLen) return compact;
+  return `${compact.slice(0, maxLen)}\u2026`;
+}
+function printUsageAndExit() {
+  console.error("usage: agent-note why <path>:<line[-end]>");
+  console.error("example: agent-note why src/app.ts:42");
+  process.exit(1);
+}
+
 // src/cli.ts
 init_constants();
 var VERSION2 = "0.2.4";
@@ -6951,6 +7120,8 @@ usage:
   agent-note deinit --agent <name...>
                                     remove hooks and config [--remove-workflow] [--keep-notes]
   agent-note show [commit]          show session details for a commit
+  agent-note why <path>:<line[-end]>
+                                    explain the Agent Note context behind a line
   agent-note log [n]                list recent commits with session info
   agent-note pr [base] [--json] [--head <ref>] [--update <PR#>] [--output description|comment] [--prompt-detail compact|full]
                                     generate PR report or update PR description/comment
@@ -6981,6 +7152,10 @@ switch (command) {
     break;
   case "show":
     await show(args[0]);
+    break;
+  case "why":
+  case "blame":
+    await why(args);
     break;
   case "log":
     await log(parseLogCountArg(args[0]));

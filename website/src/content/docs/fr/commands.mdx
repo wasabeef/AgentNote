@@ -11,6 +11,7 @@ Utilisez cette page quand vous connaissez déjà le flux Agent Note et que vous 
 
 - Premier setup: `agent-note init`
 - Voir ce qu'un commit a enregistré: `agent-note show`
+- Comprendre pourquoi une ligne a changé: `agent-note why`
 - Parcourir l'activité récente: `agent-note log`
 - Générer un PR Report: `agent-note pr`
 - Vérifier les hooks et l'adapter actif: `agent-note status`
@@ -40,6 +41,19 @@ npx agent-note show abc1234
 ```
 
 Affiche les prompts, responses, fichiers touchés, agent, model et attribution pour un commit.
+
+## agent-note why
+
+Cherche avec `git blame` le Commit qui a modifié une ligne, puis affiche le contexte Agent Note lié à ce Commit.
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` évite de faire à la main le chemin `git blame` → git note. Il affiche une preuve au niveau du Commit ou du fichier, sans prétendre connaître le prompt exact qui a écrit cette ligne.
+</Aside>
 
 ## agent-note log
 
@@ -99,4 +113,3 @@ npx agent-note commit -m "feat: add auth"
 <Aside type="tip">
   Inutile si les git hooks sont installés. Un `git commit` normal déclenche déjà le même enregistrement.
 </Aside>
-

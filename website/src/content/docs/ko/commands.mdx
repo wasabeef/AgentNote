@@ -11,6 +11,7 @@ Agent Note 흐름을 이미 알고 있고 정확한 command 나 flag 를 찾을 
 
 - 첫 setup: `agent-note init`
 - commit 에 기록된 내용 확인: `agent-note show`
+- 한 줄이 왜 바뀌었는지 확인: `agent-note why`
 - 최근 활동 확인: `agent-note log`
 - PR Report 생성: `agent-note pr`
 - hook 과 active adapter 확인: `agent-note status`
@@ -40,6 +41,19 @@ npx agent-note show abc1234
 ```
 
 commit 의 prompts, responses, touched files, agent, model, attribution 을 표시합니다.
+
+## agent-note why
+
+`git blame` 으로 한 줄을 마지막으로 바꾼 Commit 을 찾고, 그 Commit 에 연결된 Agent Note context 를 보여줍니다.
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+```
+
+<Aside>
+  `why` 는 `git blame` → git note 를 손으로 따라가는 흐름을 줄여줍니다. Commit 또는 file 수준의 prompt evidence 를 보여주지만, 정확히 그 줄을 쓴 prompt 를 안다고 말하지는 않습니다.
+</Aside>
 
 ## agent-note log
 
@@ -99,4 +113,3 @@ npx agent-note commit -m "feat: add auth"
 <Aside type="tip">
   git hooks 가 설치되어 있으면 필요하지 않습니다. 일반 `git commit` 이 같은 기록을 수행합니다.
 </Aside>
-

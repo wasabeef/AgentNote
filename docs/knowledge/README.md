@@ -7,6 +7,7 @@ This directory stores focused knowledge for Agent Note maintainers and AI coding
 - `../architecture.md` — canonical architecture reference.
 - `prompt-context.md` — how `📝 Context` is selected and rendered.
 - `prompt-selection.md` — how prompt evidence is stored, scored at render time, and filtered by `prompt_detail`.
+- `why-command.md` — implemented `agent-note why` / blame-style command and future schema direction.
 - `agent-support-policy.md` — support-tier gates for non-Claude adapters.
 - `investigations.md` — resolved investigations and regression notes.
 
