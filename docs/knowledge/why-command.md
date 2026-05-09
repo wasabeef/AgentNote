@@ -149,6 +149,10 @@ Current behavior:
    `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,
    `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied
    from AI Agent output.
+   Normalize `@`, `file://`, and `vscode:` forms before repository-relative
+   resolution; GitHub file URLs prefer existing repo paths so branch names that
+   contain `/` stay part of the ref, and ambiguous `@scope/...` paths are kept
+   when they exist in the repo.
 2. Run `git blame --porcelain` for the target line or range.
 3. Read the blame commit's Agent Note.
 4. Prefer interactions whose `files_touched` contains the target path.
