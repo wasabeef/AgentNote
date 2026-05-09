@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` 는 `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.
+  `why` 는 `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.
 </Aside>
 
 ## agent-note log

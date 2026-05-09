@@ -61,7 +61,7 @@ npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` acepta `path:line`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.
+  `why` acepta `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` y paths con `@` inicial copiados de la salida de un AI Agent. Evita hacer manualmente el flujo `git blame` → `git notes --ref=agentnote show <commit>`.
 </Aside>
 
 ## agent-note log

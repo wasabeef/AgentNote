@@ -145,7 +145,7 @@ Rationale:
 
 Current behavior:
 
-1. Parse `path:line`, `path:start-end`, `path:line:column`, GitHub-style
+1. Parse `path:line`, `path:line-end`, `path:line:column`, GitHub-style
    `path#Lline`, `path#Lstart-Lend`, `path#LlineCcol`, GitHub file URLs,
    `file://` URLs, `vscode:` file URLs, and leading `@` path mentions copied
    from AI Agent output.
