@@ -1,0 +1,1071 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-09T12:06:46.598Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "$coderabbit-review",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "fallback",
+        "signals": [
+          "before_commit_boundary"
+        ]
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": true
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/commands.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/installation.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/troubleshooting.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/index.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/index.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "d3d441d07c4df7fb9b64071807cdde0efadc78e4",
+    "short_sha": "d3d441d",
+    "message": "docs: align cursor line estimate wording",
+    "date": "2026-05-09T21:06:44+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.de.md",
+        "lines": [
+          "index 358578f..6118c01 100644",
+          "--- a/README.de.md",
+          "+++ b/README.de.md",
+          "@@ -118,7 +118,7 @@ Diese Dateien erscheinen weiterhin in Notes, PR Report und Dashboard. Sie werden",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Ja | Ja | Ja | Ja | Standardmäßig |",
+          " | Codex CLI | Supported | Ja | Ja | Ja | Ja | Wenn die Codex-Patch-Historie zum finalen Commit passt |",
+          "-| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit-Zähler und finale Datei passen |",
+          "+| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit-Zähler passen und die finale Datei noch zum letzten AI edit passt |",
+          " | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |",
+          " ",
+          " `Files` bedeutet, dass Agent Note zeigen kann, welche committierten Dateien vom Agent berührt wurden. `Line Estimate` bedeutet, dass es zusätzlich KI-geschriebene Zeilen schätzen kann, statt nur Dateien zu zählen."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.es.md",
+        "lines": [
+          "index a9bd98d..79cf3ac 100644",
+          "--- a/README.es.md",
+          "+++ b/README.es.md",
+          "@@ -118,7 +118,7 @@ Esos archivos siguen apareciendo en Notes, PR Report y Dashboard. Solo se elimin",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Sí | Sí | Sí | Sí | Por defecto |",
+          " | Codex CLI | Supported | Sí | Sí | Sí | Sí | Cuando el historial de parches de Codex coincide con el Commit final |",
+          "-| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit y el archivo final coinciden |",
+          "+| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit coinciden y el archivo final aún coincide con el último edit de IA |",
+          " | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |",
+          " ",
+          " `Files` significa que Agent Note puede mostrar qué archivos commiteados tocó el Agent. `Line Estimate` significa que también puede estimar líneas escritas por la IA en lugar de contar solo archivos."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.fr.md",
+        "lines": [
+          "index 782a2c7..6c525ea 100644",
+          "--- a/README.fr.md",
+          "+++ b/README.fr.md",
+          "@@ -118,7 +118,7 @@ Ces fichiers restent visibles dans Notes, PR Report et Dashboard. Ils sont seule",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Oui | Oui | Oui | Oui | Par défaut |",
+          " | Codex CLI | Supported | Oui | Oui | Oui | Oui | Quand l'historique de patch Codex correspond au Commit final |",
+          "-| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit et le fichier final correspondent |",
+          "+| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit correspondent et que le fichier final correspond encore au dernier edit IA |",
+          " | Gemini CLI | Preview | Oui | Oui | Oui | Oui | Pas encore |",
+          " ",
+          " `Files` signifie qu'Agent Note peut montrer quels fichiers commités ont été touchés par l'Agent. `Line Estimate` signifie qu'il peut aussi estimer les lignes écrites par l'AI au lieu de seulement compter les fichiers."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.id.md",
+        "lines": [
+          "index 0558aba..f6d11c3 100644",
+          "--- a/README.id.md",
+          "+++ b/README.id.md",
+          "@@ -118,7 +118,7 @@ File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikelu",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |",
+          " | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |",
+          "-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit dan file akhir cocok |",
+          "+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir |",
+          " | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |",
+          " ",
+          " `Files` berarti Agent Note dapat menunjukkan file yang di-commit dan disentuh oleh Agent. `Line Estimate` berarti Agent Note juga dapat memperkirakan baris yang ditulis AI, bukan hanya menghitung file."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.it.md",
+        "lines": [
+          "index 36efe74..e77b84e 100644",
+          "--- a/README.it.md",
+          "+++ b/README.it.md",
+          "@@ -118,7 +118,7 @@ Questi file restano visibili in Notes, PR Report e Dashboard. Vengono rimossi so",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Sì | Sì | Sì | Sì | Di default |",
+          " | Codex CLI | Supported | Sì | Sì | Sì | Sì | Quando la cronologia patch di Codex corrisponde al Commit finale |",
+          "-| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit e il file finale coincidono |",
+          "+| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit coincidono e il file finale corrisponde ancora all'ultimo edit IA |",
+          " | Gemini CLI | Preview | Sì | Sì | Sì | Sì | Non ancora |",
+          " ",
+          " `Files` significa che Agent Note può mostrare quali file committati sono stati toccati dall'Agent. `Line Estimate` significa che può anche stimare le linee scritte dall'AI invece di contare solo i file."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ja.md",
+        "lines": [
+          "index 1000337..227e9cb 100644",
+          "--- a/README.ja.md",
+          "+++ b/README.ja.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 対応 | 対応 | 対応 | 対応 | 既定で表示 |",
+          " | Codex CLI | Supported | 対応 | 対応 | 対応 | 対応 | Codex の patch 履歴が最終 Commit と一致したとき |",
+          "-| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 file が一致したとき |",
+          "+| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数が一致し、committed file が最後の AI edit と一致したとき |",
+          " | Gemini CLI | Preview | 対応 | 対応 | 対応 | 対応 | 未対応 |",
+          " ",
+          " `Files` は、Agent が触った committed file を表示できるという意味です。`Line Estimate` は、file 数だけでなく AI が書いた行の目安も表示できるという意味です。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ko.md",
+        "lines": [
+          "index 75137b0..a76a02e 100644",
+          "--- a/README.ko.md",
+          "+++ b/README.ko.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |",
+          " | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |",
+          "-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |",
+          "+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 가 맞고 final file 이 마지막 AI edit 와 일치할 때 |",
+          " | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |",
+          " ",
+          " `Files` 는 Agent 가 건드린 committed file 을 표시할 수 있다는 뜻입니다. `Line Estimate` 는 file 개수만 세는 대신 AI 가 작성한 줄의 추정치도 표시할 수 있다는 뜻입니다."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.md",
+        "lines": [
+          "index 120ba44..3dd7e22 100644",
+          "--- a/README.md",
+          "+++ b/README.md",
+          "@@ -118,7 +118,7 @@ Those files still appear in Notes, PR Report, and Dashboard. They are only remov",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Yes | Yes | Yes | Yes | Default |",
+          " | Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |",
+          "-| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final file match |",
+          "+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts match and the final file still matches the latest AI edit |",
+          " | Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |",
+          " ",
+          " `Files` means Agent Note can show which committed files were touched by the agent. `Line Estimate` means it can also estimate AI-written lines instead of only counting files."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.pt-br.md",
+        "lines": [
+          "index 0a3c08a..0c53f0d 100644",
+          "--- a/README.pt-br.md",
+          "+++ b/README.pt-br.md",
+          "@@ -118,7 +118,7 @@ Esses arquivos continuam aparecendo em Notes, PR Report e Dashboard. Eles são r",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |",
+          " | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |",
+          "-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |",
+          "+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições coincide e o arquivo final ainda bate com a última edição da IA |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          " `Files` significa que Agent Note pode mostrar quais arquivos commitados foram tocados pelo Agent. `Line Estimate` significa que ele também pode estimar linhas escritas pela IA, em vez de apenas contar arquivos."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.ru.md",
+        "lines": [
+          "index e97adad..0a4bdcb 100644",
+          "--- a/README.ru.md",
+          "+++ b/README.ru.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | Да | Да | Да | Да | По умолчанию |",
+          " | Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |",
+          "-| Cursor | Supported | Да | Да | Да | Да | Когда счётчики edit и итоговый file совпадают |",
+          "+| Cursor | Supported | Да | Да | Да | Да | Когда счётчики edit совпадают и итоговый файл всё ещё соответствует последнему AI edit |",
+          " | Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |",
+          " ",
+          " `Files` означает, что Agent Note может показать, какие commit-файлы были затронуты Agent. `Line Estimate` означает, что он также может оценить строки, написанные AI, а не только считать файлы."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-cn.md",
+        "lines": [
+          "index de87641..49598ff 100644",
+          "--- a/README.zh-cn.md",
+          "+++ b/README.zh-cn.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit 数和最终 file 匹配时 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit 数匹配，且最终 file 仍匹配最后一次 AI edit 时 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |",
+          " ",
+          " `Files` 表示 Agent Note 可以显示 Agent 触碰过哪些已提交文件。`Line Estimate` 表示它还可以估算 AI 编写的行，而不是只统计文件。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "README.zh-tw.md",
+        "lines": [
+          "index 52c40e7..8068981 100644",
+          "--- a/README.zh-tw.md",
+          "+++ b/README.zh-tw.md",
+          "@@ -118,7 +118,7 @@ packages/pr-report/dist/**",
+          " | --- | --- | --- | --- | --- | --- | --- |",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 預設顯示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 當 Codex patch 記錄與最終 Commit 相符時 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit 數和最終 file 相符時 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit 數相符，且最終 file 仍符合最後一次 AI edit 時 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支援 |",
+          " ",
+          " `Files` 表示 Agent Note 可以顯示 Agent 觸碰過哪些已提交檔案。`Line Estimate` 表示它還可以估算 AI 編寫的行，而不是只統計檔案。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/agent-support.mdx",
+        "lines": [
+          "index 1c5858c..3195d56 100644",
+          "--- a/website/src/content/docs/agent-support.mdx",
+          "+++ b/website/src/content/docs/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note uses the same git-note format for every agent, but each agent exposes",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Yes | Yes | Yes | Yes | Default |",
+          " | Codex CLI | Supported | Yes | Yes | Yes | Yes | When Codex patch history matches the final commit |",
+          "-| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts and the final file match |",
+          "+| Cursor | Supported | Yes | Yes | Yes | Yes | When edit counts match and the final file still matches the latest AI edit |",
+          " | Gemini CLI | Preview | Yes | Yes | Yes | Yes | Not yet |",
+          " ",
+          " <Aside>",
+          "@@ -70,7 +70,7 @@ Shell-only edits are not guessed from command text. If no reliable transcript is",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when the committed file still matches the latest AI edit.",
+          "+Cursor support uses `afterFileEdit` / `afterTabFileEdit` hooks plus response hooks or local transcripts. Line-level attribution is possible only when edit counts match and the committed file still matches the latest AI edit.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/commands.mdx",
+        "lines": [
+          "index 46fac31..fc4f02a 100644",
+          "--- a/website/src/content/docs/commands.mdx",
+          "+++ b/website/src/content/docs/commands.mdx",
+          "@@ -176,5 +176,5 @@ npx agent-note commit -m \"feat: add auth\"",
+          " ",
+          " <Aside>",
+          "   Cursor preview tracks plain `git commit` normally when the generated git hooks are installed.",
+          "-  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when the committed file still matches the last AI edit. `agent-note commit` remains a useful fallback wrapper when git hooks are unavailable.",
+          "+  Its hooks also capture prompts, response metadata, and `afterFileEdit` / `afterTabFileEdit` attribution data, with a safe line-level upgrade when edit counts match and the committed file still matches the last AI edit. `agent-note commit` remains a useful fallback wrapper when git hooks are unavailable.",
+          " </Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/agent-support.mdx",
+        "lines": [
+          "index b4001a7..54723c9 100644",
+          "--- a/website/src/content/docs/de/agent-support.mdx",
+          "+++ b/website/src/content/docs/de/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note speichert für alle Agents dasselbe git-note Format, aber jeder Agent",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Ja | Ja | Ja | Ja | Standardmäßig |",
+          " | Codex CLI | Supported | Ja | Ja | Ja | Ja | Wenn die Codex-Patch-Historie zum finalen Commit passt |",
+          "-| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit Counts und finale Datei passen |",
+          "+| Cursor | Supported | Ja | Ja | Ja | Ja | Wenn Edit Counts passen und die finale Datei noch zum letzten AI edit passt |",
+          " | Gemini CLI | Preview | Ja | Ja | Ja | Ja | Noch nicht |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI ist transcript-driven. Agent Note liest lokale Transcripts und wechsel",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn die finale Datei noch zum letzten AI edit passt.",
+          "+Cursor nutzt `afterFileEdit` / `afterTabFileEdit` plus Response Hooks oder lokale Transcripts. Line-level ist nur möglich, wenn Edit Counts passen und die finale Datei noch zum letzten AI edit passt.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/index.mdx",
+        "lines": [
+          "index 10b5df9..7253bc0 100644",
+          "--- a/website/src/content/docs/de/index.mdx",
+          "+++ b/website/src/content/docs/de/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Standardmäßig</div>",
+          "     <div class=\"cap-partial\">Codex-Patch-Historie passt zum finalen Commit</div>",
+          "-    <div class=\"cap-partial\">Edit-Zähler und finale Datei passen</div>",
+          "+    <div class=\"cap-partial\">Edit-Zähler passen und finale Datei passt noch zum letzten AI edit</div>",
+          "     <div class=\"cap-no\">Noch nicht</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/agent-support.mdx",
+        "lines": [
+          "index 5fb63e1..83a6a10 100644",
+          "--- a/website/src/content/docs/es/agent-support.mdx",
+          "+++ b/website/src/content/docs/es/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note guarda el mismo formato de git note para todos los agents, pero cada",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sí | Sí | Sí | Sí | Por defecto |",
+          " | Codex CLI | Supported | Sí | Sí | Sí | Sí | Cuando el historial de parches de Codex coincide con el Commit final |",
+          "-| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit y el blob final coinciden |",
+          "+| Cursor | Supported | Sí | Sí | Sí | Sí | Cuando los conteos de edit coinciden y el archivo final aún coincide con el último edit de IA |",
+          " | Gemini CLI | Preview | Sí | Sí | Sí | Sí | Todavía no |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI es transcript-driven. Agent Note lee transcripts locales y sube a line",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor usa `afterFileEdit` / `afterTabFileEdit`, además de response hooks o transcripts locales. Line-level solo es posible si el blob final sigue coincidiendo con el último edit de IA.",
+          "+Cursor usa `afterFileEdit` / `afterTabFileEdit`, además de response hooks o transcripts locales. Line-level solo es posible si los conteos de edit coinciden y el archivo final aún coincide con el último edit de IA.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/index.mdx",
+        "lines": [
+          "index e683037..8f525ed 100644",
+          "--- a/website/src/content/docs/es/index.mdx",
+          "+++ b/website/src/content/docs/es/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Por defecto</div>",
+          "     <div class=\"cap-partial\">El historial de parches de Codex coincide con el Commit final</div>",
+          "-    <div class=\"cap-partial\">Los conteos de edit y el archivo final coinciden</div>",
+          "+    <div class=\"cap-partial\">Los conteos de edit coinciden y el archivo final aún coincide con el último edit de IA</div>",
+          "     <div class=\"cap-no\">Todavía no</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/agent-support.mdx",
+        "lines": [
+          "index ff7ead5..c641d68 100644",
+          "--- a/website/src/content/docs/fr/agent-support.mdx",
+          "+++ b/website/src/content/docs/fr/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note écrit le même format de git note pour tous les agents, mais chaque",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Oui | Oui | Oui | Oui | Par défaut |",
+          " | Codex CLI | Supported | Oui | Oui | Oui | Oui | Quand l'historique de patch Codex correspond au Commit final |",
+          "-| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit et le blob final correspondent |",
+          "+| Cursor | Supported | Oui | Oui | Oui | Oui | Quand les compteurs d'edit correspondent et que le fichier final correspond encore au dernier edit IA |",
+          " | Gemini CLI | Preview | Oui | Oui | Oui | Oui | Pas encore |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI est transcript-driven. Agent Note lit le transcript local et passe en",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor utilise `afterFileEdit` / `afterTabFileEdit`, plus response hooks ou transcripts locaux. Le line-level est possible seulement si le blob final correspond encore au dernier edit IA.",
+          "+Cursor utilise `afterFileEdit` / `afterTabFileEdit`, plus response hooks ou transcripts locaux. Le line-level est possible seulement si les compteurs d'edit correspondent et que le fichier final correspond encore au dernier edit IA.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/index.mdx",
+        "lines": [
+          "index 6d985f7..09ba5bf 100644",
+          "--- a/website/src/content/docs/fr/index.mdx",
+          "+++ b/website/src/content/docs/fr/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Par défaut</div>",
+          "     <div class=\"cap-partial\">L'historique de patch Codex correspond au Commit final</div>",
+          "-    <div class=\"cap-partial\">Les compteurs d'edit et le fichier final correspondent</div>",
+          "+    <div class=\"cap-partial\">Les compteurs d'edit correspondent et le fichier final correspond encore au dernier edit IA</div>",
+          "     <div class=\"cap-no\">Pas encore</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/agent-support.mdx",
+        "lines": [
+          "index fde1dfb..2a0501f 100644",
+          "--- a/website/src/content/docs/id/agent-support.mdx",
+          "+++ b/website/src/content/docs/id/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note memakai format git note yang sama untuk semua agent, tetapi setiap ag",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Ya | Ya | Ya | Ya | Default |",
+          " | Codex CLI | Supported | Ya | Ya | Ya | Ya | Saat riwayat patch Codex cocok dengan Commit akhir |",
+          "-| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit dan file akhir cocok |",
+          "+| Cursor | Supported | Ya | Ya | Ya | Ya | Saat jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir |",
+          " | Gemini CLI | Preview | Ya | Ya | Ya | Ya | Belum |",
+          " ",
+          " <Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/index.mdx",
+        "lines": [
+          "index 90db25e..6da06da 100644",
+          "--- a/website/src/content/docs/id/index.mdx",
+          "+++ b/website/src/content/docs/id/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Default</div>",
+          "     <div class=\"cap-partial\">Riwayat patch Codex cocok dengan Commit akhir</div>",
+          "-    <div class=\"cap-partial\">Jumlah edit dan file akhir cocok</div>",
+          "+    <div class=\"cap-partial\">Jumlah edit cocok dan file akhir masih cocok dengan edit AI terakhir</div>",
+          "     <div class=\"cap-no\">Belum</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/index.mdx",
+        "lines": [
+          "index ac988a3..bc2c411 100644",
+          "--- a/website/src/content/docs/index.mdx",
+          "+++ b/website/src/content/docs/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Default</div>",
+          "     <div class=\"cap-partial\">Codex patch history matches final Commit</div>",
+          "-    <div class=\"cap-partial\">Edit count and final file match</div>",
+          "+    <div class=\"cap-partial\">Edit count matches and final file still matches the latest AI edit</div>",
+          "     <div class=\"cap-no\">Not yet</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/installation.mdx",
+        "lines": [
+          "index 4d2134c..91653b8 100644",
+          "--- a/website/src/content/docs/installation.mdx",
+          "+++ b/website/src/content/docs/installation.mdx",
+          "@@ -172,7 +172,7 @@ This is the quick view. For the detailed capture and attribution rules, see [Age",
+          "   <Card>",
+          "     <div class=\"agent-capability-card\">",
+          "       <div class=\"agent-capability-card__title\">Cursor</div>",
+          "-      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when `afterFileEdit` / `afterTabFileEdit` counts and the final file still matches.",
+          "+      Plain `git commit` works with the generated git hooks. Prompt / response recovery comes from response hooks or local transcripts, and attribution upgrades when edit counts match and the final file still matches the last AI edit.",
+          "       <img class=\"agent-capability-card__logo\" src=\"/AgentNote/model-icons/cursor.png\" alt=\"\" aria-hidden=\"true\" />",
+          "     </div>",
+          "   </Card>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/agent-support.mdx",
+        "lines": [
+          "index 38bd74a..384d18e 100644",
+          "--- a/website/src/content/docs/it/agent-support.mdx",
+          "+++ b/website/src/content/docs/it/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note usa lo stesso formato di git note per tutti gli agent, ma ogni agent",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sì | Sì | Sì | Sì | Di default |",
+          " | Codex CLI | Supported | Sì | Sì | Sì | Sì | Quando la cronologia patch di Codex corrisponde al Commit finale |",
+          "-| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit e il file finale coincidono |",
+          "+| Cursor | Supported | Sì | Sì | Sì | Sì | Quando i conteggi degli edit coincidono e il file finale corrisponde ancora all'ultimo edit IA |",
+          " | Gemini CLI | Preview | Sì | Sì | Sì | Sì | Non ancora |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI è transcript-driven. Agent Note legge transcript locali e passa a lin",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor usa `afterFileEdit` / `afterTabFileEdit`, più response hooks o transcript locali. Line-level è possibile solo se il file finale coincide ancora con l’ultimo edit IA.",
+          "+Cursor usa `afterFileEdit` / `afterTabFileEdit`, più response hooks o transcript locali. Line-level è possibile solo se i conteggi degli edit coincidono e il file finale corrisponde ancora all'ultimo edit IA.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/index.mdx",
+        "lines": [
+          "index 940ad94..144339c 100644",
+          "--- a/website/src/content/docs/it/index.mdx",
+          "+++ b/website/src/content/docs/it/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Di default</div>",
+          "     <div class=\"cap-partial\">La cronologia patch di Codex corrisponde al Commit finale</div>",
+          "-    <div class=\"cap-partial\">I conteggi degli edit e il file finale coincidono</div>",
+          "+    <div class=\"cap-partial\">I conteggi degli edit coincidono e il file finale corrisponde ancora all'ultimo edit IA</div>",
+          "     <div class=\"cap-no\">Non ancora</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/agent-support.mdx",
+        "lines": [
+          "index d6afe0a..67ad8d9 100644",
+          "--- a/website/src/content/docs/ja/agent-support.mdx",
+          "+++ b/website/src/content/docs/ja/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note はどの agent でも同じ git note 形式で保存します。た",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 対応 | 対応 | 対応 | 対応 | 既定で表示 |",
+          " | Codex CLI | Supported | 対応 | 対応 | 対応 | 対応 | Codex の patch 履歴が最終 Commit と一致したとき |",
+          "-| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数と最終 file が一致したとき |",
+          "+| Cursor | Supported | 対応 | 対応 | 対応 | 対応 | edit 数が一致し、committed file が最後の AI edit と一致したとき |",
+          " | Gemini CLI | Preview | 対応 | 対応 | 対応 | 対応 | 未対応 |",
+          " ",
+          " <Aside>",
+          "@@ -70,7 +70,7 @@ shell-only edit は command 文字列だけから推測しません。信頼で",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor は `afterFileEdit` / `afterTabFileEdit` hook と response hook または local transcript を使います。line-level は、committed file が最後の AI edit とまだ一致しているときだけ可能です。",
+          "+Cursor は `afterFileEdit` / `afterTabFileEdit` hook と response hook または local transcript を使います。line-level は、edit 数が一致し、committed file が最後の AI edit と一致したときだけ可能です。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/commands.mdx",
+        "lines": [
+          "index 1b0bf72..c64f08c 100644",
+          "--- a/website/src/content/docs/ja/commands.mdx",
+          "+++ b/website/src/content/docs/ja/commands.mdx",
+          "@@ -153,5 +153,5 @@ npx agent-note commit -m \"feat: add auth\"",
+          " ",
+          " <Aside>",
+          "   Cursor でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。",
+          "-  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、最後の AI edit 後の file がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。",
+          "+  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、edit 数が一致し、最後の AI edit 後の file がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。",
+          " </Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/index.mdx",
+        "lines": [
+          "index 46abfde..b08e393 100644",
+          "--- a/website/src/content/docs/ja/index.mdx",
+          "+++ b/website/src/content/docs/ja/index.mdx",
+          "@@ -197,7 +197,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">既定で表示</div>",
+          "     <div class=\"cap-partial\">Codex patch 履歴が最終 Commit と一致したとき</div>",
+          "-    <div class=\"cap-partial\">edit 数と最終 file が一致したとき</div>",
+          "+    <div class=\"cap-partial\">edit 数が一致し、committed file が最後の AI edit と一致したとき</div>",
+          "     <div class=\"cap-no\">未対応</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/installation.mdx",
+        "lines": [
+          "index ec99f4f..6632e15 100644",
+          "--- a/website/src/content/docs/ja/installation.mdx",
+          "+++ b/website/src/content/docs/ja/installation.mdx",
+          "@@ -172,7 +172,7 @@ linked:  3/20 recent commits",
+          "   <Card>",
+          "     <div class=\"agent-capability-card\">",
+          "       <div class=\"agent-capability-card__title\">Cursor</div>",
+          "-      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、`afterFileEdit` / `afterTabFileEdit` と最終 file が一致した file だけ line-level に昇格します。",
+          "+      生成された git hook があれば、通常の `git commit` でそのまま記録できます。prompt / response は response hook または local transcript から復元され、edit 数が一致し、committed file が最後の AI edit と一致した file だけ line-level に昇格します。",
+          "       <img class=\"agent-capability-card__logo\" src=\"/AgentNote/model-icons/cursor.png\" alt=\"\" aria-hidden=\"true\" />",
+          "     </div>",
+          "   </Card>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/troubleshooting.mdx",
+        "lines": [
+          "index 1892f94..2fb4a0d 100644",
+          "--- a/website/src/content/docs/ja/troubleshooting.mdx",
+          "+++ b/website/src/content/docs/ja/troubleshooting.mdx",
+          "@@ -110,7 +110,7 @@ git hook は `.git/` 内にあるため、agent config file が commit されて",
+          " ",
+          " - Claude Code は通常 line-level に必要な edit history を持っています。",
+          " - Codex CLI は transcript patch 行数が最終 commit diff と一致したときだけ昇格します。",
+          "-- Cursor は edit 行数が一致し、最終 file が最後の AI edit と一致したときだけ昇格します。",
+          "+- Cursor は edit 行数が一致し、committed file が最後の AI edit と一致したときだけ昇格します。",
+          " - Gemini CLI は現在 file-level attribution です。",
+          " ",
+          " 証拠が足りない場合、Agent Note は推測せず、安全な判定に戻します。"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/agent-support.mdx",
+        "lines": [
+          "index f59d7a7..88d0873 100644",
+          "--- a/website/src/content/docs/ko/agent-support.mdx",
+          "+++ b/website/src/content/docs/ko/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note 는 모든 agent 에 같은 git note 형식을 사용하지만, 각 a",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 지원 | 지원 | 지원 | 지원 | 기본 표시 |",
+          " | Codex CLI | Supported | 지원 | 지원 | 지원 | 지원 | Codex patch 기록이 최종 Commit 과 일치할 때 |",
+          "-| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 와 final file 이 일치할 때 |",
+          "+| Cursor | Supported | 지원 | 지원 | 지원 | 지원 | edit count 가 맞고 final file 이 마지막 AI edit 와 일치할 때 |",
+          " | Gemini CLI | Preview | 지원 | 지원 | 지원 | 지원 | 아직 없음 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 는 transcript-driven 입니다. local transcript 를 읽고, `apply_p",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. final file 이 마지막 AI edit 과 여전히 맞을 때만 line-level 이 가능합니다.",
+          "+Cursor 는 `afterFileEdit` / `afterTabFileEdit` 와 response hook 또는 local transcript 를 사용합니다. edit count 가 맞고 final file 이 마지막 AI edit 와 여전히 맞을 때만 line-level 이 가능합니다.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/index.mdx",
+        "lines": [
+          "index 947f00b..3a11b02 100644",
+          "--- a/website/src/content/docs/ko/index.mdx",
+          "+++ b/website/src/content/docs/ko/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">기본 표시</div>",
+          "     <div class=\"cap-partial\">Codex patch 기록이 최종 Commit 과 일치할 때</div>",
+          "-    <div class=\"cap-partial\">edit count 와 final file 이 일치할 때</div>",
+          "+    <div class=\"cap-partial\">edit count 가 맞고 final file 이 마지막 AI edit 와 일치할 때</div>",
+          "     <div class=\"cap-no\">아직 없음</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/agent-support.mdx",
+        "lines": [
+          "index 0de7c84..7468695 100644",
+          "--- a/website/src/content/docs/pt-br/agent-support.mdx",
+          "+++ b/website/src/content/docs/pt-br/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ O Agent Note grava o mesmo formato de git note para todos os agents, mas cada ag",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Sim | Sim | Sim | Sim | Por padrão |",
+          " | Codex CLI | Supported | Sim | Sim | Sim | Sim | Quando o histórico de patches do Codex bate com o Commit final |",
+          "-| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições e o arquivo final coincidem |",
+          "+| Cursor | Supported | Sim | Sim | Sim | Sim | Quando a contagem de edições coincide e o arquivo final ainda bate com a última edição da IA |",
+          " | Gemini CLI | Preview | Sim | Sim | Sim | Sim | Ainda não |",
+          " ",
+          " <Aside>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/index.mdx",
+        "lines": [
+          "index a277b12..ac9d42b 100644",
+          "--- a/website/src/content/docs/pt-br/index.mdx",
+          "+++ b/website/src/content/docs/pt-br/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">Por padrão</div>",
+          "     <div class=\"cap-partial\">O histórico de patches do Codex bate com o Commit final</div>",
+          "-    <div class=\"cap-partial\">A contagem de edições e o arquivo final coincidem</div>",
+          "+    <div class=\"cap-partial\">A contagem de edições coincide e o arquivo final ainda bate com a última edição da IA</div>",
+          "     <div class=\"cap-no\">Ainda não</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/agent-support.mdx",
+        "lines": [
+          "index 720db08..082d660 100644",
+          "--- a/website/src/content/docs/ru/agent-support.mdx",
+          "+++ b/website/src/content/docs/ru/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note использует один формат git note для всех a",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | Да | Да | Да | Да | По умолчанию |",
+          " | Codex CLI | Supported | Да | Да | Да | Да | Когда история patch в Codex совпадает с итоговым Commit |",
+          "-| Cursor | Supported | Да | Да | Да | Да | Когда edit counts и итоговый файл совпадают |",
+          "+| Cursor | Supported | Да | Да | Да | Да | Когда edit counts совпадают и итоговый файл всё ещё соответствует последнему AI edit |",
+          " | Gemini CLI | Preview | Да | Да | Да | Да | Пока нет |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI работает через transcripts. Agent Note читает local",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor использует `afterFileEdit` / `afterTabFileEdit`, а также response hooks или local transcripts. Line-level возможен только если итоговый файл всё еще совпадает с последним AI edit.",
+          "+Cursor использует `afterFileEdit` / `afterTabFileEdit`, а также response hooks или local transcripts. Line-level возможен только если edit counts совпадают и итоговый файл всё еще соответствует последнему AI edit.",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/index.mdx",
+        "lines": [
+          "index ec846cb..47e8e37 100644",
+          "--- a/website/src/content/docs/ru/index.mdx",
+          "+++ b/website/src/content/docs/ru/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">По умолчанию</div>",
+          "     <div class=\"cap-partial\">История patch в Codex совпадает с итоговым Commit</div>",
+          "-    <div class=\"cap-partial\">Счётчики edit и итоговый file совпадают</div>",
+          "+    <div class=\"cap-partial\">Счётчики edit совпадают, а итоговый файл всё ещё соответствует последнему AI edit</div>",
+          "     <div class=\"cap-no\">Пока нет</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/agent-support.mdx",
+        "lines": [
+          "index 8e53ed0..c663fca 100644",
+          "--- a/website/src/content/docs/zh-cn/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-cn/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note 对所有 agent 使用相同的 git note 格式，但每个 agent 暴",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 默认显示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 当 Codex patch 记录与最终 Commit 匹配时 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 和 final file 匹配时 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 当 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支持 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 读取 local transcript，并仅在",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。",
+          "+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 edit count 匹配，且 final file 仍匹配最后一次 AI edit 时，才可使用 line-level。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/index.mdx",
+        "lines": [
+          "index 6ce6bfc..fe8915c 100644",
+          "--- a/website/src/content/docs/zh-cn/index.mdx",
+          "+++ b/website/src/content/docs/zh-cn/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">默认显示</div>",
+          "     <div class=\"cap-partial\">Codex patch 记录与最终 Commit 匹配时</div>",
+          "-    <div class=\"cap-partial\">edit 数和最终 file 匹配时</div>",
+          "+    <div class=\"cap-partial\">edit 数匹配，且最终 file 仍匹配最后一次 AI edit 时</div>",
+          "     <div class=\"cap-no\">尚未支持</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/agent-support.mdx",
+        "lines": [
+          "index de9c41d..0f48ae0 100644",
+          "--- a/website/src/content/docs/zh-tw/agent-support.mdx",
+          "+++ b/website/src/content/docs/zh-tw/agent-support.mdx",
+          "@@ -13,7 +13,7 @@ Agent Note 對所有 agent 使用相同的 git note 格式，但每個 agent 暴",
+          " |---|---|---|---|---|---|---|",
+          " | Claude Code | Full support | 是 | 是 | 是 | 是 | 預設顯示 |",
+          " | Codex CLI | Supported | 是 | 是 | 是 | 是 | 當 Codex patch 記錄與最終 Commit 相符時 |",
+          "-| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 與 final file 相符時 |",
+          "+| Cursor | Supported | 是 | 是 | 是 | 是 | 當 edit count 相符，且 final file 仍符合最後一次 AI edit 時 |",
+          " | Gemini CLI | Preview | 是 | 是 | 是 | 是 | 尚未支援 |",
+          " ",
+          " <Aside>",
+          "@@ -61,7 +61,7 @@ Codex CLI 是 transcript-driven。Agent Note 讀取 local transcript，只有在",
+          " ",
+          " ### Cursor",
+          " ",
+          "-Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 final file 仍符合最後一次 AI edit 時，才可使用 line-level。",
+          "+Cursor 使用 `afterFileEdit` / `afterTabFileEdit`，以及 response hook 或 local transcript。只有 edit count 相符，且 final file 仍符合最後一次 AI edit 時，才可使用 line-level。",
+          " ",
+          " ### Gemini CLI",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/index.mdx",
+        "lines": [
+          "index 844c5bd..4b5e8d2 100644",
+          "--- a/website/src/content/docs/zh-tw/index.mdx",
+          "+++ b/website/src/content/docs/zh-tw/index.mdx",
+          "@@ -198,7 +198,7 @@ linked:  3/20 recent commits",
+          "     <div class=\"capability-label\">Line Estimate</div>",
+          "     <div class=\"cap-yes\">預設顯示</div>",
+          "     <div class=\"cap-partial\">Codex patch 記錄與最終 Commit 相符時</div>",
+          "-    <div class=\"cap-partial\">edit 數和最終 file 相符時</div>",
+          "+    <div class=\"cap-partial\">edit 數相符，且最終 file 仍符合最後一次 AI edit 時</div>",
+          "     <div class=\"cap-no\">尚未支援</div>",
+          "   </div>",
+          " </div>"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 66,
+    "title": "docs: clarify AI review and dashboard guidance",
+    "state": "open"
+  }
+}
