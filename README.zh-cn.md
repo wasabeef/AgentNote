@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Agent Note 为该 Commit 写入 Git Note
 
 | Command | 作用 |
 | --- | --- |
-| `agent-note init` | 设置 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |
+| `agent-note init` | 设置 Hooks、Workflow、Git Hooks 和 notes auto-fetch |
 | `agent-note deinit` | 移除 Agent Note hooks 和 config |
 | `agent-note status` | 显示 Tracking state |
 | `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |

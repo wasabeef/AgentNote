@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Den detaillierten Flow, die Schätzung von KI-geschriebener Arbeit und das gespe
 
 | Command | Was es tut |
 | --- | --- |
-| `agent-note init` | Richtet Hooks, Workflow, Git Hooks und Notes auto-fetch ein |
+| `agent-note init` | Richtet Hooks, Workflow, Git Hooks und notes auto-fetch ein |
 | `agent-note deinit` | Entfernt Agent-Note-Hooks und Konfiguration |
 | `agent-note status` | Zeigt den Tracking-Status |
 | `agent-note log [n]` | Listet aktuelle Commits mit AI Ratio |

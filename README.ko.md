@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Agent Note 가 해당 Commit 에 Git Note 를 씁니다
 
 | Command | What it does |
 | --- | --- |
-| `agent-note init` | Hooks, Workflow, Git Hooks, Notes auto-fetch 를 설정합니다 |
+| `agent-note init` | Hooks, Workflow, Git Hooks, notes auto-fetch 를 설정합니다 |
 | `agent-note deinit` | Agent Note hooks 와 config 를 제거합니다 |
 | `agent-note status` | Tracking state 를 보여줍니다 |
 | `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |

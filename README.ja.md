@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Agent Note がその Commit に Git Note を書く
 
 | Command | What it does |
 | --- | --- |
-| `agent-note init` | Hooks、Workflow、Git Hooks、Notes auto-fetch を設定します |
+| `agent-note init` | Hooks、Workflow、Git Hooks、notes auto-fetch を設定します |
 | `agent-note deinit` | Agent Note の hooks と config を削除します |
 | `agent-note status` | Tracking state を表示します |
 | `agent-note log [n]` | Recent Commits と AI Ratio を一覧します |

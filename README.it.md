@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Per il Flow dettagliato, come Agent Note stima il lavoro scritto dall'AI e lo Sc
 
 | Command | Cosa fa |
 | --- | --- |
-| `agent-note init` | Configura Hooks, Workflow, Git Hooks e Notes auto-fetch |
+| `agent-note init` | Configura Hooks, Workflow, Git Hooks e notes auto-fetch |
 | `agent-note deinit` | Rimuove hook e configurazione di Agent Note |
 | `agent-note status` | Mostra lo stato del Tracking |
 | `agent-note log [n]` | Elenca Commit recenti con AI Ratio |

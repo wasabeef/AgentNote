@@ -166,7 +166,7 @@ session: a1b2c3d4-5678-4abc-8def-111122223333
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -263,7 +263,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 
 | Command | Fungsi |
 | --- | --- |
-| `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan Notes auto-fetch |
+| `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan notes auto-fetch |
 | `agent-note deinit` | Menghapus hooks dan config Agent Note |
 | `agent-note status` | Menampilkan status pelacakan |
 | `agent-note log [n]` | Mendaftar commit terbaru dengan Rasio AI |
