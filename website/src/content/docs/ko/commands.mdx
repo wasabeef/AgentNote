@@ -1,22 +1,28 @@
 ---
 title: 명령어
-description: Agent Note CLI command reference.
+description: Agent Note 공개 CLI commands.
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-Agent Note 흐름을 이미 알고 있고 정확한 command 나 flag 를 찾을 때 사용하는 reference 입니다. 첫 setup 은 [설치](./installation/) 에서 시작하세요.
+이 페이지는 사용자가 직접 실행하는 command 만 다룹니다. 첫 setup 은 [설치](./installation/) 에서 시작하세요.
 
 ## 자주 쓰는 작업
 
 - 첫 setup: `agent-note init`
-- commit 에 기록된 내용 확인: `agent-note show`
-- 한 줄이 왜 바뀌었는지 확인: `agent-note why`
+- repository 에서 Agent Note 제거: `agent-note deinit`
+- 상태 확인: `agent-note status`
 - 최근 활동 확인: `agent-note log`
-- PR Report 생성: `agent-note pr`
-- hook 과 active adapter 확인: `agent-note status`
+- commit 데이터 보기: `agent-note show`
+- 한 줄이 왜 바뀌었는지 확인: `agent-note why`
+
+<Aside>
+  PR Report 와 Dashboard 는 GitHub Actions 기능입니다. `agent-note init` 은 보통 workflow 파일을 만들고, 실제 report 와 Dashboard 는 이후 workflow 실행으로 생성됩니다.
+</Aside>
 
 ## agent-note init
+
+repository 에 Agent Note 를 설정합니다.
 
 ```bash
 npx agent-note init --agent claude
@@ -24,27 +30,95 @@ npx agent-note init --agent claude
 
 | Flag | 설명 |
 |---|---|
-| `--agent <name...>` | 필수. 하나 이상의 adapter: `claude`, `codex`, `cursor`, `gemini` |
-| `--dashboard` | shared Dashboard workflow 도 생성 |
-| `--no-hooks` | agent hook 설정 건너뛰기 |
-| `--no-git-hooks` | git hook 설치 건너뛰기 |
-| `--no-action` | workflow 생성 건너뛰기 |
-| `--no-notes` | notes auto-fetch 설정 건너뛰기 |
-| `--hooks` | agent hook 만 설치 |
-| `--action` | workflow 만 생성 |
+| `--agent <name...>` | 하나 이상의 agent adapter 를 선택합니다: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | 공유 Dashboard workflow 도 생성합니다 |
+| `--no-hooks` | agent hook 설정을 건너뜁니다 |
+| `--no-git-hooks` | Git Hooks 설치를 건너뜁니다 |
+| `--no-action` | workflow 생성을 건너뜁니다 |
+| `--no-notes` | notes auto-fetch 설정을 건너뜁니다 |
+| `--hooks` | agent hooks 만 설치합니다 |
+| `--action` | workflow 만 생성합니다 |
+
+## agent-note deinit
+
+하나 이상의 Agent hooks 와 config 를 제거합니다.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Flag | 설명 |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
+| `--remove-workflow` | PR Report 와 Dashboard workflow 도 제거 |
+| `--keep-notes` | notes auto-fetch 설정 유지 |
+
+## agent-note status
+
+추적 상태를 보여줍니다.
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+## agent-note log
+
+최근 commit 과 AI Ratio 를 표시합니다.
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
 ## agent-note show
+
+commit 의 AI Session 을 보여줍니다.
 
 ```bash
 npx agent-note show
 npx agent-note show abc1234
 ```
 
-commit 의 prompts, responses, touched files, agent, model, attribution 을 표시합니다.
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-4abc-8def-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   3 changed, 2 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
 
 ## agent-note why
 
-`git blame` 으로 한 줄을 마지막으로 바꾼 Commit 을 찾고, 그 Commit 에 연결된 Agent Note context 를 보여줍니다.
+변경된 줄 뒤의 Agent Note context 를 보여줍니다.
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -55,70 +129,20 @@ npx agent-note why src/middleware/auth.ts#L42-L55
 npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
 npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
 npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` 는 `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다. `git blame` → `git notes --ref=agentnote show <commit>` 를 손으로 따라가는 흐름을 줄여줍니다.
+  `why` 는 `path:line`, `path#Lline`, GitHub file URL, `file://...`, `vscode://file...`, AI Agent 출력에서 복사한 앞쪽 `@` path 를 받습니다.
 </Aside>
 
-## agent-note log
+## Agent Note Skill
+
+Agent Note Skill 을 설치하면 자연어로 이런 작업을 요청할 수 있습니다.
 
 ```bash
-npx agent-note log
-npx agent-note log 20
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-최근 commit 을 AI ratio 와 저장된 prompt 수와 함께 표시합니다.
-
-## agent-note pr
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  `compact` 는 commit 을 설명하는 prompt 중심으로 PR Report 를 유지합니다. `full` 은 저장된 prompt 를 모두 표시합니다.
-</Aside>
-
-## agent-note status
-
-```bash
-npx agent-note status
-```
-
-active adapter, hook 이 수집하는 data, git hook 상태, commit 경로를 확인합니다.
-
-## agent-note deinit
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-PR Report 와 Dashboard workflow 도 지우려면 `--remove-workflow` 를 추가합니다.
-
-## agent-note commit
-
-```bash
-npx agent-note commit -m "feat: add auth"
-```
-
-<Aside type="tip">
-  git hooks 가 설치되어 있으면 필요하지 않습니다. 일반 `git commit` 이 같은 기록을 수행합니다.
-</Aside>
+`gh skill install` 의 `--agent` 에는 Agent 에 맞는 identifier 인 `codex`, `claude-code`, `cursor` or `gemini-cli` 를 지정하세요.

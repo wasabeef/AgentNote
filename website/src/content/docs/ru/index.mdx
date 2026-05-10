@@ -87,7 +87,6 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 
 3. Пишите код с ИИ.
    Если сгенерированные git hooks установлены, достаточно обычного `git commit`.
-   `agent-note commit -m "..."` нужен только как запасной путь, когда git hooks недоступны.
 </Steps>
 
 ## Проверьте настройку
@@ -116,12 +115,12 @@ linked:  3/20 recent commits
   <TabItem label="agent-note show">
   ```
   commit:  ce941f7 feat: add JWT auth middleware
-  session: a1b2c3d4-5678-90ab-cdef-111122223333
+  session: a1b2c3d4-5678-4abc-8def-111122223333
 
   ai:      60% (45/75 lines) [█████░░░]
   model:   claude-sonnet-4-20250514
   agent:   claude
-  files:   5 changed, 3 by AI
+  files:   3 changed, 2 by AI
 
     src/middleware/auth.ts  🤖
     src/types/token.ts  🤖

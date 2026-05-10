@@ -45,6 +45,16 @@ Agent Note 會為每個 Commit 保存與 AI 的對話和變更檔案。資訊足
 - Node.js 20 或更新版本
 - 已安裝並認證的支援 Coding Agent
 
+## AI Agent Skill
+
+如果你的 AI Agent 支援 GitHub Agent Skills，可以安裝 Agent Note Skill，用自然語言請求 Agent Note 相關任務。
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+對於 `gh skill install`，請依照 Agent 選擇對應的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。Skill 通常只會引導 agent 使用六個公開命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
+
 ## Quick Start
 
 1. 為你的 Coding Agent 啟用 Agent Note。
@@ -85,7 +95,7 @@ git push
 
 3. 繼續使用平常的 `git commit` Workflow。
 
-安裝產生的 Git Hooks 後，Agent Note 會自動記錄 Commits。只有當 Git Hooks 不可用時，才把 `agent-note commit -m "..."` 作為 Fallback 使用。
+安裝產生的 Git Hooks 後，Agent Note 會自動記錄一般 `git commit`。
 
 ## 保存的資料
 
@@ -141,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 顯示已啟用的 Agent Adapters。`capture:` 概述 Active Agent Hooks 會收集什麼。`git:` 顯示 Managed Repository-Local Git Hooks 是否已安裝。`commit:` 顯示 Primary Tracking Path：Git Hooks Active 時是一般 `git commit`，Fallback Mode 時應優先使用 `agent-note commit`。
+`agent:` 顯示已啟用的 Agent Adapters。`capture:` 概述 Active Agent Hooks 會收集什麼。`git:` 顯示 Managed Repository-Local Git Hooks 是否已安裝。`commit:` 顯示一般 `git commit` 是否是 Primary Tracking Path。
 
 ## 你會得到什麼
 
@@ -151,12 +161,12 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -182,11 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-```
-$ npx agent-note pr --output description --update 42
-```
-
-這會把 AI Session Report 發佈到 PR Description：
+預設情況下，GitHub Action 會把 AI Session Report 發佈到 PR Description：
 
 `agentnote-reviewer-context` block 會作為 hidden comment 保存在 PR body 中。Copilot、CodeRabbit、Devin、Greptile 等讀取 raw PR description 的 AI Review tool 可以把它作為額外的 intent 和 review focus。
 
@@ -257,15 +263,12 @@ Agent Note 為該 Commit 寫入 Git Note
 
 | Command | 作用 |
 | --- | --- |
-| `agent-note init` | 設定 Hooks、Workflow、Git Hooks 和 Notes auto-fetch |
-| `agent-note deinit` | 移除某個 Agent 的 Hooks 和 Config |
+| `agent-note init` | 設定 Hooks、Workflow、Git Hooks 和 notes auto-fetch |
+| `agent-note deinit` | 移除 Agent Note hooks 和 config |
+| `agent-note status` | 顯示 Tracking state |
+| `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
 | `agent-note show [commit]` | 顯示 `HEAD` 或 Commit SHA 背後的 AI Session |
 | `agent-note why <target>` | 顯示最後修改某一行或範圍的 Commit 的 Agent Note context |
-| `agent-note log [n]` | 列出 Recent Commits 和 AI Ratio |
-| `agent-note pr [base]` | 產生 PR Report (Markdown 或 JSON) |
-| `agent-note session <id>` | 顯示關聯到某個 Session 的所有 Commits |
-| `agent-note commit [args]` | Git Hooks 不可用時的 `git commit` Fallback wrapper |
-| `agent-note status` | 顯示 Tracking state |
 
 ## GitHub Action
 

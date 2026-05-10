@@ -46,7 +46,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ### Two execution paths
 
-1. **CLI** (`packages/cli/src/cli.ts` → commands): `agent-note init`, `agent-note deinit`, `agent-note show`, `agent-note log`, `agent-note session`, `agent-note pr`, `agent-note status`, `agent-note commit`, `agent-note record`. Run by users and CI.
+1. **CLI** (`packages/cli/src/cli.ts` → commands): public user commands are `agent-note init`, `agent-note deinit`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Internal or automation-facing commands include `agent-note hook`, `agent-note record`, `agent-note pr`, `agent-note commit`, and `agent-note push-notes`.
 2. **Hook handler** (`packages/cli/src/commands/hook.ts`): Called by agent hooks via stdin JSON. All data collection. Agent-agnostic via adapter pattern.
 
 ### Data flow
@@ -55,7 +55,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
 git commit → prepare-commit-msg injects trailer when session data exists → post-commit calls agent-note record → git note written
 git push → pre-push auto-pushes refs/notes/agentnote
-agent-note show/log/session → reads git notes --ref=agentnote
+agent-note show/log/why → reads git notes --ref=agentnote
 ```
 
 ### Agent adapters (`packages/cli/src/agents/`)

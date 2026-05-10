@@ -39,8 +39,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    Codex CLI добавляет `.codex/config.toml` и `.codex/hooks.json`. Cursor добавляет `.cursor/hooks.json`. Gemini CLI добавляет `.gemini/settings.json`. С `--dashboard` также добавьте `.github/workflows/agentnote-dashboard.yml`.
 
 3. Работайте с agent как обычно.
-
-   Если сгенерированные git hooks установлены, достаточно `git commit`. Используйте `agent-note commit -m "..."` только когда git hooks недоступны.
+   Если сгенерированные git hooks установлены, достаточно `git commit`.
 </Steps>
 
 ## Каждый clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 Если PR Report пустой или prompts выглядят слишком короткими, откройте [Troubleshooting](./troubleshooting/).
-
-## Удалить
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Добавьте `--remove-workflow`, чтобы удалить также workflows PR Report и Dashboard.
-

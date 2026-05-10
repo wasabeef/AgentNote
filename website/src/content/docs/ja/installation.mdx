@@ -71,7 +71,6 @@ import { Steps, Aside, Card, CardGrid } from '@astrojs/starlight/components';
 3. **agent と一緒に開発を始めます。**
 
    生成された git hook が入っていれば、通常の `git commit` をそのまま使えます。
-   git hook が使えない環境だけ `agent-note commit -m "..."` を代替手段として使います。
 </Steps>
 
 ## clone ごとのセットアップ
@@ -97,7 +96,6 @@ npx agent-note init --agent claude
 3. **送信** `git push` 時に notes も remote に送信
 
 Cursor では response hook または local transcript から prompt / response も復元されます。
-git hook が使えない環境では `agent-note commit` を使います。
 
 ## 動作確認
 
@@ -107,12 +105,12 @@ npx agent-note show
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -184,11 +182,3 @@ linked:  3/20 recent commits
     </div>
   </Card>
 </CardGrid>
-
-## アンインストール
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-agent hook と git hook を削除します。`--remove-workflow` を付けると `agentnote-pr-report.yml` と `agentnote-dashboard.yml` も削除します。

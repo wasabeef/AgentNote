@@ -39,8 +39,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    Codex CLI 會加入 `.codex/config.toml` 和 `.codex/hooks.json`。Cursor 會加入 `.cursor/hooks.json`。Gemini CLI 會加入 `.gemini/settings.json`。使用 `--dashboard` 時，也要提交 `.github/workflows/agentnote-dashboard.yml`。
 
 3. 像平常一樣使用 agent 寫程式。
-
-   產生的 git hooks 安裝後，一般 `git commit` 就足夠了。只有在 git hooks 不可用時才使用 `agent-note commit -m "..."`。
+   產生的 git hooks 安裝後，一般 `git commit` 就足夠了。
 </Steps>
 
 ## 每個 clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 如果 PR Report 是空的，或 prompt 看起來過短，請查看 [Troubleshooting](./troubleshooting/)。
-
-## 解除安裝
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-若也要刪除 PR Report 和 Dashboard workflow，請加上 `--remove-workflow`。
-

@@ -20,11 +20,16 @@ docs/
     ├── README.md
     ├── prompt-context.md
     ├── prompt-selection.md
+    ├── agent-skill.md
     ├── agent-support-policy.md
     ├── investigations.md
     ├── research/
     └── archive/
 ```
+
+The published Agent Skill itself lives outside `docs/` at
+`skills/agent-note/SKILL.md`; the rationale and maintenance notes live in
+`knowledge/agent-skill.md`.
 
 ## Reading Order
 

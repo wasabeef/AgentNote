@@ -1,20 +1,24 @@
 ---
 title: コマンド
-description: Agent Note CLI の使い方とコマンド一覧
+description: Agent Note CLI の公開コマンド一覧
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-このページは、Agent Note の全体像を把握したあとにコマンドや flag を確認するための reference です。最初の導入手順だけ見たい場合は、先に [インストール](./installation/) を読んでください。
+このページは、Agent Note の全体像を把握したあとに、ユーザーが直接使うコマンドや flag を確認するための reference です。最初の導入手順だけ見たい場合は、先に [インストール](./installation/) を読んでください。
 
 ## よく使うコマンド
 
 - 最初のセットアップ: `agent-note init`
+- Agent Note をリポジトリから削除する: `agent-note deinit`
+- hook と有効な adapter を確認する: `agent-note status`
+- 最近の活動を一覧する: `agent-note log`
 - コミットに何が記録されたか見る: `agent-note show`
 - その行がなぜ変わったか見る: `agent-note why`
-- 最近の活動を一覧する: `agent-note log`
-- PR レポートを作る: `agent-note pr`
-- hook と有効な adapter を確認する: `agent-note status`
+
+<Aside>
+  PR Report と Dashboard は GitHub Actions の機能です。通常は `agent-note init` が workflow ファイルを作成し、実際の report と Dashboard は後でその workflow が生成します。
+</Aside>
 
 ## agent-note init
 
@@ -26,103 +30,32 @@ npx agent-note init --agent claude
 
 | フラグ | 説明 |
 |---|---|
-| `--agent <name...>` | **必須。** 1 つ以上のエージェントアダプターを指定: `claude`、`codex`、`cursor`、`gemini` |
-| `--dashboard` | 共有 Dashboard 用の `.github/workflows/agentnote-dashboard.yml` も作成 |
-| `--no-hooks` | エージェントフックの設定をスキップ |
-| `--no-git-hooks` | git フックのインストールをスキップ |
-| `--no-action` | ワークフローの作成をスキップ |
-| `--no-notes` | 自動 fetch 設定をスキップ |
-| `--hooks` | エージェントフックのみインストール |
-| `--action` | ワークフローのみ作成 |
+| `--agent <name...>` | 1 つ以上の Agent adapter を選びます: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | 共有 Dashboard workflow も作成 |
+| `--no-hooks` | Agent hook 設定をスキップ |
+| `--no-git-hooks` | Git Hooks のインストールをスキップ |
+| `--no-action` | workflow 作成をスキップ |
+| `--no-notes` | notes auto-fetch 設定をスキップ |
+| `--hooks` | Agent hooks だけをインストール |
+| `--action` | workflow だけを作成 |
 
-## agent-note show
+## agent-note deinit
 
-コミットの AI セッション詳細を表示します。
-
-```bash
-npx agent-note show          # HEAD
-npx agent-note show abc1234  # commit SHA
-```
-
-```
-commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
-
-ai:      60% (45/75 lines) [█████░░░]
-model:   claude-sonnet-4-20250514
-agent:   claude
-files:   5 changed, 3 by AI
-
-  src/middleware/auth.ts  🤖
-  src/types/token.ts  🤖
-  CHANGELOG.md  👤
-```
-
-## agent-note why
-
-指定した行を最後に変更した Commit を `git blame` で調べ、その Commit に紐づく Agent Note context を表示します。
+1 つ以上の Agent の hooks と config を削除します。
 
 ```bash
-npx agent-note why src/middleware/auth.ts:42
-npx agent-note why src/middleware/auth.ts:42-55
-npx agent-note why src/middleware/auth.ts:42:7
-npx agent-note why src/middleware/auth.ts#L42
-npx agent-note why src/middleware/auth.ts#L42-L55
-npx agent-note why src/middleware/auth.ts#L42C7
-npx agent-note why @src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
-npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
-npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
+npx agent-note deinit --agent claude
 ```
 
-<Aside>
-  `why` は `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。`git blame` から `git notes --ref=agentnote show <commit>` を手で探す流れを短縮します。
-</Aside>
-
-## agent-note log
-
-最近のコミットを AI 比率付きで一覧表示します。
-
-```bash
-npx agent-note log      # 直近 10 件
-npx agent-note log 20   # 直近 20 件
-```
-
-## agent-note pr
-
-PR レポートを生成します。
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-  <TabItem label="PR 更新">
-  ```bash
-  npx agent-note pr origin/main --output description --update 42
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  prompt detail の既定値は `compact` です。`compact` は commit の説明に必要な prompt を中心に表示し、`full` は保存された prompt をすべて表示します。
-</Aside>
+| フラグ | 説明 |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
+| `--remove-workflow` | PR Report と Dashboard の workflow も削除 |
+| `--keep-notes` | notes auto-fetch 設定を残す |
 
 ## agent-note status
 
-現在の tracking 状態を表示します。
+現在の記録状態を表示します。
 
 ```bash
 npx agent-note status
@@ -140,41 +73,76 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-<Aside>
-  `agent:` は有効な adapter、`capture:` は今の hook が何を集めるか、`git:` はリポジトリ単位の git hook の状態、`commit:` は主な記録経路を示します。`commit:` が代替モードのときは `agent-note commit` を使うのが安全です。
-</Aside>
+## agent-note log
 
-## agent-note deinit
-
-リポジトリから Agent Note のフックと設定を除去します。
+最近の Commit と AI Ratio を一覧します。
 
 ```bash
-npx agent-note deinit --agent claude
+npx agent-note log
+npx agent-note log 20
 ```
 
-| フラグ | 説明 |
-|---|---|
-| `--agent <name...>` | **必須。** 1 つ以上のエージェントを除去: `claude`、`codex`、`cursor`、`gemini` |
-| `--remove-workflow` | `.github/workflows/agentnote-pr-report.yml` と `.github/workflows/agentnote-dashboard.yml` も削除 |
-| `--keep-notes` | notes の自動 fetch 設定を維持 |
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
-<Aside>
-  他のエージェントがまだ有効な場合、共有インフラ（git フック、notes 設定）は温存されます。
-</Aside>
+## agent-note show
 
-## agent-note commit
-
-セッショントレーラーと note 記録を含む `git commit` のラッパーです。
+Commit の AI Session 詳細を表示します。
 
 ```bash
-npx agent-note commit -m "feat: add auth"
+npx agent-note show
+npx agent-note show abc1234
 ```
 
-<Aside type="tip">
-  git フックがインストールされていれば不要です — `git commit` が同じ処理を自動的に行います。
-</Aside>
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-4abc-8def-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   3 changed, 2 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
+
+## agent-note why
+
+指定した行を最後に変更した Commit を `git blame` で調べ、その Commit に紐づく Agent Note context を表示します。
+
+```bash
+npx agent-note why src/middleware/auth.ts:42
+npx agent-note why src/middleware/auth.ts:42-55
+npx agent-note why src/middleware/auth.ts:42:7
+npx agent-note why src/middleware/auth.ts#L42
+npx agent-note why src/middleware/auth.ts#L42-L55
+npx agent-note why src/middleware/auth.ts#L42C7
+npx agent-note why @src/middleware/auth.ts#L42
+npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
+npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
+npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
+```
 
 <Aside>
-  Cursor でも、生成された git hook が入っていれば通常の `git commit` をそのまま記録できます。
-  prompt、response metadata、`afterFileEdit` / `afterTabFileEdit` による attribution を記録し、edit 数が一致し、最後の AI edit 後の file がそのまま commit に残っている場合だけ安全に line-level へ昇格します。git hook が使えない環境では `agent-note commit` が代替手段です。
+  `why` は `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`、AI Agent の出力からコピーした先頭 `@` 付き path を受け付けます。
 </Aside>
+
+## AI Agent Skill
+
+利用している AI Agent が GitHub Agent Skills に対応している場合は、Agent Note Skill を入れておくと自然言語で Agent Note の作業を頼めます。
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+`gh skill install` の `--agent` には、利用する Agent に合わせて `codex`, `claude-code`, `cursor` or `gemini-cli` を指定します。

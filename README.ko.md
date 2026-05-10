@@ -45,6 +45,16 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 - Node.js 20 이상
 - 지원되는 Coding Agent 설치 및 인증
 
+## AI Agent Skill
+
+사용 중인 AI Agent 가 GitHub Agent Skills 를 지원한다면 Agent Note Skill 을 설치해 자연어로 Agent Note 작업을 요청할 수 있습니다.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+`gh skill install` 의 `--agent` 에는 Agent 에 맞는 identifier 인 `codex`, `claude-code`, `cursor` or `gemini-cli` 를 지정하세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
+
 ## Quick Start
 
 1. Coding Agent 에 Agent Note 를 활성화합니다.
@@ -85,7 +95,7 @@ git push
 
 3. 평소처럼 `git commit` Workflow 를 계속 사용합니다.
 
-생성된 Git Hooks 가 설치되어 있으면 Agent Note 가 Commit 을 자동 기록합니다. Git Hooks 를 사용할 수 없을 때만 Fallback 으로 `agent-note commit -m "..."` 를 사용하세요.
+생성된 Git Hooks 가 설치되어 있으면 Agent Note 가 일반 `git commit` 을 자동 기록합니다.
 
 ## 저장되는 데이터
 
@@ -141,7 +151,7 @@ agent:   cursor
 linked:  3/20 recent commits
 ```
 
-`agent:` 는 활성화된 Agent Adapters 를 보여줍니다. `capture:` 는 Active Agent Hooks 가 무엇을 수집하는지 요약합니다. `git:` 는 Managed Repository-Local Git Hooks 설치 여부를 보여줍니다. `commit:` 은 Primary Tracking Path 를 알려줍니다. Git Hooks 가 Active 이면 일반 `git commit`, Fallback Mode 이면 `agent-note commit` 을 우선 사용합니다.
+`agent:` 는 활성화된 Agent Adapters 를 보여줍니다. `capture:` 는 Active Agent Hooks 가 무엇을 수집하는지 요약합니다. `git:` 는 Managed Repository-Local Git Hooks 설치 여부를 보여줍니다. `commit:` 은 일반 `git commit` 이 Primary Tracking Path 인지 알려줍니다.
 
 ## 얻을 수 있는 것
 
@@ -151,12 +161,12 @@ linked:  3/20 recent commits
 $ npx agent-note show
 
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -182,11 +192,7 @@ ba091be fix: update dependencies
 
 ### PR Report
 
-```
-$ npx agent-note pr --output description --update 42
-```
-
-PR Description 에 AI Session Report 를 게시합니다.
+GitHub Action 은 기본적으로 PR Description 에 AI Session Report 를 게시합니다.
 
 `agentnote-reviewer-context` block 은 PR body 에 hidden comment 로 저장됩니다. Copilot, CodeRabbit, Devin, Greptile 처럼 raw PR description 을 읽는 AI Review tool 은 이를 추가 intent 와 review focus 로 사용할 수 있습니다.
 
@@ -257,15 +263,12 @@ Agent Note 가 해당 Commit 에 Git Note 를 씁니다
 
 | Command | What it does |
 | --- | --- |
-| `agent-note init` | Hooks, Workflow, Git Hooks, Notes auto-fetch 를 설정합니다 |
-| `agent-note deinit` | Agent Hooks 와 Config 를 제거합니다 |
+| `agent-note init` | Hooks, Workflow, Git Hooks, notes auto-fetch 를 설정합니다 |
+| `agent-note deinit` | Agent Note hooks 와 config 를 제거합니다 |
+| `agent-note status` | Tracking state 를 보여줍니다 |
+| `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |
 | `agent-note show [commit]` | `HEAD` 또는 Commit SHA 뒤의 AI Session 을 보여줍니다 |
 | `agent-note why <target>` | 파일 한 줄 또는 범위를 마지막으로 바꾼 Commit 의 Agent Note context 를 보여줍니다 |
-| `agent-note log [n]` | 최근 Commit 과 AI Ratio 를 나열합니다 |
-| `agent-note pr [base]` | PR Report 를 생성합니다 (Markdown 또는 JSON) |
-| `agent-note session <id>` | 하나의 Session 에 연결된 모든 Commit 을 보여줍니다 |
-| `agent-note commit [args]` | Git Hooks 가 없을 때 쓰는 `git commit` Fallback wrapper |
-| `agent-note status` | Tracking state 를 보여줍니다 |
 
 ## GitHub Action
 

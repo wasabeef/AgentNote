@@ -39,8 +39,7 @@ Halaman ini adalah langkah praktis. Setelah selesai, repository dapat merekam da
    Codex CLI menambahkan `.codex/config.toml` dan `.codex/hooks.json`. Cursor menambahkan `.cursor/hooks.json`. Gemini CLI menambahkan `.gemini/settings.json`. Dengan `--dashboard`, tambahkan juga `.github/workflows/agentnote-dashboard.yml`.
 
 3. Bekerja seperti biasa dengan agent Anda.
-
-   Jika git hooks yang dibuat sudah terpasang, `git commit` biasa sudah cukup. Gunakan `agent-note commit -m "..."` hanya ketika git hooks tidak tersedia.
+   Jika git hooks yang dibuat sudah terpasang, `git commit` biasa sudah cukup.
 </Steps>
 
 ## Setiap clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 Jika PR Report kosong atau prompt terasa terlalu pendek, buka [Troubleshooting](./troubleshooting/).
-
-## Menghapus
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Tambahkan `--remove-workflow` untuk menghapus workflow PR Report dan Dashboard juga.
-

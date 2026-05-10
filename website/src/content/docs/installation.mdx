@@ -71,7 +71,6 @@ This page is the hands-on setup path. By the end, your repository can record Age
 3. **Start coding with your agent.**
 
    Normal `git commit` works when the generated git hooks are installed.
-   Use `agent-note commit -m "..."` only when git hooks are unavailable.
 </Steps>
 
 ## Set Up Each Clone
@@ -97,7 +96,6 @@ After setup, plain `git commit` will, when the current session has Agent Note da
 3. **Push** notes to the remote on `git push`
 
 Cursor preview also restores prompt / response pairs from response hooks or local transcripts.
-If git hooks are unavailable, `agent-note commit` remains the fallback wrapper.
 
 ## Verify It Works
 
@@ -107,12 +105,12 @@ npx agent-note show
 
 ```text
 commit:  ce941f7 feat: add JWT auth middleware
-session: a1b2c3d4-5678-90ab-cdef-111122223333
+session: a1b2c3d4-5678-4abc-8def-111122223333
 
 ai:      60% (45/75 lines) [█████░░░]
 model:   claude-sonnet-4-20250514
 agent:   claude
-files:   5 changed, 3 by AI
+files:   3 changed, 2 by AI
 
   src/middleware/auth.ts  🤖
   src/types/token.ts  🤖
@@ -184,11 +182,3 @@ This is the quick view. For the detailed capture and attribution rules, see [Age
     </div>
   </Card>
 </CardGrid>
-
-## Uninstall
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-This removes agent hooks and git hooks. Add `--remove-workflow` to also delete `agentnote-pr-report.yml` and `agentnote-dashboard.yml`.

@@ -39,8 +39,7 @@ Diese Seite ist der praktische Setup-Pfad. Danach kann dein Repository Agent-Not
    Codex CLI ergänzt `.codex/config.toml` und `.codex/hooks.json`. Cursor ergänzt `.cursor/hooks.json`. Gemini CLI ergänzt `.gemini/settings.json`. Mit `--dashboard` kommt `.github/workflows/agentnote-dashboard.yml` dazu.
 
 3. Arbeite normal mit deinem Agent.
-
-   Wenn die generierten Git-Hooks installiert sind, reicht `git commit`. Nutze `agent-note commit -m "..."` nur, wenn Git-Hooks nicht verfügbar sind.
+   Wenn die generierten Git-Hooks installiert sind, reicht `git commit`.
 </Steps>
 
 ## Jeder Clone
@@ -65,12 +64,3 @@ npx agent-note show
 ```
 
 Wenn der PR Report leer ist oder Prompts zu kurz wirken, lies [Troubleshooting](./troubleshooting/).
-
-## Entfernen
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Mit `--remove-workflow` entfernst du auch die PR-Report- und Dashboard-Workflows.
-

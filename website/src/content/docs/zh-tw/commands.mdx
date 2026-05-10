@@ -1,50 +1,124 @@
 ---
 title: 命令
-description: Agent Note CLI 命令參考。
+description: Agent Note 公開 CLI 命令。
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-當你已經理解 Agent Note 的流程，只需要查找具體 command 或 flag 時，可以使用這一頁。首次 setup 請從 [安裝](./installation/) 開始。
+這一頁只列出使用者直接執行的命令。首次設定請從 [安裝](./installation/) 開始。
 
 ## 常用任務
 
-- 首次 setup: `agent-note init`
-- 查看 commit 記錄了什麼: `agent-note show`
-- 查看某一行為什麼改變: `agent-note why`
+- 首次設定: `agent-note init`
+- 從儲存庫移除 Agent Note: `agent-note deinit`
+- 檢查狀態: `agent-note status`
 - 查看最近活動: `agent-note log`
-- 產生 PR Report: `agent-note pr`
-- 檢查 hooks 和 active adapter: `agent-note status`
+- 顯示 Commit 資訊: `agent-note show`
+- 查看某一行為什麼改變: `agent-note why`
+
+<Aside>
+  PR Report 和 Dashboard 是 GitHub Actions 功能。`agent-note init` 通常建立 Workflow 檔案；報告和 Dashboard 會在這些 Workflow 執行後產生。
+</Aside>
 
 ## agent-note init
+
+在儲存庫中設定 Agent Note。
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-| Flag | 說明 |
+| 參數 | 說明 |
 |---|---|
-| `--agent <name...>` | 必填。一個或多個 adapter: `claude`, `codex`, `cursor`, `gemini` |
-| `--dashboard` | 同時建立 shared Dashboard workflow |
-| `--no-hooks` | 跳過 agent hook 設定 |
-| `--no-git-hooks` | 跳過 git hook 安裝 |
-| `--no-action` | 跳過 workflow 建立 |
+| `--agent <name...>` | 選擇一個或多個 Agent 介接器: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | 同時建立共享 Dashboard Workflow |
+| `--no-hooks` | 跳過 Agent hooks 設定 |
+| `--no-git-hooks` | 跳過 Git Hooks 安裝 |
+| `--no-action` | 跳過 Workflow 建立 |
 | `--no-notes` | 跳過 notes auto-fetch 設定 |
-| `--hooks` | 只安裝 agent hooks |
-| `--action` | 只建立 workflow |
+| `--hooks` | 只安裝 Agent hooks |
+| `--action` | 只建立 Workflow |
+
+## agent-note deinit
+
+移除一個或多個 Agent 的 hooks 和設定。
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| 參數 | 說明 |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
+| `--remove-workflow` | 同時刪除 PR Report 和 Dashboard Workflow |
+| `--keep-notes` | 保留 notes auto-fetch 設定 |
+
+## agent-note status
+
+顯示追蹤狀態。
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+## agent-note log
+
+列出最近 commit 和 AI Ratio。
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
 ## agent-note show
+
+顯示某個 commit 的 AI Session。
 
 ```bash
 npx agent-note show
 npx agent-note show abc1234
 ```
 
-顯示某個 commit 的 prompts、responses、touched files、agent、model 和 attribution。
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-4abc-8def-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   3 changed, 2 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
 
 ## agent-note why
 
-使用 `git blame` 找到最後修改某一行的 Commit，並顯示該 Commit 對應的 Agent Note context。
+顯示某一行背後的 Agent Note 脈絡。
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -55,70 +129,20 @@ npx agent-note why src/middleware/auth.ts#L42-L55
 npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
 npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
 npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` 支援 `path:line`、`path:line-end`、`path:line:column`、`path#Lline`、`path#Lline-Lend`、`path#LlineCcol`、GitHub file URL、`file://...`、`vscode://file...`，以及從 AI Agent 輸出複製的前置 `@` path。它縮短了手動執行 `git blame` → `git notes --ref=agentnote show <commit>` 的流程。
+  `why` 支援 `path:line`、`path#Lline`、GitHub file URL、`file://...`、`vscode://file...`，以及從 AI Agent 輸出複製的前置 `@` 路徑。
 </Aside>
 
-## agent-note log
+## AI Agent Skill
+
+安裝 Agent Note Skill 後，可以用自然語言請求這些任務。
 
 ```bash
-npx agent-note log
-npx agent-note log 20
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-列出最近 commit，並顯示 AI ratio 和保存的 prompt 數量。
-
-## agent-note pr
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  `compact` 會讓 PR Report 聚焦在解釋 commit 的 prompts。`full` 會顯示所有保存的 prompts。
-</Aside>
-
-## agent-note status
-
-```bash
-npx agent-note status
-```
-
-檢查 active adapter、hooks 收集的內容、git hooks 狀態和 commit 記錄路徑。
-
-## agent-note deinit
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-若也要刪除 PR Report 和 Dashboard workflow，請加上 `--remove-workflow`。
-
-## agent-note commit
-
-```bash
-npx agent-note commit -m "feat: add auth"
-```
-
-<Aside type="tip">
-  如果 git hooks 已安裝，則不需要它。一般 `git commit` 已經會記錄同樣的資料。
-</Aside>
+對於 `gh skill install`，請依照 Agent 選擇對應的識別碼: `codex`, `claude-code`, `cursor` or `gemini-cli`。

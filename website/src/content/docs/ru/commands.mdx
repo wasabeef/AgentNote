@@ -1,50 +1,124 @@
 ---
 title: Команды
-description: Справочник команд CLI Agent Note.
+description: Публичные CLI-команды Agent Note.
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-Используйте эту страницу, когда вы уже понимаете поток Agent Note и ищете конкретную command или flag. Для первого setup начните с [Установки](./installation/).
+Эта страница показывает команды, которые пользователь запускает напрямую. Для первого setup начните с [Установки](./installation/).
 
 ## Частые задачи
 
 - Первый setup: `agent-note init`
-- Посмотреть данные commit: `agent-note show`
+- Удалить Agent Note из репозитория: `agent-note deinit`
+- Проверить статус: `agent-note status`
+- Посмотреть недавнюю активность: `agent-note log`
+- Показать данные commit: `agent-note show`
 - Понять, почему изменилась строка: `agent-note why`
-- Проверить недавнюю активность: `agent-note log`
-- Сгенерировать PR Report: `agent-note pr`
-- Проверить hooks и active adapter: `agent-note status`
+
+<Aside>
+  PR Report и Dashboard — это функции GitHub Actions. `agent-note init` обычно создает файлы workflow; отчеты и Dashboard появляются позже при запуске этих workflows.
+</Aside>
 
 ## agent-note init
+
+Настраивает Agent Note в репозитории.
 
 ```bash
 npx agent-note init --agent claude
 ```
 
-| Flag | Описание |
+| Флаг | Описание |
 |---|---|
-| `--agent <name...>` | Обязательно. Один или несколько adapters: `claude`, `codex`, `cursor`, `gemini` |
-| `--dashboard` | Также создает workflow для shared Dashboard |
-| `--no-hooks` | Пропускает настройку agent hooks |
-| `--no-git-hooks` | Пропускает установку git hooks |
-| `--no-action` | Пропускает создание workflow |
-| `--no-notes` | Пропускает notes auto-fetch |
-| `--hooks` | Устанавливает только agent hooks |
-| `--action` | Создает только workflow |
+| `--agent <name...>` | Выбрать один или несколько agent adapters: `claude`, `codex`, `cursor` or `gemini` |
+| `--dashboard` | Также создать workflow для общего Dashboard |
+| `--no-hooks` | Пропустить настройку hooks для agent |
+| `--no-git-hooks` | Пропустить установку Git Hooks |
+| `--no-action` | Пропустить создание workflows |
+| `--no-notes` | Пропустить настройку notes auto-fetch |
+| `--hooks` | Установить только hooks для agent |
+| `--action` | Создать только workflows |
+
+## agent-note deinit
+
+Удаляет hooks и config Agent Note для одного или нескольких agents.
+
+```bash
+npx agent-note deinit --agent claude
+```
+
+| Флаг | Описание |
+|---|---|
+| `--agent <name...>` | `claude`, `codex`, `cursor` or `gemini` |
+| `--remove-workflow` | Также удаляет workflows PR Report и Dashboard |
+| `--keep-notes` | Оставить настройку notes auto-fetch |
+
+## agent-note status
+
+Показывает состояние отслеживания.
+
+```bash
+npx agent-note status
+```
+
+```text
+agent-note v0.x.x
+
+agent:   active (cursor)
+capture: cursor(prompt, response, edits, shell)
+git:     active (prepare-commit-msg, post-commit, pre-push)
+commit:  tracked via git hooks
+session: a1b2c3d4…
+agent:   cursor
+linked:  3/20 recent commits
+```
+
+## agent-note log
+
+Показывает последние commits с AI Ratio.
+
+```bash
+npx agent-note log
+npx agent-note log 20
+```
+
+```text
+ce941f7 feat: add auth  [a1b2c3d4… | 🤖60% | 2p]
+326a568 test: add tests [a1b2c3d4… | 🤖100% | 1p]
+ba091be fix: update deps
+```
 
 ## agent-note show
+
+Показывает AI Session для commit.
 
 ```bash
 npx agent-note show
 npx agent-note show abc1234
 ```
 
-Показывает prompts, responses, touched files, agent, model и attribution для commit.
+```text
+commit:  ce941f7 feat: add JWT auth middleware
+session: a1b2c3d4-5678-4abc-8def-111122223333
+
+ai:      60% (45/75 lines) [█████░░░]
+model:   claude-sonnet-4-20250514
+agent:   claude
+files:   3 changed, 2 by AI
+
+  src/middleware/auth.ts  🤖
+  src/types/token.ts  🤖
+  CHANGELOG.md  👤
+
+prompts: 2
+
+  1. Implement JWT auth middleware with refresh token rotation
+  2. Add tests for expired token and invalid signature
+```
 
 ## agent-note why
 
-Через `git blame` находит Commit, который последним изменил строку, и показывает связанный контекст Agent Note.
+Показывает контекст Agent Note за измененной строкой.
 
 ```bash
 npx agent-note why src/middleware/auth.ts:42
@@ -55,70 +129,20 @@ npx agent-note why src/middleware/auth.ts#L42-L55
 npx agent-note why src/middleware/auth.ts#L42C7
 npx agent-note why @src/middleware/auth.ts#L42
 npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42
-npx agent-note why https://github.com/owner/repo/blob/main/src/middleware/auth.ts#L42-L55
 npx agent-note why file:///workspace/repo/src/middleware/auth.ts#L42
 npx agent-note why vscode://file/workspace/repo/src/middleware/auth.ts:42:7
 ```
 
 <Aside>
-  `why` принимает `path:line`, `path:line-end`, `path:line:column`, `path#Lline`, `path#Lline-Lend`, `path#LlineCcol`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из вывода AI Agent. Он заменяет ручной путь `git blame` → `git notes --ref=agentnote show <commit>`.
+  `why` принимает `path:line`, `path#Lline`, GitHub file URLs, `file://...`, `vscode://file...` и paths с начальным `@`, скопированные из AI Agent.
 </Aside>
 
-## agent-note log
+## AI Agent Skill
+
+Установите Agent Note Skill, чтобы просить эти задачи на естественном языке.
 
 ```bash
-npx agent-note log
-npx agent-note log 20
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Показывает последние commits с AI ratio и числом сохраненных prompts.
-
-## agent-note pr
-
-<Tabs>
-  <TabItem label="Markdown">
-  ```bash
-  npx agent-note pr origin/main
-  ```
-  </TabItem>
-  <TabItem label="Detail">
-  ```bash
-  npx agent-note pr origin/main --prompt-detail compact
-  ```
-  </TabItem>
-  <TabItem label="JSON">
-  ```bash
-  npx agent-note pr origin/main --json
-  ```
-  </TabItem>
-</Tabs>
-
-<Aside>
-  `compact` фокусирует PR Report на prompts, которые объясняют commit. `full` показывает все сохраненные prompts.
-</Aside>
-
-## agent-note status
-
-```bash
-npx agent-note status
-```
-
-Проверяет active adapter, что собирают hooks, состояние git hooks и путь записи commit.
-
-## agent-note deinit
-
-```bash
-npx agent-note deinit --agent claude
-```
-
-Добавьте `--remove-workflow`, чтобы удалить также workflows PR Report и Dashboard.
-
-## agent-note commit
-
-```bash
-npx agent-note commit -m "feat: add auth"
-```
-
-<Aside type="tip">
-  Не нужно, если git hooks установлены. Обычный `git commit` уже выполняет такую же запись.
-</Aside>
+Для `gh skill install` выберите подходящий идентификатор agent: `codex`, `claude-code`, `cursor` or `gemini-cli`.

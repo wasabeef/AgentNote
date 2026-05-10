@@ -70,7 +70,7 @@ Codex CLI と Cursor は `Supported` であっても attribution の精度は条
 
 - upstream event schema や transcript schema に高優先度の未確定事項がある
 - 実機 session から採取した fixture が足りず、test が synthetic payload 中心である
-- normal `git commit`、`show`、`log`、`pr`、`status` の一連動作を安定保証できない
+- normal `git commit`、`deinit`、`show`、`log`、`why`、`status`、PR Report の一連動作を安定保証できない
 - fallback 条件や deferred 理由が docs 上で十分説明されていない
 
 ### 4.2 `Supported`
@@ -81,8 +81,8 @@ Codex CLI と Cursor は `Supported` であっても attribution の精度は条
 `Supported` の条件は次の通り。
 
 - generated git hooks を入れた通常の `git commit` が期待通りに動作する
-- `agent-note commit` fallback も継続して動作する
-- `show` / `log` / `pr` / `status` が当該 agent の note を問題なく扱える
+- `deinit` / `show` / `log` / `why` / `status` が当該 agent の note と hook config を問題なく扱える
+- GitHub Action の PR Report が当該 agent の note を問題なく扱える
 - 実機 session 由来の fixture と regression test がある
 - 既知の limitation と fallback 条件が README と website に明記されている
 - promotion 後に support すると言える範囲が、maintainer の言葉で説明できる
