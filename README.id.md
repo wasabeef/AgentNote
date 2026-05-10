@@ -34,11 +34,11 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 
 ## Mengapa Agent Note
 
-- Lihat percakapan AI di balik setiap Commit yang dibantu AI.
-- Tinjau file yang ikut diedit AI dan perkiraan AI Ratio langsung di Pull Request.
-- Berikan konteks tersembunyi di PR body untuk AI Review tool, sehingga Copilot, CodeRabbit, Devin, dan Greptile dapat meninjau dengan intent penulis.
-- Buka Dashboard bersama yang mengubah Commit History menjadi cerita yang mudah dibaca.
-- Simpan data secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
+- Rekam prompt, response, file yang berubah, dan AI Ratio untuk setiap Commit yang dibantu AI.
+- Tetap gunakan `git commit` biasa; Agent Note mencatat konteks di background.
+- Berikan PR Report untuk reviewer manusia dan AI Review tool, dengan ringkasan terlihat dan Reviewer Context tersembunyi.
+- Buka Dashboard bersama, atau jalankan `agent-note why <file:line>` untuk kembali dari satu baris ke percakapan Commit.
+- Simpan semuanya secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
 
 ## Persyaratan
 
@@ -267,7 +267,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan notes auto-fetch |
 | `agent-note deinit` | Menghapus hooks dan config Agent Note |
 | `agent-note status` | Menampilkan status pelacakan |
-| `agent-note log [n]` | Mendaftar commit terbaru dengan Rasio AI |
+| `agent-note log [n]` | Mendaftar commit terbaru dengan AI Ratio |
 | `agent-note show [commit]` | Menampilkan sesi AI di balik `HEAD` atau Commit SHA |
 | `agent-note why <target>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |
 

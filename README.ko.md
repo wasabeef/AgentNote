@@ -34,11 +34,11 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 
 ## 왜 Agent Note 인가
 
-- AI 가 도운 각 Commit 뒤의 대화를 확인할 수 있습니다.
-- Pull Request 에서 AI 가 함께 수정한 파일과 AI Ratio 추정치를 바로 확인할 수 있습니다.
-- PR body 의 hidden comment 로 Reviewer Context 를 제공해 Copilot, CodeRabbit, Devin, Greptile 같은 AI Review tool 이 작성자의 의도와 확인 관점을 함께 읽게 할 수 있습니다.
-- 공유 Dashboard 로 Commit History 를 읽기 쉬운 흐름으로 볼 수 있습니다.
-- 데이터는 `refs/notes/agentnote` 에 Git-native 로 남습니다. Hosted Service 도 Telemetry 도 없습니다.
+- AI 가 도운 각 Commit 마다 prompt, response, 변경 파일, AI Ratio 를 남깁니다.
+- 평소처럼 `git commit` 을 사용하면 됩니다. Agent Note 가 뒤에서 문맥을 기록합니다.
+- 사람 reviewer 와 AI Review tool 모두에게 보이는 요약과 숨겨진 Reviewer Context 가 포함된 PR Report 를 제공합니다.
+- 공유 Dashboard 를 열거나 `agent-note why <file:line>` 으로 한 줄에서 Commit 대화까지 거슬러 올라갈 수 있습니다.
+- 모든 데이터는 `refs/notes/agentnote` 에 Git-native 로 남습니다. Hosted Service 도 Telemetry 도 없습니다.
 
 ## 요구 사항
 

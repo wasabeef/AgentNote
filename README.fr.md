@@ -34,10 +34,10 @@ Pensez-y comme à <code>git log</code> plus la conversation IA derrière le chan
 
 ## Pourquoi Agent Note
 
-- Voir la conversation IA derrière chaque Commit assisté.
-- Vérifier dans la Pull Request les fichiers que l'IA a aidé à modifier et l'AI Ratio estimé.
-- Donner aux AI Review tools un contexte caché dans le PR body, afin que Copilot, CodeRabbit, Devin et Greptile puissent relire avec l'intention de l'auteur.
-- Ouvrir un Dashboard partagé qui transforme l'historique des Commits en récit lisible.
+- Capturer les prompts, réponses, fichiers modifiés et l'AI Ratio pour chaque Commit assisté par IA.
+- Continuer à utiliser `git commit` normalement; Agent Note enregistre le contexte en arrière-plan.
+- Donner aux humains et aux AI Review tools un PR Report avec un résumé visible et un Reviewer Context caché.
+- Ouvrir un Dashboard partagé, ou lancer `agent-note why <file:line>` pour remonter d'une ligne à la conversation du Commit.
 - Garder les données dans git avec `refs/notes/agentnote` — pas de service hébergé, pas de télémétrie.
 
 ## Prérequis

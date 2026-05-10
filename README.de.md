@@ -34,11 +34,11 @@ Stellen Sie es sich als <code>git log</code> plus die KI-Unterhaltung hinter der
 
 ## Warum Agent Note
 
-- Sehen Sie die KI-Unterhaltung hinter jedem unterstützten Commit.
-- Prüfen Sie direkt im Pull Request, welche Dateien die KI mitbearbeitet hat und wie hoch die geschätzte AI Ratio ist.
-- AI Review tools erhalten versteckten Kontext im PR body, damit Copilot, CodeRabbit, Devin und Greptile mit der Absicht des Autors reviewen können.
-- Öffnen Sie ein gemeinsames Dashboard, das Commit History in eine lesbare Story verwandelt.
-- Halten Sie die Daten Git-native in `refs/notes/agentnote` — kein Hosted Service, keine Telemetrie.
+- Erfassen Sie Prompts, Antworten, geänderte Dateien und AI Ratio für jeden KI-unterstützten Commit.
+- Nutzen Sie weiter normales `git commit`; Agent Note zeichnet den Kontext im Hintergrund auf.
+- Geben Sie menschlichen Reviewern und AI Review tools einen PR Report mit sichtbarer Zusammenfassung plus verstecktem Reviewer Context.
+- Öffnen Sie ein gemeinsames Dashboard, oder springen Sie mit `agent-note why <file:line>` von einer Zeile zurück zur Commit-Unterhaltung.
+- Halten Sie alles Git-native in `refs/notes/agentnote` — kein Hosted Service, keine Telemetrie.
 
 ## Voraussetzungen
 

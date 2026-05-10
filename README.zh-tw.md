@@ -34,11 +34,11 @@ Agent Note 會為每個 Commit 保存與 AI 的對話和變更檔案。資訊足
 
 ## 為什麼選擇 Agent Note
 
-- 查看每個 AI 輔助 Commit 背後的對話。
-- 在 Pull Request 中查看 AI 參與修改的檔案和 AI Ratio 估算。
-- 在 PR body 的 hidden comment 中提供 Reviewer Context，讓 Copilot、CodeRabbit、Devin、Greptile 等 AI Review tool 能帶著作者意圖和檢查重點進行 review。
-- 打開共享 Dashboard，把 Commit History 變成可讀的故事線。
-- 資料以 Git-native 方式保存在 `refs/notes/agentnote`，沒有 Hosted Service，也沒有 Telemetry。
+- 為每個 AI 輔助 Commit 記錄 prompt、response、變更檔案和 AI Ratio。
+- 繼續使用一般 `git commit`；Agent Note 會在背景記錄脈絡。
+- 為人工 reviewer 和 AI Review tool 提供 PR Report，包含可見摘要和隱藏的 Reviewer Context。
+- 開啟共享 Dashboard，或用 `agent-note why <file:line>` 從某一行回到對應 Commit 的對話。
+- 所有資料都以 Git-native 方式保存在 `refs/notes/agentnote`，沒有 Hosted Service，也沒有 Telemetry。
 
 ## 需求
 
