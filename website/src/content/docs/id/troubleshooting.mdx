@@ -93,4 +93,6 @@ Git hooks bersifat local di `.git/`, jadi setiap clone perlu `init`.
 
 ## Line Estimate tidak muncul
 
-Ini sering normal. Claude Code biasanya menyediakan bukti edit yang cukup untuk Line Estimate. Codex CLI hanya dapat memperkirakan baris ketika jumlah patch transcript cocok dengan final commit diff. Cursor hanya dapat melakukannya ketika jumlah edit cocok dan final file masih cocok dengan edit AI terakhir. Gemini CLI saat ini hanya menampilkan AI share di level file.
+Ini sering normal. Claude Code biasanya menyediakan bukti edit yang cukup untuk Line Estimate. Codex CLI hanya dapat memperkirakan baris ketika jumlah patch transcript cocok dengan final commit diff. Cursor hanya dapat melakukannya ketika jumlah edit cocok dan final file masih cocok dengan edit AI terakhir. Gemini CLI saat ini hanya menampilkan proporsi AI di level file.
+
+Jika bukti tidak lengkap, Agent Note kembali ke penilaian aman alih-alih menebak.
