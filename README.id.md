@@ -35,7 +35,8 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 ## Mengapa Agent Note
 
 - Lihat percakapan AI di balik setiap Commit yang dibantu AI.
-- Tinjau file yang ikut diedit AI dan perkiraan porsi AI langsung di Pull Request.
+- Tinjau file yang ikut diedit AI dan perkiraan AI Ratio langsung di Pull Request.
+- Berikan konteks tersembunyi di PR body untuk AI Review tool, sehingga Copilot, CodeRabbit, Devin, dan Greptile dapat meninjau dengan intent penulis.
 - Buka Dashboard bersama yang mengubah Commit History menjadi cerita yang mudah dibaca.
 - Simpan data secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
 
@@ -107,7 +108,7 @@ Agent Note menyimpan cerita Commit:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - File: file yang berubah dan apakah AI ikut mengeditnya
-- Porsi AI: perkiraan persentase keseluruhan, plus jumlah baris jika Agent Note dapat memperkirakannya
+- AI Ratio: perkiraan persentase keseluruhan, plus jumlah baris jika Agent Note dapat memperkirakannya
 
 Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `refs/notes/agentnote` dan dibagikan melalui `git push`.
 

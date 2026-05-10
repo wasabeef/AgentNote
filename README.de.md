@@ -35,7 +35,8 @@ Stellen Sie es sich als <code>git log</code> plus die KI-Unterhaltung hinter der
 ## Warum Agent Note
 
 - Sehen Sie die KI-Unterhaltung hinter jedem unterstützten Commit.
-- Prüfen Sie direkt im Pull Request, welche Dateien die KI mitbearbeitet hat und wie hoch der geschätzte KI-Anteil ist.
+- Prüfen Sie direkt im Pull Request, welche Dateien die KI mitbearbeitet hat und wie hoch die geschätzte AI Ratio ist.
+- AI Review tools erhalten versteckten Kontext im PR body, damit Copilot, CodeRabbit, Devin und Greptile mit der Absicht des Autors reviewen können.
 - Öffnen Sie ein gemeinsames Dashboard, das Commit History in eine lesbare Story verwandelt.
 - Halten Sie die Daten Git-native in `refs/notes/agentnote` — kein Hosted Service, keine Telemetrie.
 
@@ -107,7 +108,7 @@ Agent Note speichert die Commit Story:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - Dateien: geänderte Dateien und ob die KI beim Bearbeiten geholfen hat
-- KI-Anteil: ein Gesamtprozentsatz und, wenn schätzbar, die betroffenen Zeilen
+- AI Ratio: ein Gesamtprozentsatz und, wenn schätzbar, die betroffenen Zeilen
 
 Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record liegt in `refs/notes/agentnote` und wird per `git push` geteilt.
 

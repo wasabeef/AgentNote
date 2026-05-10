@@ -35,7 +35,8 @@ Agent Note 会为每个 Commit 保存与 AI 的对话和变更文件。信息足
 ## 为什么选择 Agent Note
 
 - 查看每个 AI 辅助 Commit 背后的对话。
-- 在 Pull Request 中查看 AI 参与修改的文件和 AI 参与比例的估算。
+- 在 Pull Request 中查看 AI 参与修改的文件和 AI Ratio 估算。
+- 在 PR body 的 hidden comment 中提供 Reviewer Context，让 Copilot、CodeRabbit、Devin、Greptile 等 AI Review tool 能带着作者意图和检查重点进行 review。
 - 打开共享 Dashboard，把 Commit History 变成可读的故事线。
 - 数据以 Git-native 方式保存在 `refs/notes/agentnote`，没有 Hosted Service，也没有 Telemetry。
 
@@ -107,7 +108,7 @@ Agent Note 保存 Commit Story：
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - 文件：变更的文件，以及 AI 是否参与编辑
-- AI 参与比例：Commit 整体的估算值，以及可估算时的行数
+- AI Ratio：Commit 整体的估算值，以及可估算时的行数
 
 Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在 `refs/notes/agentnote`，并通过 `git push` 共享。
 

@@ -35,7 +35,8 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 ## 왜 Agent Note 인가
 
 - AI 가 도운 각 Commit 뒤의 대화를 확인할 수 있습니다.
-- Pull Request 에서 AI 가 함께 수정한 파일과 AI 참여 비율의 추정치를 바로 확인할 수 있습니다.
+- Pull Request 에서 AI 가 함께 수정한 파일과 AI Ratio 추정치를 바로 확인할 수 있습니다.
+- PR body 의 hidden comment 로 Reviewer Context 를 제공해 Copilot, CodeRabbit, Devin, Greptile 같은 AI Review tool 이 작성자의 의도와 확인 관점을 함께 읽게 할 수 있습니다.
 - 공유 Dashboard 로 Commit History 를 읽기 쉬운 흐름으로 볼 수 있습니다.
 - 데이터는 `refs/notes/agentnote` 에 Git-native 로 남습니다. Hosted Service 도 Telemetry 도 없습니다.
 
@@ -107,7 +108,7 @@ Agent Note 는 Commit Story 를 저장합니다.
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - 파일: 변경된 파일과 AI 가 편집에 참여했는지 여부
-- AI 참여 비율: Commit 전체의 추정치와, 가능한 경우 줄 수
+- AI Ratio: Commit 전체의 추정치와, 가능한 경우 줄 수
 
 Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanent Record 는 `refs/notes/agentnote` 에 저장되고 `git push` 로 공유됩니다.
 
