@@ -33,14 +33,14 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## Что он делает
 
 <CardGrid stagger>
-  <Card title="Сохранять записи строк, написанных ИИ" icon="pencil">
-    Точнее `git blame`. Claude Code — полная построчная атрибуция; другие агенты повышаются, когда условия совпадают.
+  <Card title="Сохранять работу, сделанную с помощью ИИ" icon="pencil">
+    Видно, какие коммиты и файлы были изменены с помощью ИИ. Когда доказательств достаточно, Agent Note также оценивает строки, написанные ИИ.
   </Card>
   <Card title="Промпты и ответы сохраняются рядом" icon="document">
     Также имя модели и использование инструментов — всё собрано в git notes вместе с изменением.
   </Card>
   <Card title="Автоматические отчёты в PR" icon="rocket">
-    Доля ИИ, количество промптов, хеши коммитов. Ревьюеры видят контекст перед кодом.
+    AI Ratio, промпты, хеши коммитов и дополнительный контекст для AI-ревью в PR.
   </Card>
   <Card title="Записывается только в git notes" icon="setting">
     Ветки остаются чистыми. Push / fetch для совместного использования командой, плюс опциональный статический Dashboard на GitHub Pages.
@@ -187,7 +187,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">Да</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">Доля ИИ</div>
+    <div class="capability-label">AI Ratio</div>
     <div class="cap-yes">Да</div>
     <div class="cap-yes">Да</div>
     <div class="cap-yes">Да</div>

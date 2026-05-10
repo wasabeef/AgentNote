@@ -34,10 +34,11 @@ Pense nele como <code>git log</code> mais a conversa de AI por trás da mudança
 
 ## Por que Agent Note
 
-- Veja a conversa com a AI por trás de cada Commit assistido.
-- Revise na Pull Request os arquivos que a AI ajudou a editar e a participação estimada da AI.
-- Abra um Dashboard compartilhado que transforma o histórico de Commits em uma história legível.
-- Mantenha os dados Git-native em `refs/notes/agentnote` — sem Hosted Service, sem Telemetry.
+- Registre prompts, respostas, arquivos alterados e AI Ratio para cada Commit assistido por AI.
+- Continue usando `git commit` normal; Agent Note registra o contexto em background.
+- Entregue a reviewers humanos e a ferramentas de AI review um PR Report com resumo visível e Reviewer Context oculto.
+- Abra um Dashboard compartilhado, ou use `agent-note why <file:line>` para ir de uma linha à conversa do Commit.
+- Mantenha tudo Git-native em `refs/notes/agentnote` — sem Hosted Service, sem Telemetry.
 
 ## Requisitos
 
@@ -107,7 +108,7 @@ Agent Note salva a história do Commit:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - Arquivos: arquivos modificados e se a AI ajudou a Editá-los
-- Participação da AI: uma porcentagem geral, mais contagem de linhas quando Agent Note consegue estimar
+- AI Ratio: uma porcentagem geral, mais contagem de linhas quando Agent Note consegue estimar
 
 Temporary Session Data ficam em `.git/agentnote/`. O Permanent Record fica em `refs/notes/agentnote` e é compartilhado com `git push`.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## Como funciona
@@ -266,7 +267,7 @@ Para o Flow detalhado, como Agent Note estima o trabalho escrito pela IA e o Sch
 | `agent-note init` | Configura Hooks, Workflow, Git Hooks e notes auto-fetch |
 | `agent-note deinit` | Remove hooks e config do Agent Note |
 | `agent-note status` | Mostra o estado de rastreamento |
-| `agent-note log [n]` | Lista commits recentes com proporção de IA |
+| `agent-note log [n]` | Lista commits recentes com AI Ratio |
 | `agent-note show [commit]` | Mostra a sessão de IA por trás de `HEAD` ou de um Commit SHA |
 | `agent-note why <target>` | Explica o contexto do Agent Note por trás de uma linha ou intervalo de arquivo |
 

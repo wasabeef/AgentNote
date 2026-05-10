@@ -63,7 +63,7 @@ npx agent-note init --agent claude --dashboard
 
 | Output | Type | Description |
 |---|---|---|
-| `overall_ai_ratio` | number | Ratio IA sur l’ensemble de la PR (0-100) |
+| `overall_ai_ratio` | number | AI Ratio sur l’ensemble de la PR (0-100) |
 | `overall_method` | string | `line`, `file`, `mixed` ou `none` |
 | `tracked_commits` | number | Nombre de commits avec des données agent-note |
 | `total_commits` | number | Nombre total de commits dans la PR |
@@ -78,7 +78,7 @@ Le rapport de PR contient :
 
 - **Header** — `Total AI Ratio` avec une barre, puis `Model` en dessous
 - **Reviewer Context** — commentaire Markdown masqué pour les outils d'AI Review, construit à partir de groupes génériques de zones modifiées, du focus de review et des derniers signaux d'intention pertinents
-- **Tableau** — ratio IA, nombre de prompts et fichiers par commit
+- **Tableau** — AI Ratio, nombre de prompts et fichiers par commit
 - **Prompts** — entrées `📝 Context`, `🧑 Prompt` et `🤖 Response` par commit dans une section repliable
 
 <Aside type="tip">

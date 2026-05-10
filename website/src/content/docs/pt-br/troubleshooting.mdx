@@ -38,7 +38,7 @@ A maioria dos problemas vem de local git hooks, git notes ausentes ou configura�
 | Um prompt esperado não aparece | Compare `compact` e `full` |
 | Dashboard abre, mas a PR não tem dados | Verifique se as notes dessa PR já foram publicadas |
 | `git commit` não cria note | Rode `init` novamente e veja a linha `git:` em `status` |
-| Attribution continua em file-level | Verifique se o agent expõe edit history suficiente |
+| Line Estimate não aparece | Verifique se o agent pode fornecer evidência de edição suficiente |
 
 ## PR Report vazio
 
@@ -49,7 +49,7 @@ A maioria dos problemas vem de local git hooks, git notes ausentes ou configura�
 
 Agent Note não escreve note para commits em que nenhum arquivo commitado pode ser associado ao agent.
 
-Se o header mostrar `Total AI Ratio: —` e `Agent Note data: No tracked commits`, a PR tem commits, mas nenhum Agent Note data foi encontrado para eles. Isso é diferente de um AI ratio real de `0%`.
+Se o header mostrar `Total AI Ratio: —` e `Agent Note data: No tracked commits`, a PR tem commits, mas nenhum dado do Agent Note foi encontrado para eles. Isso é diferente de um AI Ratio real de `0%`.
 
 ## Prompts faltando
 
@@ -91,6 +91,13 @@ npx agent-note init --agent claude
 
 Git hooks são locais em `.git/`, então cada clone precisa de `init`.
 
-## Sem line-level attribution
+## Line Estimate não aparece
 
-Isso costuma ser normal. Claude Code geralmente tem edit history suficiente. Codex CLI e Cursor só sobem para line-level quando os signals batem com o final diff. Gemini CLI permanece file-level.
+Isso costuma ser normal.
+
+- **Claude Code** geralmente fornece evidência suficiente para Line Estimate.
+- **Codex CLI** só consegue estimar linhas quando a contagem de patches do transcript bate com o final commit diff.
+- **Cursor** só consegue estimar linhas quando as contagens de edição batem e o arquivo final ainda corresponde à última edição da IA.
+- **Gemini CLI** atualmente mostra apenas AI Ratio no nível de arquivo.
+
+Quando a evidência está incompleta, o Agent Note volta para uma avaliação segura em vez de adivinhar.

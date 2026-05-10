@@ -137,7 +137,7 @@ With the generated git hooks installed, most repos can keep using plain `git com
 - `reference` context comes from the immediately previous response when it mentions a changed file path, file name, or code identifier from the final diff.
 - `scope` context comes from the current response when its opening lines clearly name the work being done.
 - Agent Note does not use approval words such as `yes`, `continue`, or `お願いします` as selection rules. If there is no concrete file or code clue, it skips Context.
-- Context never changes `files_touched`, prompt ownership, AI ratio, attribution method, or whether a git note is saved.
+- Context never changes `files_touched`, prompt ownership, AI Ratio, attribution method, or whether a git note is saved.
 
 ## Agent Note vs Entire
 
@@ -153,7 +153,7 @@ Agent Note and Entire solve related but different problems.
 </Aside>
 
 <Aside>
-  Common generated artifacts are excluded from the AI ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves. If your repository commits bundles or generated outputs that should stay visible but not affect AI Ratio, list them in the repository-root `.agentnoteignore`.
+  Common generated artifacts are excluded from the AI Ratio denominator on a best-effort basis using specific signals such as framework/cache paths, generated filenames/suffixes, and committed file headers. Generic directory names like `build/`, `dist/`, `gen/`, `generated/`, and `target/` are not enough by themselves. If your repository commits bundles or generated outputs that should stay visible but not affect AI Ratio, list them in the repository-root `.agentnoteignore`.
 </Aside>
 
 ## Session Lifecycle

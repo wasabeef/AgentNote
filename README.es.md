@@ -34,9 +34,10 @@ Piensa en ello como <code>git log</code> más la conversación AI detrás del ca
 
 ## Por qué Agent Note
 
-- Ve la conversación con la IA detrás de cada Commit asistido.
-- Revisa en la Pull Request los archivos que la IA ayudó a modificar y la proporción estimada de IA.
-- Abre un Dashboard compartido que convierte el historial de Commits en una historia legible.
+- Captura prompts, respuestas, archivos modificados y AI Ratio para cada Commit asistido por IA.
+- Sigue usando `git commit` normal; Agent Note registra el contexto en segundo plano.
+- Da a revisores humanos y AI Review tools un PR Report con resumen visible y Reviewer Context oculto.
+- Abre un Dashboard compartido, o usa `agent-note why <file:line>` para saltar de una línea a la conversación del Commit.
 - Mantén los datos en git con `refs/notes/agentnote` — sin Hosted Service ni Telemetry.
 
 ## Requisitos
@@ -107,7 +108,7 @@ Agent Note guarda la historia del Commit:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - Archivos: archivos modificados y si la IA ayudó a editarlos
-- Participación de IA: un porcentaje general, más conteo de líneas cuando Agent Note puede estimarlo
+- AI Ratio: un porcentaje general, más conteo de líneas cuando Agent Note puede estimarlo
 
 Los datos temporales de sesión viven en `.git/agentnote/`. El registro permanente vive en `refs/notes/agentnote` y se comparte con `git push`.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## Cómo funciona

@@ -34,10 +34,11 @@ Think of it as <code>git log</code> plus the AI conversation behind the change.
 
 ## Why Agent Note
 
-- See the AI conversation behind every assisted commit.
-- Review the files AI helped edit and the estimated AI share directly in the Pull Request.
-- Open a shared Dashboard that turns commit history into a readable story.
-- Keep the data git-native with `refs/notes/agentnote` — no hosted service, no telemetry.
+- Capture prompts, responses, changed files, and AI Ratio for every AI-assisted commit.
+- Keep using normal `git commit`; Agent Note records the context in the background.
+- Give human reviewers and AI review tools a PR Report with visible summaries plus hidden Reviewer Context.
+- Open a shared Dashboard, or run `agent-note why <file:line>` to jump from a line back to the commit conversation.
+- Keep everything git-native in `refs/notes/agentnote` — no hosted service, no telemetry.
 
 ## Requirements
 
@@ -107,7 +108,7 @@ Agent Note stores the commit story:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - Files: changed files and whether AI helped edit them
-- AI share: an overall percentage, plus the likely AI-written lines when Agent Note can estimate them
+- AI Ratio: an overall percentage, plus the likely AI-written lines when Agent Note can estimate them
 
 Temporary session data lives under `.git/agentnote/`. The permanent record lives in `refs/notes/agentnote` and is shared on `git push`.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## How It Works
@@ -266,7 +267,7 @@ For the detailed flow, how Agent Note estimates AI-written work, and the stored 
 | `agent-note init` | Set up hooks, workflow, git hooks, and notes auto-fetch |
 | `agent-note deinit` | Remove Agent Note hooks and config |
 | `agent-note status` | Show tracking state |
-| `agent-note log [n]` | List recent commits with AI ratio |
+| `agent-note log [n]` | List recent commits with AI Ratio |
 | `agent-note show [commit]` | Show the AI session behind `HEAD` or a commit SHA |
 | `agent-note why <target>` | Explain the Agent Note context behind a file line or range |
 

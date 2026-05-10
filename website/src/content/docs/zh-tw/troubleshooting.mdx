@@ -38,7 +38,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 | 期望的 prompt 沒有顯示 | 比較 `compact` 與 `full` |
 | Dashboard 能開啟，但 PR 沒有資料 | 確認該 PR 的 notes 是否已發布 |
 | `git commit` 沒有建立 note | 重新執行 `init`，並檢查 `status` 中的 `git:` 行 |
-| attribution 停留在 file-level | 確認 agent 是否提供了足夠的 edit history |
+| Line Estimate 沒有顯示 | 確認 Agent 是否能提供足夠的編輯證據 |
 
 ## PR Report 為空
 
@@ -49,7 +49,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 
 如果 commit 中找不到 agent 修改過的已提交檔案，Agent Note 不會寫 note。
 
-如果 header 顯示 `Total AI Ratio: —` 和 `Agent Note data: No tracked commits`，表示 PR 有 commits，但沒有找到這些 commit 的 Agent Note data。這不同於真正的 AI ratio `0%`。
+如果 header 顯示 `Total AI Ratio: —` 和 `Agent Note data: No tracked commits`，表示 PR 有 commits，但沒有找到這些 commit 的 Agent Note data。這不同於真正的 AI Ratio `0%`。
 
 ## Prompt 缺失
 
@@ -91,6 +91,13 @@ npx agent-note init --agent claude
 
 git hooks 是 `.git/` 內的本機設定，因此每個 clone 都需要 `init`。
 
-## 沒有 line-level attribution
+## Line Estimate 沒有顯示
 
-這通常是正常的。Claude Code 通常有足夠 edit history。Codex CLI 和 Cursor 只有在 signal 符合最終 diff 時才升級到 line-level。Gemini CLI 保持 file-level。
+這通常是正常的。
+
+- **Claude Code** 通常能提供 Line Estimate 所需的編輯證據。
+- **Codex CLI** 只有在 transcript patch 數量符合最終 commit diff 時才能估算行數。
+- **Cursor** 只有在 edit 數量符合，且最終檔案仍符合最後一次 AI edit 時才能估算行數。
+- **Gemini CLI** 目前只顯示檔案級 AI Ratio。
+
+當證據不足時，Agent Note 會回退到保守判定，而不是猜測。

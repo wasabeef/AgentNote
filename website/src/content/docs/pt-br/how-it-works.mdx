@@ -137,7 +137,7 @@ Quando os git hooks gerados estão instalados, na maioria dos repositórios bast
 - O `reference` context vem da response imediatamente anterior quando ela menciona um caminho de arquivo alterado, nome de arquivo ou code identifier do diff final.
 - O `scope` context vem da response atual quando as primeiras linhas explicam claramente o trabalho em andamento.
 - O Agent Note não usa palavras curtas de aprovação como `yes`, `continue` ou `お願いします` como regra de seleção. Se não houver uma pista concreta de arquivo ou código, ele omite Context.
-- Context nunca muda `files_touched`, prompt ownership, AI ratio, attribution method ou se uma git note será gravada.
+- Context nunca muda `files_touched`, prompt ownership, AI Ratio, attribution method ou se uma git note será gravada.
 
 ## Agent Note vs Entire
 
@@ -153,7 +153,7 @@ Agent Note e Entire resolvem problemas relacionados, mas diferentes.
 </Aside>
 
 <Aside>
-  Generated artifacts comuns são excluídos do denominador de `AI ratio` em best effort usando sinais específicos, como caminhos de framework/cache, nomes ou sufixos gerados e headers dos arquivos commitados. Nomes genéricos de diretório como `build/`, `dist/`, `gen/`, `generated/` e `target/` não bastam por si só. Se o seu repository commita bundles ou generated outputs que devem continuar visíveis, mas não influenciar o AI Ratio, liste-os na `.agentnoteignore` na raiz do repository.
+  Generated artifacts comuns são excluídos do denominador de `AI Ratio` em best effort usando sinais específicos, como caminhos de framework/cache, nomes ou sufixos gerados e headers dos arquivos commitados. Nomes genéricos de diretório como `build/`, `dist/`, `gen/`, `generated/` e `target/` não bastam por si só. Se o seu repository commita bundles ou generated outputs que devem continuar visíveis, mas não influenciar o AI Ratio, liste-os na `.agentnoteignore` na raiz do repository.
 </Aside>
 
 ## Ciclo de vida da sessão

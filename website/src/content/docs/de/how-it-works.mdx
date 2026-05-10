@@ -137,7 +137,7 @@ Wenn die generierten Git-Hooks installiert sind, kannst du in den meisten Reposi
 - `reference` context kommt aus der unmittelbar vorherigen Response, wenn sie einen geänderten Dateipfad, Dateinamen oder Code-Bezeichner aus dem finalen Diff erwähnt.
 - `scope` context kommt aus der aktuellen Response, wenn die ersten Zeilen den Arbeitsumfang klar beschreiben.
 - Agent Note nutzt Zustimmungswörter wie `yes`, `continue` oder `お願いします` nicht als Auswahlregel. Ohne konkreten Datei- oder Code-Hinweis wird Context ausgelassen.
-- Context ändert nie `files_touched`, prompt ownership, AI ratio, attribution method oder ob eine git note gespeichert wird.
+- Context ändert nie `files_touched`, prompt ownership, AI Ratio, attribution method oder ob eine git note gespeichert wird.
 
 ## Agent Note vs Entire
 
@@ -153,7 +153,7 @@ Agent Note und Entire lösen verwandte, aber unterschiedliche Probleme.
 </Aside>
 
 <Aside>
-  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus. Wenn dein Repository Bundles oder generated outputs committet, die sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, liste sie in der `.agentnoteignore` im Repository-Root.
+  Häufige generated artifacts werden nach bestem Wissen aus dem Nenner von `AI Ratio` ausgeschlossen, wenn konkrete Signale vorliegen, etwa Framework-/Cache-Pfade, generated Dateinamen oder -suffixe und Header in committeten Dateien. Generische Verzeichnisnamen wie `build/`, `dist/`, `gen/`, `generated/` und `target/` reichen allein nicht aus. Wenn dein Repository Bundles oder generated outputs committet, die sichtbar bleiben, aber die AI Ratio nicht beeinflussen sollen, liste sie in der `.agentnoteignore` im Repository-Root.
 </Aside>
 
 ## Sitzungslebenszyklus

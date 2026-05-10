@@ -34,10 +34,11 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 
 ## 왜 Agent Note 인가
 
-- AI 가 도운 각 Commit 뒤의 대화를 확인할 수 있습니다.
-- Pull Request 에서 AI 가 함께 수정한 파일과 AI 참여 비율의 추정치를 바로 확인할 수 있습니다.
-- 공유 Dashboard 로 Commit History 를 읽기 쉬운 흐름으로 볼 수 있습니다.
-- 데이터는 `refs/notes/agentnote` 에 Git-native 로 남습니다. Hosted Service 도 Telemetry 도 없습니다.
+- AI 가 도운 각 Commit 마다 프롬프트, 응답, 변경 파일, AI Ratio 를 남깁니다.
+- 평소처럼 `git commit` 을 사용하면 됩니다. Agent Note 가 뒤에서 문맥을 기록합니다.
+- 사람 reviewer 와 AI Review tool 모두에게 보이는 요약과 숨겨진 Reviewer Context 가 포함된 PR Report 를 제공합니다.
+- 공유 Dashboard 를 열거나 `agent-note why <file:line>` 으로 한 줄에서 Commit 대화까지 거슬러 올라갈 수 있습니다.
+- 모든 데이터는 `refs/notes/agentnote` 에 Git-native 로 남습니다. Hosted Service 도 Telemetry 도 없습니다.
 
 ## 요구 사항
 
@@ -107,7 +108,7 @@ Agent Note 는 Commit Story 를 저장합니다.
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - 파일: 변경된 파일과 AI 가 편집에 참여했는지 여부
-- AI 참여 비율: Commit 전체의 추정치와, 가능한 경우 줄 수
+- AI Ratio: Commit 전체의 추정치와, 가능한 경우 줄 수
 
 Temporary Session Data 는 `.git/agentnote/` 아래에 저장됩니다. Permanent Record 는 `refs/notes/agentnote` 에 저장되고 `git push` 로 공유됩니다.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## 작동 방식

@@ -1,6 +1,6 @@
 ---
 title: Agent Note
-description: AI が書いたコードの「なぜ」を、git が忘れないために。プロンプト・レスポンス・行単位の著作情報をコミットに記録。
+description: AI が書いたコードの「なぜ」を、git が忘れないために。プロンプト・レスポンスをコミットに記録し、対応している Agent では AI が書いた行の目安も表示。
 template: splash
 hero:
   tagline: |
@@ -33,14 +33,14 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## できること
 
 <CardGrid stagger>
-  <Card title="AI が書いた行を残す" icon="pencil">
-    `git blame` より細かい粒度。Claude Code は行単位で完全、他のエージェントは条件が揃ったとき行単位へ昇格。
+  <Card title="AI が関わった変更を残す" icon="pencil">
+    どのコミットやファイルに AI が関わったかを確認できます。十分な根拠がある場合は、AI が書いた行の目安も表示します。
   </Card>
   <Card title="プロンプトと返答も一緒に保存" icon="document">
     モデル名・使ったツール情報も含めて、変更とセットで git notes に入れる。
   </Card>
   <Card title="PR に自動でレポート" icon="rocket">
-    AI 比率、プロンプト数、コミットハッシュ。レビュアーが最初に見る画面に文脈が載る。
+    AI Ratio、プロンプト数、コミットハッシュに加えて、レビュー支援ツール向けの補足コンテキスト（通常は非表示）も含まれます。
   </Card>
   <Card title="git notes にだけ書く" icon="setting">
     ブランチには混ざらない。push / fetch でチーム共有しつつ、必要なら GitHub Pages に Dashboard を公開できる。
@@ -186,7 +186,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">対応</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">AI 比率</div>
+    <div class="capability-label">AI Ratio</div>
     <div class="cap-yes">対応</div>
     <div class="cap-yes">対応</div>
     <div class="cap-yes">対応</div>

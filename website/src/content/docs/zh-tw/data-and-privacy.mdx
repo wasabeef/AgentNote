@@ -23,7 +23,7 @@ Agent Note 面向希望保留 AI review history、但不想依賴 hosted backend
 | `prompt` / `response` | 產生 commit 的對話 |
 | `contexts[]` | 給短 prompt 的 display-only hint |
 | `files` | committed files 以及 AI 是否修改 |
-| `attribution` | AI ratio、method 與 line counts |
+| `attribution` | AI Ratio、method 與可用行數 |
 | `agent` / `model` | agent 與 model metadata |
 
 符合 repository root 的 `.agentnoteignore` 的 path 仍會保留在 `files` 中，只會從 AI Ratio 的分母中排除。

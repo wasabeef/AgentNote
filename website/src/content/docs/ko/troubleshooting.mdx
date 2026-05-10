@@ -38,7 +38,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 | 기대한 prompt 가 보이지 않음 | `compact` 와 `full` 표시를 비교 |
 | Dashboard 는 열리지만 PR 데이터가 없음 | 해당 PR 의 notes 가 공개되었는지 확인 |
 | `git commit` 이 note 를 만들지 않음 | `init` 을 다시 실행하고 `status` 의 `git:` 줄 확인 |
-| attribution 이 file-level 에 머무름 | agent 가 충분한 edit history 를 제공하는지 확인 |
+| Line Estimate 가 보이지 않음 | Agent 가 줄 수 추정에 필요한 수정 근거를 제공할 수 있는지 확인 |
 
 ## PR Report 가 비어 있음
 
@@ -49,7 +49,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 
 agent 가 수정한 committed file 을 찾을 수 없는 commit 에는 note 를 쓰지 않습니다.
 
-Header 에 `Total AI Ratio: —` 와 `Agent Note data: No tracked commits` 가 표시되면 PR 에 commit 은 있지만 해당 commit 의 Agent Note data 를 찾지 못한 상태입니다. 실제 AI ratio 가 `0%` 라는 뜻은 아닙니다.
+Header 에 `Total AI Ratio: —` 와 `Agent Note data: No tracked commits` 가 표시되면 PR 에 commit 은 있지만 해당 commit 의 Agent Note data 를 찾지 못한 상태입니다. 실제 AI Ratio 가 `0%` 라는 뜻은 아닙니다.
 
 ## Prompt 가 부족함
 
@@ -91,6 +91,13 @@ npx agent-note init --agent claude
 
 git hooks 는 `.git/` 내부의 local 설정이므로 clone 마다 `init` 이 필요합니다.
 
-## line-level attribution 이 없음
+## Line Estimate 가 보이지 않음
 
-정상일 수 있습니다. Claude Code 는 대개 충분한 edit history 를 갖고 있습니다. Codex CLI 와 Cursor 는 signal 이 final diff 와 맞을 때만 line-level 로 올라갑니다. Gemini CLI 는 file-level 입니다.
+정상일 수 있습니다.
+
+- **Claude Code** 는 대개 Line Estimate 에 필요한 수정 근거를 제공합니다.
+- **Codex CLI** 는 transcript patch count 가 final commit diff 와 맞을 때만 줄 수를 추정할 수 있습니다.
+- **Cursor** 는 edit count 가 맞고 final file 이 마지막 AI edit 와 여전히 맞을 때만 줄 수를 추정할 수 있습니다.
+- **Gemini CLI** 는 현재 파일 단위 AI Ratio 만 표시합니다.
+
+근거가 부족하면 Agent Note 는 추측하지 않고 안전한 판정으로 돌아갑니다.

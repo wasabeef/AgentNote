@@ -34,10 +34,11 @@ Agent Note 會為每個 Commit 保存與 AI 的對話和變更檔案。資訊足
 
 ## 為什麼選擇 Agent Note
 
-- 查看每個 AI 輔助 Commit 背後的對話。
-- 在 Pull Request 中查看 AI 參與修改的檔案和 AI 參與比例的估算。
-- 打開共享 Dashboard，把 Commit History 變成可讀的故事線。
-- 資料以 Git-native 方式保存在 `refs/notes/agentnote`，沒有 Hosted Service，也沒有 Telemetry。
+- 為每個 AI 輔助 Commit 記錄 prompt、response、變更檔案和 AI Ratio。
+- 繼續使用一般 `git commit`；Agent Note 會在背景記錄脈絡。
+- 為人工 reviewer 和 AI Review tool 提供 PR Report，包含可見摘要和隱藏的 Reviewer Context。
+- 開啟共享 Dashboard，或用 `agent-note why <file:line>` 從某一行回到對應 Commit 的對話。
+- 所有資料都以 Git-native 方式保存在 `refs/notes/agentnote`，沒有 Hosted Service，也沒有 Telemetry。
 
 ## 需求
 
@@ -107,7 +108,7 @@ Agent Note 保存 Commit Story：
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - 檔案：變更的檔案，以及 AI 是否參與編輯
-- AI 參與比例：Commit 整體的估算值，以及可估算時的行數
+- AI Ratio：Commit 整體的估算值，以及可估算時的行數
 
 Temporary Session Data 保存在 `.git/agentnote/`。Permanent Record 保存在 `refs/notes/agentnote`，並透過 `git push` 分享。
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## 運作原理

@@ -137,7 +137,7 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 - `reference` context 來自上一則 response。只有當上一則 response 提到最終 diff 中的 file path、file name 或 code identifier 時才會使用。
 - `scope` context 來自目前的 response。只有當 response 開頭明確說明本次工作範圍時才會使用。
 - Agent Note 不會只根據 `yes`、`continue`、`お願いします` 這類短確認來選擇 Context。如果沒有具體的 file 或 code 線索，就不會加入 Context。
-- Context 永遠不會改變 `files_touched`、prompt ownership、AI ratio、attribution method，也不會影響是否保存 git note。
+- Context 永遠不會改變 `files_touched`、prompt ownership、AI Ratio、attribution method，也不會影響是否保存 git note。
 
 ## Agent Note vs Entire
 
@@ -153,7 +153,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。
 </Aside>
 
 <Aside>
-  常見的 generated artifacts 會以 best-effort 的方式根據具體信號排除在 `AI ratio` 的分母之外，例如框架/快取路徑、生成的檔名/後綴，以及已提交的檔案 header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請將路徑加入倉庫根目錄的 `.agentnoteignore` 檔案中。
+  常見的 generated artifacts 會以 best-effort 的方式根據具體信號排除在 `AI Ratio` 的分母之外，例如框架/快取路徑、生成的檔名/後綴，以及已提交的檔案 header。僅有 `build/`、`dist/`、`gen/`、`generated/`、`target/` 這類通用目錄名並不足以判定為 generated。如果你的 repository 需要提交 bundle 或 generated output，並希望它們繼續顯示但不影響 AI Ratio，請將路徑加入倉庫根目錄的 `.agentnoteignore` 檔案中。
 </Aside>
 
 ## Session 生命週期

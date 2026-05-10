@@ -34,10 +34,11 @@ Stellen Sie es sich als <code>git log</code> plus die KI-Unterhaltung hinter der
 
 ## Warum Agent Note
 
-- Sehen Sie die KI-Unterhaltung hinter jedem unterstützten Commit.
-- Prüfen Sie direkt im Pull Request, welche Dateien die KI mitbearbeitet hat und wie hoch der geschätzte KI-Anteil ist.
-- Öffnen Sie ein gemeinsames Dashboard, das Commit History in eine lesbare Story verwandelt.
-- Halten Sie die Daten Git-native in `refs/notes/agentnote` — kein Hosted Service, keine Telemetrie.
+- Erfassen Sie Prompts, Antworten, geänderte Dateien und AI Ratio für jeden KI-unterstützten Commit.
+- Nutzen Sie weiter normales `git commit`; Agent Note zeichnet den Kontext im Hintergrund auf.
+- Geben Sie menschlichen Reviewern und AI Review tools einen PR Report mit sichtbarer Zusammenfassung plus verstecktem Reviewer Context.
+- Öffnen Sie ein gemeinsames Dashboard, oder springen Sie mit `agent-note why <file:line>` von einer Zeile zurück zur Commit-Unterhaltung.
+- Halten Sie alles Git-native in `refs/notes/agentnote` — kein Hosted Service, keine Telemetrie.
 
 ## Voraussetzungen
 
@@ -107,7 +108,7 @@ Agent Note speichert die Commit Story:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - Dateien: geänderte Dateien und ob die KI beim Bearbeiten geholfen hat
-- KI-Anteil: ein Gesamtprozentsatz und, wenn schätzbar, die betroffenen Zeilen
+- AI Ratio: ein Gesamtprozentsatz und, wenn schätzbar, die betroffenen Zeilen
 
 Temporäre Session Data liegen unter `.git/agentnote/`. Der permanente Record liegt in `refs/notes/agentnote` und wird per `git push` geteilt.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## Funktionsweise

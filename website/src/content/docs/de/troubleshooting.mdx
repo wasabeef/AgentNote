@@ -38,7 +38,7 @@ Die meisten Probleme liegen an lokalen git hooks, fehlenden git notes oder GitHu
 | Ein erwarteter Prompt fehlt | Vergleichen Sie `compact` und `full` |
 | Dashboard öffnet, aber die PR hat keine Daten | Prüfen Sie, ob die Notes dieser PR veröffentlicht wurden |
 | `git commit` erstellt keine Note | Führen Sie `init` erneut aus und prüfen Sie die `git:` Zeile in `status` |
-| Attribution bleibt auf Datei-Ebene | Prüfen Sie, ob der Agent genug Edit-Historie liefert |
+| Line Estimate fehlt | Prüfen Sie, ob der Agent genug Bearbeitungsbelege liefern kann |
 
 ## PR Report ist leer
 
@@ -49,7 +49,7 @@ Die meisten Probleme liegen an lokalen git hooks, fehlenden git notes oder GitHu
 
 Agent Note schreibt keine Note für Commits, in denen keine committete Datei dem Agent zugeordnet werden kann.
 
-Wenn der Header `Total AI Ratio: —` und `Agent Note data: No tracked commits` zeigt, enthält die PR zwar Commits, aber für diese Commits wurden keine Agent-Note-Daten gefunden. Das ist nicht dasselbe wie ein echter KI-Anteil von `0%`.
+Wenn der Header `Total AI Ratio: —` und `Agent Note data: No tracked commits` zeigt, enthält die PR zwar Commits, aber für diese Commits wurden keine Agent-Note-Daten gefunden. Das ist nicht dasselbe wie eine echte AI Ratio von `0%`.
 
 ## Prompts fehlen
 
@@ -91,6 +91,13 @@ npx agent-note init --agent claude
 
 Git hooks liegen lokal in `.git/`; jeder Clone braucht ein eigenes `init`.
 
-## Keine line-level attribution
+## Line Estimate fehlt
 
-Das ist oft normal. Claude Code hat meist genug Edit-Historie. Codex CLI und Cursor wechseln nur bei passenden Signalen zum finalen Diff auf line-level. Gemini CLI bleibt file-level.
+Das ist oft normal:
+
+- **Claude Code** liefert meist genug Belege für Line Estimate.
+- **Codex CLI** kann Zeilen nur schätzen, wenn die Patch-Zählung aus dem Transcript zum finalen Diff passt.
+- **Cursor** kann Zeilen nur schätzen, wenn die Edit-Zählung passt und die finale Datei noch zur letzten KI-Änderung passt.
+- **Gemini CLI** zeigt aktuell nur AI Ratio auf Datei-Ebene.
+
+Wenn Belege unvollständig sind, fällt Agent Note auf eine sichere Bewertung zurück, statt zu raten.

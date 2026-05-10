@@ -33,14 +33,14 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## 하는 일
 
 <CardGrid stagger>
-  <Card title="AI가 작성한 행을 기록으로 남기기" icon="pencil">
-    `git blame`보다 세밀하다. Claude Code는 완전한 행 단위; 다른 에이전트는 조건이 맞을 때 행 단위로 승격된다.
+  <Card title="AI가 도운 변경을 기록으로 남기기" icon="pencil">
+    어떤 커밋과 파일에 AI의 도움이 있었는지 확인합니다. 근거가 충분하면 AI가 작성한 줄의 추정치도 표시합니다.
   </Card>
   <Card title="프롬프트와 응답도 함께 저장" icon="document">
     모델명과 도구 사용 이력까지 — 변경 사항과 함께 git notes에 묶어 넣는다.
   </Card>
   <Card title="PR 자동 리포트" icon="rocket">
-    AI 비율, 프롬프트 수, 커밋 해시. 리뷰어가 코드보다 먼저 맥락을 본다.
+    AI Ratio, 프롬프트 수, 커밋 해시와 함께 AI Review tool 이 읽을 수 있는 숨겨진 보조 Context 도 담습니다.
   </Card>
   <Card title="git notes에만 기록" icon="setting">
     브랜치는 깨끗하게 유지된다. push / fetch로 팀과 공유하고, 선택적으로 GitHub Pages에 static Dashboard를 공개할 수 있다.
@@ -187,7 +187,7 @@ linked:  3/20 recent commits
     <div class="cap-yes">지원</div>
   </div>
   <div class="capability-row">
-    <div class="capability-label">AI 비율</div>
+    <div class="capability-label">AI Ratio</div>
     <div class="cap-yes">지원</div>
     <div class="cap-yes">지원</div>
     <div class="cap-yes">지원</div>

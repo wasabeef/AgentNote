@@ -34,10 +34,11 @@ Pensalo come <code>git log</code> più la conversazione con l'AI dietro la modif
 
 ## Perché Agent Note
 
-- Vedi la conversazione con l'AI dietro ogni Commit assistito.
-- Controlla direttamente nella Pull Request i file che l'AI ha aiutato a modificare e la quota stimata di AI.
-- Apri un Dashboard condiviso che trasforma la Commit History in una storia leggibile.
-- Mantieni i dati Git-native con `refs/notes/agentnote` — niente Hosted Service, niente Telemetry.
+- Registra prompt, risposte, file modificati e AI Ratio per ogni Commit assistito dall'AI.
+- Continua a usare il normale `git commit`; Agent Note registra il contesto in background.
+- Dai ai reviewer umani e ai tool di AI review un PR Report con un riepilogo visibile e un Reviewer Context nascosto.
+- Apri un Dashboard condiviso, oppure usa `agent-note why <file:line>` per risalire da una riga alla conversazione del Commit.
+- Mantieni tutto Git-native in `refs/notes/agentnote` — niente Hosted Service, niente Telemetry.
 
 ## Requisiti
 
@@ -107,7 +108,7 @@ Agent Note salva la storia del Commit:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - File: file modificati e se l'AI ha aiutato a editarli
-- Quota AI: una percentuale complessiva, più il conteggio delle linee quando Agent Note può stimarlo
+- AI Ratio: una percentuale complessiva, più il conteggio delle linee quando Agent Note può stimarlo
 
 I dati temporanei di sessione vivono sotto `.git/agentnote/`. Il Record permanente vive in `refs/notes/agentnote` ed è condiviso con `git push`.
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## Come funziona

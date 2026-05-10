@@ -34,10 +34,11 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 
 ## Mengapa Agent Note
 
-- Lihat percakapan AI di balik setiap Commit yang dibantu AI.
-- Tinjau file yang ikut diedit AI dan perkiraan porsi AI langsung di Pull Request.
-- Buka Dashboard bersama yang mengubah Commit History menjadi cerita yang mudah dibaca.
-- Simpan data secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
+- Rekam prompt, respons, file yang berubah, dan AI Ratio untuk setiap Commit yang dibantu AI.
+- Tetap gunakan `git commit` biasa; Agent Note mencatat konteks di background.
+- Berikan PR Report untuk reviewer manusia dan AI Review tool, dengan ringkasan terlihat dan Reviewer Context tersembunyi.
+- Buka Dashboard bersama, atau jalankan `agent-note why <file:line>` untuk kembali dari satu baris ke percakapan Commit.
+- Simpan semuanya secara Git-native di `refs/notes/agentnote` — tanpa Hosted Service, tanpa Telemetry.
 
 ## Persyaratan
 
@@ -107,7 +108,7 @@ Agent Note menyimpan cerita Commit:
   <img src="website/public/images/context-dashboard-example.png" alt="Agent Note Dashboard showing Context before a short prompt" width="750">
 
 - File: file yang berubah dan apakah AI ikut mengeditnya
-- Porsi AI: perkiraan persentase keseluruhan, plus jumlah baris jika Agent Note dapat memperkirakannya
+- AI Ratio: perkiraan persentase keseluruhan, plus jumlah baris jika Agent Note dapat memperkirakannya
 
 Temporary Session Data berada di `.git/agentnote/`. Permanent Record berada di `refs/notes/agentnote` dan dibagikan melalui `git push`.
 
@@ -120,7 +121,7 @@ packages/cli/dist/**
 packages/pr-report/dist/**
 ```
 
-File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikeluarkan dari denominator AI Ratio.
+File tersebut tetap muncul di Notes, PR Report, dan Dashboard. File hanya dikeluarkan dari penyebut AI Ratio.
 
 ## Agent Support
 
@@ -227,7 +228,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## Cara kerja
@@ -266,7 +267,7 @@ Untuk Flow detail, cara Agent Note memperkirakan pekerjaan yang ditulis AI, dan 
 | `agent-note init` | Menyiapkan Hooks, Workflow, Git Hooks, dan notes auto-fetch |
 | `agent-note deinit` | Menghapus hooks dan config Agent Note |
 | `agent-note status` | Menampilkan status pelacakan |
-| `agent-note log [n]` | Mendaftar commit terbaru dengan Rasio AI |
+| `agent-note log [n]` | Mendaftar commit terbaru dengan AI Ratio |
 | `agent-note show [commit]` | Menampilkan sesi AI di balik `HEAD` atau Commit SHA |
 | `agent-note why <target>` | Menjelaskan konteks Agent Note di balik satu baris atau rentang baris file |
 
