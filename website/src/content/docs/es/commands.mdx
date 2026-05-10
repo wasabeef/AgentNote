@@ -30,18 +30,18 @@ npx agent-note init --agent claude
 
 | Flag | Descripción |
 |---|---|
-| `--agent <name...>` | Elige uno o más adapters de agent: `claude`, `codex`, `cursor` or `gemini` |
+| `--agent <name...>` | Elige uno o más adaptadores de agente: `claude`, `codex`, `cursor` or `gemini` |
 | `--dashboard` | También crea el workflow del Dashboard compartido |
-| `--no-hooks` | Omite la configuración de hooks del agent |
+| `--no-hooks` | Omite la configuración de hooks del agente |
 | `--no-git-hooks` | Omite la instalación de Git Hooks |
 | `--no-action` | Omite la creación de workflows |
 | `--no-notes` | Omite la configuración de notes auto-fetch |
-| `--hooks` | Solo instala hooks del agent |
+| `--hooks` | Solo instala hooks del agente |
 | `--action` | Solo crea workflows |
 
 ## agent-note deinit
 
-Elimina hooks y configuración de Agent Note para uno o más agents.
+Elimina hooks y configuración de Agent Note para uno o más agentes.
 
 ```bash
 npx agent-note deinit --agent claude
@@ -55,7 +55,7 @@ npx agent-note deinit --agent claude
 
 ## agent-note status
 
-Muestra el estado de tracking.
+Muestra el estado de seguimiento.
 
 ```bash
 npx agent-note status
@@ -145,4 +145,4 @@ Instala el Skill de Agent Note para pedir estas tareas en lenguaje natural.
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Para `gh skill install`, elige el identificador de agent adecuado: `codex`, `claude-code`, `cursor` or `gemini-cli`.
+Para `gh skill install`, elige el identificador de agente adecuado: `codex`, `claude-code`, `cursor` or `gemini-cli`.

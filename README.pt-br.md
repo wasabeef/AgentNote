@@ -53,7 +53,7 @@ Se o seu AI Agent oferece suporte a GitHub Agent Skills, instale o Agent Note Sk
 gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
 ```
 
-Para `gh skill install`, escolha o identificador de agent correto: `codex`, `claude-code`, `cursor` or `gemini-cli`. O Skill normalmente guia o agent para apenas seis comandos públicos: `init`, `deinit`, `status`, `log`, `show` e `why`.
+Para `gh skill install`, escolha o identificador de agente correto: `codex`, `claude-code`, `cursor` or `gemini-cli`. O Skill normalmente guia o agente para apenas seis comandos públicos: `init`, `deinit`, `status`, `log`, `show` e `why`.
 
 ## Quick Start
 
