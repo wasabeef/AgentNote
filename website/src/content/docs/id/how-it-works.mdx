@@ -137,7 +137,7 @@ Jika git hook yang dihasilkan sudah terpasang, kebanyakan repository cukup terus
 - `reference` context diambil dari response tepat sebelumnya ketika response itu menyebut path file yang berubah, nama file, atau code identifier dari diff final.
 - `scope` context diambil dari response saat ini ketika awal response menjelaskan pekerjaan yang sedang dilakukan.
 - Agent Note tidak memakai kata persetujuan singkat seperti `yes`, `continue`, atau `お願いします` sebagai aturan seleksi. Jika tidak ada petunjuk konkret tentang file atau code, Context dilewati.
-- Context tidak pernah mengubah `files_touched`, prompt ownership, AI ratio, attribution method, atau apakah git note disimpan.
+- Context tidak pernah mengubah `files_touched`, prompt ownership, AI Ratio, attribution method, atau apakah git note disimpan.
 
 ## Agent Note vs Entire
 
@@ -153,7 +153,7 @@ Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.
 </Aside>
 
 <Aside>
-  Generated artifact umum dikeluarkan dari denominator `AI ratio` secara best-effort memakai sinyal spesifik seperti path framework/cache, nama atau suffix generated, dan header file yang di-commit. Nama direktori generik seperti `build/`, `dist/`, `gen/`, `generated/`, dan `target/` saja tidak cukup. Jika repository Anda meng-commit bundle atau generated output yang harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tulis polanya di `.agentnoteignore` di repository root.
+  Generated artifact umum dikeluarkan dari denominator `AI Ratio` secara best-effort memakai sinyal spesifik seperti path framework/cache, nama atau suffix generated, dan header file yang di-commit. Nama direktori generik seperti `build/`, `dist/`, `gen/`, `generated/`, dan `target/` saja tidak cukup. Jika repository Anda meng-commit bundle atau generated output yang harus tetap terlihat tetapi tidak memengaruhi AI Ratio, tulis polanya di `.agentnoteignore` di repository root.
 </Aside>
 
 ## Siklus hidup sesi

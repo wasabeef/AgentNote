@@ -63,7 +63,7 @@ npx agent-note init --agent claude --dashboard
 
 | Output | 类型 | 说明 |
 |---|---|---|
-| `overall_ai_ratio` | number | 整个 PR 的 AI ratio (0-100) |
+| `overall_ai_ratio` | number | 整个 PR 的 AI Ratio (0-100) |
 | `overall_method` | string | `line`、`file`、`mixed` 或 `none` |
 | `tracked_commits` | number | 带有 agent-note 数据的 commit 数 |
 | `total_commits` | number | PR 中的 commit 总数 |
@@ -78,7 +78,7 @@ PR 报告包含：
 
 - **Header** — `Total AI Ratio` 与进度条，以及下一行的 `Model`
 - **Reviewer Context** — 面向 AI Review tool 的 hidden Markdown comment，由通用 changed area 分组、review focus 和最新相关 intent signals 生成
-- **表格** — 每个 commit 的 AI ratio、prompt 数和文件列表
+- **表格** — 每个 commit 的 AI Ratio、prompt 数和文件列表
 - **Prompts** — 可折叠的 `📝 Context`、`🧑 Prompt`、`🤖 Response` 区块
 
 <Aside type="tip">

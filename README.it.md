@@ -36,7 +36,7 @@ Pensalo come <code>git log</code> più la conversazione con l'AI dietro la modif
 
 - Registra prompt, risposte, file modificati e AI Ratio per ogni Commit assistito dall'AI.
 - Continua a usare il normale `git commit`; Agent Note registra il contesto in background.
-- Dai ai reviewer umani e agli AI Review tools un PR Report con riepilogo visibile e Reviewer Context nascosto.
+- Dai ai reviewer umani e ai tool di AI review un PR Report con un riepilogo visibile e un Reviewer Context nascosto.
 - Apri un Dashboard condiviso, oppure usa `agent-note why <file:line>` per risalire da una riga alla conversazione del Commit.
 - Mantieni tutto Git-native in `refs/notes/agentnote` — niente Hosted Service, niente Telemetry.
 

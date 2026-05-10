@@ -34,7 +34,7 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 
 ## Mengapa Agent Note
 
-- Rekam prompt, response, file yang berubah, dan AI Ratio untuk setiap Commit yang dibantu AI.
+- Rekam prompt, respons, file yang berubah, dan AI Ratio untuk setiap Commit yang dibantu AI.
 - Tetap gunakan `git commit` biasa; Agent Note mencatat konteks di background.
 - Berikan PR Report untuk reviewer manusia dan AI Review tool, dengan ringkasan terlihat dan Reviewer Context tersembunyi.
 - Buka Dashboard bersama, atau jalankan `agent-note why <file:line>` untuk kembali dari satu baris ke percakapan Commit.

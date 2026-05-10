@@ -33,7 +33,7 @@ Agent Note stores the information needed to explain a commit:
 | `prompt` / `response` | Conversation that led to the commit |
 | `contexts[]` | Display-only hints for short prompts |
 | `files` | Committed files and whether AI touched them |
-| `attribution` | AI ratio, method, and line counts when available |
+| `attribution` | AI Ratio, method, and line counts when available |
 | `agent` / `model` | Agent and model metadata when exposed |
 
 Paths matched by the repository-root `.agentnoteignore` still stay in `files`; they are only excluded from the AI Ratio denominator.

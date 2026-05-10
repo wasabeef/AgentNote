@@ -34,9 +34,9 @@ Pense nele como <code>git log</code> mais a conversa de AI por trás da mudança
 
 ## Por que Agent Note
 
-- Registre prompt, response, arquivos alterados e AI Ratio para cada Commit assistido por AI.
+- Registre prompts, respostas, arquivos alterados e AI Ratio para cada Commit assistido por AI.
 - Continue usando `git commit` normal; Agent Note registra o contexto em background.
-- Entregue a reviewers humanos e AI Review tools um PR Report com resumo visível e Reviewer Context oculto.
+- Entregue a reviewers humanos e a ferramentas de AI review um PR Report com resumo visível e Reviewer Context oculto.
 - Abra um Dashboard compartilhado, ou use `agent-note why <file:line>` para ir de uma linha à conversa do Commit.
 - Mantenha tudo Git-native em `refs/notes/agentnote` — sem Hosted Service, sem Telemetry.
 

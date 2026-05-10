@@ -34,7 +34,7 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 
 ## 왜 Agent Note 인가
 
-- AI 가 도운 각 Commit 마다 prompt, response, 변경 파일, AI Ratio 를 남깁니다.
+- AI 가 도운 각 Commit 마다 프롬프트, 응답, 변경 파일, AI Ratio 를 남깁니다.
 - 평소처럼 `git commit` 을 사용하면 됩니다. Agent Note 가 뒤에서 문맥을 기록합니다.
 - 사람 reviewer 와 AI Review tool 모두에게 보이는 요약과 숨겨진 Reviewer Context 가 포함된 PR Report 를 제공합니다.
 - 공유 Dashboard 를 열거나 `agent-note why <file:line>` 으로 한 줄에서 Commit 대화까지 거슬러 올라갈 수 있습니다.
