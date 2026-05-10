@@ -93,6 +93,11 @@ Git hooks são locais em `.git/`, então cada clone precisa de `init`.
 
 ## Line Estimate não aparece
 
-Isso costuma ser normal. Claude Code geralmente fornece evidência suficiente para Line Estimate. Codex CLI só consegue estimar linhas quando a contagem de patches do transcript bate com o final commit diff. Cursor só consegue estimar linhas quando as contagens de edição batem e o arquivo final ainda corresponde à última edição da IA. Gemini CLI atualmente mostra apenas AI Ratio no nível de arquivo.
+Isso costuma ser normal.
+
+- **Claude Code** geralmente fornece evidência suficiente para Line Estimate.
+- **Codex CLI** só consegue estimar linhas quando a contagem de patches do transcript bate com o final commit diff.
+- **Cursor** só consegue estimar linhas quando as contagens de edição batem e o arquivo final ainda corresponde à última edição da IA.
+- **Gemini CLI** atualmente mostra apenas AI Ratio no nível de arquivo.
 
 Quando a evidência está incompleta, o Agent Note volta para uma avaliação segura em vez de adivinhar.
