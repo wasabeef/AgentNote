@@ -45,16 +45,6 @@ Agent Note 는 각 Commit 에 대해 AI 와 나눈 대화와 변경된 파일을
 - Node.js 20 이상
 - 지원되는 Coding Agent 설치 및 인증
 
-## AI Agent Skill
-
-사용 중인 AI Agent 가 GitHub Agent Skills 를 지원한다면 Agent Note Skill 을 설치해 자연어로 Agent Note 작업을 요청할 수 있습니다.
-
-```bash
-gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
-```
-
-`gh skill install` 의 `--agent` 에는 Agent 에 맞는 identifier 인 `codex`, `claude-code`, `cursor` or `gemini-cli` 를 지정하세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
-
 ## Quick Start
 
 1. Coding Agent 에 Agent Note 를 활성화합니다.
@@ -96,6 +86,16 @@ git push
 3. 평소처럼 `git commit` Workflow 를 계속 사용합니다.
 
 생성된 Git Hooks 가 설치되어 있으면 Agent Note 가 일반 `git commit` 을 자동 기록합니다.
+
+## AI Agent Skill
+
+사용 중인 AI Agent 가 GitHub Agent Skills 를 지원한다면 Agent Note Skill 을 설치해 자연어로 Agent Note 작업을 요청할 수 있습니다.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+`gh skill install` 의 `--agent` 에는 Agent 에 맞는 identifier 인 `codex`, `claude-code`, `cursor` or `gemini-cli` 를 지정하세요. Skill 이 일반적으로 안내하는 공개 command 는 `init`, `deinit`, `status`, `log`, `show`, `why` 여섯 개입니다.
 
 ## 저장되는 데이터
 

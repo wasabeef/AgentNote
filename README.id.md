@@ -45,16 +45,6 @@ Anggap saja sebagai <code>git log</code> ditambah percakapan AI di balik perubah
 - Node.js 20 atau lebih baru
 - Coding Agent yang didukung, sudah terpasang dan terautentikasi
 
-## AI Agent Skill
-
-Jika AI Agent Anda mendukung GitHub Agent Skills, pasang Agent Note Skill agar Anda bisa meminta tugas Agent Note dengan bahasa natural.
-
-```bash
-gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
-```
-
-Untuk `gh skill install`, pilih identifier agent yang sesuai: `codex`, `claude-code`, `cursor` or `gemini-cli`. Skill biasanya hanya mengarahkan agent ke enam command publik: `init`, `deinit`, `status`, `log`, `show`, dan `why`.
-
 ## Quick Start
 
 1. Aktifkan Agent Note untuk Coding Agent Anda.
@@ -96,6 +86,16 @@ git push
 3. Terus gunakan Workflow `git commit` normal.
 
 Dengan Git Hooks yang dibuat, Agent Note otomatis merekam Commit dari `git commit` biasa.
+
+## AI Agent Skill
+
+Jika AI Agent Anda mendukung GitHub Agent Skills, pasang Agent Note Skill agar Anda bisa meminta tugas Agent Note dengan bahasa natural.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+Untuk `gh skill install`, pilih identifier agent yang sesuai: `codex`, `claude-code`, `cursor` or `gemini-cli`. Skill biasanya hanya mengarahkan agent ke enam command publik: `init`, `deinit`, `status`, `log`, `show`, dan `why`.
 
 ## Data yang disimpan
 

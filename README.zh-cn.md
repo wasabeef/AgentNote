@@ -45,16 +45,6 @@ Agent Note 会为每个 Commit 保存与 AI 的对话和变更文件。信息足
 - Node.js 20 或更高版本
 - 已安装并认证的受支持 Coding Agent
 
-## AI Agent Skill
-
-如果你的 AI Agent 支持 GitHub Agent Skills，可以安装 Agent Note Skill，用自然语言请求 Agent Note 相关任务。
-
-```bash
-gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
-```
-
-对于 `gh skill install`，请根据 Agent 选择对应的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。Skill 通常只会引导 agent 使用六个公开命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
-
 ## Quick Start
 
 1. 为你的 Coding Agent 启用 Agent Note。
@@ -96,6 +86,16 @@ git push
 3. 继续使用平常的 `git commit` Workflow。
 
 安装生成的 Git Hooks 后，Agent Note 会自动记录普通 `git commit`。
+
+## AI Agent Skill
+
+如果你的 AI Agent 支持 GitHub Agent Skills，可以安装 Agent Note Skill，用自然语言请求 Agent Note 相关任务。
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+对于 `gh skill install`，请根据 Agent 选择对应的 identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`。Skill 通常只会引导 agent 使用六个公开命令: `init`、`deinit`、`status`、`log`、`show`、`why`。
 
 ## 保存的数据
 

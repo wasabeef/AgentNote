@@ -45,16 +45,6 @@ Stellen Sie es sich als <code>git log</code> plus die KI-Unterhaltung hinter der
 - Node.js 20 oder neuer
 - Ein unterstützter Coding Agent, installiert und authentifiziert
 
-## AI Agent Skill
-
-Wenn Ihr AI Agent GitHub Agent Skills unterstützt, installieren Sie den Agent Note Skill, damit Sie Agent-Note-Aufgaben in natürlicher Sprache anstoßen können.
-
-```bash
-gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
-```
-
-Für `gh skill install` wählen Sie den passenden Agent-Identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`. Der Skill führt den Agent normalerweise nur zu sechs öffentlichen Befehlen: `init`, `deinit`, `status`, `log`, `show` und `why`.
-
 ## Quick Start
 
 1. Aktivieren Sie Agent Note für Ihren Coding Agent.
@@ -96,6 +86,16 @@ git push
 3. Verwenden Sie weiter Ihren normalen `git commit` Workflow.
 
 Mit den generierten Git Hooks zeichnet Agent Note normale `git commit`-Vorgänge automatisch auf.
+
+## AI Agent Skill
+
+Wenn Ihr AI Agent GitHub Agent Skills unterstützt, installieren Sie den Agent Note Skill, damit Sie Agent-Note-Aufgaben in natürlicher Sprache anstoßen können.
+
+```bash
+gh skill install wasabeef/AgentNote agent-note --agent codex --scope user
+```
+
+Für `gh skill install` wählen Sie den passenden Agent-Identifier: `codex`, `claude-code`, `cursor` or `gemini-cli`. Der Skill führt den Agent normalerweise nur zu sechs öffentlichen Befehlen: `init`, `deinit`, `status`, `log`, `show` und `why`.
 
 ## Gespeicherte Daten
 
