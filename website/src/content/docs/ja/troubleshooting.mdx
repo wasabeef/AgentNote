@@ -38,7 +38,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 | 期待した prompt が出ない | `compact` と `full` の表示差分 |
 | Dashboard は開くが PR の data がない | その PR の notes が公開済みか |
 | 通常の `git commit` で note が作られない | `init` を再実行し、`status` の `git:` 行を確認 |
-| attribution が file-level のまま | agent が十分な edit history を公開しているか |
+| Line Estimate が出ない | Agent が十分な編集情報を出せるか |
 
 ## PR Report が空
 
@@ -104,13 +104,13 @@ npx agent-note init --agent claude
 
 git hook は `.git/` 内にあるため、agent config file が commit されていても clone ごとに local setup が必要です。
 
-## 行単位の attribution にならない
+## Line Estimate が出ない
 
 多くの場合、これは期待通りです。
 
-- Claude Code は通常 line-level に必要な edit history を持っています。
-- Codex CLI は transcript patch 行数が最終 commit diff と一致したときだけ昇格します。
-- Cursor は edit 行数が一致し、committed file が最後の AI edit と一致したときだけ昇格します。
-- Gemini CLI は現在 file-level attribution です。
+- Claude Code は通常、Line Estimate に必要な編集情報を出せます。
+- Codex CLI は transcript の patch 行数が最終 commit diff と一致したときだけ行数を推定できます。
+- Cursor は edit 行数が一致し、committed file が最後の AI edit と一致したときだけ行数を推定できます。
+- Gemini CLI は現在、file 単位の AI share のみを表示します。
 
 証拠が足りない場合、Agent Note は推測せず、安全な判定に戻します。

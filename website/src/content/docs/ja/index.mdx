@@ -1,6 +1,6 @@
 ---
 title: Agent Note
-description: AI が書いたコードの「なぜ」を、git が忘れないために。プロンプト・レスポンス・行単位の著作情報をコミットに記録。
+description: AI が書いたコードの「なぜ」を、git が忘れないために。プロンプト・レスポンス・AI が書いた行の目安をコミットに記録。
 template: splash
 hero:
   tagline: |
@@ -33,8 +33,8 @@ import { Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/compone
 ## できること
 
 <CardGrid stagger>
-  <Card title="AI が書いた行を残す" icon="pencil">
-    `git blame` より細かい粒度。Claude Code は行単位で完全、他のエージェントは条件が揃ったとき行単位へ昇格。
+  <Card title="AI が関わった変更を残す" icon="pencil">
+    どの Commit / file に AI が関わったかを確認できます。十分な根拠がある場合は、AI が書いた行の目安も表示します。
   </Card>
   <Card title="プロンプトと返答も一緒に保存" icon="document">
     モデル名・使ったツール情報も含めて、変更とセットで git notes に入れる。

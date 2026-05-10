@@ -227,7 +227,7 @@ Author intent signals:
 |---|---|---|---|
 | ce941f7 feat: add auth | ████░ 73% | 2 | auth.ts 🤖, token.ts 🤖 |
 
-<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/">Open Dashboard ↗</a></div>
+<div align="right"><a href="https://OWNER.github.io/REPO/dashboard/?pr=123" target="_blank" rel="noopener noreferrer">Open Dashboard ↗</a></div>
 ```
 
 ## How It Works

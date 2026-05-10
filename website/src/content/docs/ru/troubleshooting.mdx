@@ -38,7 +38,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 | Ожидаемый prompt не отображается | Сравните `compact` и `full` |
 | Dashboard открывается, но у PR нет данных | Проверьте, опубликованы ли notes этой PR |
 | `git commit` не создает note | Запустите `init` снова и проверьте строку `git:` в `status` |
-| Attribution остается на уровне файла | Проверьте, предоставляет ли agent достаточно edit history |
+| Line Estimate не отображается | Проверьте, может ли agent предоставить достаточно доказательств редактирования |
 
 ## PR Report пустой
 
@@ -91,6 +91,6 @@ npx agent-note init --agent claude
 
 Git hooks локальны для `.git/`, поэтому каждому clone нужен `init`.
 
-## Нет line-level attribution
+## Line Estimate не отображается
 
-Это часто нормально. У Claude Code обычно достаточно edit history. Codex CLI и Cursor переходят на line-level только когда signals совпадают с final diff. Gemini CLI остается file-level.
+Это часто нормально. Claude Code обычно предоставляет достаточно доказательств для Line Estimate. Codex CLI может оценить строки только когда счётчик patches в transcript совпадает с final commit diff. Cursor может оценить строки только когда счётчики edit совпадают и final file всё ещё совпадает с последним AI edit. Gemini CLI сейчас показывает только AI share на уровне файла.

@@ -38,7 +38,7 @@ Start here when Agent Note does not show the data you expected. Most issues come
 | A prompt you expected is not shown | Compare `compact` and `full` prompt detail |
 | Dashboard opens but the PR has no data | Check whether that PR's notes have been published |
 | Plain `git commit` does not create notes | Re-run `init` and inspect the `git:` line in `status` |
-| Attribution stays file-level | Check whether the agent exposed enough edit history |
+| Line Estimate is missing | Check whether the agent can provide enough edit evidence |
 
 ## PR Report Is Empty
 
@@ -104,13 +104,13 @@ npx agent-note init --agent claude
 
 Git hooks live inside `.git/`, so every clone needs local setup even when the agent config files are committed.
 
-## Line-level Attribution Is Not Available
+## Line Estimate Is Not Available
 
 This is usually expected.
 
-- Claude Code usually has enough edit history for line-level attribution.
-- Codex CLI upgrades only when transcript patch counts match the final commit diff.
-- Cursor upgrades only when edit counts match and the final file still matches the latest AI edit.
-- Gemini CLI currently records file-level attribution.
+- Claude Code usually provides enough edit evidence for Line Estimate.
+- Codex CLI can estimate lines only when transcript patch counts match the final commit diff.
+- Cursor can estimate lines only when edit counts match and the final file still matches the latest AI edit.
+- Gemini CLI currently reports file-level AI share only.
 
 When evidence is incomplete, Agent Note falls back instead of guessing.

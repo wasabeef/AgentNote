@@ -38,7 +38,7 @@ La plupart des problèmes viennent des git hooks locaux, des git notes non pouss
 | Un prompt attendu n'apparaît pas | Comparez `compact` et `full` |
 | Dashboard s'ouvre, mais la PR n'a pas de données | Vérifiez si les notes de cette PR ont été publiées |
 | `git commit` ne crée pas de note | Relancez `init` et regardez la ligne `git:` dans `status` |
-| L'attribution reste au niveau fichier | Vérifiez si l'agent expose assez d'historique d'édition |
+| Line Estimate est absent | Vérifiez si l'agent peut fournir assez de preuves d'édition |
 
 ## PR Report vide
 
@@ -91,6 +91,6 @@ npx agent-note init --agent claude
 
 Les git hooks sont locaux à `.git/`, donc chaque clone doit être initialisé.
 
-## Pas de line-level attribution
+## Line Estimate absent
 
-C’est souvent normal. Claude Code fournit généralement assez d’historique. Codex CLI et Cursor passent en line-level seulement lorsque les signaux correspondent au diff final. Gemini CLI reste file-level.
+C’est souvent normal. Claude Code fournit généralement assez de preuves pour Line Estimate. Codex CLI ne peut estimer les lignes que lorsque les patchs du transcript correspondent au diff final. Cursor ne peut le faire que lorsque les compteurs d’édition correspondent et que le fichier final correspond encore à la dernière édition IA. Gemini CLI affiche actuellement seulement la part IA au niveau fichier.

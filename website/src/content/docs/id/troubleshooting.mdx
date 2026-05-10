@@ -38,7 +38,7 @@ Sebagian besar masalah berasal dari local git hooks, git notes yang belum tersed
 | Prompt yang diharapkan tidak muncul | Bandingkan `compact` dan `full` |
 | Dashboard terbuka, tetapi PR tidak punya data | Periksa apakah notes untuk PR itu sudah dipublikasikan |
 | `git commit` tidak membuat note | Jalankan `init` lagi dan lihat baris `git:` di `status` |
-| Attribution tetap file-level | Periksa apakah agent menyediakan edit history yang cukup |
+| Line Estimate tidak muncul | Periksa apakah agent dapat menyediakan bukti edit yang cukup |
 
 ## PR Report kosong
 
@@ -91,6 +91,6 @@ npx agent-note init --agent claude
 
 Git hooks bersifat local di `.git/`, jadi setiap clone perlu `init`.
 
-## Tidak ada line-level attribution
+## Line Estimate tidak muncul
 
-Ini sering normal. Claude Code biasanya punya edit history yang cukup. Codex CLI dan Cursor hanya naik ke line-level ketika signals cocok dengan final diff. Gemini CLI tetap file-level.
+Ini sering normal. Claude Code biasanya menyediakan bukti edit yang cukup untuk Line Estimate. Codex CLI hanya dapat memperkirakan baris ketika jumlah patch transcript cocok dengan final commit diff. Cursor hanya dapat melakukannya ketika jumlah edit cocok dan final file masih cocok dengan edit AI terakhir. Gemini CLI saat ini hanya menampilkan AI share di level file.
