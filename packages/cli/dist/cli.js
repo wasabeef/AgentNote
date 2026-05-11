@@ -4801,11 +4801,21 @@ function parseCommittedBlobs(output) {
 }
 
 // src/commands/commit.ts
-var AMEND_LIKE_COMMIT_ARGS = /* @__PURE__ */ new Set(["--amend", "-c", "-C"]);
+var AMEND_LIKE_COMMIT_ARGS = /* @__PURE__ */ new Set([
+  "--amend",
+  "-c",
+  "-C",
+  "--reuse-message",
+  "--reedit-message"
+]);
+var AMEND_LIKE_COMMIT_ARG_PREFIXES = ["--reuse-message=", "--reedit-message="];
+function isAmendLikeCommitArg(arg) {
+  return AMEND_LIKE_COMMIT_ARGS.has(arg) || AMEND_LIKE_COMMIT_ARG_PREFIXES.some((prefix) => arg.startsWith(prefix));
+}
 async function commit(args2) {
   const sf = await sessionFile();
   let sessionId = "";
-  const skipAgentNoteRecording = args2.some((arg) => AMEND_LIKE_COMMIT_ARGS.has(arg));
+  const skipAgentNoteRecording = args2.some((arg) => isAmendLikeCommitArg(arg));
   if (!skipAgentNoteRecording && existsSync9(sf)) {
     sessionId = (await readFile9(sf, TEXT_ENCODING)).trim();
     if (sessionId) {

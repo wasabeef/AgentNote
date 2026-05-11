@@ -15,6 +15,7 @@ import {
   TRANSCRIPT_PATH_FILE,
   TURN_FILE,
 } from "../core/constants.js";
+import { isAmendLikeCommitArg } from "./commit.js";
 
 /** Write a fresh heartbeat so agentnote commit treats the session as active. */
 function ensureHeartbeat(sessionDir: string): void {
@@ -39,6 +40,24 @@ describe("agentnote commit", () => {
       cwd: testDir,
       env: { ...process.env, HOME: testHome },
     });
+  });
+
+  it("detects amend-like commit message reuse flags", () => {
+    for (const arg of [
+      "--amend",
+      "-c",
+      "-C",
+      "--reuse-message",
+      "--reuse-message=HEAD",
+      "--reedit-message",
+      "--reedit-message=HEAD",
+    ]) {
+      assert.equal(isAmendLikeCommitArg(arg), true, `${arg} should skip Agent Note recording`);
+    }
+
+    for (const arg of ["--message", "-m", "--allow-empty", "--reuse-messageful"]) {
+      assert.equal(isAmendLikeCommitArg(arg), false, `${arg} should be recordable`);
+    }
   });
 
   after(() => {

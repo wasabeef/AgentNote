@@ -15,7 +15,22 @@ import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 import { recordHeadFallback } from "./record.js";
 
-const AMEND_LIKE_COMMIT_ARGS = new Set(["--amend", "-c", "-C"]);
+const AMEND_LIKE_COMMIT_ARGS = new Set([
+  "--amend",
+  "-c",
+  "-C",
+  "--reuse-message",
+  "--reedit-message",
+]);
+const AMEND_LIKE_COMMIT_ARG_PREFIXES = ["--reuse-message=", "--reedit-message="] as const;
+
+/** True for git commit flags that rewrite or reuse an existing commit message. */
+export function isAmendLikeCommitArg(arg: string): boolean {
+  return (
+    AMEND_LIKE_COMMIT_ARGS.has(arg) ||
+    AMEND_LIKE_COMMIT_ARG_PREFIXES.some((prefix) => arg.startsWith(prefix))
+  );
+}
 
 /**
  * Provide a hook-compatible manual commit path.
@@ -27,7 +42,7 @@ const AMEND_LIKE_COMMIT_ARGS = new Set(["--amend", "-c", "-C"]);
 export async function commit(args: string[]): Promise<void> {
   const sf = await sessionFile();
   let sessionId = "";
-  const skipAgentNoteRecording = args.some((arg) => AMEND_LIKE_COMMIT_ARGS.has(arg));
+  const skipAgentNoteRecording = args.some((arg) => isAmendLikeCommitArg(arg));
 
   if (!skipAgentNoteRecording && existsSync(sf)) {
     sessionId = (await readFile(sf, TEXT_ENCODING)).trim();
