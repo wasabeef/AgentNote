@@ -515,6 +515,10 @@ describe("claude adapter", () => {
                       command: "node packages/cli/dist/cli.js hook --agent claude",
                       async: true,
                     },
+                    {
+                      type: "command",
+                      command: "echo keep-inline",
+                    },
                   ],
                 },
                 {
@@ -543,6 +547,7 @@ describe("claude adapter", () => {
         "agent-note hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");
+      assert.ok(allCommands.includes("echo keep-inline"), "inline custom hook should be preserved");
     });
 
     it("is a no-op when settings.json does not exist", async () => {
@@ -582,6 +587,37 @@ describe("claude adapter", () => {
 
       const enabled = await claude.isEnabled(repoRoot);
       assert.equal(enabled, true);
+    });
+
+    it("does not infer enabled state from unrelated hook command fragments", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "echo agent-note hook",
+                    async: true,
+                  },
+                  {
+                    type: "command",
+                    command: "echo --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
     });
 
     it("returns false when hooks are not installed", async () => {

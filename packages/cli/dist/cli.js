@@ -272,17 +272,75 @@ var init_git = __esm({
 });
 
 // src/agents/hook-command.ts
-function isAgentNoteHookCommand(command2, agentName, options = {}) {
-  const isPublicHook = command2.includes(AGENTNOTE_HOOK_COMMAND);
-  const isRepoLocalHook = command2.includes(CLI_JS_HOOK_COMMAND);
-  if (!isPublicHook && !isRepoLocalHook) return false;
-  if (command2.includes(`--agent ${agentName}`)) return true;
-  return options.allowMissingAgent === true && !command2.includes("--agent ");
+function tokenizeHookCommand(command2) {
+  const tokens = [];
+  let current = "";
+  let quote = null;
+  let escaped = false;
+  for (const char of command2) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if ((char === '"' || char === "'") && quote === null) {
+      quote = char;
+      continue;
+    }
+    if (char === quote) {
+      quote = null;
+      continue;
+    }
+    if (quote === null && /\s/.test(char)) {
+      if (current) tokens.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current) tokens.push(current);
+  return tokens;
 }
+function tokenBasename(token) {
+  return token.split(PATH_SEPARATOR_RE).pop() ?? token;
+}
+function hasHookTokenSequence(tokens, sequence) {
+  return tokens.some((token, index) => {
+    const firstMatches = token === sequence[0] || sequence[0] === CLI_JS_HOOK_TOKENS[0] && tokenBasename(token) === sequence[0];
+    return firstMatches && tokens[index + 1] === sequence[1];
+  });
+}
+function readAgentFlag(tokens) {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === AGENT_FLAG) return tokens[index + 1] ?? "";
+    if (token.startsWith(AGENT_FLAG_PREFIX)) return token.slice(AGENT_FLAG_PREFIX.length);
+  }
+  return null;
+}
+function isAgentNoteHookCommand(command2, agentName, options = {}) {
+  const tokens = tokenizeHookCommand(command2);
+  const isPublicHook = hasHookTokenSequence(tokens, AGENTNOTE_HOOK_TOKENS);
+  const isRepoLocalHook = hasHookTokenSequence(tokens, CLI_JS_HOOK_TOKENS);
+  if (!isPublicHook && !isRepoLocalHook) return false;
+  const agentFlag = readAgentFlag(tokens);
+  if (agentFlag === agentName) return true;
+  return options.allowMissingAgent === true && agentFlag === null;
+}
+var AGENT_FLAG, AGENT_FLAG_PREFIX, AGENTNOTE_HOOK_TOKENS, CLI_JS_HOOK_TOKENS, PATH_SEPARATOR_RE;
 var init_hook_command = __esm({
   "src/agents/hook-command.ts"() {
     "use strict";
     init_constants();
+    AGENT_FLAG = "--agent";
+    AGENT_FLAG_PREFIX = `${AGENT_FLAG}=`;
+    AGENTNOTE_HOOK_TOKENS = AGENTNOTE_HOOK_COMMAND.split(" ");
+    CLI_JS_HOOK_TOKENS = CLI_JS_HOOK_COMMAND.split(" ");
+    PATH_SEPARATOR_RE = /[\\/]/;
   }
 });
 
@@ -339,6 +397,29 @@ function isSystemInjectedPrompt(prompt) {
 }
 function isGitCommit(cmd) {
   return findGitCommitCommand(cmd) !== null;
+}
+function isManagedClaudeHook(hook2) {
+  if (!hook2 || typeof hook2 !== "object") return false;
+  const command2 = hook2.command;
+  return typeof command2 === "string" && isAgentNoteHookCommand(command2, AGENT_NAMES.claude, { allowMissingAgent: true });
+}
+function removeManagedClaudeHooks(entry) {
+  if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+    return entry;
+  }
+  const group = entry;
+  const hooks = group.hooks.filter((hook2) => !isManagedClaudeHook(hook2));
+  return hooks.length > 0 ? { ...group, hooks } : null;
+}
+function hasManagedClaudeHook(entry) {
+  if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+    return false;
+  }
+  return entry.hooks.some((hook2) => {
+    if (!hook2 || typeof hook2 !== "object") return false;
+    const command2 = hook2.command;
+    return typeof command2 === "string" && isAgentNoteHookCommand(command2, AGENT_NAMES.claude);
+  });
 }
 var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, ENV_AGENTNOTE_CLAUDE_HOME, CLAUDE_HOOK_EVENTS, CLAUDE_TOOLS, CLAUDE_EDIT_TOOLS, CLAUDE_EDIT_TOOL_MATCHER, CLAUDE_POST_TOOL_MATCHER, CLAUDE_GIT_COMMIT_FILTER, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
 var init_claude = __esm({
@@ -423,10 +504,7 @@ var init_claude = __esm({
         }
         const hooks = settings.hooks ?? {};
         for (const [event, entries] of Object.entries(hooks)) {
-          hooks[event] = entries.filter((entry) => {
-            const text = JSON.stringify(entry);
-            return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
-          });
+          hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
           if (hooks[event].length === 0) delete hooks[event];
         }
         for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
@@ -443,10 +521,7 @@ var init_claude = __esm({
           const settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
           if (!settings.hooks) return;
           for (const [event, entries] of Object.entries(settings.hooks)) {
-            settings.hooks[event] = entries.filter((e) => {
-              const text = JSON.stringify(e);
-              return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
-            });
+            settings.hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
             if (settings.hooks[event].length === 0) delete settings.hooks[event];
           }
           if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
@@ -460,7 +535,10 @@ var init_claude = __esm({
         if (!existsSync(settingsPath)) return false;
         try {
           const content = await readFile(settingsPath, TEXT_ENCODING);
-          return isAgentNoteHookCommand(content, AGENT_NAMES.claude);
+          const settings = JSON.parse(content);
+          return Object.values(settings.hooks ?? {}).some(
+            (entries) => entries.some((entry) => hasManagedClaudeHook(entry))
+          );
         } catch {
           return false;
         }

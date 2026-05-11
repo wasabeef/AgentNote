@@ -121,6 +121,36 @@ function isGitCommit(cmd: string): boolean {
   return findGitCommitCommand(cmd) !== null;
 }
 
+function isManagedClaudeHook(hook: unknown): boolean {
+  if (!hook || typeof hook !== "object") return false;
+  const command = (hook as { command?: unknown }).command;
+  return (
+    typeof command === "string" &&
+    isAgentNoteHookCommand(command, AGENT_NAMES.claude, { allowMissingAgent: true })
+  );
+}
+
+function removeManagedClaudeHooks(entry: unknown): unknown | null {
+  if (!entry || typeof entry !== "object" || !Array.isArray((entry as { hooks?: unknown }).hooks)) {
+    return entry;
+  }
+
+  const group = entry as Record<string, unknown> & { hooks: unknown[] };
+  const hooks = group.hooks.filter((hook) => !isManagedClaudeHook(hook));
+  return hooks.length > 0 ? { ...group, hooks } : null;
+}
+
+function hasManagedClaudeHook(entry: unknown): boolean {
+  if (!entry || typeof entry !== "object" || !Array.isArray((entry as { hooks?: unknown }).hooks)) {
+    return false;
+  }
+  return (entry as { hooks: unknown[] }).hooks.some((hook) => {
+    if (!hook || typeof hook !== "object") return false;
+    const command = (hook as { command?: unknown }).command;
+    return typeof command === "string" && isAgentNoteHookCommand(command, AGENT_NAMES.claude);
+  });
+}
+
 /** Claude Code adapter for hook installation, event parsing, and transcript recovery. */
 export const claude: AgentAdapter = {
   name: AGENT_NAMES.claude,
@@ -147,10 +177,7 @@ export const claude: AgentAdapter = {
     const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
 
     for (const [event, entries] of Object.entries(hooks)) {
-      hooks[event] = entries.filter((entry) => {
-        const text = JSON.stringify(entry);
-        return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
-      });
+      hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
       if (hooks[event].length === 0) delete hooks[event];
     }
 
@@ -170,10 +197,9 @@ export const claude: AgentAdapter = {
       if (!settings.hooks) return;
 
       for (const [event, entries] of Object.entries(settings.hooks)) {
-        settings.hooks[event] = (entries as unknown[]).filter((e) => {
-          const text = JSON.stringify(e);
-          return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
-        });
+        settings.hooks[event] = (entries as unknown[])
+          .map(removeManagedClaudeHooks)
+          .filter((entry) => entry !== null);
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
       if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
@@ -188,7 +214,10 @@ export const claude: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, TEXT_ENCODING);
-      return isAgentNoteHookCommand(content, AGENT_NAMES.claude);
+      const settings = JSON.parse(content) as { hooks?: Record<string, unknown[]> };
+      return Object.values(settings.hooks ?? {}).some((entries) =>
+        entries.some((entry) => hasManagedClaudeHook(entry)),
+      );
     } catch {
       return false;
     }
