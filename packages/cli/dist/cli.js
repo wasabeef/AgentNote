@@ -44,6 +44,7 @@ var MILLISECONDS_PER_SECOND = 1e3;
 var PRE_BLOBS_FILE = "pre_blobs.jsonl";
 var COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 var RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
+var TRAILER_SESSION_FILES = [CHANGES_FILE, PRE_BLOBS_FILE];
 var EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 var SCHEMA_VERSION = 1;
 var TEXT_ENCODING = "utf-8";
@@ -3394,8 +3395,8 @@ async function recordCommitEntry(opts) {
   if (existingNote) return { promptCount: 0, aiRatio: 0 };
   let commitFiles = [];
   try {
-    const raw = await git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
-    commitFiles = raw.split("\n").filter(Boolean);
+    const raw = await git(["diff-tree", "-z", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+    commitFiles = raw.split("\0").filter(Boolean);
   } catch {
   }
   const commitFileSet = new Set(commitFiles);
@@ -4747,6 +4748,8 @@ import { readFile as readFile8 } from "node:fs/promises";
 import { join as join8 } from "node:path";
 var FALLBACK_HEAD_FLAG = "--fallback-head";
 var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+var RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
+var RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"];
 async function record(args2) {
   try {
     if (args2[0] === FALLBACK_HEAD_FLAG) {
@@ -4782,7 +4785,7 @@ async function readActiveSessionId(agentnoteDirPath) {
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
 }
 async function readHeadCommittedBlobs() {
-  const raw = await git(["diff-tree", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
+  const raw = await git(["diff-tree", "-z", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
   return parseCommittedBlobs(raw);
 }
 async function readHeadTrailerSessionId() {
@@ -4790,13 +4793,20 @@ async function readHeadTrailerSessionId() {
 }
 function parseCommittedBlobs(output) {
   const blobs = /* @__PURE__ */ new Map();
-  for (const line of output.split("\n")) {
-    const match = line.match(/^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) \w+\t(.+)$/);
+  const fields = output.split("\0");
+  for (let index = 0; index < fields.length; ) {
+    const metadata = fields[index++];
+    if (!metadata) continue;
+    const match = metadata.match(RAW_DIFF_STATUS_RE);
     if (!match) continue;
-    const paths = match[2].split("	");
-    blobs.set(paths[paths.length - 1] ?? "", match[1]);
+    const [, blob, status2] = match;
+    const pathCount = RAW_DIFF_RENAME_OR_COPY_PREFIXES.some((prefix) => status2.startsWith(prefix)) ? 2 : 1;
+    let path = "";
+    for (let pathIndex = 0; pathIndex < pathCount && index < fields.length; pathIndex++) {
+      path = fields[index++] ?? "";
+    }
+    if (path) blobs.set(path, blob);
   }
-  blobs.delete("");
   return blobs;
 }
 
@@ -4863,7 +4873,8 @@ async function commit(args2) {
   } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
-    } catch {
+    } catch (err) {
+      console.error(`agent-note: warning: fallback recording failed: ${err.message}`);
     }
   }
 }
@@ -4880,7 +4891,7 @@ import { isAbsolute as isAbsolute2, join as join10, resolve as resolve5 } from "
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
-var RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
+var TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -4970,7 +4981,7 @@ ${AGENTNOTE_HOOK_MARKER}
 # Skip amend/reword/reuse (-c/-C/--amend) \u2014 only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
-# Fail closed: no session file, no heartbeat, or metadata-only session \u2192 skip.
+# Fail closed: no session file, no heartbeat, or no file evidence \u2192 skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
 rm -f "$FALLBACK_FILE" 2>/dev/null || true
@@ -4987,14 +4998,14 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-HAS_RECORDABLE_DATA=0
-for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+HAS_TRAILER_DATA=0
+for FILE_NAME in ${TRAILER_SESSION_FILE_LIST}; do
   if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
-    HAS_RECORDABLE_DATA=1
+    HAS_TRAILER_DATA=1
     break
   fi
 done
-if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
+if [ "$HAS_TRAILER_DATA" -ne 1 ]; then exit 0; fi
 if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then
   printf '%s\\n' '${POST_COMMIT_FALLBACK_HEAD}' > "$FALLBACK_FILE" 2>/dev/null || true
   exit 0

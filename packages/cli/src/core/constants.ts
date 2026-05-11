@@ -93,6 +93,8 @@ export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 export const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 /** Session files that prove a commit can produce a non-empty git note. */
 export const RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE] as const;
+/** Session files that let plain git hooks safely attach a session trailer. */
+export const TRAILER_SESSION_FILES = [CHANGES_FILE, PRE_BLOBS_FILE] as const;
 
 // ─── Git ───
 /** SHA-1 hash of a git blob with empty content (canonical git empty blob). */

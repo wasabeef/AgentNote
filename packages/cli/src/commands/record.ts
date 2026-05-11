@@ -9,6 +9,8 @@ import { agentnoteDir } from "../paths.js";
 
 const FALLBACK_HEAD_FLAG = "--fallback-head";
 const SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+const RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
+const RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"] as const;
 
 /** Record an Agent Note entry for HEAD from post-commit hook inputs. */
 export async function record(args: string[]): Promise<void> {
@@ -56,7 +58,7 @@ async function readActiveSessionId(agentnoteDirPath: string): Promise<string | n
 }
 
 async function readHeadCommittedBlobs(): Promise<Map<string, string>> {
-  const raw = await git(["diff-tree", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
+  const raw = await git(["diff-tree", "-z", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
   return parseCommittedBlobs(raw);
 }
 
@@ -68,12 +70,25 @@ async function readHeadTrailerSessionId(): Promise<string> {
 
 function parseCommittedBlobs(output: string): Map<string, string> {
   const blobs = new Map<string, string>();
-  for (const line of output.split("\n")) {
-    const match = line.match(/^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) \w+\t(.+)$/);
+  const fields = output.split("\0");
+
+  for (let index = 0; index < fields.length; ) {
+    const metadata = fields[index++];
+    if (!metadata) continue;
+
+    const match = metadata.match(RAW_DIFF_STATUS_RE);
     if (!match) continue;
-    const paths = match[2].split("\t");
-    blobs.set(paths[paths.length - 1] ?? "", match[1]);
+
+    const [, blob, status] = match;
+    const pathCount = RAW_DIFF_RENAME_OR_COPY_PREFIXES.some((prefix) => status.startsWith(prefix))
+      ? 2
+      : 1;
+    let path = "";
+    for (let pathIndex = 0; pathIndex < pathCount && index < fields.length; pathIndex++) {
+      path = fields[index++] ?? "";
+    }
+    if (path) blobs.set(path, blob);
   }
-  blobs.delete("");
+
   return blobs;
 }

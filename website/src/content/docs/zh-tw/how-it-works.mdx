@@ -167,7 +167,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。
 | **Stop** | 記錄 stop 事件（heartbeat 會保持有效 —— Stop = response 結束，不是 session 結束） |
 
 <Aside>
-  Git hooks 在注入 trailers 或記錄 notes 之前，會透過 heartbeat 驗證 session 是否仍然新鮮，並確認存在可記錄的 session data。heartbeat 會在較長 turn 中由 hook events 更新；metadata-only session 會被略過。單獨的 transcript path 只是輔助 metadata，不是可記錄 data。
+  Plain Git hooks 在注入 trailers 前要求 fresh session 和 file evidence。Prompt-only rescue 只保留給 commit command 在 Agent hook 內被觀測到的情況。
 </Aside>
 
 <Aside type="tip">

@@ -103,8 +103,9 @@ export async function commit(args: string[]): Promise<void> {
   } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
-    } catch {
+    } catch (err: unknown) {
       // Never let agentnote fallback recording break a commit.
+      console.error(`agent-note: warning: fallback recording failed: ${(err as Error).message}`);
     }
   }
 }

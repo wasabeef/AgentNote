@@ -81,8 +81,16 @@ export async function recordCommitEntry(opts: {
   // Get files in THIS specific commit.
   let commitFiles: string[] = [];
   try {
-    const raw = await git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
-    commitFiles = raw.split("\n").filter(Boolean);
+    const raw = await git([
+      "diff-tree",
+      "-z",
+      "--root",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "HEAD",
+    ]);
+    commitFiles = raw.split("\0").filter(Boolean);
   } catch {
     // empty
   }

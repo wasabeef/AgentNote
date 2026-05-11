@@ -187,7 +187,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("prepare-commit-msg skips metadata-only sessions before injecting trailers", () => {
+  it("prepare-commit-msg requires file evidence before injecting trailers", () => {
     const dir = mkdtempSync(join(tmpdir(), "agentnote-prepare-session-data-"));
     execSync("git init", { cwd: dir });
     execSync("git config user.email test@test.com", { cwd: dir });
@@ -218,12 +218,24 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"commit this change"}\n',
     );
-    const recordableMessagePath = join(dir, "recordable-message.txt");
-    writeFileSync(recordableMessagePath, "subject\n");
-    execFileSync(hookPath, [recordableMessagePath], { cwd: dir });
+    const promptOnlyMessagePath = join(dir, "prompt-only-message.txt");
+    writeFileSync(promptOnlyMessagePath, "subject\n");
+    execFileSync(hookPath, [promptOnlyMessagePath], { cwd: dir });
     assert.ok(
-      readFileSync(recordableMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
-      "sessions with prompts should receive a trailer",
+      !readFileSync(promptOnlyMessagePath, "utf-8").includes(TRAILER_KEY),
+      "prompt-only sessions should not receive a plain git hook trailer",
+    );
+
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"src/app.ts","blob":"abc123","turn":1}\n',
+    );
+    const fileEvidenceMessagePath = join(dir, "file-evidence-message.txt");
+    writeFileSync(fileEvidenceMessagePath, "subject\n");
+    execFileSync(hookPath, [fileEvidenceMessagePath], { cwd: dir });
+    assert.ok(
+      readFileSync(fileEvidenceMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
+      "sessions with file evidence should receive a trailer",
     );
 
     rmSync(dir, { recursive: true, force: true });
@@ -274,6 +286,97 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     const entry = JSON.parse(note);
     assert.equal(entry.session_id, sessionId);
     assert.equal(entry.interactions[0].prompt, "add stale rescue");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("plain git commit does not attach fresh prompt-only active sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-fresh-prompt-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-9999-9999-9999-000000000999";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"fresh prompt only","turn":1}\n',
+    );
+
+    writeFileSync(join(dir, "terminal-only.ts"), "export const terminalOnly = true;\n");
+    execSync("git add terminal-only.ts", { cwd: dir });
+    execSync("git commit -m 'chore: terminal only'", { cwd: dir });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(
+      !message.includes(TRAILER_KEY),
+      "fresh prompt-only sessions should not hijack plain terminal commits",
+    );
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions for quoted raw diff paths", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-quoted-path-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-8888-8888-8888-000000000888";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    const filePath = "src/日本語 file.ts";
+    mkdirSync(join(dir, "src"), { recursive: true });
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add quoted path fallback","turn":1}\n',
+    );
+    writeFileSync(join(dir, filePath), "export const quotedPathFallback = true;\n");
+    const quotedPathBlob = execSync(`git hash-object -w ${shellSingleQuote(filePath)}`, {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"${filePath}","blob":"${quotedPathBlob}","turn":1}\n`,
+    );
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: quoted path fallback'", { cwd: dir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "add quoted path fallback");
 
     rmSync(dir, { recursive: true, force: true });
   });

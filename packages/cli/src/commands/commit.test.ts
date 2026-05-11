@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,6 +17,13 @@ import {
 } from "../core/constants.js";
 import { isAmendLikeCommitArg } from "./commit.js";
 
+type CliExecOptions = {
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  encoding?: BufferEncoding;
+  input?: string;
+};
+
 /** Write a fresh heartbeat so agentnote commit treats the session as active. */
 function ensureHeartbeat(sessionDir: string): void {
   mkdirSync(sessionDir, { recursive: true });
@@ -27,6 +34,8 @@ describe("agentnote commit", () => {
   let testDir: string;
   let testHome: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
+  const runCli = (args: string[], options: CliExecOptions): Buffer | string =>
+    execFileSync("node", [cliPath, ...args], options);
 
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-commit-"));
@@ -36,7 +45,7 @@ describe("agentnote commit", () => {
     execSync("git config user.email test@test.com", { cwd: testDir });
     execSync("git config user.name Test", { cwd: testDir });
     execSync("git commit --allow-empty -m 'init'", { cwd: testDir });
-    execSync(`node ${cliPath} init --agent claude --hooks --no-git-hooks`, {
+    runCli(["init", "--agent", "claude", "--hooks", "--no-git-hooks"], {
       cwd: testDir,
       env: { ...process.env, HOME: testHome },
     });
@@ -76,7 +85,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "hello.txt"), "hello");
     execSync("git add hello.txt", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "test commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "test commit"], { cwd: testDir });
 
     // verify trailer
     const msg = execSync("git log -1 --format=%B", {
@@ -97,7 +106,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "metadata-only.txt"), "metadata only");
     execSync("git add metadata-only.txt", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "metadata-only commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "metadata-only commit"], { cwd: testDir });
 
     const msg = execSync("git log -1 --format=%B", {
       cwd: testDir,
@@ -128,7 +137,7 @@ describe("agentnote commit", () => {
     );
 
     execSync("git add stale-commit.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: stale commit fallback"`, { cwd: testDir });
+    runCli(["commit", "-m", "feat: stale commit fallback"], { cwd: testDir });
 
     const msg = execSync("git log -1 --format=%B", {
       cwd: testDir,
@@ -168,7 +177,7 @@ describe("agentnote commit", () => {
     writeFileSync(absPath, "export const x = 1;");
     writeFileSync(join(testDir, "human-file.ts"), "export const y = 2;");
     execSync("git add .", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "mixed commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "mixed commit"], { cwd: testDir });
 
     // verify git note exists
     const note = execSync("git notes --ref=agentnote show HEAD", {
@@ -190,7 +199,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "plain.txt"), "no session");
     execSync("git add plain.txt", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "plain commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "plain commit"], { cwd: testDir });
 
     const msg = execSync("git log -1 --format=%B", {
       cwd: testDir,
@@ -240,7 +249,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "auth.ts"), "export {}");
     execSync("git add auth.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: auth with transcript"`, {
+    runCli(["commit", "-m", "feat: auth with transcript"], {
       cwd: testDir,
       env: { ...process.env, HOME: testHome },
     });
@@ -292,7 +301,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "cross-turn.ts"), "export const crossTurn = true;");
     execSync("git add cross-turn.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: cross-turn commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "feat: cross-turn commit"], { cwd: testDir });
 
     const note = execSync("git notes --ref=agentnote show HEAD", {
       cwd: testDir,
@@ -356,7 +365,7 @@ describe("agentnote commit", () => {
 
     writeFileSync(join(testDir, "multi-gap.ts"), "export const multiGap = true;");
     execSync("git add multi-gap.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: multi-turn gap commit"`, { cwd: testDir });
+    runCli(["commit", "-m", "feat: multi-turn gap commit"], { cwd: testDir });
 
     const note = execSync("git notes --ref=agentnote show HEAD", {
       cwd: testDir,
@@ -394,7 +403,7 @@ describe("agentnote commit", () => {
     // First commit: only split-a.ts
     writeFileSync(join(testDir, "split-a.ts"), "export const a = 1;");
     execSync("git add split-a.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: split-a"`, { cwd: testDir });
+    runCli(["commit", "-m", "feat: split-a"], { cwd: testDir });
 
     const note1 = execSync("git notes --ref=agentnote show HEAD", {
       cwd: testDir,
@@ -408,7 +417,7 @@ describe("agentnote commit", () => {
     // With the empty-note skip, no note is written for a purely human commit.
     writeFileSync(join(testDir, "human-only.ts"), "export const h = 2;");
     execSync("git add human-only.ts", { cwd: testDir });
-    execSync(`node ${cliPath} commit -m "feat: human-only"`, { cwd: testDir });
+    runCli(["commit", "-m", "feat: human-only"], { cwd: testDir });
 
     let hasNote = true;
     try {
@@ -429,53 +438,47 @@ describe("agentnote commit", () => {
       execSync("git config user.email test@test.com", { cwd: dir });
       execSync("git config user.name Test", { cwd: dir });
       execSync("git commit --allow-empty -m 'init'", { cwd: dir });
-      execSync(`node ${cliPath} init --agent claude --no-action`, {
+      runCli(["init", "--agent", "claude", "--no-action"], {
         cwd: dir,
         env: { ...process.env, HOME: home },
         encoding: "utf-8",
       });
 
       const sessionId = "a1b2c3d4-1111-2222-3333-444444444444";
-      execSync(
-        `echo '${JSON.stringify({
+      runCli(["hook", "--agent", "claude"], {
+        cwd: dir,
+        env: { ...process.env, HOME: home },
+        encoding: "utf-8",
+        input: JSON.stringify({
           hook_event_name: "SessionStart",
           session_id: sessionId,
           model: "claude-opus-4-6",
-        })}' | node ${cliPath} hook --agent claude`,
-        {
-          cwd: dir,
-          env: { ...process.env, HOME: home },
-          encoding: "utf-8",
-        },
-      );
+        }),
+      });
 
-      execSync(
-        `echo '${JSON.stringify({
+      runCli(["hook", "--agent", "claude"], {
+        cwd: dir,
+        env: { ...process.env, HOME: home },
+        encoding: "utf-8",
+        input: JSON.stringify({
           hook_event_name: "UserPromptSubmit",
           session_id: sessionId,
           prompt: "Create claude-git-hook.txt",
-        })}' | node ${cliPath} hook --agent claude`,
-        {
-          cwd: dir,
-          env: { ...process.env, HOME: home },
-          encoding: "utf-8",
-        },
-      );
+        }),
+      });
 
       writeFileSync(join(dir, "claude-git-hook.txt"), "Claude git hook\n");
-      execSync(
-        `echo '${JSON.stringify({
+      runCli(["hook", "--agent", "claude"], {
+        cwd: dir,
+        env: { ...process.env, HOME: home },
+        encoding: "utf-8",
+        input: JSON.stringify({
           hook_event_name: "PostToolUse",
           session_id: sessionId,
           tool_name: "Write",
           tool_input: { file_path: join(dir, "claude-git-hook.txt") },
-        })}' | node ${cliPath} hook --agent claude`,
-        {
-          cwd: dir,
-          env: { ...process.env, HOME: home },
-          encoding: "utf-8",
-        },
-      );
+        }),
+      });
 
       execSync("git add claude-git-hook.txt", { cwd: dir });
       execSync(`git commit -m "feat: claude git hook commit"`, {

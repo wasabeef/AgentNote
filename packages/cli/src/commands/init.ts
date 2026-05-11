@@ -11,9 +11,9 @@ import {
   NOTES_REF_FULL,
   POST_COMMIT_FALLBACK_FILE,
   POST_COMMIT_FALLBACK_HEAD,
-  RECORDABLE_SESSION_FILES,
   TEXT_ENCODING,
   TRAILER_KEY,
+  TRAILER_SESSION_FILES,
 } from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
@@ -24,7 +24,7 @@ export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 
 const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
-const RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
+const TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
 
 const PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
@@ -124,7 +124,7 @@ ${AGENTNOTE_HOOK_MARKER}
 # Skip amend/reword/reuse (-c/-C/--amend) — only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
-# Fail closed: no session file, no heartbeat, or metadata-only session → skip.
+# Fail closed: no session file, no heartbeat, or no file evidence → skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
 rm -f "$FALLBACK_FILE" 2>/dev/null || true
@@ -141,14 +141,14 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-HAS_RECORDABLE_DATA=0
-for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+HAS_TRAILER_DATA=0
+for FILE_NAME in ${TRAILER_SESSION_FILE_LIST}; do
   if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
-    HAS_RECORDABLE_DATA=1
+    HAS_TRAILER_DATA=1
     break
   fi
 done
-if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
+if [ "$HAS_TRAILER_DATA" -ne 1 ]; then exit 0; fi
 if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then
   printf '%s\\n' '${POST_COMMIT_FALLBACK_HEAD}' > "$FALLBACK_FILE" 2>/dev/null || true
   exit 0
