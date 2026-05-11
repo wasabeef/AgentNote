@@ -309,9 +309,27 @@ function tokenBasename(token) {
   return token.split(PATH_SEPARATOR_RE).pop() ?? token;
 }
 function hasHookTokenSequence(tokens, sequence) {
+  if (sequence.length === 0) return false;
   return tokens.some((token, index) => {
     const firstMatches = token === sequence[0] || sequence[0] === CLI_JS_HOOK_TOKENS[0] && tokenBasename(token) === sequence[0];
-    return firstMatches && tokens[index + 1] === sequence[1];
+    if (!firstMatches || index + sequence.length > tokens.length) return false;
+    return sequence.slice(1).every((expectedToken, offset) => tokens[index + offset + 1] === expectedToken);
+  });
+}
+function hasPublicHookCommand(tokens) {
+  return tokens.some((token, index) => {
+    if (token !== AGENTNOTE_HOOK_TOKENS[0]) return false;
+    if (!hasHookTokenSequence(tokens.slice(index), AGENTNOTE_HOOK_TOKENS)) return false;
+    if (index === 0) return true;
+    if (tokenBasename(tokens[0]) !== NPX_COMMAND_NAME) return false;
+    return tokens.slice(1, index).every((part) => part.startsWith("-"));
+  });
+}
+function hasRepoLocalHookCommand(tokens) {
+  return tokens.some((token, index) => {
+    if (tokenBasename(token) !== CLI_JS_HOOK_TOKENS[0]) return false;
+    if (!hasHookTokenSequence(tokens.slice(index), CLI_JS_HOOK_TOKENS)) return false;
+    return index === 0 || index === 1 && NODE_COMMAND_NAMES.has(tokenBasename(tokens[0]));
   });
 }
 function readAgentFlag(tokens) {
@@ -324,14 +342,14 @@ function readAgentFlag(tokens) {
 }
 function isAgentNoteHookCommand(command2, agentName, options = {}) {
   const tokens = tokenizeHookCommand(command2);
-  const isPublicHook = hasHookTokenSequence(tokens, AGENTNOTE_HOOK_TOKENS);
-  const isRepoLocalHook = hasHookTokenSequence(tokens, CLI_JS_HOOK_TOKENS);
+  const isPublicHook = hasPublicHookCommand(tokens);
+  const isRepoLocalHook = hasRepoLocalHookCommand(tokens);
   if (!isPublicHook && !isRepoLocalHook) return false;
   const agentFlag = readAgentFlag(tokens);
   if (agentFlag === agentName) return true;
   return options.allowMissingAgent === true && agentFlag === null;
 }
-var AGENT_FLAG, AGENT_FLAG_PREFIX, AGENTNOTE_HOOK_TOKENS, CLI_JS_HOOK_TOKENS, PATH_SEPARATOR_RE;
+var AGENT_FLAG, AGENT_FLAG_PREFIX, AGENTNOTE_HOOK_TOKENS, CLI_JS_HOOK_TOKENS, NODE_COMMAND_NAMES, NPX_COMMAND_NAME, PATH_SEPARATOR_RE;
 var init_hook_command = __esm({
   "src/agents/hook-command.ts"() {
     "use strict";
@@ -340,6 +358,8 @@ var init_hook_command = __esm({
     AGENT_FLAG_PREFIX = `${AGENT_FLAG}=`;
     AGENTNOTE_HOOK_TOKENS = AGENTNOTE_HOOK_COMMAND.split(" ");
     CLI_JS_HOOK_TOKENS = CLI_JS_HOOK_COMMAND.split(" ");
+    NODE_COMMAND_NAMES = /* @__PURE__ */ new Set(["node", "nodejs"]);
+    NPX_COMMAND_NAME = "npx";
     PATH_SEPARATOR_RE = /[\\/]/;
   }
 });

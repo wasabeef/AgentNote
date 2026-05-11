@@ -648,6 +648,32 @@ describe("claude adapter", () => {
       assert.equal(enabled, false);
     });
 
+    it("does not infer enabled state from an unrelated single command", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "echo agent-note hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
+    });
+
     it("returns false when hooks are not installed", async () => {
       const enabled = await claude.isEnabled(repoRoot);
       assert.equal(enabled, false);

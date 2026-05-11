@@ -31,6 +31,11 @@ describe("hook command detection", () => {
       isAgentNoteHookCommand("node packages/cli/dist/cli.js hook-check --agent codex", "codex"),
       false,
     );
+    assert.equal(isAgentNoteHookCommand("echo agent-note hook --agent claude", "claude"), false);
+    assert.equal(
+      isAgentNoteHookCommand("echo npx --yes agent-note hook --agent claude", "claude"),
+      false,
+    );
   });
 
   it("allows missing legacy agent flags only for cleanup paths", () => {
