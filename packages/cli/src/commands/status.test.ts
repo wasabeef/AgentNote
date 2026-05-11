@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -65,6 +65,87 @@ describe("agentnote status", () => {
     );
     assert.ok(output.includes("git:     not configured"), "should show git hooks missing");
     assert.ok(output.includes("commit:  fallback mode"), "should show fallback mode");
+  });
+
+  it("shows capture details for repo-local legacy hook commands", () => {
+    const repo = mkdtempSync(join(tmpdir(), "agentnote-status-local-hooks-"));
+    try {
+      execSync("git init", { cwd: repo });
+      execSync("git config user.email test@test.com", { cwd: repo });
+      execSync("git config user.name Test", { cwd: repo });
+      execSync("git commit --allow-empty -m 'init'", { cwd: repo });
+
+      mkdirSync(join(repo, ".codex"), { recursive: true });
+      writeFileSync(join(repo, ".codex", "config.toml"), "[features]\ncodex_hooks = true\n");
+      writeFileSync(
+        join(repo, ".codex", "hooks.json"),
+        `${JSON.stringify({
+          hooks: {
+            UserPromptSubmit: [
+              { hooks: [{ command: "node packages/cli/dist/cli.js hook --agent codex" }] },
+            ],
+            Stop: [{ hooks: [{ command: "node packages/cli/dist/cli.js hook --agent codex" }] }],
+            SessionStart: [
+              { hooks: [{ command: "node packages/cli/dist/cli.js hook --agent codex" }] },
+            ],
+          },
+        })}\n`,
+      );
+
+      mkdirSync(join(repo, ".cursor"), { recursive: true });
+      writeFileSync(
+        join(repo, ".cursor", "hooks.json"),
+        `${JSON.stringify({
+          version: 1,
+          hooks: {
+            beforeSubmitPrompt: [{ command: "node packages/cli/dist/cli.js hook --agent cursor" }],
+            afterAgentResponse: [{ command: "node packages/cli/dist/cli.js hook --agent cursor" }],
+            afterFileEdit: [{ command: "node packages/cli/dist/cli.js hook --agent cursor" }],
+            beforeShellExecution: [
+              { command: "node packages/cli/dist/cli.js hook --agent cursor" },
+            ],
+          },
+        })}\n`,
+      );
+
+      mkdirSync(join(repo, ".gemini"), { recursive: true });
+      writeFileSync(
+        join(repo, ".gemini", "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            BeforeAgent: [
+              { hooks: [{ command: "node packages/cli/dist/cli.js hook --agent gemini" }] },
+            ],
+            AfterAgent: [
+              { hooks: [{ command: "node packages/cli/dist/cli.js hook --agent gemini" }] },
+            ],
+            BeforeTool: [
+              { hooks: [{ command: "node packages/cli/dist/cli.js hook --agent gemini" }] },
+            ],
+          },
+        })}\n`,
+      );
+
+      const output = execSync(`node ${cliPath} status`, {
+        cwd: repo,
+        encoding: "utf-8",
+      });
+
+      assert.ok(
+        output.includes("codex(prompt, response, transcript)"),
+        "should show Codex repo-local capture capabilities",
+      );
+      assert.ok(
+        output.includes("cursor(prompt, response, edits, shell)"),
+        "should show Cursor repo-local capture capabilities",
+      );
+      assert.ok(
+        output.includes("gemini(prompt, response, edits, shell)"),
+        "should show Gemini repo-local capture capabilities",
+      );
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   it("shows git hooks as the primary commit path when fully configured", () => {

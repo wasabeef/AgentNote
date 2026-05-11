@@ -6811,6 +6811,7 @@ function truncateLines(text, maxLen) {
 }
 
 // src/commands/status.ts
+init_hook_command();
 init_agents();
 init_types();
 init_constants();
@@ -6963,7 +6964,9 @@ async function readCodexCaptureCapabilities(repoRoot3) {
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
-      (group) => (group.hooks ?? []).some((hook2) => hook2.command?.includes(AGENTNOTE_HOOK_COMMAND))
+      (group) => (group.hooks ?? []).some(
+        (hook2) => typeof hook2.command === "string" && isAgentNoteHookCommand(hook2.command, AGENT_NAMES.codex)
+      )
     );
     const capabilities = [];
     if (hasAgentnoteHook(CODEX_STATUS_HOOK_EVENTS.userPromptSubmit)) {
@@ -6987,7 +6990,9 @@ async function readCursorCaptureCapabilities(repoRoot3) {
     const content = await readFile12(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
-    const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
+    const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
+      (entry) => typeof entry.command === "string" && isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor)
+    );
     const capabilities = [];
     if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeSubmitPrompt)) {
       capabilities.push(CAPABILITY_LABELS.prompt);
@@ -7014,7 +7019,9 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
-      (group) => (group.hooks ?? []).some((h) => h.command?.includes(AGENTNOTE_HOOK_COMMAND))
+      (group) => (group.hooks ?? []).some(
+        (h) => typeof h.command === "string" && isAgentNoteHookCommand(h.command, AGENT_NAMES.gemini)
+      )
     );
     const capabilities = [];
     if (hasAgentnoteHook(GEMINI_STATUS_HOOK_EVENTS.beforeAgent)) {

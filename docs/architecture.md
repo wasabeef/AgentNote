@@ -143,6 +143,8 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b
 1. **CLI** (`packages/cli/`) — public user commands are `agent-note init`, `agent-note deinit`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Automation-facing commands such as `agent-note pr`, `agent-note hook`, `agent-note record`, `agent-note commit`, and `agent-note push-notes` are kept for generated workflows and hooks.
 2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.
 
+Public user installs generate agent hooks that call `npx --yes agent-note hook --agent <name>`. The Agent Note repository itself may use repo-local development hooks such as `node packages/cli/dist/cli.js hook --agent <name>` so maintainers can exercise the built CLI before publishing. That `cli.js hook` form is a maintainer-only compatibility path and should not appear in public setup guidance.
+
 ### Data flow
 
 ```

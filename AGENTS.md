@@ -125,6 +125,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 - `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
 - `hook` is called by the coding agent at runtime. It never modifies config files.
+- Public user installs generate agent hooks that call `npx --yes agent-note hook --agent <name>`. This repository may keep repo-local development hooks that call `node packages/cli/dist/cli.js hook --agent <name>` so local changes can be tested before publishing. Treat `cli.js hook` as a maintainer-only compatibility path, not public setup guidance.
 
 ### Harness hooks
 
