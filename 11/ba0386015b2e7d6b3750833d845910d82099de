@@ -1,0 +1,219 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-11T11:49:34+09:00",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "github actions で @v0 指定しているものを洗い出してほしい",
+      "response": "実運用 workflow には残っていませんでした。一方で、生成される workflow template と README / website / docs には `@v0` が残っていたため、公開後の導線として `@v1` に揃える方針にしました。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "ブランチきって更新作業して",
+      "response": "`@v0` を `@v1` に切り替えるブランチを作り、生成 workflow、tests、README、website、docs をまとめて更新します。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "v1.0.0 でしかリリースしてないけど、@v1 という指定でも取得できるのけ？",
+      "response": "`@v1` は GitHub Actions では Release 名ではなく Git ref なので、`v1` という tag か branch が存在するかで決まります。remote には `refs/tags/v1` と `refs/tags/v1.0.0` があるため解決できます。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "これは v1 も更新される github action になってる？",
+      "response": "release workflow は `v1.0.x` の tag push 時に `v1` moving tag も更新する形になっています。docs 側に残っていた `v0` の説明も `v1` 前提に直しました。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "PR まで作成して",
+      "response": "変更済み tracked file だけを commit し、branch を push して PR #71 を作成しました。",
+      "tools": [
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.de.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.es.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.fr.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.id.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.it.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.ja.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.ko.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.pt-br.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.ru.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.zh-cn.md",
+      "by_ai": false
+    },
+    {
+      "path": "README.zh-tw.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": false
+    },
+    {
+      "path": "docs/knowledge/agent-skill.md",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/src/commands/init.ts",
+      "by_ai": false
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/de/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/de/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/es/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/es/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/fr/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/fr/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/id/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/id/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/it/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/it/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ja/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ko/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ko/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/pt-br/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/pt-br/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ru/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/ru/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/github-action.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/dashboard.mdx",
+      "by_ai": false
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/github-action.mdx",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "none"
+  }
+}
