@@ -60,7 +60,7 @@ describe("agentnote init", () => {
     const workflowPath = join(testDir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
-    assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
+    assert.ok(workflow.includes("wasabeef/AgentNote@v1"), "workflow should reference the action");
 
     // Notes fetch config
     const fetchConfig = execSync("git config --get-all remote.origin.fetch", {
@@ -375,7 +375,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should have the new name",
     );
     assert.ok(
-      dashboardWorkflow.includes("uses: wasabeef/AgentNote@v0"),
+      dashboardWorkflow.includes("uses: wasabeef/AgentNote@v1"),
       "dashboard workflow should use the public Agent Note action",
     );
     assert.ok(
@@ -405,7 +405,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should keep Pages artifact paths inside the shared action",
     );
     assert.ok(
-      !dashboardWorkflow.includes("packages/dashboard@v0"),
+      !dashboardWorkflow.includes("packages/dashboard@v1"),
       "dashboard workflow should not expose the internal Dashboard package path",
     );
     assert.ok(

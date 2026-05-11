@@ -281,7 +281,7 @@ Root action punya dua mode:
 PR Report Mode adalah default:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ Atur `prompt_detail` ke `compact` atau `full` jika ingin riwayat Prompt yang fok
 Dashboard Mode memakai action yang sama dengan `dashboard: true`:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ Jika Anda sudah punya GitHub Pages Site, lihat [Dashboard Docs](https://wasabeef
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

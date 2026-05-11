@@ -281,7 +281,7 @@ root action 有兩種 mode：
 PR Report Mode 是預設值：
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ PR Report Mode 是預設值：
 Dashboard Mode 使用同一個 action，並傳入 `dashboard: true`：
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ npx agent-note init --agent claude --dashboard
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

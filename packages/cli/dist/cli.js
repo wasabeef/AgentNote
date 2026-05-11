@@ -4850,7 +4850,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: wasabeef/AgentNote@v0
+      - uses: wasabeef/AgentNote@v1
         env:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
@@ -4882,7 +4882,7 @@ jobs:
     steps:
       - name: Build Dashboard bundle
         id: dashboard
-        uses: wasabeef/AgentNote@v0
+        uses: wasabeef/AgentNote@v1
         with:
           dashboard: true
 

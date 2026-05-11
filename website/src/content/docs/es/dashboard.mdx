@@ -45,7 +45,7 @@ git push
 
 3. En GitHub Pages, elige **GitHub Actions** como origen.
 
-El workflow generado del Dashboard usa `wasabeef/AgentNote@v0` con `dashboard: true` para restaurar, sincronizar, compilar, subir el artefacto y persistir las notas, y después publica la vista compartida en `/dashboard/`. Si el mismo job ya sube un artefacto de GitHub Pages, Agent Note añade el Dashboard en el directorio `dashboard/` de ese artefacto en lugar de reemplazar el sitio existente. Si otro job o workflow ya publica Pages, Agent Note omite la publicación standalone; coloca Agent Note en el mismo job antes de `actions/upload-pages-artifact` para combinar un docs site y el Dashboard.
+El workflow generado del Dashboard usa `wasabeef/AgentNote@v1` con `dashboard: true` para restaurar, sincronizar, compilar, subir el artefacto y persistir las notas, y después publica la vista compartida en `/dashboard/`. Si el mismo job ya sube un artefacto de GitHub Pages, Agent Note añade el Dashboard en el directorio `dashboard/` de ese artefacto en lugar de reemplazar el sitio existente. Si otro job o workflow ya publica Pages, Agent Note omite la publicación standalone; coloca Agent Note en el mismo job antes de `actions/upload-pages-artifact` para combinar un docs site y el Dashboard.
 
 ## URL pública
 
@@ -68,7 +68,7 @@ Incluso en un repositorio nuevo, el Dashboard puede acumular datos antes del pri
 ## Cómo funciona
 
 - `refs/notes/agentnote` sigue siendo la Source of Truth
-- `wasabeef/AgentNote@v0` en modo Dashboard escribe snapshots de notas en `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v1` en modo Dashboard escribe snapshots de notas en `gh-pages/dashboard/notes/*.json`
 - GitHub Pages sirve el Dashboard generado en `/dashboard/`
 
 El repositorio no hace commit de ejemplos JSON del Dashboard. Un nuevo Dashboard permanece vacío hasta que el workflow restaura o genera note files. `pull_request` publica el estado Open, y los pushes a `default branch` lo reemplazan por el estado Merged.

@@ -45,7 +45,7 @@ git push
 
 3. Wähle in GitHub Pages **GitHub Actions** als Quelle.
 
-Der generierte Dashboard-Workflow verwendet `wasabeef/AgentNote@v0` mit `dashboard: true`, um Wiederherstellung, Sync, Build, Artefakt-Upload und Notes-Persistenz auszuführen, und veröffentlicht danach die gemeinsame Ansicht unter `/dashboard/`. Wenn derselbe Job bereits ein GitHub-Pages-Artefakt hochlädt, fügt Agent Note das Dashboard unter `dashboard/` in dieses Artefakt ein, statt die bestehende Site zu ersetzen. Wenn ein anderer Job oder Workflow Pages bereits veröffentlicht, überspringt Agent Note die Standalone-Veröffentlichung; platziere Agent Note im selben Job vor `actions/upload-pages-artifact`, um docs site und Dashboard zu kombinieren.
+Der generierte Dashboard-Workflow verwendet `wasabeef/AgentNote@v1` mit `dashboard: true`, um Wiederherstellung, Sync, Build, Artefakt-Upload und Notes-Persistenz auszuführen, und veröffentlicht danach die gemeinsame Ansicht unter `/dashboard/`. Wenn derselbe Job bereits ein GitHub-Pages-Artefakt hochlädt, fügt Agent Note das Dashboard unter `dashboard/` in dieses Artefakt ein, statt die bestehende Site zu ersetzen. Wenn ein anderer Job oder Workflow Pages bereits veröffentlicht, überspringt Agent Note die Standalone-Veröffentlichung; platziere Agent Note im selben Job vor `actions/upload-pages-artifact`, um docs site und Dashboard zu kombinieren.
 
 ## Öffentliche URL
 
@@ -68,7 +68,7 @@ Auch ein neues Repository kann schon vor dem ersten Production-Deploy Dashboard-
 ## Wie es funktioniert
 
 - `refs/notes/agentnote` bleibt die Source of Truth
-- `wasabeef/AgentNote@v0` im Dashboard-Modus schreibt Notes-Snapshots nach `gh-pages/dashboard/notes/*.json`
+- `wasabeef/AgentNote@v1` im Dashboard-Modus schreibt Notes-Snapshots nach `gh-pages/dashboard/notes/*.json`
 - GitHub Pages liefert das gebaute Dashboard unter `/dashboard/` aus
 
 Das Repository committet keine Beispiel-JSONs für das Dashboard. Ein neues Dashboard bleibt leer, bis der Workflow note files wiederherstellt oder erzeugt. `pull_request` veröffentlicht den Open-Status, und Pushes auf `default branch` ersetzen ihn durch den Merged-Status.

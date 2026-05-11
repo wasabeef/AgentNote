@@ -112,7 +112,7 @@ The PR Report action reads the same git note schema that the CLI writes and the 
 
 The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
 
-For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard Mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard Mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
+For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v1` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard Mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard Mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
@@ -122,14 +122,14 @@ A brand-new Repository can therefore accumulate Dashboard note data before the D
 
 ### Root action.yml dispatcher
 
-GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is the public facade:
+GitHub resolves `uses: wasabeef/AgentNote@v1` by looking for `action.yml` at the repo root. The root file is the public facade:
 
 ```yaml
 # PR Report Mode
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
 
 # Dashboard Mode
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
 ```
@@ -502,7 +502,7 @@ JSON output structure:
 ### Usage
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main
@@ -553,7 +553,7 @@ In Dashboard Mode (`dashboard: true`), it prepares the caller repository without
 
 ```
 CLI:    npx agent-note init          (or npm install --save-dev)
-Action: uses: wasabeef/AgentNote@v0             (Marketplace)
+Action: uses: wasabeef/AgentNote@v1             (Marketplace)
 ```
 
 ### Release procedure
@@ -579,15 +579,15 @@ Release steps:
 4. Review the generated release note locally before tagging:
    - `git-cliff --config .github/cliff.toml --latest --strip header`
 5. Commit the version bump to `main`.
-6. Create and push the matching git tag, for example `v0.1.11`.
+6. Create and push the matching git tag, for example `v1.0.1`.
 
 Important:
 
 - Do **not** cut a release tag before the package version bump lands on `main`.
-- If `packages/cli/package.json` still says `0.1.9` and you push `v0.1.10`, the workflow will still try to publish `0.1.9` and npm will reject it as an already published version.
+- If `packages/cli/package.json` still says `1.0.0` and you push `v1.0.1`, the workflow will still try to publish `1.0.0` and npm will reject it as an already published version.
 - Treat `@wasabeef/agentnote` as a reserved alias only. Do not use it in README or website installation commands unless the project intentionally changes the canonical package name.
 - The npm publish job is rerun-safe: if either `agent-note@<version>` or `@wasabeef/agentnote@<version>` is already published, that package publish step is skipped.
-- The workflow updates the floating major tag (`v0`) after the GitHub release is created, but it does not manage package.json versions for you.
+- The workflow updates the floating major tag (`v1` for `v1.x.y` releases) after the GitHub release is created, but it does not manage package.json versions for you.
 
 ### Team workflow
 
