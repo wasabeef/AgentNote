@@ -251,12 +251,16 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add stale rescue","turn":1}\n',
     );
+    writeFileSync(join(dir, "stale-rescue.ts"), "export const staleRescue = true;\n");
+    const staleRescueBlob = execSync("git hash-object -w stale-rescue.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
     writeFileSync(
       join(sessionDir, CHANGES_FILE),
-      '{"event":"file_change","tool":"Write","file":"stale-rescue.ts","turn":1}\n',
+      `{"event":"file_change","tool":"Write","file":"stale-rescue.ts","blob":"${staleRescueBlob}","turn":1}\n`,
     );
 
-    writeFileSync(join(dir, "stale-rescue.ts"), "export const staleRescue = true;\n");
     execSync("git add stale-rescue.ts", { cwd: dir });
     execSync("git commit -m 'feat: stale rescue'", { cwd: dir });
 
@@ -308,6 +312,146 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
         stdio: "pipe",
       });
     });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record stale same-path sessions when blobs differ", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-blob-mismatch-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-5555-5555-5555-000000000555";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"old same path edit","turn":1}\n',
+    );
+    writeFileSync(join(dir, "same-path.ts"), "export const stale = true;\n");
+    const staleBlob = execSync("git hash-object -w same-path.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"same-path.ts","blob":"${staleBlob}","turn":1}\n`,
+    );
+
+    writeFileSync(join(dir, "same-path.ts"), "export const human = true;\n");
+    execSync("git add same-path.ts", { cwd: dir });
+    execSync("git commit -m 'chore: human same path'", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record amend commits", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-amend-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    writeFileSync(join(dir, "amend.ts"), "export const before = true;\n");
+    execSync("git add amend.ts", { cwd: dir });
+    execSync("git commit -m 'feat: initial amend target'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-6666-6666-6666-000000000666";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"amend should stay skipped","turn":1}\n',
+    );
+    writeFileSync(join(dir, "amend.ts"), "export const after = true;\n");
+    const amendBlob = execSync("git hash-object -w amend.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"amend.ts","blob":"${amendBlob}","turn":1}\n`,
+    );
+
+    execSync("git add amend.ts", { cwd: dir });
+    execSync("git commit --amend --no-edit", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions on root commits", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-root-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-7777-7777-7777-000000000777";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"root commit fallback","turn":1}\n',
+    );
+    writeFileSync(join(dir, "root.ts"), "export const rootFallback = true;\n");
+    const rootBlob = execSync("git hash-object -w root.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"root.ts","blob":"${rootBlob}","turn":1}\n`,
+    );
+
+    execSync("git add root.ts", { cwd: dir });
+    execSync("git commit -m 'feat: root fallback'", { cwd: dir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "root commit fallback");
 
     rmSync(dir, { recursive: true, force: true });
   });

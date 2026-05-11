@@ -49,6 +49,10 @@ export const SESSION_FILE = "session";
 export const SESSION_AGENT_FILE = "agent";
 /** Gemini pending commit state file used between BeforeTool and AfterTool. */
 export const PENDING_COMMIT_FILE = "pending_commit.json";
+/** One-shot marker allowing post-commit to recover a stale-heartbeat session. */
+export const POST_COMMIT_FALLBACK_FILE = "post_commit_fallback";
+/** Marker value indicating that post-commit may try strict HEAD recovery. */
+export const POST_COMMIT_FALLBACK_HEAD = "head";
 
 // ─── Display limits ───
 /** Maximum commits scanned by commands that need bounded history traversal. */

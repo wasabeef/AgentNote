@@ -98,12 +98,16 @@ describe("agentnote commit", () => {
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add stale commit fallback","turn":1}\n',
     );
+    writeFileSync(join(testDir, "stale-commit.ts"), "export const staleCommit = true;\n");
+    const staleCommitBlob = execSync("git hash-object -w stale-commit.ts", {
+      cwd: testDir,
+      encoding: "utf-8",
+    }).trim();
     writeFileSync(
       join(sessionDir, CHANGES_FILE),
-      '{"event":"file_change","tool":"Write","file":"stale-commit.ts","turn":1}\n',
+      `{"event":"file_change","tool":"Write","file":"stale-commit.ts","blob":"${staleCommitBlob}","turn":1}\n`,
     );
 
-    writeFileSync(join(testDir, "stale-commit.ts"), "export const staleCommit = true;\n");
     execSync("git add stale-commit.ts", { cwd: testDir });
     execSync(`node ${cliPath} commit -m "feat: stale commit fallback"`, { cwd: testDir });
 

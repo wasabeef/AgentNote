@@ -15,6 +15,8 @@ import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
 import { recordHeadFallback } from "./record.js";
 
+const AMEND_LIKE_COMMIT_ARGS = new Set(["--amend", "-c", "-C"]);
+
 /**
  * Provide a hook-compatible manual commit path.
  *
@@ -25,8 +27,9 @@ import { recordHeadFallback } from "./record.js";
 export async function commit(args: string[]): Promise<void> {
   const sf = await sessionFile();
   let sessionId = "";
+  const skipAgentNoteRecording = args.some((arg) => AMEND_LIKE_COMMIT_ARGS.has(arg));
 
-  if (existsSync(sf)) {
+  if (!skipAgentNoteRecording && existsSync(sf)) {
     sessionId = (await readFile(sf, TEXT_ENCODING)).trim();
     // Check heartbeat validity — must match prepare-commit-msg and status logic:
     // heartbeat must exist, be non-zero, and be at most 1 hour old.
@@ -82,7 +85,7 @@ export async function commit(args: string[]): Promise<void> {
       // Never let agentnote recording break a commit.
       console.error(`agent-note: warning: ${(err as Error).message}`);
     }
-  } else {
+  } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
     } catch {

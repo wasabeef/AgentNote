@@ -81,7 +81,7 @@ export async function recordCommitEntry(opts: {
   // Get files in THIS specific commit.
   let commitFiles: string[] = [];
   try {
-    const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+    const raw = await git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
     commitFiles = raw.split("\n").filter(Boolean);
   } catch {
     // empty
@@ -584,19 +584,18 @@ export async function recordCommitEntry(opts: {
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
 
-/** Return true when session file evidence intersects the current commit files. */
-export async function hasSessionCommitFileEvidence(
+/** Return true when a session post-edit blob survives as a HEAD commit blob. */
+export async function hasSessionHeadBlobEvidence(
   sessionDir: string,
-  commitFiles: string[],
+  committedBlobs: Map<string, string>,
 ): Promise<boolean> {
-  const commitFileSet = new Set(commitFiles);
-  if (commitFileSet.size === 0) return false;
+  if (committedBlobs.size === 0) return false;
 
   const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
-  const preBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
-  return [...changeEntries, ...preBlobEntries].some((entry) => {
+  return changeEntries.some((entry) => {
     const file = typeof entry.file === "string" ? entry.file : "";
-    return file !== "" && commitFileSet.has(file);
+    const blob = typeof entry.blob === "string" ? entry.blob : "";
+    return file !== "" && blob !== "" && committedBlobs.get(file) === blob;
   });
 }
 

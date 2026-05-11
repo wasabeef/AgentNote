@@ -94,7 +94,7 @@ Gemini-specific event handling:
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
 - **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. `transcript_path` alone is metadata, not recordable data. Skips amends.
-- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If a long-running session was too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when session file evidence intersects the committed files.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.

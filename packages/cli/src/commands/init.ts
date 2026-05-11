@@ -9,6 +9,8 @@ import {
   HEARTBEAT_TTL_SECONDS,
   NOTES_FETCH_REFSPEC,
   NOTES_REF_FULL,
+  POST_COMMIT_FALLBACK_FILE,
+  POST_COMMIT_FALLBACK_HEAD,
   RECORDABLE_SESSION_FILES,
   TEXT_ENCODING,
   TRAILER_KEY,
@@ -122,9 +124,11 @@ ${AGENTNOTE_HOOK_MARKER}
 # Skip amend/reword/reuse (-c/-C/--amend) — only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
-case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session → skip.
+# Fail closed: no session file, no heartbeat, or metadata-only session → skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+rm -f "$FALLBACK_FILE" 2>/dev/null || true
+case "$2" in commit) exit 0;; esac
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
@@ -137,7 +141,6 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
 HAS_RECORDABLE_DATA=0
 for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
   if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
@@ -146,6 +149,10 @@ for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
   fi
 done
 if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
+if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then
+  printf '%s\\n' '${POST_COMMIT_FALLBACK_HEAD}' > "$FALLBACK_FILE" 2>/dev/null || true
+  exit 0
+fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -160,7 +167,15 @@ ${AGENTNOTE_HOOK_MARKER}
 # HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
-if [ -z "$SESSION_ID" ]; then SESSION_ID="--fallback-head"; fi
+if [ -z "$SESSION_ID" ]; then
+  FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+  if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
+    SESSION_ID="--fallback-head"
+  else
+    exit 0
+  fi
+  rm -f "$FALLBACK_FILE" 2>/dev/null || true
+fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then

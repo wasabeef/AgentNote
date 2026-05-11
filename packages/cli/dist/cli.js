@@ -27,6 +27,8 @@ var PROMPT_ID_FILE = "prompt_id";
 var SESSION_FILE = "session";
 var SESSION_AGENT_FILE = "agent";
 var PENDING_COMMIT_FILE = "pending_commit.json";
+var POST_COMMIT_FALLBACK_FILE = "post_commit_fallback";
+var POST_COMMIT_FALLBACK_HEAD = "head";
 var MAX_COMMITS = 500;
 var RECENT_STATUS_COMMIT_LIMIT = 20;
 var DEFAULT_LOG_COUNT = 10;
@@ -3392,7 +3394,7 @@ async function recordCommitEntry(opts) {
   if (existingNote) return { promptCount: 0, aiRatio: 0 };
   let commitFiles = [];
   try {
-    const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+    const raw = await git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
     commitFiles = raw.split("\n").filter(Boolean);
   } catch {
   }
@@ -3742,14 +3744,13 @@ async function recordCommitEntry(opts) {
   );
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
 }
-async function hasSessionCommitFileEvidence(sessionDir, commitFiles) {
-  const commitFileSet = new Set(commitFiles);
-  if (commitFileSet.size === 0) return false;
+async function hasSessionHeadBlobEvidence(sessionDir, committedBlobs) {
+  if (committedBlobs.size === 0) return false;
   const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
-  const preBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
-  return [...changeEntries, ...preBlobEntries].some((entry) => {
+  return changeEntries.some((entry) => {
     const file = typeof entry.file === "string" ? entry.file : "";
-    return file !== "" && commitFileSet.has(file);
+    const blob = typeof entry.blob === "string" ? entry.blob : "";
+    return file !== "" && blob !== "" && committedBlobs.get(file) === blob;
   });
 }
 function correlatePromptIds(interactions, sessionPromptEntries, transcriptCorrelationStartMs = null) {
@@ -4765,8 +4766,8 @@ async function recordHeadFallback() {
   if (!sessionId) return;
   const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, sessionId);
   if (!await hasRecordableSessionData(sessionDir)) return;
-  const commitFiles = await readHeadCommitFiles();
-  if (!await hasSessionCommitFileEvidence(sessionDir, commitFiles)) return;
+  const headBlobs = await readHeadCommittedBlobs();
+  if (!await hasSessionHeadBlobEvidence(sessionDir, headBlobs)) return;
   await recordCommitEntry({
     agentnoteDirPath,
     sessionId,
@@ -4780,19 +4781,32 @@ async function readActiveSessionId(agentnoteDirPath) {
   if (sessionId === "." || sessionId === "..") return null;
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
 }
-async function readHeadCommitFiles() {
-  const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
-  return raw.split("\n").filter(Boolean);
+async function readHeadCommittedBlobs() {
+  const raw = await git(["diff-tree", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
+  return parseCommittedBlobs(raw);
 }
 async function readHeadTrailerSessionId() {
   return (await git(["log", "-1", `--format=%(trailers:key=${TRAILER_KEY},valueonly)`, "HEAD"])).trim();
 }
+function parseCommittedBlobs(output) {
+  const blobs = /* @__PURE__ */ new Map();
+  for (const line of output.split("\n")) {
+    const match = line.match(/^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) \w+\t(.+)$/);
+    if (!match) continue;
+    const paths = match[2].split("	");
+    blobs.set(paths[paths.length - 1] ?? "", match[1]);
+  }
+  blobs.delete("");
+  return blobs;
+}
 
 // src/commands/commit.ts
+var AMEND_LIKE_COMMIT_ARGS = /* @__PURE__ */ new Set(["--amend", "-c", "-C"]);
 async function commit(args2) {
   const sf = await sessionFile();
   let sessionId = "";
-  if (existsSync9(sf)) {
+  const skipAgentNoteRecording = args2.some((arg) => AMEND_LIKE_COMMIT_ARGS.has(arg));
+  if (!skipAgentNoteRecording && existsSync9(sf)) {
     sessionId = (await readFile9(sf, TEXT_ENCODING)).trim();
     if (sessionId) {
       const dir = await agentnoteDir();
@@ -4836,7 +4850,7 @@ async function commit(args2) {
     } catch (err) {
       console.error(`agent-note: warning: ${err.message}`);
     }
-  } else {
+  } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
     } catch {
@@ -4946,9 +4960,11 @@ ${AGENTNOTE_HOOK_MARKER}
 # Skip amend/reword/reuse (-c/-C/--amend) \u2014 only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
-case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session \u2192 skip.
+# Fail closed: no session file, no heartbeat, or metadata-only session \u2192 skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+rm -f "$FALLBACK_FILE" 2>/dev/null || true
+case "$2" in commit) exit 0;; esac
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
@@ -4961,7 +4977,6 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
 HAS_RECORDABLE_DATA=0
 for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
   if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
@@ -4970,6 +4985,10 @@ for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
   fi
 done
 if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
+if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then
+  printf '%s\\n' '${POST_COMMIT_FALLBACK_HEAD}' > "$FALLBACK_FILE" 2>/dev/null || true
+  exit 0
+fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -4983,7 +5002,15 @@ ${AGENTNOTE_HOOK_MARKER}
 # HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
-if [ -z "$SESSION_ID" ]; then SESSION_ID="--fallback-head"; fi
+if [ -z "$SESSION_ID" ]; then
+  FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+  if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
+    SESSION_ID="--fallback-head"
+  else
+    exit 0
+  fi
+  rm -f "$FALLBACK_FILE" 2>/dev/null || true
+fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then

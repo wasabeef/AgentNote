@@ -16,7 +16,7 @@ import {
   TURN_FILE,
 } from "./constants.js";
 import { analyzePromptSelection, toPersistedSelection } from "./prompt-window.js";
-import { hasSessionCommitFileEvidence, recordCommitEntry } from "./record.js";
+import { hasSessionHeadBlobEvidence, recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";
@@ -872,7 +872,7 @@ describe("prompt task-boundary policy simulation", () => {
 });
 
 describe("post-commit fallback evidence simulation", () => {
-  it("requires commit-file evidence across 100+ generated cases", async () => {
+  it("requires matching post-edit blob evidence across 100+ generated cases", async () => {
     const root = mkdtempSync(join(tmpdir(), "agentnote-fallback-evidence-"));
     const agents = ["claude", "codex", "cursor", "gemini"] as const;
     const evidenceFiles = [
@@ -906,10 +906,11 @@ describe("post-commit fallback evidence simulation", () => {
                     : relation === "unrelated"
                       ? "src/other-file.ts"
                       : "";
+                const blob = relation === "match" ? "abc123" : "def456";
                 writeFileSync(
                   join(sessionDir, evidenceFile),
                   file
-                    ? `{"event":"file_change","tool":"Write","file":"${file}","turn":1}\n`
+                    ? `{"event":"file_change","tool":"Write","file":"${file}","blob":"${blob}","turn":1}\n`
                     : '{"event":"file_change","tool":"Write","turn":1}\n',
                 );
               }
@@ -926,12 +927,13 @@ describe("post-commit fallback evidence simulation", () => {
                 );
               }
 
-              const hasEvidence = await hasSessionCommitFileEvidence(sessionDir, [
-                "src/commit-file.ts",
-              ]);
+              const hasEvidence = await hasSessionHeadBlobEvidence(
+                sessionDir,
+                new Map([["src/commit-file.ts", "abc123"]]),
+              );
               assert.equal(
                 hasEvidence,
-                evidenceFile !== "none" && relation === "match",
+                evidenceFile.includes("changes") && relation === "match",
                 `${agent}/${evidenceFile}/${relation}/${noiseMode}`,
               );
             }
