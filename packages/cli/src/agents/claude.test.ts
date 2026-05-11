@@ -589,6 +589,34 @@ describe("claude adapter", () => {
       assert.equal(enabled, true);
     });
 
+    it("removes legacy repo-local dist hooks from SessionStart", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "node packages/cli/dist/cli.js hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      await claude.removeHooks(repoRoot);
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
+    });
+
     it("does not infer enabled state from unrelated hook command fragments", async () => {
       const settingsDir = join(repoRoot, ".claude");
       mkdirSync(settingsDir, { recursive: true });

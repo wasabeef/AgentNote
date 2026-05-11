@@ -54,6 +54,7 @@ function tokenBasename(token: string): string {
 
 function hasHookTokenSequence(tokens: string[], sequence: string[]): boolean {
   return tokens.some((token, index) => {
+    // Repo-local development hooks pass paths such as `packages/cli/dist/cli.js`.
     const firstMatches =
       token === sequence[0] ||
       (sequence[0] === CLI_JS_HOOK_TOKENS[0] && tokenBasename(token) === sequence[0]);

@@ -405,7 +405,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should keep Pages artifact paths inside the shared action",
     );
     assert.ok(
-      !dashboardWorkflow.includes("packages/dashboard@v1"),
+      !dashboardWorkflow.includes("packages/dashboard@"),
       "dashboard workflow should not expose the internal Dashboard package path",
     );
     assert.ok(
