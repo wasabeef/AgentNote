@@ -2,8 +2,9 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
-import { AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
+import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
+import { isAgentNoteHookCommand } from "./hook-command.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -148,7 +149,7 @@ export const claude: AgentAdapter = {
     for (const [event, entries] of Object.entries(hooks)) {
       hooks[event] = entries.filter((entry) => {
         const text = JSON.stringify(entry);
-        return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
+        return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
       });
       if (hooks[event].length === 0) delete hooks[event];
     }
@@ -171,7 +172,7 @@ export const claude: AgentAdapter = {
       for (const [event, entries] of Object.entries(settings.hooks)) {
         settings.hooks[event] = (entries as unknown[]).filter((e) => {
           const text = JSON.stringify(e);
-          return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
+          return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
         });
         if (settings.hooks[event].length === 0) delete settings.hooks[event];
       }
@@ -187,7 +188,7 @@ export const claude: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, TEXT_ENCODING);
-      return content.includes(CLAUDE_HOOK_COMMAND);
+      return isAgentNoteHookCommand(content, AGENT_NAMES.claude);
     } catch {
       return false;
     }

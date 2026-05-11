@@ -271,6 +271,21 @@ var init_git = __esm({
   }
 });
 
+// src/agents/hook-command.ts
+function isAgentNoteHookCommand(command2, agentName, options = {}) {
+  const isPublicHook = command2.includes(AGENTNOTE_HOOK_COMMAND);
+  const isRepoLocalHook = command2.includes(CLI_JS_HOOK_COMMAND);
+  if (!isPublicHook && !isRepoLocalHook) return false;
+  if (command2.includes(`--agent ${agentName}`)) return true;
+  return options.allowMissingAgent === true && !command2.includes("--agent ");
+}
+var init_hook_command = __esm({
+  "src/agents/hook-command.ts"() {
+    "use strict";
+    init_constants();
+  }
+});
+
 // src/agents/types.ts
 var AGENT_NAMES, NORMALIZED_EVENT_KINDS;
 var init_types = __esm({
@@ -331,6 +346,7 @@ var init_claude = __esm({
     "use strict";
     init_constants();
     init_git();
+    init_hook_command();
     init_types();
     HOOK_COMMAND = "npx --yes agent-note hook";
     CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent ${AGENT_NAMES.claude}`;
@@ -409,7 +425,7 @@ var init_claude = __esm({
         for (const [event, entries] of Object.entries(hooks)) {
           hooks[event] = entries.filter((entry) => {
             const text = JSON.stringify(entry);
-            return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
+            return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
           });
           if (hooks[event].length === 0) delete hooks[event];
         }
@@ -429,7 +445,7 @@ var init_claude = __esm({
           for (const [event, entries] of Object.entries(settings.hooks)) {
             settings.hooks[event] = entries.filter((e) => {
               const text = JSON.stringify(e);
-              return !text.includes(AGENTNOTE_HOOK_COMMAND) && !text.includes(CLI_JS_HOOK_COMMAND);
+              return !isAgentNoteHookCommand(text, AGENT_NAMES.claude, { allowMissingAgent: true });
             });
             if (settings.hooks[event].length === 0) delete settings.hooks[event];
           }
@@ -444,7 +460,7 @@ var init_claude = __esm({
         if (!existsSync(settingsPath)) return false;
         try {
           const content = await readFile(settingsPath, TEXT_ENCODING);
-          return content.includes(CLAUDE_HOOK_COMMAND);
+          return isAgentNoteHookCommand(content, AGENT_NAMES.claude);
         } catch {
           return false;
         }
@@ -784,7 +800,11 @@ function stripAgentnoteHooks(config) {
     Object.entries(config.hooks).map(([event, groups]) => {
       const filteredGroups = groups.map((group) => ({
         ...group,
-        hooks: group.hooks.filter((hook2) => !hook2.command.includes(AGENTNOTE_HOOK_COMMAND))
+        hooks: group.hooks.filter(
+          (hook2) => !isAgentNoteHookCommand(hook2.command, AGENT_NAMES.codex, {
+            allowMissingAgent: true
+          })
+        )
       })).filter((group) => group.hooks.length > 0);
       return [event, filteredGroups];
     }).filter(([, groups]) => groups.length > 0)
@@ -865,6 +885,7 @@ var init_codex = __esm({
   "src/agents/codex.ts"() {
     "use strict";
     init_constants();
+    init_hook_command();
     init_types();
     CONFIG_REL_PATH = ".codex/config.toml";
     ENV_CODEX_HOME = "CODEX_HOME";
@@ -920,7 +941,12 @@ var init_codex = __esm({
             readFile2(hooksPath, TEXT_ENCODING)
           ]);
           const configOk = configContent.includes("features.codex_hooks = true") || configContent.includes("[features]") && configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null;
-          const hasHook = hooksContent.includes(HOOK_COMMAND2);
+          const parsed = JSON.parse(hooksContent);
+          const hasHook = Object.values(parsed.hooks ?? {}).some(
+            (groups) => groups.some(
+              (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.codex))
+            )
+          );
           return configOk && hasHook;
         } catch {
           return false;
@@ -1305,7 +1331,9 @@ function stripAgentnoteHooks2(config) {
   const hooks = Object.fromEntries(
     Object.entries(config.hooks).map(([event, entries]) => [
       event,
-      entries.filter((entry) => !entry.command.includes(AGENTNOTE_HOOK_COMMAND))
+      entries.filter(
+        (entry) => !isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor, { allowMissingAgent: true })
+      )
     ]).filter(([, entries]) => entries.length > 0)
   );
   return { version: config.version ?? 1, hooks };
@@ -1328,6 +1356,7 @@ var init_cursor = __esm({
     "use strict";
     init_constants();
     init_git();
+    init_hook_command();
     init_types();
     HOOKS_REL_PATH2 = ".cursor/hooks.json";
     HOOK_COMMAND3 = `npx --yes agent-note hook --agent ${AGENT_NAMES.cursor}`;
@@ -1380,7 +1409,10 @@ var init_cursor = __esm({
         if (!existsSync3(hooksPath)) return false;
         try {
           const content = await readFile3(hooksPath, TEXT_ENCODING);
-          return content.includes(HOOK_COMMAND3);
+          const parsed = JSON.parse(content);
+          return Object.values(parsed.hooks ?? {}).some(
+            (entries) => entries.some((entry) => isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor))
+          );
         } catch {
           return false;
         }
@@ -1513,7 +1545,9 @@ function extractPartText(content) {
 function stripAgentnoteGroups(groups) {
   return groups.map((group) => ({
     ...group,
-    hooks: group.hooks.filter((hook2) => !hook2.command.includes(AGENTNOTE_HOOK_COMMAND))
+    hooks: group.hooks.filter(
+      (hook2) => !isAgentNoteHookCommand(hook2.command, AGENT_NAMES.gemini, { allowMissingAgent: true })
+    )
   })).filter((group) => group.hooks.length > 0);
 }
 function readTranscriptSessionId2(candidate) {
@@ -1560,6 +1594,7 @@ var init_gemini = __esm({
     "use strict";
     init_constants();
     init_git();
+    init_hook_command();
     init_types();
     HOOK_COMMAND4 = `npx --yes agent-note hook --agent ${AGENT_NAMES.gemini}`;
     ENV_GEMINI_HOME = "GEMINI_HOME";
@@ -1742,7 +1777,12 @@ var init_gemini = __esm({
         if (!existsSync4(settingsPath)) return false;
         try {
           const content = await readFile4(settingsPath, TEXT_ENCODING);
-          return content.includes(HOOK_COMMAND4);
+          const parsed = JSON.parse(content);
+          return Object.values(parsed.hooks ?? {}).some(
+            (groups) => groups.some(
+              (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.gemini))
+            )
+          );
         } catch {
           return false;
         }

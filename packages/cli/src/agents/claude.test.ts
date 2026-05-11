@@ -510,6 +510,11 @@ describe("claude adapter", () => {
                       command: "npx --yes agent-note hook --agent claude",
                       async: true,
                     },
+                    {
+                      type: "command",
+                      command: "node packages/cli/dist/cli.js hook --agent claude",
+                      async: true,
+                    },
                   ],
                 },
                 {
@@ -532,7 +537,9 @@ describe("claude adapter", () => {
       const allCommands =
         settings.hooks?.PostToolUse?.flatMap((g) => g.hooks).map((h) => h.command) ?? [];
       assert.ok(
-        !allCommands.some((c) => c?.includes("agent-note hook")),
+        !allCommands.some(
+          (c) => c?.includes("agent-note hook") || c?.includes("cli.js hook --agent claude"),
+        ),
         "agent-note hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");
@@ -547,6 +554,32 @@ describe("claude adapter", () => {
   describe("isEnabled", () => {
     it("returns true when hooks are installed", async () => {
       await claude.installHooks(repoRoot);
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, true);
+    });
+
+    it("returns true for legacy repo-local dist hooks", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "node packages/cli/dist/cli.js hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
       const enabled = await claude.isEnabled(repoRoot);
       assert.equal(enabled, true);
     });
