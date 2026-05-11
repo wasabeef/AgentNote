@@ -141,7 +141,7 @@ npx agent-note status
 ```
 
 ```text
-agent-note v0.x.x
+agent-note v1.x.x
 
 agent:   active (cursor)
 capture: cursor(prompt, response, edits, shell)

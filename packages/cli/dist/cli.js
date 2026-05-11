@@ -6703,7 +6703,7 @@ init_paths();
 import { existsSync as existsSync14 } from "node:fs";
 import { readFile as readFile12 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4, join as join15 } from "node:path";
-var VERSION = "0.2.4";
+var VERSION = "1.0.0";
 var CAPABILITY_LABELS = {
   edits: "edits",
   prompt: "prompt",
@@ -7231,7 +7231,7 @@ function printUsageAndExit() {
 
 // src/cli.ts
 init_constants();
-var VERSION2 = "0.2.4";
+var VERSION2 = "1.0.0";
 var HELP = `
 agent-note v${VERSION2} \u2014 remember why your code changed
 
