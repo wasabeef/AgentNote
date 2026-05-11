@@ -13,6 +13,7 @@ import {
   SESSIONS_DIR,
   TRAILER_KEY,
   TRANSCRIPT_PATH_FILE,
+  TURN_FILE,
 } from "../core/constants.js";
 
 /** Write a fresh heartbeat so agentnote commit treats the session as active. */
@@ -84,6 +85,41 @@ describe("agentnote commit", () => {
       encoding: "utf-8",
     });
     assert.ok(!msg.includes(TRAILER_KEY), "metadata-only sessions should not get a trailer");
+  });
+
+  it("records non-UUID stale sessions through the strict post-commit fallback", () => {
+    const sessionId = "codex-session-stale-555";
+    const sessionDir = join(testDir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(testDir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add stale commit fallback","turn":1}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"stale-commit.ts","turn":1}\n',
+    );
+
+    writeFileSync(join(testDir, "stale-commit.ts"), "export const staleCommit = true;\n");
+    execSync("git add stale-commit.ts", { cwd: testDir });
+    execSync(`node ${cliPath} commit -m "feat: stale commit fallback"`, { cwd: testDir });
+
+    const msg = execSync("git log -1 --format=%B", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    assert.ok(!msg.includes(TRAILER_KEY), "stale fallback should not add a trailer");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: testDir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "add stale commit fallback");
   });
 
   it("records entry as git note with prompts and AI ratio", () => {

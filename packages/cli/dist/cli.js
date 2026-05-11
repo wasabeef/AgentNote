@@ -1,63 +1,85 @@
 #!/usr/bin/env node
-var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
+
+// src/commands/commit.ts
+import { spawn as spawn2 } from "node:child_process";
+import { existsSync as existsSync9 } from "node:fs";
+import { readFile as readFile9 } from "node:fs/promises";
+import { join as join9 } from "node:path";
 
 // src/core/constants.ts
-var TRAILER_KEY, AGENTNOTE_HOOK_MARKER, AGENTNOTE_IGNORE_FILE, AGENTNOTE_HOOK_COMMAND, CLI_JS_HOOK_COMMAND, NOTES_REF, NOTES_REF_FULL, NOTES_FETCH_REFSPEC, AGENTNOTE_DIR, SESSIONS_DIR, GIT_HOOK_NAMES, PROMPTS_FILE, CHANGES_FILE, EVENTS_FILE, TRANSCRIPT_PATH_FILE, TURN_FILE, PROMPT_ID_FILE, SESSION_FILE, SESSION_AGENT_FILE, PENDING_COMMIT_FILE, MAX_COMMITS, RECENT_STATUS_COMMIT_LIMIT, DEFAULT_LOG_COUNT, BAR_WIDTH_FULL, TRUNCATE_PROMPT, TRUNCATE_PROMPT_PR, TRUNCATE_RESPONSE_SHOW, TRUNCATE_RESPONSE_PR, ARCHIVE_ID_RE, HEARTBEAT_FILE, HEARTBEAT_TTL_SECONDS, MILLISECONDS_PER_SECOND, PRE_BLOBS_FILE, COMMITTED_PAIRS_FILE, RECORDABLE_SESSION_FILES, EMPTY_BLOB, SCHEMA_VERSION, TEXT_ENCODING;
-var init_constants = __esm({
-  "src/core/constants.ts"() {
-    "use strict";
-    TRAILER_KEY = "Agentnote-Session";
-    AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
-    AGENTNOTE_IGNORE_FILE = ".agentnoteignore";
-    AGENTNOTE_HOOK_COMMAND = "agent-note hook";
-    CLI_JS_HOOK_COMMAND = "cli.js hook";
-    NOTES_REF = "agentnote";
-    NOTES_REF_FULL = `refs/notes/${NOTES_REF}`;
-    NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
-    AGENTNOTE_DIR = "agentnote";
-    SESSIONS_DIR = "sessions";
-    GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"];
-    PROMPTS_FILE = "prompts.jsonl";
-    CHANGES_FILE = "changes.jsonl";
-    EVENTS_FILE = "events.jsonl";
-    TRANSCRIPT_PATH_FILE = "transcript_path";
-    TURN_FILE = "turn";
-    PROMPT_ID_FILE = "prompt_id";
-    SESSION_FILE = "session";
-    SESSION_AGENT_FILE = "agent";
-    PENDING_COMMIT_FILE = "pending_commit.json";
-    MAX_COMMITS = 500;
-    RECENT_STATUS_COMMIT_LIMIT = 20;
-    DEFAULT_LOG_COUNT = 10;
-    BAR_WIDTH_FULL = 20;
-    TRUNCATE_PROMPT = 120;
-    TRUNCATE_PROMPT_PR = 500;
-    TRUNCATE_RESPONSE_SHOW = 200;
-    TRUNCATE_RESPONSE_PR = 500;
-    ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
-    HEARTBEAT_FILE = "heartbeat";
-    HEARTBEAT_TTL_SECONDS = 60 * 60;
-    MILLISECONDS_PER_SECOND = 1e3;
-    PRE_BLOBS_FILE = "pre_blobs.jsonl";
-    COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
-    RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
-    EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
-    SCHEMA_VERSION = 1;
-    TEXT_ENCODING = "utf-8";
-  }
-});
+var TRAILER_KEY = "Agentnote-Session";
+var AGENTNOTE_HOOK_MARKER = "# agentnote-managed";
+var AGENTNOTE_IGNORE_FILE = ".agentnoteignore";
+var AGENTNOTE_HOOK_COMMAND = "agent-note hook";
+var CLI_JS_HOOK_COMMAND = "cli.js hook";
+var NOTES_REF = "agentnote";
+var NOTES_REF_FULL = `refs/notes/${NOTES_REF}`;
+var NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
+var AGENTNOTE_DIR = "agentnote";
+var SESSIONS_DIR = "sessions";
+var GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"];
+var PROMPTS_FILE = "prompts.jsonl";
+var CHANGES_FILE = "changes.jsonl";
+var EVENTS_FILE = "events.jsonl";
+var TRANSCRIPT_PATH_FILE = "transcript_path";
+var TURN_FILE = "turn";
+var PROMPT_ID_FILE = "prompt_id";
+var SESSION_FILE = "session";
+var SESSION_AGENT_FILE = "agent";
+var PENDING_COMMIT_FILE = "pending_commit.json";
+var MAX_COMMITS = 500;
+var RECENT_STATUS_COMMIT_LIMIT = 20;
+var DEFAULT_LOG_COUNT = 10;
+var BAR_WIDTH_FULL = 20;
+var TRUNCATE_PROMPT = 120;
+var TRUNCATE_PROMPT_PR = 500;
+var TRUNCATE_RESPONSE_SHOW = 200;
+var TRUNCATE_RESPONSE_PR = 500;
+var ARCHIVE_ID_RE = /^[0-9a-z]{6,}$/;
+var HEARTBEAT_FILE = "heartbeat";
+var HEARTBEAT_TTL_SECONDS = 60 * 60;
+var MILLISECONDS_PER_SECOND = 1e3;
+var PRE_BLOBS_FILE = "pre_blobs.jsonl";
+var COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
+var RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
+var EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
+var SCHEMA_VERSION = 1;
+var TEXT_ENCODING = "utf-8";
+
+// src/core/record.ts
+import { spawn } from "node:child_process";
+import { existsSync as existsSync7 } from "node:fs";
+import { readdir, readFile as readFile7, unlink, writeFile as writeFile6 } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as join6 } from "node:path";
+
+// src/agents/claude.ts
+import { existsSync, readdirSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, resolve, sep } from "node:path";
 
 // src/git.ts
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+var execFileAsync = promisify(execFile);
+var GIT_BINARY = "git";
+var GIT_COMMAND_COMMIT = "commit";
+var GIT_COMMAND_ENV = "env";
+var GIT_COMMAND_WRAPPER = "command";
+var GIT_AMEND_FLAG = "--amend";
+var GIT_END_OF_OPTIONS = "--";
+var SHELL_AND_OPERATOR = "&";
+var SHELL_PIPE_OPERATOR = "|";
+var SHELL_SEMICOLON_OPERATOR = ";";
+var SHELL_NEWLINE = "\n";
+var SHELL_ESCAPE = "\\";
+var SHELL_COMMENT = "#";
+var SHELL_SINGLE_QUOTE = "'";
+var SHELL_DOUBLE_QUOTE = '"';
+var ENV_IGNORE_FLAGS = /* @__PURE__ */ new Set(["-i", "--ignore-environment"]);
+var GIT_OPTIONS_WITH_VALUES = /* @__PURE__ */ new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
+var GIT_OPTIONS_WITH_INLINE_VALUES = ["--git-dir=", "--work-tree=", "--namespace=", "-c="];
 async function git(args2, options) {
   const { stdout } = await execFileAsync(GIT_BINARY, args2, {
     cwd: options?.cwd,
@@ -245,33 +267,15 @@ function injectGitCommitTrailer(command2, trailer) {
   if (!match) return null;
   return `${command2.slice(0, match.insertAt)} ${trailer}${command2.slice(match.insertAt)}`;
 }
-var execFileAsync, GIT_BINARY, GIT_COMMAND_COMMIT, GIT_COMMAND_ENV, GIT_COMMAND_WRAPPER, GIT_AMEND_FLAG, GIT_END_OF_OPTIONS, SHELL_AND_OPERATOR, SHELL_PIPE_OPERATOR, SHELL_SEMICOLON_OPERATOR, SHELL_NEWLINE, SHELL_ESCAPE, SHELL_COMMENT, SHELL_SINGLE_QUOTE, SHELL_DOUBLE_QUOTE, ENV_IGNORE_FLAGS, GIT_OPTIONS_WITH_VALUES, GIT_OPTIONS_WITH_INLINE_VALUES;
-var init_git = __esm({
-  "src/git.ts"() {
-    "use strict";
-    init_constants();
-    execFileAsync = promisify(execFile);
-    GIT_BINARY = "git";
-    GIT_COMMAND_COMMIT = "commit";
-    GIT_COMMAND_ENV = "env";
-    GIT_COMMAND_WRAPPER = "command";
-    GIT_AMEND_FLAG = "--amend";
-    GIT_END_OF_OPTIONS = "--";
-    SHELL_AND_OPERATOR = "&";
-    SHELL_PIPE_OPERATOR = "|";
-    SHELL_SEMICOLON_OPERATOR = ";";
-    SHELL_NEWLINE = "\n";
-    SHELL_ESCAPE = "\\";
-    SHELL_COMMENT = "#";
-    SHELL_SINGLE_QUOTE = "'";
-    SHELL_DOUBLE_QUOTE = '"';
-    ENV_IGNORE_FLAGS = /* @__PURE__ */ new Set(["-i", "--ignore-environment"]);
-    GIT_OPTIONS_WITH_VALUES = /* @__PURE__ */ new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
-    GIT_OPTIONS_WITH_INLINE_VALUES = ["--git-dir=", "--work-tree=", "--namespace=", "-c="];
-  }
-});
 
 // src/agents/hook-command.ts
+var AGENT_FLAG = "--agent";
+var AGENT_FLAG_PREFIX = `${AGENT_FLAG}=`;
+var AGENTNOTE_HOOK_TOKENS = AGENTNOTE_HOOK_COMMAND.split(" ");
+var CLI_JS_HOOK_TOKENS = CLI_JS_HOOK_COMMAND.split(" ");
+var NODE_COMMAND_NAMES = /* @__PURE__ */ new Set(["node", "nodejs"]);
+var NPX_COMMAND_NAME = "npx";
+var PATH_SEPARATOR_RE = /[\\/]/;
 function tokenizeHookCommand(command2) {
   const tokens = [];
   let current = "";
@@ -349,50 +353,80 @@ function isAgentNoteHookCommand(command2, agentName, options = {}) {
   if (agentFlag === agentName) return true;
   return options.allowMissingAgent === true && agentFlag === null;
 }
-var AGENT_FLAG, AGENT_FLAG_PREFIX, AGENTNOTE_HOOK_TOKENS, CLI_JS_HOOK_TOKENS, NODE_COMMAND_NAMES, NPX_COMMAND_NAME, PATH_SEPARATOR_RE;
-var init_hook_command = __esm({
-  "src/agents/hook-command.ts"() {
-    "use strict";
-    init_constants();
-    AGENT_FLAG = "--agent";
-    AGENT_FLAG_PREFIX = `${AGENT_FLAG}=`;
-    AGENTNOTE_HOOK_TOKENS = AGENTNOTE_HOOK_COMMAND.split(" ");
-    CLI_JS_HOOK_TOKENS = CLI_JS_HOOK_COMMAND.split(" ");
-    NODE_COMMAND_NAMES = /* @__PURE__ */ new Set(["node", "nodejs"]);
-    NPX_COMMAND_NAME = "npx";
-    PATH_SEPARATOR_RE = /[\\/]/;
-  }
-});
 
 // src/agents/types.ts
-var AGENT_NAMES, NORMALIZED_EVENT_KINDS;
-var init_types = __esm({
-  "src/agents/types.ts"() {
-    "use strict";
-    AGENT_NAMES = {
-      claude: "claude",
-      codex: "codex",
-      cursor: "cursor",
-      gemini: "gemini"
-    };
-    NORMALIZED_EVENT_KINDS = {
-      sessionStart: "session_start",
-      stop: "stop",
-      response: "response",
-      prompt: "prompt",
-      preEdit: "pre_edit",
-      fileChange: "file_change",
-      preCommit: "pre_commit",
-      postCommit: "post_commit"
-    };
-  }
-});
+var AGENT_NAMES = {
+  claude: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  gemini: "gemini"
+};
+var NORMALIZED_EVENT_KINDS = {
+  sessionStart: "session_start",
+  stop: "stop",
+  response: "response",
+  prompt: "prompt",
+  preEdit: "pre_edit",
+  fileChange: "file_change",
+  preCommit: "pre_commit",
+  postCommit: "post_commit"
+};
 
 // src/agents/claude.ts
-import { existsSync, readdirSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join, resolve, sep } from "node:path";
+var HOOK_COMMAND = "npx --yes agent-note hook";
+var CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent ${AGENT_NAMES.claude}`;
+var ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
+var CLAUDE_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  stop: "Stop",
+  userPromptSubmit: "UserPromptSubmit",
+  preToolUse: "PreToolUse",
+  postToolUse: "PostToolUse"
+};
+var CLAUDE_TOOLS = {
+  bash: "Bash",
+  edit: "Edit",
+  write: "Write",
+  multiEdit: "MultiEdit",
+  notebookEdit: "NotebookEdit"
+};
+var CLAUDE_EDIT_TOOLS = /* @__PURE__ */ new Set([
+  CLAUDE_TOOLS.edit,
+  CLAUDE_TOOLS.write,
+  CLAUDE_TOOLS.multiEdit,
+  CLAUDE_TOOLS.notebookEdit
+]);
+var CLAUDE_EDIT_TOOL_MATCHER = "Edit|Write|MultiEdit|NotebookEdit";
+var CLAUDE_POST_TOOL_MATCHER = `${CLAUDE_EDIT_TOOL_MATCHER}|${CLAUDE_TOOLS.bash}`;
+var CLAUDE_GIT_COMMIT_FILTER = "Bash(*git commit*)";
+var HOOKS_CONFIG = {
+  [CLAUDE_HOOK_EVENTS.sessionStart]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+  ],
+  [CLAUDE_HOOK_EVENTS.stop]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+  ],
+  [CLAUDE_HOOK_EVENTS.userPromptSubmit]: [
+    { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
+  ],
+  [CLAUDE_HOOK_EVENTS.preToolUse]: [
+    {
+      matcher: CLAUDE_EDIT_TOOL_MATCHER,
+      hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND }]
+    },
+    {
+      matcher: CLAUDE_TOOLS.bash,
+      hooks: [{ type: "command", if: CLAUDE_GIT_COMMIT_FILTER, command: CLAUDE_HOOK_COMMAND }]
+    }
+  ],
+  [CLAUDE_HOOK_EVENTS.postToolUse]: [
+    {
+      matcher: CLAUDE_POST_TOOL_MATCHER,
+      hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }]
+    }
+  ]
+};
+var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function claudeHome() {
   return process.env[ENV_AGENTNOTE_CLAUDE_HOME] ?? join(homedir(), ".claude");
 }
@@ -404,6 +438,7 @@ function isValidTranscriptPath(p) {
   const normalized = resolve(p);
   return normalized === base || normalized.startsWith(`${base}${sep}`);
 }
+var SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
 function isSystemInjectedPrompt(prompt) {
   for (const prefix of SYSTEM_PROMPT_PREFIXES) {
     if (prompt.startsWith(prefix)) {
@@ -441,296 +476,241 @@ function hasManagedClaudeHook(entry) {
     return typeof command2 === "string" && isAgentNoteHookCommand(command2, AGENT_NAMES.claude);
   });
 }
-var HOOK_COMMAND, CLAUDE_HOOK_COMMAND, ENV_AGENTNOTE_CLAUDE_HOME, CLAUDE_HOOK_EVENTS, CLAUDE_TOOLS, CLAUDE_EDIT_TOOLS, CLAUDE_EDIT_TOOL_MATCHER, CLAUDE_POST_TOOL_MATCHER, CLAUDE_GIT_COMMIT_FILTER, HOOKS_CONFIG, UUID_PATTERN, SYSTEM_PROMPT_PREFIXES, claude;
-var init_claude = __esm({
-  "src/agents/claude.ts"() {
-    "use strict";
-    init_constants();
-    init_git();
-    init_hook_command();
-    init_types();
-    HOOK_COMMAND = "npx --yes agent-note hook";
-    CLAUDE_HOOK_COMMAND = `${HOOK_COMMAND} --agent ${AGENT_NAMES.claude}`;
-    ENV_AGENTNOTE_CLAUDE_HOME = "AGENTNOTE_CLAUDE_HOME";
-    CLAUDE_HOOK_EVENTS = {
-      sessionStart: "SessionStart",
-      stop: "Stop",
-      userPromptSubmit: "UserPromptSubmit",
-      preToolUse: "PreToolUse",
-      postToolUse: "PostToolUse"
-    };
-    CLAUDE_TOOLS = {
-      bash: "Bash",
-      edit: "Edit",
-      write: "Write",
-      multiEdit: "MultiEdit",
-      notebookEdit: "NotebookEdit"
-    };
-    CLAUDE_EDIT_TOOLS = /* @__PURE__ */ new Set([
-      CLAUDE_TOOLS.edit,
-      CLAUDE_TOOLS.write,
-      CLAUDE_TOOLS.multiEdit,
-      CLAUDE_TOOLS.notebookEdit
-    ]);
-    CLAUDE_EDIT_TOOL_MATCHER = "Edit|Write|MultiEdit|NotebookEdit";
-    CLAUDE_POST_TOOL_MATCHER = `${CLAUDE_EDIT_TOOL_MATCHER}|${CLAUDE_TOOLS.bash}`;
-    CLAUDE_GIT_COMMIT_FILTER = "Bash(*git commit*)";
-    HOOKS_CONFIG = {
-      [CLAUDE_HOOK_EVENTS.sessionStart]: [
-        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
-      ],
-      [CLAUDE_HOOK_EVENTS.stop]: [
-        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
-      ],
-      [CLAUDE_HOOK_EVENTS.userPromptSubmit]: [
-        { hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }] }
-      ],
-      [CLAUDE_HOOK_EVENTS.preToolUse]: [
-        {
-          matcher: CLAUDE_EDIT_TOOL_MATCHER,
-          hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND }]
-        },
-        {
-          matcher: CLAUDE_TOOLS.bash,
-          hooks: [{ type: "command", if: CLAUDE_GIT_COMMIT_FILTER, command: CLAUDE_HOOK_COMMAND }]
-        }
-      ],
-      [CLAUDE_HOOK_EVENTS.postToolUse]: [
-        {
-          matcher: CLAUDE_POST_TOOL_MATCHER,
-          hooks: [{ type: "command", command: CLAUDE_HOOK_COMMAND, async: true }]
-        }
-      ]
-    };
-    UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
-    claude = {
-      name: AGENT_NAMES.claude,
-      settingsRelPath: ".claude/settings.json",
-      async managedPaths() {
-        return [this.settingsRelPath];
-      },
-      async installHooks(repoRoot3) {
-        const settingsPath = join(repoRoot3, this.settingsRelPath);
-        const { dirname: dirname2 } = await import("node:path");
-        await mkdir(dirname2(settingsPath), { recursive: true });
-        let settings = {};
-        if (existsSync(settingsPath)) {
-          try {
-            settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
-          } catch {
-            settings = {};
-          }
-        }
-        const hooks = settings.hooks ?? {};
-        for (const [event, entries] of Object.entries(hooks)) {
-          hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
-          if (hooks[event].length === 0) delete hooks[event];
-        }
-        for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
-          hooks[event] = [...hooks[event] ?? [], ...entries];
-        }
-        settings.hooks = hooks;
-        await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}
+var claude = {
+  name: AGENT_NAMES.claude,
+  settingsRelPath: ".claude/settings.json",
+  async managedPaths() {
+    return [this.settingsRelPath];
+  },
+  async installHooks(repoRoot3) {
+    const settingsPath = join(repoRoot3, this.settingsRelPath);
+    const { dirname: dirname2 } = await import("node:path");
+    await mkdir(dirname2(settingsPath), { recursive: true });
+    let settings = {};
+    if (existsSync(settingsPath)) {
+      try {
+        settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
+      } catch {
+        settings = {};
+      }
+    }
+    const hooks = settings.hooks ?? {};
+    for (const [event, entries] of Object.entries(hooks)) {
+      hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
+      if (hooks[event].length === 0) delete hooks[event];
+    }
+    for (const [event, entries] of Object.entries(HOOKS_CONFIG)) {
+      hooks[event] = [...hooks[event] ?? [], ...entries];
+    }
+    settings.hooks = hooks;
+    await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}
 `);
-      },
-      async removeHooks(repoRoot3) {
-        const settingsPath = join(repoRoot3, this.settingsRelPath);
-        if (!existsSync(settingsPath)) return;
-        try {
-          const settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
-          if (!settings.hooks) return;
-          for (const [event, entries] of Object.entries(settings.hooks)) {
-            settings.hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
-            if (settings.hooks[event].length === 0) delete settings.hooks[event];
-          }
-          if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-          await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}
+  },
+  async removeHooks(repoRoot3) {
+    const settingsPath = join(repoRoot3, this.settingsRelPath);
+    if (!existsSync(settingsPath)) return;
+    try {
+      const settings = JSON.parse(await readFile(settingsPath, TEXT_ENCODING));
+      if (!settings.hooks) return;
+      for (const [event, entries] of Object.entries(settings.hooks)) {
+        settings.hooks[event] = entries.map(removeManagedClaudeHooks).filter((entry) => entry !== null);
+        if (settings.hooks[event].length === 0) delete settings.hooks[event];
+      }
+      if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+      await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}
 `);
-        } catch {
-        }
-      },
-      async isEnabled(repoRoot3) {
-        const settingsPath = join(repoRoot3, this.settingsRelPath);
-        if (!existsSync(settingsPath)) return false;
-        try {
-          const content = await readFile(settingsPath, TEXT_ENCODING);
-          const settings = JSON.parse(content);
-          return Object.values(settings.hooks ?? {}).some(
-            (entries) => entries.some((entry) => hasManagedClaudeHook(entry))
-          );
-        } catch {
-          return false;
-        }
-      },
-      parseEvent(input) {
-        let e;
-        try {
-          e = JSON.parse(input.raw);
-        } catch {
+    } catch {
+    }
+  },
+  async isEnabled(repoRoot3) {
+    const settingsPath = join(repoRoot3, this.settingsRelPath);
+    if (!existsSync(settingsPath)) return false;
+    try {
+      const content = await readFile(settingsPath, TEXT_ENCODING);
+      const settings = JSON.parse(content);
+      return Object.values(settings.hooks ?? {}).some(
+        (entries) => entries.some((entry) => hasManagedClaudeHook(entry))
+      );
+    } catch {
+      return false;
+    }
+  },
+  parseEvent(input) {
+    let e;
+    try {
+      e = JSON.parse(input.raw);
+    } catch {
+      return null;
+    }
+    const sid = e.session_id;
+    const ts = (/* @__PURE__ */ new Date()).toISOString();
+    if (!sid || !isValidSessionId(sid)) return null;
+    const tp = e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : void 0;
+    switch (e.hook_event_name) {
+      case CLAUDE_HOOK_EVENTS.sessionStart:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
+          sessionId: sid,
+          timestamp: ts,
+          model: e.model,
+          transcriptPath: tp
+        };
+      case CLAUDE_HOOK_EVENTS.stop:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId: sid,
+          timestamp: ts,
+          transcriptPath: tp
+        };
+      case CLAUDE_HOOK_EVENTS.userPromptSubmit:
+        if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
           return null;
         }
-        const sid = e.session_id;
-        const ts = (/* @__PURE__ */ new Date()).toISOString();
-        if (!sid || !isValidSessionId(sid)) return null;
-        const tp = e.transcript_path && isValidTranscriptPath(e.transcript_path) ? e.transcript_path : void 0;
-        switch (e.hook_event_name) {
-          case CLAUDE_HOOK_EVENTS.sessionStart:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.sessionStart,
-              sessionId: sid,
-              timestamp: ts,
-              model: e.model,
-              transcriptPath: tp
-            };
-          case CLAUDE_HOOK_EVENTS.stop:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.stop,
-              sessionId: sid,
-              timestamp: ts,
-              transcriptPath: tp
-            };
-          case CLAUDE_HOOK_EVENTS.userPromptSubmit:
-            if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
-              return null;
-            }
-            return {
-              kind: NORMALIZED_EVENT_KINDS.prompt,
-              sessionId: sid,
-              timestamp: ts,
-              prompt: e.prompt
-            };
-          case CLAUDE_HOOK_EVENTS.preToolUse: {
-            const tool = e.tool_name;
-            const cmd = e.tool_input?.command ?? "";
-            if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.preEdit,
-                sessionId: sid,
-                timestamp: ts,
-                tool,
-                file: e.tool_input.file_path,
-                toolUseId: e.tool_use_id
-              };
-            }
-            if (tool === CLAUDE_TOOLS.bash && isGitCommit(cmd)) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.preCommit,
-                sessionId: sid,
-                timestamp: ts,
-                commitCommand: cmd
-              };
-            }
-            return null;
-          }
-          case CLAUDE_HOOK_EVENTS.postToolUse: {
-            const tool = e.tool_name;
-            if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.fileChange,
-                sessionId: sid,
-                timestamp: ts,
-                tool,
-                file: e.tool_input.file_path,
-                toolUseId: e.tool_use_id
-              };
-            }
-            if (tool === CLAUDE_TOOLS.bash && isGitCommit(e.tool_input?.command ?? "")) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.postCommit,
-                sessionId: sid,
-                timestamp: ts,
-                transcriptPath: tp
-              };
-            }
-            return null;
-          }
-          default:
-            return null;
+        return {
+          kind: NORMALIZED_EVENT_KINDS.prompt,
+          sessionId: sid,
+          timestamp: ts,
+          prompt: e.prompt
+        };
+      case CLAUDE_HOOK_EVENTS.preToolUse: {
+        const tool = e.tool_name;
+        const cmd = e.tool_input?.command ?? "";
+        if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preEdit,
+            sessionId: sid,
+            timestamp: ts,
+            tool,
+            file: e.tool_input.file_path,
+            toolUseId: e.tool_use_id
+          };
         }
-      },
-      findTranscript(sessionId) {
-        if (!isValidSessionId(sessionId)) return null;
-        const claudeDir = join(claudeHome(), "projects");
-        if (!existsSync(claudeDir)) return null;
-        try {
-          for (const project of readdirSync(claudeDir)) {
-            const sessionsDir = join(claudeDir, project, "sessions");
-            if (!existsSync(sessionsDir)) continue;
-            const candidate = join(sessionsDir, `${sessionId}.jsonl`);
-            if (existsSync(candidate) && isValidTranscriptPath(candidate)) {
-              return candidate;
-            }
-          }
-        } catch {
+        if (tool === CLAUDE_TOOLS.bash && isGitCommit(cmd)) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preCommit,
+            sessionId: sid,
+            timestamp: ts,
+            commitCommand: cmd
+          };
         }
         return null;
-      },
-      async extractInteractions(transcriptPath) {
-        if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
-        try {
-          const content = await readFile(transcriptPath, TEXT_ENCODING);
-          const lines = content.trim().split("\n");
-          const interactions = [];
-          let pendingPrompt = null;
-          let pendingPromptTimestamp;
-          let pendingResponseTexts = [];
-          const flush = () => {
-            if (pendingPrompt === null) return;
-            const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
-            const interaction = { prompt: pendingPrompt, response };
-            if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
-            interactions.push(interaction);
-            pendingPrompt = null;
-            pendingPromptTimestamp = void 0;
-            pendingResponseTexts = [];
+      }
+      case CLAUDE_HOOK_EVENTS.postToolUse: {
+        const tool = e.tool_name;
+        if (tool && CLAUDE_EDIT_TOOLS.has(tool) && e.tool_input?.file_path) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.fileChange,
+            sessionId: sid,
+            timestamp: ts,
+            tool,
+            file: e.tool_input.file_path,
+            toolUseId: e.tool_use_id
           };
-          const extractUserText = (content2) => {
-            if (!Array.isArray(content2)) return null;
-            const texts = [];
-            for (const block of content2) {
-              if (block && typeof block === "object" && block.type === "text" && block.text) {
-                texts.push(block.text);
-              }
-            }
-            return texts.length > 0 ? texts.join("\n") : null;
+        }
+        if (tool === CLAUDE_TOOLS.bash && isGitCommit(e.tool_input?.command ?? "")) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.postCommit,
+            sessionId: sid,
+            timestamp: ts,
+            transcriptPath: tp
           };
-          for (const line of lines) {
-            try {
-              const entry = JSON.parse(line);
-              if (entry.type === "user" && entry.message?.content) {
-                const userText = extractUserText(entry.message.content);
-                if (userText) {
-                  flush();
-                  pendingPrompt = userText;
-                  pendingPromptTimestamp = typeof entry.timestamp === "string" ? entry.timestamp : void 0;
-                }
-              }
-              if (entry.type === "assistant" && entry.message?.content && pendingPrompt !== null) {
-                for (const block of entry.message.content) {
-                  if (block?.type === "text" && block.text) {
-                    pendingResponseTexts.push(block.text);
-                  }
-                }
-              }
-            } catch {
-            }
-          }
-          flush();
-          return interactions;
-        } catch {
-          return [];
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  },
+  findTranscript(sessionId) {
+    if (!isValidSessionId(sessionId)) return null;
+    const claudeDir = join(claudeHome(), "projects");
+    if (!existsSync(claudeDir)) return null;
+    try {
+      for (const project of readdirSync(claudeDir)) {
+        const sessionsDir = join(claudeDir, project, "sessions");
+        if (!existsSync(sessionsDir)) continue;
+        const candidate = join(sessionsDir, `${sessionId}.jsonl`);
+        if (existsSync(candidate) && isValidTranscriptPath(candidate)) {
+          return candidate;
         }
       }
-    };
+    } catch {
+    }
+    return null;
+  },
+  async extractInteractions(transcriptPath) {
+    if (!isValidTranscriptPath(transcriptPath) || !existsSync(transcriptPath)) return [];
+    try {
+      const content = await readFile(transcriptPath, TEXT_ENCODING);
+      const lines = content.trim().split("\n");
+      const interactions = [];
+      let pendingPrompt = null;
+      let pendingPromptTimestamp;
+      let pendingResponseTexts = [];
+      const flush = () => {
+        if (pendingPrompt === null) return;
+        const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
+        const interaction = { prompt: pendingPrompt, response };
+        if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
+        interactions.push(interaction);
+        pendingPrompt = null;
+        pendingPromptTimestamp = void 0;
+        pendingResponseTexts = [];
+      };
+      const extractUserText = (content2) => {
+        if (!Array.isArray(content2)) return null;
+        const texts = [];
+        for (const block of content2) {
+          if (block && typeof block === "object" && block.type === "text" && block.text) {
+            texts.push(block.text);
+          }
+        }
+        return texts.length > 0 ? texts.join("\n") : null;
+      };
+      for (const line of lines) {
+        try {
+          const entry = JSON.parse(line);
+          if (entry.type === "user" && entry.message?.content) {
+            const userText = extractUserText(entry.message.content);
+            if (userText) {
+              flush();
+              pendingPrompt = userText;
+              pendingPromptTimestamp = typeof entry.timestamp === "string" ? entry.timestamp : void 0;
+            }
+          }
+          if (entry.type === "assistant" && entry.message?.content && pendingPrompt !== null) {
+            for (const block of entry.message.content) {
+              if (block?.type === "text" && block.text) {
+                pendingResponseTexts.push(block.text);
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      flush();
+      return interactions;
+    } catch {
+      return [];
+    }
   }
-});
+};
 
 // src/agents/codex.ts
 import { existsSync as existsSync2, readdirSync as readdirSync2, readFileSync } from "node:fs";
 import { mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
 import { isAbsolute, join as join2, relative, resolve as resolve2, sep as sep2 } from "node:path";
+var CONFIG_REL_PATH = ".codex/config.toml";
+var ENV_CODEX_HOME = "CODEX_HOME";
+var HOOKS_REL_PATH = ".codex/hooks.json";
+var HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
+var TRANSCRIPT_PREVIEW_CHARS = 4096;
+var CODEX_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  userPromptSubmit: "UserPromptSubmit",
+  stop: "Stop"
+};
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -978,218 +958,199 @@ function appendInteractionTool(interaction, toolName) {
   if (tools.includes(toolName)) return;
   interaction.tools = [...tools, toolName];
 }
-var CONFIG_REL_PATH, ENV_CODEX_HOME, HOOKS_REL_PATH, HOOK_COMMAND2, TRANSCRIPT_PREVIEW_CHARS, CODEX_HOOK_EVENTS, codex;
-var init_codex = __esm({
-  "src/agents/codex.ts"() {
-    "use strict";
-    init_constants();
-    init_hook_command();
-    init_types();
-    CONFIG_REL_PATH = ".codex/config.toml";
-    ENV_CODEX_HOME = "CODEX_HOME";
-    HOOKS_REL_PATH = ".codex/hooks.json";
-    HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
-    TRANSCRIPT_PREVIEW_CHARS = 4096;
-    CODEX_HOOK_EVENTS = {
-      sessionStart: "SessionStart",
-      userPromptSubmit: "UserPromptSubmit",
-      stop: "Stop"
-    };
-    codex = {
-      name: AGENT_NAMES.codex,
-      settingsRelPath: CONFIG_REL_PATH,
-      async managedPaths() {
-        return [CONFIG_REL_PATH, HOOKS_REL_PATH];
-      },
-      async installHooks(repoRoot3) {
-        const codexDir = join2(repoRoot3, ".codex");
-        const configPath = join2(repoRoot3, CONFIG_REL_PATH);
-        const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
-        await mkdir2(codexDir, { recursive: true });
-        const configContent = existsSync2(configPath) ? await readFile2(configPath, TEXT_ENCODING) : "";
-        await writeFile2(configPath, normalizeConfigToml(configContent));
-        let hooksConfig = {};
-        if (existsSync2(hooksPath)) {
-          try {
-            hooksConfig = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
-          } catch {
-            hooksConfig = {};
-          }
-        }
-        await writeFile2(hooksPath, `${JSON.stringify(mergeHooksConfig(hooksConfig), null, 2)}
-`);
-      },
-      async removeHooks(repoRoot3) {
-        const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
-        if (!existsSync2(hooksPath)) return;
-        try {
-          const parsed = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
-          await writeFile2(hooksPath, `${JSON.stringify(stripAgentnoteHooks(parsed), null, 2)}
-`);
-        } catch {
-        }
-      },
-      async isEnabled(repoRoot3) {
-        const configPath = join2(repoRoot3, CONFIG_REL_PATH);
-        const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
-        if (!existsSync2(configPath) || !existsSync2(hooksPath)) return false;
-        try {
-          const [configContent, hooksContent] = await Promise.all([
-            readFile2(configPath, TEXT_ENCODING),
-            readFile2(hooksPath, TEXT_ENCODING)
-          ]);
-          const configOk = configContent.includes("features.codex_hooks = true") || configContent.includes("[features]") && configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null;
-          const parsed = JSON.parse(hooksContent);
-          const hasHook = Object.values(parsed.hooks ?? {}).some(
-            (groups) => groups.some(
-              (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.codex))
-            )
-          );
-          return configOk && hasHook;
-        } catch {
-          return false;
-        }
-      },
-      parseEvent(input) {
-        let payload;
-        try {
-          payload = JSON.parse(input.raw);
-        } catch {
-          return null;
-        }
-        const sessionId = payload.session_id?.trim();
-        if (!sessionId) return null;
-        const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-        const transcriptPath = normalizeTranscriptPath(payload.transcript_path);
-        switch (payload.hook_event_name) {
-          case CODEX_HOOK_EVENTS.sessionStart:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.sessionStart,
-              sessionId,
-              timestamp,
-              model: payload.model,
-              transcriptPath
-            };
-          case CODEX_HOOK_EVENTS.userPromptSubmit:
-            return payload.prompt ? {
-              kind: NORMALIZED_EVENT_KINDS.prompt,
-              sessionId,
-              timestamp,
-              prompt: payload.prompt,
-              transcriptPath,
-              model: payload.model
-            } : null;
-          case CODEX_HOOK_EVENTS.stop:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.stop,
-              sessionId,
-              timestamp,
-              response: payload.last_assistant_message ?? void 0,
-              transcriptPath,
-              model: payload.model
-            };
-          default:
-            return null;
-        }
-      },
-      findTranscript(sessionId) {
-        const sessionsDir = join2(codexHome(), "sessions");
-        if (!existsSync2(sessionsDir)) return null;
-        return findTranscriptCandidate(sessionsDir, sessionId);
-      },
-      async extractInteractions(transcriptPath) {
-        if (!isValidTranscriptPath2(transcriptPath)) {
-          throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
-        }
-        if (!existsSync2(transcriptPath)) {
-          throw new Error(`Codex transcript not found: ${transcriptPath}`);
-        }
-        let content;
-        try {
-          content = await readFile2(transcriptPath, TEXT_ENCODING);
-        } catch {
-          throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
-        }
-        const interactions = [];
-        let current = null;
-        let sessionCwd;
-        for (const rawLine of content.split("\n")) {
-          const line = rawLine.trim();
-          if (!line) continue;
-          let entry;
-          try {
-            entry = JSON.parse(line);
-          } catch {
-            continue;
-          }
-          if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
-            sessionCwd = entry.payload.cwd;
-            continue;
-          }
-          if (entry.type !== "response_item" || !entry.payload) continue;
-          const payload = entry.payload;
-          const payloadType = typeof payload.type === "string" ? payload.type : void 0;
-          const payloadRole = typeof payload.role === "string" ? payload.role : void 0;
-          if (payloadType === "message" && payloadRole === "user") {
-            const prompt = collectMessageText(payload.content).join("\n");
-            if (!prompt) continue;
-            if (current) interactions.push(current);
-            current = { prompt, response: null };
-            if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
-            continue;
-          }
-          if (!current) continue;
-          if (payloadType === "message" && payloadRole === "assistant") {
-            const response = collectMessageText(payload.content).join("\n");
-            if (response) {
-              current.response = current.response ? `${current.response}
-${response}` : response;
-            }
-            continue;
-          }
-          const toolName = typeof payload.name === "string" ? payload.name : typeof payload.call_name === "string" ? payload.call_name : void 0;
-          if ((payloadType === "custom_tool_call" || payloadType === "function_call" || payloadType === "tool_use") && toolName) {
-            appendInteractionTool(current, toolName);
-          }
-          if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
-            const patchInputs = [
-              ...collectPatchStrings(payload.input),
-              ...collectPatchStrings(payload.arguments)
-            ];
-            const files = [];
-            const fileSeen = /* @__PURE__ */ new Set();
-            current.line_stats = current.line_stats ?? {};
-            for (const patchInput of patchInputs) {
-              for (const file of extractFilesFromApplyPatch(patchInput)) {
-                const normalized = normalizeInteractionFilePath(file, sessionCwd);
-                if (!normalized) continue;
-                appendUnique(files, fileSeen, normalized);
-              }
-              const lineStats = extractLineStatsFromApplyPatch(patchInput);
-              for (const [file, stats] of Object.entries(lineStats)) {
-                const normalized = normalizeInteractionFilePath(file, sessionCwd);
-                if (!normalized) continue;
-                const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
-                current.line_stats[normalized] = {
-                  added: previous.added + stats.added,
-                  deleted: previous.deleted + stats.deleted
-                };
-              }
-            }
-            if (files.length > 0) {
-              current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], ...files])];
-            }
-            if (Object.keys(current.line_stats).length === 0) {
-              delete current.line_stats;
-            }
-          }
-        }
-        if (current) interactions.push(current);
-        return interactions;
+var codex = {
+  name: AGENT_NAMES.codex,
+  settingsRelPath: CONFIG_REL_PATH,
+  async managedPaths() {
+    return [CONFIG_REL_PATH, HOOKS_REL_PATH];
+  },
+  async installHooks(repoRoot3) {
+    const codexDir = join2(repoRoot3, ".codex");
+    const configPath = join2(repoRoot3, CONFIG_REL_PATH);
+    const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
+    await mkdir2(codexDir, { recursive: true });
+    const configContent = existsSync2(configPath) ? await readFile2(configPath, TEXT_ENCODING) : "";
+    await writeFile2(configPath, normalizeConfigToml(configContent));
+    let hooksConfig = {};
+    if (existsSync2(hooksPath)) {
+      try {
+        hooksConfig = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
+      } catch {
+        hooksConfig = {};
       }
-    };
+    }
+    await writeFile2(hooksPath, `${JSON.stringify(mergeHooksConfig(hooksConfig), null, 2)}
+`);
+  },
+  async removeHooks(repoRoot3) {
+    const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
+    if (!existsSync2(hooksPath)) return;
+    try {
+      const parsed = JSON.parse(await readFile2(hooksPath, TEXT_ENCODING));
+      await writeFile2(hooksPath, `${JSON.stringify(stripAgentnoteHooks(parsed), null, 2)}
+`);
+    } catch {
+    }
+  },
+  async isEnabled(repoRoot3) {
+    const configPath = join2(repoRoot3, CONFIG_REL_PATH);
+    const hooksPath = join2(repoRoot3, HOOKS_REL_PATH);
+    if (!existsSync2(configPath) || !existsSync2(hooksPath)) return false;
+    try {
+      const [configContent, hooksContent] = await Promise.all([
+        readFile2(configPath, TEXT_ENCODING),
+        readFile2(hooksPath, TEXT_ENCODING)
+      ]);
+      const configOk = configContent.includes("features.codex_hooks = true") || configContent.includes("[features]") && configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null;
+      const parsed = JSON.parse(hooksContent);
+      const hasHook = Object.values(parsed.hooks ?? {}).some(
+        (groups) => groups.some(
+          (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.codex))
+        )
+      );
+      return configOk && hasHook;
+    } catch {
+      return false;
+    }
+  },
+  parseEvent(input) {
+    let payload;
+    try {
+      payload = JSON.parse(input.raw);
+    } catch {
+      return null;
+    }
+    const sessionId = payload.session_id?.trim();
+    if (!sessionId) return null;
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const transcriptPath = normalizeTranscriptPath(payload.transcript_path);
+    switch (payload.hook_event_name) {
+      case CODEX_HOOK_EVENTS.sessionStart:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
+          sessionId,
+          timestamp,
+          model: payload.model,
+          transcriptPath
+        };
+      case CODEX_HOOK_EVENTS.userPromptSubmit:
+        return payload.prompt ? {
+          kind: NORMALIZED_EVENT_KINDS.prompt,
+          sessionId,
+          timestamp,
+          prompt: payload.prompt,
+          transcriptPath,
+          model: payload.model
+        } : null;
+      case CODEX_HOOK_EVENTS.stop:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId,
+          timestamp,
+          response: payload.last_assistant_message ?? void 0,
+          transcriptPath,
+          model: payload.model
+        };
+      default:
+        return null;
+    }
+  },
+  findTranscript(sessionId) {
+    const sessionsDir = join2(codexHome(), "sessions");
+    if (!existsSync2(sessionsDir)) return null;
+    return findTranscriptCandidate(sessionsDir, sessionId);
+  },
+  async extractInteractions(transcriptPath) {
+    if (!isValidTranscriptPath2(transcriptPath)) {
+      throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
+    }
+    if (!existsSync2(transcriptPath)) {
+      throw new Error(`Codex transcript not found: ${transcriptPath}`);
+    }
+    let content;
+    try {
+      content = await readFile2(transcriptPath, TEXT_ENCODING);
+    } catch {
+      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
+    }
+    const interactions = [];
+    let current = null;
+    let sessionCwd;
+    for (const rawLine of content.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      let entry;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
+        sessionCwd = entry.payload.cwd;
+        continue;
+      }
+      if (entry.type !== "response_item" || !entry.payload) continue;
+      const payload = entry.payload;
+      const payloadType = typeof payload.type === "string" ? payload.type : void 0;
+      const payloadRole = typeof payload.role === "string" ? payload.role : void 0;
+      if (payloadType === "message" && payloadRole === "user") {
+        const prompt = collectMessageText(payload.content).join("\n");
+        if (!prompt) continue;
+        if (current) interactions.push(current);
+        current = { prompt, response: null };
+        if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
+        continue;
+      }
+      if (!current) continue;
+      if (payloadType === "message" && payloadRole === "assistant") {
+        const response = collectMessageText(payload.content).join("\n");
+        if (response) {
+          current.response = current.response ? `${current.response}
+${response}` : response;
+        }
+        continue;
+      }
+      const toolName = typeof payload.name === "string" ? payload.name : typeof payload.call_name === "string" ? payload.call_name : void 0;
+      if ((payloadType === "custom_tool_call" || payloadType === "function_call" || payloadType === "tool_use") && toolName) {
+        appendInteractionTool(current, toolName);
+      }
+      if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
+        const patchInputs = [
+          ...collectPatchStrings(payload.input),
+          ...collectPatchStrings(payload.arguments)
+        ];
+        const files = [];
+        const fileSeen = /* @__PURE__ */ new Set();
+        current.line_stats = current.line_stats ?? {};
+        for (const patchInput of patchInputs) {
+          for (const file of extractFilesFromApplyPatch(patchInput)) {
+            const normalized = normalizeInteractionFilePath(file, sessionCwd);
+            if (!normalized) continue;
+            appendUnique(files, fileSeen, normalized);
+          }
+          const lineStats = extractLineStatsFromApplyPatch(patchInput);
+          for (const [file, stats] of Object.entries(lineStats)) {
+            const normalized = normalizeInteractionFilePath(file, sessionCwd);
+            if (!normalized) continue;
+            const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
+            current.line_stats[normalized] = {
+              added: previous.added + stats.added,
+              deleted: previous.deleted + stats.deleted
+            };
+          }
+        }
+        if (files.length > 0) {
+          current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], ...files])];
+        }
+        if (Object.keys(current.line_stats).length === 0) {
+          delete current.line_stats;
+        }
+      }
+    }
+    if (current) interactions.push(current);
+    return interactions;
   }
-});
+};
 
 // src/agents/cursor.ts
 import { execFileSync } from "node:child_process";
@@ -1197,6 +1158,21 @@ import { existsSync as existsSync3, statSync } from "node:fs";
 import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile3 } from "node:fs/promises";
 import { homedir as homedir3 } from "node:os";
 import { join as join3, resolve as resolve3, sep as sep3 } from "node:path";
+var HOOKS_REL_PATH2 = ".cursor/hooks.json";
+var HOOK_COMMAND3 = `npx --yes agent-note hook --agent ${AGENT_NAMES.cursor}`;
+var CURSOR_PROJECTS_DIR = join3(homedir3(), ".cursor", "projects");
+var CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
+var TRANSCRIPT_WAIT_MS = 1500;
+var TRANSCRIPT_POLL_MS = 50;
+var CURSOR_HOOK_EVENTS = {
+  beforeSubmitPrompt: "beforeSubmitPrompt",
+  afterAgentResponse: "afterAgentResponse",
+  beforeShellExecution: "beforeShellExecution",
+  afterFileEdit: "afterFileEdit",
+  afterTabFileEdit: "afterTabFileEdit",
+  afterShellExecution: "afterShellExecution",
+  stop: "stop"
+};
 function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1448,170 +1424,274 @@ function mergeHooksConfig2(existing) {
     hooks: mergedHooks
   };
 }
-var HOOKS_REL_PATH2, HOOK_COMMAND3, CURSOR_PROJECTS_DIR, CURSOR_TRANSCRIPTS_DIR_ENV, TRANSCRIPT_WAIT_MS, TRANSCRIPT_POLL_MS, CURSOR_HOOK_EVENTS, cursor;
-var init_cursor = __esm({
-  "src/agents/cursor.ts"() {
-    "use strict";
-    init_constants();
-    init_git();
-    init_hook_command();
-    init_types();
-    HOOKS_REL_PATH2 = ".cursor/hooks.json";
-    HOOK_COMMAND3 = `npx --yes agent-note hook --agent ${AGENT_NAMES.cursor}`;
-    CURSOR_PROJECTS_DIR = join3(homedir3(), ".cursor", "projects");
-    CURSOR_TRANSCRIPTS_DIR_ENV = "AGENTNOTE_CURSOR_TRANSCRIPTS_DIR";
-    TRANSCRIPT_WAIT_MS = 1500;
-    TRANSCRIPT_POLL_MS = 50;
-    CURSOR_HOOK_EVENTS = {
-      beforeSubmitPrompt: "beforeSubmitPrompt",
-      afterAgentResponse: "afterAgentResponse",
-      beforeShellExecution: "beforeShellExecution",
-      afterFileEdit: "afterFileEdit",
-      afterTabFileEdit: "afterTabFileEdit",
-      afterShellExecution: "afterShellExecution",
-      stop: "stop"
-    };
-    cursor = {
-      name: AGENT_NAMES.cursor,
-      settingsRelPath: HOOKS_REL_PATH2,
-      async managedPaths() {
-        return [HOOKS_REL_PATH2];
-      },
-      async installHooks(repoRoot3) {
-        const cursorDir = join3(repoRoot3, ".cursor");
-        const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
-        await mkdir3(cursorDir, { recursive: true });
-        let hooksConfig = {};
-        if (existsSync3(hooksPath)) {
-          try {
-            hooksConfig = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
-          } catch {
-            hooksConfig = {};
-          }
-        }
-        await writeFile3(hooksPath, `${JSON.stringify(mergeHooksConfig2(hooksConfig), null, 2)}
-`);
-      },
-      async removeHooks(repoRoot3) {
-        const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
-        if (!existsSync3(hooksPath)) return;
-        try {
-          const parsed = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
-          await writeFile3(hooksPath, `${JSON.stringify(stripAgentnoteHooks2(parsed), null, 2)}
-`);
-        } catch {
-        }
-      },
-      async isEnabled(repoRoot3) {
-        const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
-        if (!existsSync3(hooksPath)) return false;
-        try {
-          const content = await readFile3(hooksPath, TEXT_ENCODING);
-          const parsed = JSON.parse(content);
-          return Object.values(parsed.hooks ?? {}).some(
-            (entries) => entries.some((entry) => isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor))
-          );
-        } catch {
-          return false;
-        }
-      },
-      parseEvent(input) {
-        let payload;
-        try {
-          payload = JSON.parse(input.raw);
-        } catch {
-          return null;
-        }
-        const sessionId = sessionIdFromPayload(payload);
-        if (!sessionId) return null;
-        const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-        switch (payload.hook_event_name) {
-          case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
-            return payload.prompt ? {
-              kind: NORMALIZED_EVENT_KINDS.prompt,
-              sessionId,
-              timestamp,
-              prompt: payload.prompt,
-              model: payload.model
-            } : null;
-          case CURSOR_HOOK_EVENTS.afterAgentResponse: {
-            const response = collectMessageText2(
-              payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
-            ).join("\n").trim();
-            return response ? {
-              kind: NORMALIZED_EVENT_KINDS.response,
-              sessionId,
-              timestamp,
-              response
-            } : null;
-          }
-          case CURSOR_HOOK_EVENTS.beforeShellExecution:
-            return payload.command && isGitCommit2(payload.command) ? {
-              kind: NORMALIZED_EVENT_KINDS.preCommit,
-              sessionId,
-              timestamp,
-              commitCommand: payload.command
-            } : null;
-          case CURSOR_HOOK_EVENTS.afterFileEdit:
-          case CURSOR_HOOK_EVENTS.afterTabFileEdit: {
-            const filePath = payload.file_path ?? payload.filePath;
-            const editStats = extractEditStats(payload.edits);
-            return filePath ? {
-              kind: NORMALIZED_EVENT_KINDS.fileChange,
-              sessionId,
-              timestamp,
-              file: filePath,
-              tool: payload.hook_event_name,
-              ...editStats ? { editStats } : {}
-            } : null;
-          }
-          case CURSOR_HOOK_EVENTS.afterShellExecution:
-            return payload.command && isGitCommit2(payload.command) ? {
-              kind: NORMALIZED_EVENT_KINDS.postCommit,
-              sessionId,
-              timestamp
-            } : null;
-          case CURSOR_HOOK_EVENTS.stop: {
-            const response = collectMessageText2(
-              payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
-            ).join("\n").trim();
-            return {
-              kind: NORMALIZED_EVENT_KINDS.stop,
-              sessionId,
-              timestamp,
-              response: response || void 0
-            };
-          }
-          default:
-            return null;
-        }
-      },
-      findTranscript(sessionId) {
-        return resolveTranscriptPath(cursorTranscriptDir(), sessionId);
-      },
-      async extractInteractions(transcriptPath) {
-        if (!isValidTranscriptPath3(transcriptPath)) return [];
-        const ready = await waitForTranscriptReady(transcriptPath);
-        if (!ready) return [];
-        let content = "";
-        try {
-          content = await readFile3(transcriptPath, TEXT_ENCODING);
-        } catch {
-          return [];
-        }
-        if (!content.trim()) return [];
-        const trimmed = content.trimStart();
-        return trimmed.startsWith("{") ? extractJsonlInteractions(content) : extractPlainTextInteractions(content);
+var cursor = {
+  name: AGENT_NAMES.cursor,
+  settingsRelPath: HOOKS_REL_PATH2,
+  async managedPaths() {
+    return [HOOKS_REL_PATH2];
+  },
+  async installHooks(repoRoot3) {
+    const cursorDir = join3(repoRoot3, ".cursor");
+    const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
+    await mkdir3(cursorDir, { recursive: true });
+    let hooksConfig = {};
+    if (existsSync3(hooksPath)) {
+      try {
+        hooksConfig = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
+      } catch {
+        hooksConfig = {};
       }
-    };
+    }
+    await writeFile3(hooksPath, `${JSON.stringify(mergeHooksConfig2(hooksConfig), null, 2)}
+`);
+  },
+  async removeHooks(repoRoot3) {
+    const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
+    if (!existsSync3(hooksPath)) return;
+    try {
+      const parsed = JSON.parse(await readFile3(hooksPath, TEXT_ENCODING));
+      await writeFile3(hooksPath, `${JSON.stringify(stripAgentnoteHooks2(parsed), null, 2)}
+`);
+    } catch {
+    }
+  },
+  async isEnabled(repoRoot3) {
+    const hooksPath = join3(repoRoot3, HOOKS_REL_PATH2);
+    if (!existsSync3(hooksPath)) return false;
+    try {
+      const content = await readFile3(hooksPath, TEXT_ENCODING);
+      const parsed = JSON.parse(content);
+      return Object.values(parsed.hooks ?? {}).some(
+        (entries) => entries.some((entry) => isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor))
+      );
+    } catch {
+      return false;
+    }
+  },
+  parseEvent(input) {
+    let payload;
+    try {
+      payload = JSON.parse(input.raw);
+    } catch {
+      return null;
+    }
+    const sessionId = sessionIdFromPayload(payload);
+    if (!sessionId) return null;
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    switch (payload.hook_event_name) {
+      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
+        return payload.prompt ? {
+          kind: NORMALIZED_EVENT_KINDS.prompt,
+          sessionId,
+          timestamp,
+          prompt: payload.prompt,
+          model: payload.model
+        } : null;
+      case CURSOR_HOOK_EVENTS.afterAgentResponse: {
+        const response = collectMessageText2(
+          payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
+        ).join("\n").trim();
+        return response ? {
+          kind: NORMALIZED_EVENT_KINDS.response,
+          sessionId,
+          timestamp,
+          response
+        } : null;
+      }
+      case CURSOR_HOOK_EVENTS.beforeShellExecution:
+        return payload.command && isGitCommit2(payload.command) ? {
+          kind: NORMALIZED_EVENT_KINDS.preCommit,
+          sessionId,
+          timestamp,
+          commitCommand: payload.command
+        } : null;
+      case CURSOR_HOOK_EVENTS.afterFileEdit:
+      case CURSOR_HOOK_EVENTS.afterTabFileEdit: {
+        const filePath = payload.file_path ?? payload.filePath;
+        const editStats = extractEditStats(payload.edits);
+        return filePath ? {
+          kind: NORMALIZED_EVENT_KINDS.fileChange,
+          sessionId,
+          timestamp,
+          file: filePath,
+          tool: payload.hook_event_name,
+          ...editStats ? { editStats } : {}
+        } : null;
+      }
+      case CURSOR_HOOK_EVENTS.afterShellExecution:
+        return payload.command && isGitCommit2(payload.command) ? {
+          kind: NORMALIZED_EVENT_KINDS.postCommit,
+          sessionId,
+          timestamp
+        } : null;
+      case CURSOR_HOOK_EVENTS.stop: {
+        const response = collectMessageText2(
+          payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
+        ).join("\n").trim();
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId,
+          timestamp,
+          response: response || void 0
+        };
+      }
+      default:
+        return null;
+    }
+  },
+  findTranscript(sessionId) {
+    return resolveTranscriptPath(cursorTranscriptDir(), sessionId);
+  },
+  async extractInteractions(transcriptPath) {
+    if (!isValidTranscriptPath3(transcriptPath)) return [];
+    const ready = await waitForTranscriptReady(transcriptPath);
+    if (!ready) return [];
+    let content = "";
+    try {
+      content = await readFile3(transcriptPath, TEXT_ENCODING);
+    } catch {
+      return [];
+    }
+    if (!content.trim()) return [];
+    const trimmed = content.trimStart();
+    return trimmed.startsWith("{") ? extractJsonlInteractions(content) : extractPlainTextInteractions(content);
   }
-});
+};
 
 // src/agents/gemini.ts
 import { existsSync as existsSync4, readdirSync as readdirSync3, readFileSync as readFileSync2 } from "node:fs";
 import { mkdir as mkdir4, readFile as readFile4, writeFile as writeFile4 } from "node:fs/promises";
 import { homedir as homedir4 } from "node:os";
 import { dirname, join as join4, resolve as resolve4, sep as sep4 } from "node:path";
+var HOOK_COMMAND4 = `npx --yes agent-note hook --agent ${AGENT_NAMES.gemini}`;
+var ENV_GEMINI_HOME = "GEMINI_HOME";
+var HOOK_TIMEOUT_MS = 1e4;
+var SETTINGS_REL_PATH = ".gemini/settings.json";
+var TRANSCRIPT_PREVIEW_CHARS2 = 4096;
+var GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
+var GEMINI_HOOK_EVENTS = {
+  sessionStart: "SessionStart",
+  sessionEnd: "SessionEnd",
+  beforeAgent: "BeforeAgent",
+  afterAgent: "AfterAgent",
+  beforeTool: "BeforeTool",
+  afterTool: "AfterTool"
+};
+var GEMINI_EDIT_TOOL_NAMES = ["write_file", "replace"];
+var GEMINI_SHELL_TOOL_NAMES = [
+  "run_shell_command",
+  "shell",
+  "bash",
+  "run_command",
+  "execute_command"
+];
+var GEMINI_EDIT_TOOL_MATCHER = GEMINI_EDIT_TOOL_NAMES.join("|");
+var GEMINI_SHELL_TOOL_MATCHER = GEMINI_SHELL_TOOL_NAMES.join("|");
+var EDIT_TOOLS = new Set(GEMINI_EDIT_TOOL_NAMES);
+var SHELL_TOOLS = new Set(GEMINI_SHELL_TOOL_NAMES);
+var UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+var HOOKS_CONFIG2 = {
+  [GEMINI_HOOK_EVENTS.sessionStart]: [
+    {
+      matcher: "*",
+      hooks: [
+        {
+          name: "agentnote-session-start",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ],
+  [GEMINI_HOOK_EVENTS.sessionEnd]: [
+    {
+      matcher: "*",
+      hooks: [
+        {
+          name: "agentnote-session-end",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ],
+  [GEMINI_HOOK_EVENTS.beforeAgent]: [
+    {
+      matcher: "*",
+      hooks: [
+        {
+          name: "agentnote-before-agent",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ],
+  [GEMINI_HOOK_EVENTS.afterAgent]: [
+    {
+      matcher: "*",
+      hooks: [
+        {
+          name: "agentnote-after-agent",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ],
+  [GEMINI_HOOK_EVENTS.beforeTool]: [
+    {
+      matcher: GEMINI_EDIT_TOOL_MATCHER,
+      hooks: [
+        {
+          name: "agentnote-before-edit",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    },
+    {
+      matcher: GEMINI_SHELL_TOOL_MATCHER,
+      hooks: [
+        {
+          name: "agentnote-before-shell",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ],
+  [GEMINI_HOOK_EVENTS.afterTool]: [
+    {
+      matcher: GEMINI_EDIT_TOOL_MATCHER,
+      hooks: [
+        {
+          name: "agentnote-after-edit",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    },
+    {
+      matcher: GEMINI_SHELL_TOOL_MATCHER,
+      hooks: [
+        {
+          name: "agentnote-after-shell",
+          type: "command",
+          command: HOOK_COMMAND4,
+          timeout: HOOK_TIMEOUT_MS
+        }
+      ]
+    }
+  ]
+};
 function geminiHome() {
   return process.env[ENV_GEMINI_HOME] ?? join4(homedir4(), ".gemini");
 }
@@ -1686,359 +1766,226 @@ function findTranscriptCandidate2(rootDir, sessionId) {
   }
   return null;
 }
-var HOOK_COMMAND4, ENV_GEMINI_HOME, HOOK_TIMEOUT_MS, SETTINGS_REL_PATH, TRANSCRIPT_PREVIEW_CHARS2, GEMINI_TRANSCRIPT_MESSAGE_TYPE, GEMINI_HOOK_EVENTS, GEMINI_EDIT_TOOL_NAMES, GEMINI_SHELL_TOOL_NAMES, GEMINI_EDIT_TOOL_MATCHER, GEMINI_SHELL_TOOL_MATCHER, EDIT_TOOLS, SHELL_TOOLS, UUID_PATTERN2, HOOKS_CONFIG2, gemini;
-var init_gemini = __esm({
-  "src/agents/gemini.ts"() {
-    "use strict";
-    init_constants();
-    init_git();
-    init_hook_command();
-    init_types();
-    HOOK_COMMAND4 = `npx --yes agent-note hook --agent ${AGENT_NAMES.gemini}`;
-    ENV_GEMINI_HOME = "GEMINI_HOME";
-    HOOK_TIMEOUT_MS = 1e4;
-    SETTINGS_REL_PATH = ".gemini/settings.json";
-    TRANSCRIPT_PREVIEW_CHARS2 = 4096;
-    GEMINI_TRANSCRIPT_MESSAGE_TYPE = "gemini";
-    GEMINI_HOOK_EVENTS = {
-      sessionStart: "SessionStart",
-      sessionEnd: "SessionEnd",
-      beforeAgent: "BeforeAgent",
-      afterAgent: "AfterAgent",
-      beforeTool: "BeforeTool",
-      afterTool: "AfterTool"
-    };
-    GEMINI_EDIT_TOOL_NAMES = ["write_file", "replace"];
-    GEMINI_SHELL_TOOL_NAMES = [
-      "run_shell_command",
-      "shell",
-      "bash",
-      "run_command",
-      "execute_command"
-    ];
-    GEMINI_EDIT_TOOL_MATCHER = GEMINI_EDIT_TOOL_NAMES.join("|");
-    GEMINI_SHELL_TOOL_MATCHER = GEMINI_SHELL_TOOL_NAMES.join("|");
-    EDIT_TOOLS = new Set(GEMINI_EDIT_TOOL_NAMES);
-    SHELL_TOOLS = new Set(GEMINI_SHELL_TOOL_NAMES);
-    UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    HOOKS_CONFIG2 = {
-      [GEMINI_HOOK_EVENTS.sessionStart]: [
-        {
-          matcher: "*",
-          hooks: [
-            {
-              name: "agentnote-session-start",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ],
-      [GEMINI_HOOK_EVENTS.sessionEnd]: [
-        {
-          matcher: "*",
-          hooks: [
-            {
-              name: "agentnote-session-end",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ],
-      [GEMINI_HOOK_EVENTS.beforeAgent]: [
-        {
-          matcher: "*",
-          hooks: [
-            {
-              name: "agentnote-before-agent",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ],
-      [GEMINI_HOOK_EVENTS.afterAgent]: [
-        {
-          matcher: "*",
-          hooks: [
-            {
-              name: "agentnote-after-agent",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ],
-      [GEMINI_HOOK_EVENTS.beforeTool]: [
-        {
-          matcher: GEMINI_EDIT_TOOL_MATCHER,
-          hooks: [
-            {
-              name: "agentnote-before-edit",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        },
-        {
-          matcher: GEMINI_SHELL_TOOL_MATCHER,
-          hooks: [
-            {
-              name: "agentnote-before-shell",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ],
-      [GEMINI_HOOK_EVENTS.afterTool]: [
-        {
-          matcher: GEMINI_EDIT_TOOL_MATCHER,
-          hooks: [
-            {
-              name: "agentnote-after-edit",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        },
-        {
-          matcher: GEMINI_SHELL_TOOL_MATCHER,
-          hooks: [
-            {
-              name: "agentnote-after-shell",
-              type: "command",
-              command: HOOK_COMMAND4,
-              timeout: HOOK_TIMEOUT_MS
-            }
-          ]
-        }
-      ]
-    };
-    gemini = {
-      name: AGENT_NAMES.gemini,
-      settingsRelPath: SETTINGS_REL_PATH,
-      async managedPaths() {
-        return [SETTINGS_REL_PATH];
-      },
-      async installHooks(repoRoot3) {
-        const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
-        await mkdir4(dirname(settingsPath), { recursive: true });
-        let settings = {};
-        if (existsSync4(settingsPath)) {
-          try {
-            settings = JSON.parse(await readFile4(settingsPath, TEXT_ENCODING));
-          } catch {
-            settings = {};
-          }
-        }
-        const hooks = settings.hooks ?? {};
-        for (const [event, groups] of Object.entries(hooks)) {
-          hooks[event] = stripAgentnoteGroups(groups);
-          if (hooks[event].length === 0) delete hooks[event];
-        }
-        for (const [event, groups] of Object.entries(HOOKS_CONFIG2)) {
-          hooks[event] = [...hooks[event] ?? [], ...groups];
-        }
-        settings.hooks = hooks;
-        await writeFile4(settingsPath, `${JSON.stringify(settings, null, 2)}
-`);
-      },
-      async removeHooks(repoRoot3) {
-        const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
-        if (!existsSync4(settingsPath)) return;
-        try {
-          const settings = JSON.parse(
-            await readFile4(settingsPath, TEXT_ENCODING)
-          );
-          if (!settings.hooks) return;
-          for (const [event, groups] of Object.entries(settings.hooks)) {
-            settings.hooks[event] = stripAgentnoteGroups(groups);
-            if (settings.hooks[event].length === 0) delete settings.hooks[event];
-          }
-          if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-          await writeFile4(settingsPath, `${JSON.stringify(settings, null, 2)}
-`);
-        } catch {
-        }
-      },
-      async isEnabled(repoRoot3) {
-        const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
-        if (!existsSync4(settingsPath)) return false;
-        try {
-          const content = await readFile4(settingsPath, TEXT_ENCODING);
-          const parsed = JSON.parse(content);
-          return Object.values(parsed.hooks ?? {}).some(
-            (groups) => groups.some(
-              (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.gemini))
-            )
-          );
-        } catch {
-          return false;
-        }
-      },
-      parseEvent(input) {
-        let e;
-        try {
-          e = JSON.parse(input.raw);
-        } catch {
-          return null;
-        }
-        const sid = e.session_id?.trim();
-        const ts = (/* @__PURE__ */ new Date()).toISOString();
-        if (!sid || !isValidSessionId2(sid)) return null;
-        const tp = e.transcript_path && isValidTranscriptPath4(e.transcript_path) ? e.transcript_path : void 0;
-        switch (e.hook_event_name) {
-          case GEMINI_HOOK_EVENTS.sessionStart:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.sessionStart,
-              sessionId: sid,
-              timestamp: ts,
-              model: e.model,
-              transcriptPath: tp
-            };
-          case GEMINI_HOOK_EVENTS.sessionEnd:
-            return {
-              kind: NORMALIZED_EVENT_KINDS.stop,
-              sessionId: sid,
-              timestamp: ts,
-              transcriptPath: tp
-            };
-          case GEMINI_HOOK_EVENTS.beforeAgent:
-            return e.prompt ? {
-              kind: NORMALIZED_EVENT_KINDS.prompt,
-              sessionId: sid,
-              timestamp: ts,
-              prompt: e.prompt,
-              model: e.model
-            } : null;
-          case GEMINI_HOOK_EVENTS.afterAgent:
-            return e.prompt_response ? {
-              kind: NORMALIZED_EVENT_KINDS.response,
-              sessionId: sid,
-              timestamp: ts,
-              response: e.prompt_response
-            } : null;
-          case GEMINI_HOOK_EVENTS.beforeTool: {
-            const toolName = e.tool_name?.toLowerCase() ?? "";
-            const filePath = e.tool_input?.file_path;
-            const cmd = e.tool_input?.command ?? "";
-            if (EDIT_TOOLS.has(toolName) && filePath) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.preEdit,
-                sessionId: sid,
-                timestamp: ts,
-                tool: e.tool_name,
-                file: filePath
-              };
-            }
-            if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.preCommit,
-                sessionId: sid,
-                timestamp: ts,
-                commitCommand: cmd
-              };
-            }
-            return null;
-          }
-          case GEMINI_HOOK_EVENTS.afterTool: {
-            const toolName = e.tool_name?.toLowerCase() ?? "";
-            const filePath = e.tool_input?.file_path;
-            const cmd = e.tool_input?.command ?? "";
-            if (EDIT_TOOLS.has(toolName) && filePath) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.fileChange,
-                sessionId: sid,
-                timestamp: ts,
-                tool: e.tool_name,
-                file: filePath
-              };
-            }
-            if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
-              return {
-                kind: NORMALIZED_EVENT_KINDS.postCommit,
-                sessionId: sid,
-                timestamp: ts,
-                transcriptPath: tp
-              };
-            }
-            return null;
-          }
-          default:
-            return null;
-        }
-      },
-      findTranscript(sessionId) {
-        if (!isValidSessionId2(sessionId)) return null;
-        const tmpDir = join4(geminiHome(), "tmp");
-        if (!existsSync4(tmpDir)) return null;
-        return findTranscriptCandidate2(tmpDir, sessionId);
-      },
-      async extractInteractions(transcriptPath) {
-        if (!isValidTranscriptPath4(transcriptPath) || !existsSync4(transcriptPath)) return [];
-        let content;
-        try {
-          content = await readFile4(transcriptPath, TEXT_ENCODING);
-        } catch {
-          return [];
-        }
-        const interactions = [];
-        let current = null;
-        for (const rawLine of content.split("\n")) {
-          const line = rawLine.trim();
-          if (!line) continue;
-          let record;
-          try {
-            record = JSON.parse(line);
-          } catch {
-            continue;
-          }
-          const type = typeof record.type === "string" ? record.type : void 0;
-          if (!type) continue;
-          if (type === "user") {
-            const prompt = extractPartText(record.content);
-            if (!prompt) continue;
-            if (current) interactions.push(current);
-            current = { prompt, response: null };
-            if (typeof record.timestamp === "string") current.timestamp = record.timestamp;
-            continue;
-          }
-          if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
-            const response = extractPartText(record.content);
-            if (response) {
-              current.response = current.response ? `${current.response}
-${response}` : response;
-            }
-            const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
-            for (const call of toolCalls) {
-              if (!isRecord3(call)) continue;
-              const toolName = typeof call.name === "string" ? call.name : void 0;
-              if (!toolName || !EDIT_TOOLS.has(toolName)) continue;
-              const args2 = isRecord3(call.args) ? call.args : void 0;
-              const filePath = typeof args2?.file_path === "string" ? args2.file_path : void 0;
-              if (filePath) {
-                current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], filePath])];
-              }
-            }
-          }
-        }
-        if (current) interactions.push(current);
-        return interactions;
+var gemini = {
+  name: AGENT_NAMES.gemini,
+  settingsRelPath: SETTINGS_REL_PATH,
+  async managedPaths() {
+    return [SETTINGS_REL_PATH];
+  },
+  async installHooks(repoRoot3) {
+    const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
+    await mkdir4(dirname(settingsPath), { recursive: true });
+    let settings = {};
+    if (existsSync4(settingsPath)) {
+      try {
+        settings = JSON.parse(await readFile4(settingsPath, TEXT_ENCODING));
+      } catch {
+        settings = {};
       }
-    };
+    }
+    const hooks = settings.hooks ?? {};
+    for (const [event, groups] of Object.entries(hooks)) {
+      hooks[event] = stripAgentnoteGroups(groups);
+      if (hooks[event].length === 0) delete hooks[event];
+    }
+    for (const [event, groups] of Object.entries(HOOKS_CONFIG2)) {
+      hooks[event] = [...hooks[event] ?? [], ...groups];
+    }
+    settings.hooks = hooks;
+    await writeFile4(settingsPath, `${JSON.stringify(settings, null, 2)}
+`);
+  },
+  async removeHooks(repoRoot3) {
+    const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
+    if (!existsSync4(settingsPath)) return;
+    try {
+      const settings = JSON.parse(
+        await readFile4(settingsPath, TEXT_ENCODING)
+      );
+      if (!settings.hooks) return;
+      for (const [event, groups] of Object.entries(settings.hooks)) {
+        settings.hooks[event] = stripAgentnoteGroups(groups);
+        if (settings.hooks[event].length === 0) delete settings.hooks[event];
+      }
+      if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+      await writeFile4(settingsPath, `${JSON.stringify(settings, null, 2)}
+`);
+    } catch {
+    }
+  },
+  async isEnabled(repoRoot3) {
+    const settingsPath = join4(repoRoot3, SETTINGS_REL_PATH);
+    if (!existsSync4(settingsPath)) return false;
+    try {
+      const content = await readFile4(settingsPath, TEXT_ENCODING);
+      const parsed = JSON.parse(content);
+      return Object.values(parsed.hooks ?? {}).some(
+        (groups) => groups.some(
+          (group) => group.hooks.some((hook2) => isAgentNoteHookCommand(hook2.command, AGENT_NAMES.gemini))
+        )
+      );
+    } catch {
+      return false;
+    }
+  },
+  parseEvent(input) {
+    let e;
+    try {
+      e = JSON.parse(input.raw);
+    } catch {
+      return null;
+    }
+    const sid = e.session_id?.trim();
+    const ts = (/* @__PURE__ */ new Date()).toISOString();
+    if (!sid || !isValidSessionId2(sid)) return null;
+    const tp = e.transcript_path && isValidTranscriptPath4(e.transcript_path) ? e.transcript_path : void 0;
+    switch (e.hook_event_name) {
+      case GEMINI_HOOK_EVENTS.sessionStart:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.sessionStart,
+          sessionId: sid,
+          timestamp: ts,
+          model: e.model,
+          transcriptPath: tp
+        };
+      case GEMINI_HOOK_EVENTS.sessionEnd:
+        return {
+          kind: NORMALIZED_EVENT_KINDS.stop,
+          sessionId: sid,
+          timestamp: ts,
+          transcriptPath: tp
+        };
+      case GEMINI_HOOK_EVENTS.beforeAgent:
+        return e.prompt ? {
+          kind: NORMALIZED_EVENT_KINDS.prompt,
+          sessionId: sid,
+          timestamp: ts,
+          prompt: e.prompt,
+          model: e.model
+        } : null;
+      case GEMINI_HOOK_EVENTS.afterAgent:
+        return e.prompt_response ? {
+          kind: NORMALIZED_EVENT_KINDS.response,
+          sessionId: sid,
+          timestamp: ts,
+          response: e.prompt_response
+        } : null;
+      case GEMINI_HOOK_EVENTS.beforeTool: {
+        const toolName = e.tool_name?.toLowerCase() ?? "";
+        const filePath = e.tool_input?.file_path;
+        const cmd = e.tool_input?.command ?? "";
+        if (EDIT_TOOLS.has(toolName) && filePath) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preEdit,
+            sessionId: sid,
+            timestamp: ts,
+            tool: e.tool_name,
+            file: filePath
+          };
+        }
+        if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.preCommit,
+            sessionId: sid,
+            timestamp: ts,
+            commitCommand: cmd
+          };
+        }
+        return null;
+      }
+      case GEMINI_HOOK_EVENTS.afterTool: {
+        const toolName = e.tool_name?.toLowerCase() ?? "";
+        const filePath = e.tool_input?.file_path;
+        const cmd = e.tool_input?.command ?? "";
+        if (EDIT_TOOLS.has(toolName) && filePath) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.fileChange,
+            sessionId: sid,
+            timestamp: ts,
+            tool: e.tool_name,
+            file: filePath
+          };
+        }
+        if (SHELL_TOOLS.has(toolName) && isGitCommit3(cmd)) {
+          return {
+            kind: NORMALIZED_EVENT_KINDS.postCommit,
+            sessionId: sid,
+            timestamp: ts,
+            transcriptPath: tp
+          };
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  },
+  findTranscript(sessionId) {
+    if (!isValidSessionId2(sessionId)) return null;
+    const tmpDir = join4(geminiHome(), "tmp");
+    if (!existsSync4(tmpDir)) return null;
+    return findTranscriptCandidate2(tmpDir, sessionId);
+  },
+  async extractInteractions(transcriptPath) {
+    if (!isValidTranscriptPath4(transcriptPath) || !existsSync4(transcriptPath)) return [];
+    let content;
+    try {
+      content = await readFile4(transcriptPath, TEXT_ENCODING);
+    } catch {
+      return [];
+    }
+    const interactions = [];
+    let current = null;
+    for (const rawLine of content.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      let record2;
+      try {
+        record2 = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const type = typeof record2.type === "string" ? record2.type : void 0;
+      if (!type) continue;
+      if (type === "user") {
+        const prompt = extractPartText(record2.content);
+        if (!prompt) continue;
+        if (current) interactions.push(current);
+        current = { prompt, response: null };
+        if (typeof record2.timestamp === "string") current.timestamp = record2.timestamp;
+        continue;
+      }
+      if (type === GEMINI_TRANSCRIPT_MESSAGE_TYPE && current) {
+        const response = extractPartText(record2.content);
+        if (response) {
+          current.response = current.response ? `${current.response}
+${response}` : response;
+        }
+        const toolCalls = Array.isArray(record2.toolCalls) ? record2.toolCalls : [];
+        for (const call of toolCalls) {
+          if (!isRecord3(call)) continue;
+          const toolName = typeof call.name === "string" ? call.name : void 0;
+          if (!toolName || !EDIT_TOOLS.has(toolName)) continue;
+          const args2 = isRecord3(call.args) ? call.args : void 0;
+          const filePath = typeof args2?.file_path === "string" ? args2.file_path : void 0;
+          if (filePath) {
+            current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], filePath])];
+          }
+        }
+      }
+    }
+    if (current) interactions.push(current);
+    return interactions;
   }
-});
+};
 
 // src/agents/index.ts
+var AGENTS = /* @__PURE__ */ new Map([
+  [claude.name, claude],
+  [codex.name, codex],
+  [cursor.name, cursor],
+  [gemini.name, gemini]
+]);
 function getAgent(name) {
   const agent = AGENTS.get(name);
   if (!agent) {
@@ -2052,22 +1999,6 @@ function hasAgent(name) {
 function listAgents() {
   return [...AGENTS.keys()];
 }
-var AGENTS;
-var init_agents = __esm({
-  "src/agents/index.ts"() {
-    "use strict";
-    init_claude();
-    init_codex();
-    init_cursor();
-    init_gemini();
-    AGENTS = /* @__PURE__ */ new Map([
-      [claude.name, claude],
-      [codex.name, codex],
-      [cursor.name, cursor],
-      [gemini.name, gemini]
-    ]);
-  }
-});
 
 // src/core/attribution.ts
 function parseUnifiedHunks(diffOutput) {
@@ -2157,15 +2088,129 @@ async function gitDiffUnified0(blobA, blobB) {
   }
   return stdout;
 }
-var init_attribution = __esm({
-  "src/core/attribution.ts"() {
-    "use strict";
-    init_git();
-    init_constants();
-  }
-});
 
 // src/core/entry.ts
+var DEFAULT_PROMPT_DETAIL = "compact";
+var LEGACY_PROMPT_SCORE = 100;
+var PERCENT_DENOMINATOR = 100;
+var PRIMARY_SCORE_FLOOR = 80;
+var HIGH_SCORE_THRESHOLD = 75;
+var MEDIUM_SCORE_THRESHOLD = 45;
+var BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE = 55;
+var BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE = 44;
+var ANCHORED_BRIDGE_SCORE_MAX = 65;
+var UNANCHORED_TAIL_SCORE_MAX = 44;
+var SHORT_PROMPT_MAX_CHARS = 120;
+var SHORT_PROMPT_MAX_WORDS = 12;
+var PROMPT_ROLE_BASE_SCORES = {
+  primary: 90,
+  direct_anchor: 75,
+  scope: 60,
+  tail: 45,
+  anchored_bridge: 45,
+  bridge: 25,
+  background: 15
+};
+var PROMPT_ROLE_SCORE_CLAMPS = {
+  primary: [80, 100],
+  direct_anchor: [65, 95],
+  scope: [50, 80],
+  tail: [35, 70],
+  anchored_bridge: [40, 65],
+  bridge: [20, 55],
+  background: [0, 30]
+};
+var PROMPT_SIGNAL_SCORES = {
+  primary_edit_turn: 0,
+  exact_commit_path: 30,
+  commit_file_basename: 10,
+  diff_identifier: 20,
+  response_exact_commit_path: 18,
+  response_basename_or_identifier: 10,
+  commit_subject_overlap: 4,
+  list_or_checklist_shape: 10,
+  multi_line_instruction: 6,
+  inline_code_or_path_shape: 6,
+  substantive_prompt_shape: 12,
+  before_commit_boundary: 5,
+  between_non_excluded_prompts: 8
+};
+var GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([
+  // Web / JS / TS build outputs
+  ".next",
+  ".nuxt",
+  "coverage",
+  // Monorepo / remote-cache build outputs
+  ".turbo",
+  ".yarn",
+  "bazel-bin",
+  "bazel-out",
+  "bazel-testlogs",
+  // Mobile / Flutter build caches
+  ".dart_tool",
+  "DerivedData"
+]);
+var GENERATED_FILE_NAMES = /* @__PURE__ */ new Set([
+  // Flutter tool-managed dependency snapshot
+  ".flutter-plugins-dependencies",
+  // Flutter desktop / mobile plugin registrants
+  "generated_plugin_registrant.dart",
+  "GeneratedPluginRegistrant.java",
+  "GeneratedPluginRegistrant.swift",
+  "GeneratedPluginRegistrant.m",
+  "GeneratedPluginRegistrant.h"
+]);
+var GENERATED_FILE_SUFFIXES = [
+  // Web / TS / GraphQL / OpenAPI codegen
+  ".gen.ts",
+  ".gen.tsx",
+  ".generated.js",
+  ".generated.jsx",
+  ".generated.ts",
+  ".generated.tsx",
+  // Dart / Flutter codegen
+  ".chopper.dart",
+  ".config.dart",
+  ".freezed.dart",
+  ".g.dart",
+  ".gr.dart",
+  ".mocks.dart",
+  ".pb.dart",
+  ".pbjson.dart",
+  ".pbenum.dart",
+  ".pbserver.dart",
+  // Go codegen
+  ".pb.go",
+  ".pb.gw.go",
+  ".twirp.go",
+  ".gen.go",
+  ".generated.go",
+  "_gen.go",
+  "_generated.go",
+  "_string.go",
+  // Rust codegen
+  ".generated.rs",
+  ".pb.rs",
+  "_generated.rs",
+  // Kotlin / Swift codegen
+  ".g.kt",
+  ".gen.kt",
+  ".generated.kt",
+  ".g.swift",
+  ".generated.swift",
+  // Web sourcemaps
+  ".map"
+];
+var GENERATED_CONTENT_PATTERNS = [
+  // Cross-language generator banners used by protoc, sqlc, stringer, bindgen, etc.
+  /\bcode generated\b[\s\S]{0,160}\bdo not edit\b/i,
+  /\bautomatically generated by\b/i,
+  /\bthis file was generated by\b/i,
+  // Annotation-style banners commonly used in Java / Kotlin / JS ecosystems.
+  /\B@generated\b/i,
+  // Named generators across Web, mobile, backend, and protobuf toolchains.
+  /\bgenerated by (?:swiftgen|sourcery|protoc|buf|sqlc|openapi(?:-generator)?|openapitools|wire|freezed|build_runner|mockgen|rust-bindgen|apollo|drift|flutterfire|ksp)\b/i
+];
 function isGeneratedArtifactPath(path) {
   const normalized = path.replaceAll("\\", "/");
   const segments = normalized.split("/").filter(Boolean);
@@ -2409,136 +2454,69 @@ function buildEntry(opts) {
     attribution
   };
 }
-var DEFAULT_PROMPT_DETAIL, LEGACY_PROMPT_SCORE, PERCENT_DENOMINATOR, PRIMARY_SCORE_FLOOR, HIGH_SCORE_THRESHOLD, MEDIUM_SCORE_THRESHOLD, BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE, BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE, ANCHORED_BRIDGE_SCORE_MAX, UNANCHORED_TAIL_SCORE_MAX, SHORT_PROMPT_MAX_CHARS, SHORT_PROMPT_MAX_WORDS, PROMPT_ROLE_BASE_SCORES, PROMPT_ROLE_SCORE_CLAMPS, PROMPT_SIGNAL_SCORES, GENERATED_DIR_SEGMENTS, GENERATED_FILE_NAMES, GENERATED_FILE_SUFFIXES, GENERATED_CONTENT_PATTERNS;
-var init_entry = __esm({
-  "src/core/entry.ts"() {
-    "use strict";
-    init_constants();
-    DEFAULT_PROMPT_DETAIL = "compact";
-    LEGACY_PROMPT_SCORE = 100;
-    PERCENT_DENOMINATOR = 100;
-    PRIMARY_SCORE_FLOOR = 80;
-    HIGH_SCORE_THRESHOLD = 75;
-    MEDIUM_SCORE_THRESHOLD = 45;
-    BRIDGE_SCORE_MAX_WITH_SUBSTANTIVE = 55;
-    BRIDGE_SCORE_MAX_WITHOUT_SUBSTANTIVE = 44;
-    ANCHORED_BRIDGE_SCORE_MAX = 65;
-    UNANCHORED_TAIL_SCORE_MAX = 44;
-    SHORT_PROMPT_MAX_CHARS = 120;
-    SHORT_PROMPT_MAX_WORDS = 12;
-    PROMPT_ROLE_BASE_SCORES = {
-      primary: 90,
-      direct_anchor: 75,
-      scope: 60,
-      tail: 45,
-      anchored_bridge: 45,
-      bridge: 25,
-      background: 15
-    };
-    PROMPT_ROLE_SCORE_CLAMPS = {
-      primary: [80, 100],
-      direct_anchor: [65, 95],
-      scope: [50, 80],
-      tail: [35, 70],
-      anchored_bridge: [40, 65],
-      bridge: [20, 55],
-      background: [0, 30]
-    };
-    PROMPT_SIGNAL_SCORES = {
-      primary_edit_turn: 0,
-      exact_commit_path: 30,
-      commit_file_basename: 10,
-      diff_identifier: 20,
-      response_exact_commit_path: 18,
-      response_basename_or_identifier: 10,
-      commit_subject_overlap: 4,
-      list_or_checklist_shape: 10,
-      multi_line_instruction: 6,
-      inline_code_or_path_shape: 6,
-      substantive_prompt_shape: 12,
-      before_commit_boundary: 5,
-      between_non_excluded_prompts: 8
-    };
-    GENERATED_DIR_SEGMENTS = /* @__PURE__ */ new Set([
-      // Web / JS / TS build outputs
-      ".next",
-      ".nuxt",
-      "coverage",
-      // Monorepo / remote-cache build outputs
-      ".turbo",
-      ".yarn",
-      "bazel-bin",
-      "bazel-out",
-      "bazel-testlogs",
-      // Mobile / Flutter build caches
-      ".dart_tool",
-      "DerivedData"
-    ]);
-    GENERATED_FILE_NAMES = /* @__PURE__ */ new Set([
-      // Flutter tool-managed dependency snapshot
-      ".flutter-plugins-dependencies",
-      // Flutter desktop / mobile plugin registrants
-      "generated_plugin_registrant.dart",
-      "GeneratedPluginRegistrant.java",
-      "GeneratedPluginRegistrant.swift",
-      "GeneratedPluginRegistrant.m",
-      "GeneratedPluginRegistrant.h"
-    ]);
-    GENERATED_FILE_SUFFIXES = [
-      // Web / TS / GraphQL / OpenAPI codegen
-      ".gen.ts",
-      ".gen.tsx",
-      ".generated.js",
-      ".generated.jsx",
-      ".generated.ts",
-      ".generated.tsx",
-      // Dart / Flutter codegen
-      ".chopper.dart",
-      ".config.dart",
-      ".freezed.dart",
-      ".g.dart",
-      ".gr.dart",
-      ".mocks.dart",
-      ".pb.dart",
-      ".pbjson.dart",
-      ".pbenum.dart",
-      ".pbserver.dart",
-      // Go codegen
-      ".pb.go",
-      ".pb.gw.go",
-      ".twirp.go",
-      ".gen.go",
-      ".generated.go",
-      "_gen.go",
-      "_generated.go",
-      "_string.go",
-      // Rust codegen
-      ".generated.rs",
-      ".pb.rs",
-      "_generated.rs",
-      // Kotlin / Swift codegen
-      ".g.kt",
-      ".gen.kt",
-      ".generated.kt",
-      ".g.swift",
-      ".generated.swift",
-      // Web sourcemaps
-      ".map"
-    ];
-    GENERATED_CONTENT_PATTERNS = [
-      // Cross-language generator banners used by protoc, sqlc, stringer, bindgen, etc.
-      /\bcode generated\b[\s\S]{0,160}\bdo not edit\b/i,
-      /\bautomatically generated by\b/i,
-      /\bthis file was generated by\b/i,
-      // Annotation-style banners commonly used in Java / Kotlin / JS ecosystems.
-      /\B@generated\b/i,
-      // Named generators across Web, mobile, backend, and protobuf toolchains.
-      /\bgenerated by (?:swiftgen|sourcery|protoc|buf|sqlc|openapi(?:-generator)?|openapitools|wire|freezed|build_runner|mockgen|rust-bindgen|apollo|drift|flutterfire|ksp)\b/i
-    ];
-  }
-});
 
 // src/core/interaction-context.ts
+var MAX_CONTEXT_CHARS = 900;
+var MAX_SCOPE_PROMPT_CHARS = 120;
+var MAX_SCOPE_LINES = 10;
+var MAX_SCOPE_SENTENCES = 4;
+var MAX_REFERENCE_PARAGRAPHS = 2;
+var MAX_SCOPE_PROMPT_LINES = 3;
+var MIN_SCOPE_SCORE = 2;
+var REFERENCE_CONTEXT_RANK = 3;
+var CONTEXT_SEPARATOR_CHARS = 2;
+var SENTENCE_LOOKAHEAD_CHARS = 16;
+var SUBJECT_TOKEN_SCOPE_THRESHOLD = 2;
+var STRUCTURAL_SCOPE_WEIGHT = 2;
+var GENERIC_SUBJECT_TOKEN_MIN_CHARS = 3;
+var CONTEXT_KIND_ORDER = {
+  reference: 0,
+  scope: 1
+};
+var GENERIC_TOKENS = /* @__PURE__ */ new Set([
+  "agent",
+  "agentnote",
+  "add",
+  "added",
+  "adds",
+  "build",
+  "case",
+  "change",
+  "commit",
+  "context",
+  "diff",
+  "file",
+  "files",
+  "fix",
+  "html",
+  "http",
+  "https",
+  "implement",
+  "implemented",
+  "implements",
+  "json",
+  "note",
+  "prompt",
+  "record",
+  "remove",
+  "removed",
+  "removes",
+  "response",
+  "test",
+  "tests",
+  "todo",
+  "turn",
+  "update",
+  "updated",
+  "updates",
+  "utf8",
+  "yaml"
+]);
+var CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
+var SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
+var ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{2,}\b/g;
+var ISSUE_OR_PR_REFERENCE = /\b(?:PR|Issue|GH)[\s#-]*\d+\b|#\d+\b/iu;
+var MARKDOWN_FILE_REFERENCE = /(?:^|[\s("'`])(?:\.{0,2}\/)?[A-Za-z0-9_.-]+\/[^\s"'`]+\.[A-Za-z0-9]{1,8}\b/;
 function buildCommitContextSignature(opts) {
   return {
     changedFiles: unique(opts.changedFiles.map((file) => normalizePath(file))),
@@ -2848,73 +2826,6 @@ function stripRank(context) {
     text: context.text
   };
 }
-var MAX_CONTEXT_CHARS, MAX_SCOPE_PROMPT_CHARS, MAX_SCOPE_LINES, MAX_SCOPE_SENTENCES, MAX_REFERENCE_PARAGRAPHS, MAX_SCOPE_PROMPT_LINES, MIN_SCOPE_SCORE, REFERENCE_CONTEXT_RANK, CONTEXT_SEPARATOR_CHARS, SENTENCE_LOOKAHEAD_CHARS, SUBJECT_TOKEN_SCOPE_THRESHOLD, STRUCTURAL_SCOPE_WEIGHT, GENERIC_SUBJECT_TOKEN_MIN_CHARS, CONTEXT_KIND_ORDER, GENERIC_TOKENS, CAMEL_OR_PASCAL_IDENTIFIER, SNAKE_IDENTIFIER, ALL_CAPS_IDENTIFIER, ISSUE_OR_PR_REFERENCE, MARKDOWN_FILE_REFERENCE;
-var init_interaction_context = __esm({
-  "src/core/interaction-context.ts"() {
-    "use strict";
-    MAX_CONTEXT_CHARS = 900;
-    MAX_SCOPE_PROMPT_CHARS = 120;
-    MAX_SCOPE_LINES = 10;
-    MAX_SCOPE_SENTENCES = 4;
-    MAX_REFERENCE_PARAGRAPHS = 2;
-    MAX_SCOPE_PROMPT_LINES = 3;
-    MIN_SCOPE_SCORE = 2;
-    REFERENCE_CONTEXT_RANK = 3;
-    CONTEXT_SEPARATOR_CHARS = 2;
-    SENTENCE_LOOKAHEAD_CHARS = 16;
-    SUBJECT_TOKEN_SCOPE_THRESHOLD = 2;
-    STRUCTURAL_SCOPE_WEIGHT = 2;
-    GENERIC_SUBJECT_TOKEN_MIN_CHARS = 3;
-    CONTEXT_KIND_ORDER = {
-      reference: 0,
-      scope: 1
-    };
-    GENERIC_TOKENS = /* @__PURE__ */ new Set([
-      "agent",
-      "agentnote",
-      "add",
-      "added",
-      "adds",
-      "build",
-      "case",
-      "change",
-      "commit",
-      "context",
-      "diff",
-      "file",
-      "files",
-      "fix",
-      "html",
-      "http",
-      "https",
-      "implement",
-      "implemented",
-      "implements",
-      "json",
-      "note",
-      "prompt",
-      "record",
-      "remove",
-      "removed",
-      "removes",
-      "response",
-      "test",
-      "tests",
-      "todo",
-      "turn",
-      "update",
-      "updated",
-      "updates",
-      "utf8",
-      "yaml"
-    ]);
-    CAMEL_OR_PASCAL_IDENTIFIER = /\b[A-Za-z_$]*[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*\b/g;
-    SNAKE_IDENTIFIER = /\b[a-z][a-z0-9]*_[a-z][a-z0-9_]*[a-z0-9]\b/g;
-    ALL_CAPS_IDENTIFIER = /\b[A-Z][A-Z0-9_]{2,}\b/g;
-    ISSUE_OR_PR_REFERENCE = /\b(?:PR|Issue|GH)[\s#-]*\d+\b|#\d+\b/iu;
-    MARKDOWN_FILE_REFERENCE = /(?:^|[\s("'`])(?:\.{0,2}\/)?[A-Za-z0-9_.-]+\/[^\s"'`]+\.[A-Za-z0-9]{1,8}\b/;
-  }
-});
 
 // src/core/jsonl.ts
 import { existsSync as existsSync5 } from "node:fs";
@@ -2936,14 +2847,38 @@ async function appendJsonl(filePath, data) {
   await appendFile(filePath, `${JSON.stringify(data)}
 `);
 }
-var init_jsonl = __esm({
-  "src/core/jsonl.ts"() {
-    "use strict";
-    init_constants();
-  }
-});
 
 // src/core/prompt-window.ts
+var PROMPT_SELECTION_SOURCE = /* @__PURE__ */ Symbol("agentnotePromptSelectionSource");
+var PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY = /* @__PURE__ */ Symbol(
+  "agentnotePromptSelectionBeforeCommitBoundary"
+);
+var PROMPT_WINDOW_MAX_ENTRIES = 24;
+var PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
+var PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
+var PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
+var LOW_SHAPE_WINDOW_TEXT_SCORE_MAX = 2;
+var LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX = 20;
+var PROMPT_SELECTION_SCHEMA = 1;
+var QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
+var QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
+var QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
+var TEXT_SHAPE_LENGTH_DIVISOR = 4;
+var TEXT_SHAPE_LENGTH_SCORE_MAX = 24;
+var TEXT_SHAPE_NEWLINE_WEIGHT = 10;
+var TEXT_SHAPE_NEWLINE_SCORE_MAX = 30;
+var TEXT_SHAPE_INLINE_CODE_SCORE = 18;
+var TEXT_SHAPE_PATH_SCORE = 16;
+var TEXT_SHAPE_FLAG_SCORE = 14;
+var TEXT_SHAPE_LIST_SCORE = 20;
+var FILE_REF_EXACT_PATH_SCORE = 80;
+var FILE_REF_SEGMENT_MIN_CHARS = 4;
+var FILE_REF_SEGMENT_SCORE = 5;
+var FILE_REF_BASENAME_SCORE = 20;
+var TEXT_OVERLAP_PATH_TOKEN_SCORE = 4;
+var TEXT_OVERLAP_WORD_TOKEN_SCORE = 1;
+var TOKEN_MIN_CHARS = 2;
+var TOKEN_PART_MIN_CHARS = 3;
 function selectPromptWindowEntries(promptEntries, primaryTurns, editTurns, maxConsumedTurn, currentTurn, commitFiles, commitSubject, contextSignature, consumedPromptState, responsesByTurn) {
   if (primaryTurns.size === 0) return emptyPromptWindowSelection();
   const orderedPrimaryTurns = [...primaryTurns].filter((turn) => turn > 0).sort((a, b) => a - b);
@@ -3392,43 +3327,6 @@ function tokenizePromptSelectionText(text) {
   }
   return tokens;
 }
-var PROMPT_SELECTION_SOURCE, PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY, PROMPT_WINDOW_MAX_ENTRIES, PROMPT_WINDOW_ANCHOR_TEXT_SCORE, PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE, PROMPT_WINDOW_ANCHOR_SHAPE_SCORE, LOW_SHAPE_WINDOW_TEXT_SCORE_MAX, LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX, PROMPT_SELECTION_SCHEMA, QUOTED_HISTORY_MIN_PROMPT_CHARS, QUOTED_HISTORY_MIN_INDENTED_LINES, QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS, TEXT_SHAPE_LENGTH_DIVISOR, TEXT_SHAPE_LENGTH_SCORE_MAX, TEXT_SHAPE_NEWLINE_WEIGHT, TEXT_SHAPE_NEWLINE_SCORE_MAX, TEXT_SHAPE_INLINE_CODE_SCORE, TEXT_SHAPE_PATH_SCORE, TEXT_SHAPE_FLAG_SCORE, TEXT_SHAPE_LIST_SCORE, FILE_REF_EXACT_PATH_SCORE, FILE_REF_SEGMENT_MIN_CHARS, FILE_REF_SEGMENT_SCORE, FILE_REF_BASENAME_SCORE, TEXT_OVERLAP_PATH_TOKEN_SCORE, TEXT_OVERLAP_WORD_TOKEN_SCORE, TOKEN_MIN_CHARS, TOKEN_PART_MIN_CHARS;
-var init_prompt_window = __esm({
-  "src/core/prompt-window.ts"() {
-    "use strict";
-    init_entry();
-    PROMPT_SELECTION_SOURCE = /* @__PURE__ */ Symbol("agentnotePromptSelectionSource");
-    PROMPT_SELECTION_BEFORE_COMMIT_BOUNDARY = /* @__PURE__ */ Symbol(
-      "agentnotePromptSelectionBeforeCommitBoundary"
-    );
-    PROMPT_WINDOW_MAX_ENTRIES = 24;
-    PROMPT_WINDOW_ANCHOR_TEXT_SCORE = 2;
-    PROMPT_WINDOW_ANCHOR_FILE_REF_SCORE = 5;
-    PROMPT_WINDOW_ANCHOR_SHAPE_SCORE = 44;
-    LOW_SHAPE_WINDOW_TEXT_SCORE_MAX = 2;
-    LOW_SHAPE_WINDOW_SHAPE_SCORE_MAX = 20;
-    PROMPT_SELECTION_SCHEMA = 1;
-    QUOTED_HISTORY_MIN_PROMPT_CHARS = 300;
-    QUOTED_HISTORY_MIN_INDENTED_LINES = 8;
-    QUOTED_HISTORY_MIN_INDENTED_PROMPT_CHARS = 500;
-    TEXT_SHAPE_LENGTH_DIVISOR = 4;
-    TEXT_SHAPE_LENGTH_SCORE_MAX = 24;
-    TEXT_SHAPE_NEWLINE_WEIGHT = 10;
-    TEXT_SHAPE_NEWLINE_SCORE_MAX = 30;
-    TEXT_SHAPE_INLINE_CODE_SCORE = 18;
-    TEXT_SHAPE_PATH_SCORE = 16;
-    TEXT_SHAPE_FLAG_SCORE = 14;
-    TEXT_SHAPE_LIST_SCORE = 20;
-    FILE_REF_EXACT_PATH_SCORE = 80;
-    FILE_REF_SEGMENT_MIN_CHARS = 4;
-    FILE_REF_SEGMENT_SCORE = 5;
-    FILE_REF_BASENAME_SCORE = 20;
-    TEXT_OVERLAP_PATH_TOKEN_SCORE = 4;
-    TEXT_OVERLAP_WORD_TOKEN_SCORE = 1;
-    TOKEN_MIN_CHARS = 2;
-    TOKEN_PART_MIN_CHARS = 3;
-  }
-});
 
 // src/core/session.ts
 import { existsSync as existsSync6 } from "node:fs";
@@ -3464,12 +3362,6 @@ async function hasRecordableSessionData(sessionDir) {
   }
   return false;
 }
-var init_session = __esm({
-  "src/core/session.ts"() {
-    "use strict";
-    init_constants();
-  }
-});
 
 // src/core/storage.ts
 async function writeNote(commitSha, data) {
@@ -3485,24 +3377,11 @@ async function readNote(commitSha) {
     return null;
   }
 }
-var init_storage = __esm({
-  "src/core/storage.ts"() {
-    "use strict";
-    init_git();
-    init_constants();
-  }
-});
 
 // src/core/record.ts
-var record_exports = {};
-__export(record_exports, {
-  recordCommitEntry: () => recordCommitEntry
-});
-import { spawn } from "node:child_process";
-import { existsSync as existsSync7 } from "node:fs";
-import { readdir, readFile as readFile7, unlink, writeFile as writeFile6 } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join as join6 } from "node:path";
+var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
+var AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
+var AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 async function recordCommitEntry(opts) {
   const sessionDir = join6(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -3837,7 +3716,7 @@ async function recordCommitEntry(opts) {
     relevantPromptEntries,
     commitFileSet
   );
-  if (interactions.length === 0 && aiFiles.length === 0) {
+  if (opts.requireAiFileEvidence && aiFiles.length === 0 || interactions.length === 0 && aiFiles.length === 0) {
     return { promptCount: 0, aiRatio: 0 };
   }
   const entry = buildEntry({
@@ -3862,6 +3741,16 @@ async function recordCommitEntry(opts) {
     consumedTranscriptPromptFiles
   );
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
+}
+async function hasSessionCommitFileEvidence(sessionDir, commitFiles) {
+  const commitFileSet = new Set(commitFiles);
+  if (commitFileSet.size === 0) return false;
+  const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
+  const preBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
+  return [...changeEntries, ...preBlobEntries].some((entry) => {
+    const file = typeof entry.file === "string" ? entry.file : "";
+    return file !== "" && commitFileSet.has(file);
+  });
 }
 function correlatePromptIds(interactions, sessionPromptEntries, transcriptCorrelationStartMs = null) {
   const effectiveCorrelationStartMs = hasTranscriptCandidateAtOrAfter(
@@ -4819,36 +4708,11 @@ async function ensureEmptyBlobInStore() {
     }
   }
 }
-var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH, AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS, AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE;
-var init_record = __esm({
-  "src/core/record.ts"() {
-    "use strict";
-    init_agents();
-    init_types();
-    init_git();
-    init_attribution();
-    init_constants();
-    init_entry();
-    init_interaction_context();
-    init_jsonl();
-    init_prompt_window();
-    init_session();
-    init_storage();
-    AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
-    AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
-    AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
-  }
-});
 
 // src/paths.ts
-var paths_exports = {};
-__export(paths_exports, {
-  agentnoteDir: () => agentnoteDir,
-  root: () => root,
-  sessionFile: () => sessionFile,
-  settingsFile: () => settingsFile
-});
 import { join as join7 } from "node:path";
+var _root = null;
+var _gitDir = null;
 async function root() {
   if (!_root) {
     try {
@@ -4875,39 +4739,66 @@ async function agentnoteDir() {
 async function sessionFile() {
   return join7(await agentnoteDir(), SESSION_FILE);
 }
-async function settingsFile() {
-  return join7(await root(), ".claude", "settings.json");
-}
-var _root, _gitDir;
-var init_paths = __esm({
-  "src/paths.ts"() {
-    "use strict";
-    init_constants();
-    init_git();
-    _root = null;
-    _gitDir = null;
-  }
-});
 
-// src/commands/commit.ts
-init_constants();
-init_record();
-init_session();
-init_paths();
-import { spawn as spawn2 } from "node:child_process";
+// src/commands/record.ts
 import { existsSync as existsSync8 } from "node:fs";
 import { readFile as readFile8 } from "node:fs/promises";
 import { join as join8 } from "node:path";
+var FALLBACK_HEAD_FLAG = "--fallback-head";
+var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+async function record(args2) {
+  try {
+    if (args2[0] === FALLBACK_HEAD_FLAG) {
+      await recordHeadFallback();
+      return;
+    }
+    const sessionId = args2[0];
+    if (!sessionId) return;
+    await recordCommitEntry({ agentnoteDirPath: await agentnoteDir(), sessionId });
+  } catch {
+  }
+}
+async function recordHeadFallback() {
+  if (await readHeadTrailerSessionId()) return;
+  const agentnoteDirPath = await agentnoteDir();
+  const sessionId = await readActiveSessionId(agentnoteDirPath);
+  if (!sessionId) return;
+  const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, sessionId);
+  if (!await hasRecordableSessionData(sessionDir)) return;
+  const commitFiles = await readHeadCommitFiles();
+  if (!await hasSessionCommitFileEvidence(sessionDir, commitFiles)) return;
+  await recordCommitEntry({
+    agentnoteDirPath,
+    sessionId,
+    requireAiFileEvidence: true
+  });
+}
+async function readActiveSessionId(agentnoteDirPath) {
+  const activeSessionPath = join8(agentnoteDirPath, SESSION_FILE);
+  if (!existsSync8(activeSessionPath)) return null;
+  const sessionId = (await readFile8(activeSessionPath, TEXT_ENCODING)).trim();
+  if (sessionId === "." || sessionId === "..") return null;
+  return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+async function readHeadCommitFiles() {
+  const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+  return raw.split("\n").filter(Boolean);
+}
+async function readHeadTrailerSessionId() {
+  return (await git(["log", "-1", `--format=%(trailers:key=${TRAILER_KEY},valueonly)`, "HEAD"])).trim();
+}
+
+// src/commands/commit.ts
 async function commit(args2) {
   const sf = await sessionFile();
   let sessionId = "";
-  if (existsSync8(sf)) {
-    sessionId = (await readFile8(sf, TEXT_ENCODING)).trim();
+  if (existsSync9(sf)) {
+    sessionId = (await readFile9(sf, TEXT_ENCODING)).trim();
     if (sessionId) {
       const dir = await agentnoteDir();
-      const hbPath = join8(dir, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+      const hbPath = join9(dir, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
       try {
-        const hb = Number.parseInt((await readFile8(hbPath, TEXT_ENCODING)).trim(), 10);
+        const hb = Number.parseInt((await readFile9(hbPath, TEXT_ENCODING)).trim(), 10);
         if (hb === 0 || Number.isNaN(hb)) {
           sessionId = "";
         } else {
@@ -4917,7 +4808,7 @@ async function commit(args2) {
       } catch {
         sessionId = "";
       }
-      if (sessionId && !await hasRecordableSessionData(join8(dir, SESSIONS_DIR, sessionId))) {
+      if (sessionId && !await hasRecordableSessionData(join9(dir, SESSIONS_DIR, sessionId))) {
         sessionId = "";
       }
     }
@@ -4945,27 +4836,23 @@ async function commit(args2) {
     } catch (err) {
       console.error(`agent-note: warning: ${err.message}`);
     }
+  } else {
+    try {
+      await recordHeadFallback();
+    } catch {
+    }
   }
 }
 
 // src/commands/deinit.ts
-init_agents();
-init_constants();
-init_git();
-init_paths();
-import { existsSync as existsSync10 } from "node:fs";
-import { readFile as readFile10, rename, unlink as unlink2 } from "node:fs/promises";
-import { join as join10 } from "node:path";
+import { existsSync as existsSync11 } from "node:fs";
+import { readFile as readFile11, rename, unlink as unlink2 } from "node:fs/promises";
+import { join as join11 } from "node:path";
 
 // src/commands/init.ts
-init_agents();
-init_types();
-init_constants();
-init_git();
-init_paths();
-import { existsSync as existsSync9 } from "node:fs";
-import { chmod, mkdir as mkdir5, readFile as readFile9, writeFile as writeFile7 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join9, resolve as resolve5 } from "node:path";
+import { existsSync as existsSync10 } from "node:fs";
+import { chmod, mkdir as mkdir5, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
+import { isAbsolute as isAbsolute2, join as join10, resolve as resolve5 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
@@ -5091,12 +4978,12 @@ fi
 var POST_COMMIT_SCRIPT = `#!/bin/sh
 ${AGENTNOTE_HOOK_MARKER}
 # Record agentnote entry as a git note on HEAD.
-# Read session ID from the finalized commit's trailer (source of truth),
-# not from the mutable session file. This eliminates TOCTOU races between
-# prepare-commit-msg and post-commit.
+# Prefer the finalized trailer as the source of truth. If no trailer was
+# injected because the session heartbeat was stale, the CLI may use a strict
+# HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
-if [ -z "$SESSION_ID" ]; then exit 0; fi
+if [ -z "$SESSION_ID" ]; then SESSION_ID="--fallback-head"; fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
@@ -5193,10 +5080,10 @@ async function init(args2) {
     );
   }
   if (!skipAction && !hooksOnly) {
-    const workflowDir = join9(repoRoot3, ".github", "workflows");
-    const prReportWorkflowPath = join9(workflowDir, PR_REPORT_WORKFLOW_FILENAME);
+    const workflowDir = join10(repoRoot3, ".github", "workflows");
+    const prReportWorkflowPath = join10(workflowDir, PR_REPORT_WORKFLOW_FILENAME);
     await mkdir5(workflowDir, { recursive: true });
-    if (existsSync9(prReportWorkflowPath)) {
+    if (existsSync10(prReportWorkflowPath)) {
       results.push(
         `  \xB7 workflow already exists at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`
       );
@@ -5205,8 +5092,8 @@ async function init(args2) {
       results.push(`  \u2713 workflow created at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`);
     }
     if (dashboard) {
-      const dashboardWorkflowPath = join9(workflowDir, DASHBOARD_WORKFLOW_FILENAME);
-      if (existsSync9(dashboardWorkflowPath)) {
+      const dashboardWorkflowPath = join10(workflowDir, DASHBOARD_WORKFLOW_FILENAME);
+      if (existsSync10(dashboardWorkflowPath)) {
         results.push(
           `  \xB7 workflow already exists at .github/workflows/${DASHBOARD_WORKFLOW_FILENAME}`
         );
@@ -5239,23 +5126,23 @@ async function init(args2) {
     }
   }
   if (!skipAction && !hooksOnly) {
-    const prReportWorkflowPath = join9(
+    const prReportWorkflowPath = join10(
       repoRoot3,
       ".github",
       "workflows",
       PR_REPORT_WORKFLOW_FILENAME
     );
-    if (existsSync9(prReportWorkflowPath)) {
+    if (existsSync10(prReportWorkflowPath)) {
       toCommit.push(`.github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`);
     }
     if (dashboard) {
-      const dashboardWorkflowPath = join9(
+      const dashboardWorkflowPath = join10(
         repoRoot3,
         ".github",
         "workflows",
         DASHBOARD_WORKFLOW_FILENAME
       );
-      if (existsSync9(dashboardWorkflowPath)) {
+      if (existsSync10(dashboardWorkflowPath)) {
         toCommit.push(`.github/workflows/${DASHBOARD_WORKFLOW_FILENAME}`);
       }
     }
@@ -5284,19 +5171,19 @@ async function init(args2) {
 async function resolveHookDir(repoRoot3) {
   try {
     const hooksPath = await git(["config", "--get", "core.hooksPath"]);
-    if (hooksPath) return isAbsolute2(hooksPath) ? hooksPath : join9(repoRoot3, hooksPath);
+    if (hooksPath) return isAbsolute2(hooksPath) ? hooksPath : join10(repoRoot3, hooksPath);
   } catch {
   }
   const gitDir2 = await git(["rev-parse", "--git-dir"]);
-  return join9(gitDir2, "hooks");
+  return join10(gitDir2, "hooks");
 }
 function shellSingleQuote(value) {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 async function installLocalCliShim(agentnoteDirPath) {
   if (!process.argv[1]) return;
-  const shimDir = join9(agentnoteDirPath, "bin");
-  const shimPath = join9(shimDir, "agent-note");
+  const shimDir = join10(agentnoteDirPath, "bin");
+  const shimPath = join10(shimDir, "agent-note");
   const cliPath = resolve5(process.argv[1]);
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
@@ -5306,12 +5193,12 @@ exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
   await chmod(shimPath, 493);
 }
 async function installGitHook(hookDir, name, script) {
-  const hookPath = join9(hookDir, name);
-  if (existsSync9(hookPath)) {
-    const existing = await readFile9(hookPath, TEXT_ENCODING);
+  const hookPath = join10(hookDir, name);
+  if (existsSync10(hookPath)) {
+    const existing = await readFile10(hookPath, TEXT_ENCODING);
     if (existing.includes(AGENTNOTE_HOOK_MARKER)) {
       const backupPath2 = `${hookPath}.agentnote-backup`;
-      const target = existsSync9(backupPath2) ? script.replace(
+      const target = existsSync10(backupPath2) ? script.replace(
         "#!/bin/sh",
         `#!/bin/sh
 # Chain to original hook \u2014 preserve exit status.
@@ -5323,7 +5210,7 @@ if [ -f ${shellSingleQuote(backupPath2)} ]; then ${shellSingleQuote(backupPath2)
       return true;
     }
     const backupPath = `${hookPath}.agentnote-backup`;
-    if (!existsSync9(backupPath)) {
+    if (!existsSync10(backupPath)) {
       await writeFile7(backupPath, existing);
       await chmod(backupPath, 493);
     }
@@ -5352,12 +5239,12 @@ async function hasOtherEnabledAgents(repoRoot3, removingAgents) {
   return false;
 }
 async function removeGitHook(hookDir, name) {
-  const hookPath = join10(hookDir, name);
-  if (!existsSync10(hookPath)) return false;
-  const content = await readFile10(hookPath, TEXT_ENCODING);
+  const hookPath = join11(hookDir, name);
+  if (!existsSync11(hookPath)) return false;
+  const content = await readFile11(hookPath, TEXT_ENCODING);
   if (!content.includes(AGENTNOTE_HOOK_MARKER)) return false;
   const backupPath = `${hookPath}.agentnote-backup`;
-  if (existsSync10(backupPath)) {
+  if (existsSync11(backupPath)) {
     await rename(backupPath, hookPath);
   } else {
     await unlink2(hookPath);
@@ -5402,19 +5289,19 @@ async function deinit(args2) {
         results.push(`  \xB7 git hook: ${name} (not found or not managed by agentnote)`);
       }
     }
-    const binDir = join10(await agentnoteDir(), "bin");
-    const shimPath = join10(binDir, "agent-note");
-    if (existsSync10(shimPath)) {
+    const binDir = join11(await agentnoteDir(), "bin");
+    const shimPath = join11(binDir, "agent-note");
+    if (existsSync11(shimPath)) {
       await unlink2(shimPath);
       results.push("  \u2713 removed local CLI shim");
     }
     if (removeWorkflow) {
       const workflowPaths = [
-        join10(repoRoot3, ".github", "workflows", PR_REPORT_WORKFLOW_FILENAME),
-        join10(repoRoot3, ".github", "workflows", DASHBOARD_WORKFLOW_FILENAME)
+        join11(repoRoot3, ".github", "workflows", PR_REPORT_WORKFLOW_FILENAME),
+        join11(repoRoot3, ".github", "workflows", DASHBOARD_WORKFLOW_FILENAME)
       ];
       for (const workflowPath of workflowPaths) {
-        if (!existsSync10(workflowPath)) continue;
+        if (!existsSync11(workflowPath)) continue;
         await unlink2(workflowPath);
         results.push(`  \u2713 removed ${workflowPath.replace(`${repoRoot3}/`, "")}`);
       }
@@ -5442,35 +5329,26 @@ async function deinit(args2) {
 }
 
 // src/commands/hook.ts
-init_agents();
-init_types();
-init_constants();
-init_jsonl();
-init_record();
 import { randomUUID } from "node:crypto";
-import { existsSync as existsSync12 } from "node:fs";
-import { mkdir as mkdir6, readFile as readFile11, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join12, relative as relative2 } from "node:path";
+import { existsSync as existsSync13 } from "node:fs";
+import { mkdir as mkdir6, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
+import { isAbsolute as isAbsolute3, join as join13, relative as relative2 } from "node:path";
 
 // src/core/rotate.ts
-init_constants();
-import { existsSync as existsSync11 } from "node:fs";
+import { existsSync as existsSync12 } from "node:fs";
 import { rename as rename2 } from "node:fs/promises";
-import { join as join11 } from "node:path";
+import { join as join12 } from "node:path";
 async function rotateLogs(sessionDir, rotateId, fileNames = [PROMPTS_FILE, CHANGES_FILE]) {
   for (const name of fileNames) {
-    const src = join11(sessionDir, name);
-    if (existsSync11(src)) {
+    const src = join12(sessionDir, name);
+    if (existsSync12(src)) {
       const base = name.replace(".jsonl", "");
-      await rename2(src, join11(sessionDir, `${base}-${rotateId}.jsonl`));
+      await rename2(src, join12(sessionDir, `${base}-${rotateId}.jsonl`));
     }
   }
 }
 
 // src/commands/hook.ts
-init_session();
-init_git();
-init_paths();
 var CLAUDE_PRE_TOOL_USE_EVENT = "PreToolUse";
 var CURSOR_BEFORE_SUBMIT_PROMPT_EVENT = "beforeSubmitPrompt";
 var CURSOR_BEFORE_SHELL_EXECUTION_EVENT = "beforeShellExecution";
@@ -5509,7 +5387,7 @@ async function normalizeToRepoRelative(filePath) {
 }
 async function blobHash(absPath) {
   try {
-    if (!existsSync12(absPath)) return EMPTY_BLOB;
+    if (!existsSync13(absPath)) return EMPTY_BLOB;
     return (await git(["hash-object", "-w", absPath])).trim();
   } catch {
     return EMPTY_BLOB;
@@ -5523,15 +5401,15 @@ async function readStdin() {
   return Buffer.concat(chunks).toString(TEXT_ENCODING);
 }
 async function readCurrentTurn2(sessionDir) {
-  const turnPath = join12(sessionDir, TURN_FILE);
-  if (!existsSync12(turnPath)) return 0;
-  const raw = (await readFile11(turnPath, TEXT_ENCODING)).trim();
+  const turnPath = join13(sessionDir, TURN_FILE);
+  if (!existsSync13(turnPath)) return 0;
+  const raw = (await readFile12(turnPath, TEXT_ENCODING)).trim();
   return Number.parseInt(raw, 10) || 0;
 }
 async function readCurrentPromptId(sessionDir) {
-  const p = join12(sessionDir, PROMPT_ID_FILE);
-  if (!existsSync12(p)) return null;
-  const raw = (await readFile11(p, TEXT_ENCODING)).trim();
+  const p = join13(sessionDir, PROMPT_ID_FILE);
+  if (!existsSync13(p)) return null;
+  const raw = (await readFile12(p, TEXT_ENCODING)).trim();
   return raw || null;
 }
 async function readCurrentHead() {
@@ -5542,8 +5420,8 @@ async function readCurrentHead() {
   }
 }
 async function refreshHeartbeat(agentnoteDirPath, sessionId, opts = {}) {
-  const heartbeatPath = join12(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
-  if (opts.onlyIfExists && !existsSync12(heartbeatPath)) return;
+  const heartbeatPath = join13(agentnoteDirPath, SESSIONS_DIR, sessionId, HEARTBEAT_FILE);
+  if (opts.onlyIfExists && !existsSync13(heartbeatPath)) return;
   await writeFile8(heartbeatPath, String(Date.now()));
 }
 async function hook(args2 = []) {
@@ -5579,19 +5457,19 @@ async function hook(args2 = []) {
     return;
   }
   const agentnoteDirPath = await agentnoteDir();
-  const sessionDir = join12(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
+  const sessionDir = join13(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
   await mkdir6(sessionDir, { recursive: true });
   if (!(adapter.name === AGENT_NAMES.gemini && event.kind === NORMALIZED_EVENT_KINDS.stop)) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
   switch (event.kind) {
     case NORMALIZED_EVENT_KINDS.sessionStart: {
-      await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
+      await writeFile8(join13(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
-      await appendJsonl(join12(sessionDir, EVENTS_FILE), {
+      await appendJsonl(join13(sessionDir, EVENTS_FILE), {
         event: NORMALIZED_EVENT_KINDS.sessionStart,
         session_id: event.sessionId,
         timestamp: event.timestamp,
@@ -5606,7 +5484,7 @@ async function hook(args2 = []) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
       const turn = await readCurrentTurn2(sessionDir);
-      await appendJsonl(join12(sessionDir, EVENTS_FILE), {
+      await appendJsonl(join13(sessionDir, EVENTS_FILE), {
         event: NORMALIZED_EVENT_KINDS.stop,
         session_id: event.sessionId,
         timestamp: event.timestamp,
@@ -5615,20 +5493,20 @@ async function hook(args2 = []) {
       });
       if (adapter.name === AGENT_NAMES.gemini) {
         try {
-          await unlink3(join12(sessionDir, HEARTBEAT_FILE));
+          await unlink3(join13(sessionDir, HEARTBEAT_FILE));
         } catch {
         }
       }
       break;
     }
     case NORMALIZED_EVENT_KINDS.prompt: {
-      await writeFile8(join12(agentnoteDirPath, SESSION_FILE), event.sessionId);
+      await writeFile8(join13(agentnoteDirPath, SESSION_FILE), event.sessionId);
       await writeSessionAgent(sessionDir, adapter.name);
       if (event.transcriptPath) {
         await writeSessionTranscriptPath(sessionDir, event.transcriptPath);
       }
-      const eventsPath = join12(sessionDir, EVENTS_FILE);
-      if (!existsSync12(eventsPath)) {
+      const eventsPath = join13(sessionDir, EVENTS_FILE);
+      if (!existsSync13(eventsPath)) {
         await appendJsonl(eventsPath, {
           event: NORMALIZED_EVENT_KINDS.sessionStart,
           session_id: event.sessionId,
@@ -5639,13 +5517,13 @@ async function hook(args2 = []) {
       }
       const rotateId = Date.now().toString(36);
       await rotateLogs(sessionDir, rotateId, [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE]);
-      const turnPath = join12(sessionDir, TURN_FILE);
+      const turnPath = join13(sessionDir, TURN_FILE);
       let turn = await readCurrentTurn2(sessionDir);
       turn += 1;
       await writeFile8(turnPath, String(turn));
       const promptId = randomUUID();
-      await writeFile8(join12(sessionDir, PROMPT_ID_FILE), promptId);
-      await appendJsonl(join12(sessionDir, PROMPTS_FILE), {
+      await writeFile8(join13(sessionDir, PROMPT_ID_FILE), promptId);
+      await appendJsonl(join13(sessionDir, PROMPTS_FILE), {
         event: NORMALIZED_EVENT_KINDS.prompt,
         timestamp: event.timestamp,
         prompt: event.prompt,
@@ -5667,7 +5545,7 @@ async function hook(args2 = []) {
     }
     case NORMALIZED_EVENT_KINDS.response: {
       const turn = await readCurrentTurn2(sessionDir);
-      await appendJsonl(join12(sessionDir, EVENTS_FILE), {
+      await appendJsonl(join13(sessionDir, EVENTS_FILE), {
         event: NORMALIZED_EVENT_KINDS.response,
         session_id: event.sessionId,
         timestamp: event.timestamp,
@@ -5682,7 +5560,7 @@ async function hook(args2 = []) {
       const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
       const preBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
-      await appendJsonl(join12(sessionDir, PRE_BLOBS_FILE), {
+      await appendJsonl(join13(sessionDir, PRE_BLOBS_FILE), {
         event: PRE_BLOB_EVENT,
         turn,
         prompt_id: promptId,
@@ -5704,7 +5582,7 @@ async function hook(args2 = []) {
       const promptId = await readCurrentPromptId(sessionDir);
       const postBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       const changeId = adapter.name === AGENT_NAMES.cursor ? `${event.timestamp}:${event.tool ?? NORMALIZED_EVENT_KINDS.fileChange}:${filePath}:${postBlob}` : null;
-      await appendJsonl(join12(sessionDir, CHANGES_FILE), {
+      await appendJsonl(join13(sessionDir, CHANGES_FILE), {
         event: NORMALIZED_EVENT_KINDS.fileChange,
         timestamp: event.timestamp,
         tool: event.tool,
@@ -5726,7 +5604,7 @@ async function hook(args2 = []) {
       if (adapter.name === AGENT_NAMES.gemini) {
         const headBefore = await readCurrentHead();
         await writeFile8(
-          join12(sessionDir, PENDING_COMMIT_FILE),
+          join13(sessionDir, PENDING_COMMIT_FILE),
           `${JSON.stringify(
             {
               command: event.commitCommand ?? "",
@@ -5744,7 +5622,7 @@ async function hook(args2 = []) {
       if (adapter.name === AGENT_NAMES.cursor) {
         const headBefore = await readCurrentHead();
         await writeFile8(
-          join12(sessionDir, PENDING_COMMIT_FILE),
+          join13(sessionDir, PENDING_COMMIT_FILE),
           `${JSON.stringify(
             {
               command: event.commitCommand ?? "",
@@ -5780,11 +5658,11 @@ async function hook(args2 = []) {
     }
     case NORMALIZED_EVENT_KINDS.postCommit: {
       if (adapter.name === AGENT_NAMES.cursor || adapter.name === AGENT_NAMES.gemini) {
-        const pendingPath = join12(sessionDir, PENDING_COMMIT_FILE);
-        if (!existsSync12(pendingPath)) break;
+        const pendingPath = join13(sessionDir, PENDING_COMMIT_FILE);
+        if (!existsSync13(pendingPath)) break;
         let headBefore = null;
         try {
-          const pending = JSON.parse(await readFile11(pendingPath, TEXT_ENCODING));
+          const pending = JSON.parse(await readFile12(pendingPath, TEXT_ENCODING));
           headBefore = pending.head_before?.trim() || null;
         } catch {
           headBefore = null;
@@ -5808,11 +5686,6 @@ async function hook(args2 = []) {
     }
   }
 }
-
-// src/commands/log.ts
-init_constants();
-init_storage();
-init_git();
 
 // src/commands/normalize.ts
 function isStructuredEntry(raw) {
@@ -5982,12 +5855,8 @@ async function readPrBody(prNumber) {
 }
 
 // ../pr-report/src/report.ts
-init_constants();
-init_entry();
-init_storage();
-init_git();
-import { existsSync as existsSync13 } from "node:fs";
-import { join as join13 } from "node:path";
+import { existsSync as existsSync14 } from "node:fs";
+import { join as join14 } from "node:path";
 var AI_RATIO_HEADER_BAR_WIDTH = 8;
 var AI_RATIO_TABLE_BAR_WIDTH = 5;
 var PERCENT_DENOMINATOR2 = 100;
@@ -6177,8 +6046,8 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
     repoUrl = null;
   }
   const repoRoot3 = await git(["rev-parse", "--show-toplevel"]);
-  const hasDashboardWorkflow = existsSync13(
-    join13(repoRoot3, ".github", "workflows", "agentnote-dashboard.yml")
+  const hasDashboardWorkflow = existsSync14(
+    join14(repoRoot3, ".github", "workflows", "agentnote-dashboard.yml")
   );
   const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber) : null;
   return {
@@ -6530,7 +6399,6 @@ function basename2(path) {
 }
 
 // src/commands/pr.ts
-init_entry();
 var DEFAULT_HEAD_REF = "HEAD";
 var JSON_INDENT_SPACES2 = 2;
 var PR_FLAG_PREFIX = "--";
@@ -6590,8 +6458,6 @@ async function pr(args2) {
 }
 
 // src/commands/push-notes.ts
-init_constants();
-init_git();
 var NOTES_PUSH_TIMEOUT_MS = 1e4;
 var ENV_AGENTNOTE_PUSHING = "AGENTNOTE_PUSHING";
 var ENV_GIT_TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT";
@@ -6615,10 +6481,6 @@ async function pushNotes(args2) {
 }
 
 // src/commands/session.ts
-init_constants();
-init_entry();
-init_storage();
-init_git();
 var PERCENT_DENOMINATOR3 = 100;
 async function session(sessionId) {
   if (!sessionId) {
@@ -6730,15 +6592,8 @@ async function session(sessionId) {
 }
 
 // src/commands/show.ts
-init_agents();
-init_types();
-init_constants();
-init_session();
-init_storage();
-init_git();
-init_paths();
 import { stat as stat2 } from "node:fs/promises";
-import { join as join14 } from "node:path";
+import { join as join15 } from "node:path";
 var DEFAULT_COMMIT_REF = "HEAD";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
 var BYTES_PER_KILOBYTE = 1024;
@@ -6807,7 +6662,7 @@ async function show(commitRef) {
       }
     }
   }
-  const sessionDir = join14(await agentnoteDir(), SESSIONS_DIR, sessionId);
+  const sessionDir = join15(await agentnoteDir(), SESSIONS_DIR, sessionId);
   const sessionAgent = await readSessionAgent(sessionDir) ?? entry.agent ?? AGENT_NAMES.claude;
   const adapter = hasAgent(sessionAgent) ? getAgent(sessionAgent) : getAgent(AGENT_NAMES.claude);
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
@@ -6831,17 +6686,9 @@ function truncateLines(text, maxLen) {
 }
 
 // src/commands/status.ts
-init_hook_command();
-init_agents();
-init_types();
-init_constants();
-init_session();
-init_storage();
-init_git();
-init_paths();
-import { existsSync as existsSync14 } from "node:fs";
-import { readFile as readFile12 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join15 } from "node:path";
+import { existsSync as existsSync15 } from "node:fs";
+import { readFile as readFile13 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4, join as join16 } from "node:path";
 var VERSION = "1.0.0";
 var CAPABILITY_LABELS = {
   edits: "edits",
@@ -6907,15 +6754,15 @@ async function status() {
   }
   const sessionPath = await sessionFile();
   let sessionActive = false;
-  if (existsSync14(sessionPath)) {
-    const sid = (await readFile12(sessionPath, TEXT_ENCODING)).trim();
+  if (existsSync15(sessionPath)) {
+    const sid = (await readFile13(sessionPath, TEXT_ENCODING)).trim();
     if (sid) {
       const dir = await agentnoteDir();
-      const sessionDir = join15(dir, SESSIONS_DIR, sid);
-      const hbPath = join15(sessionDir, HEARTBEAT_FILE);
-      if (existsSync14(hbPath)) {
+      const sessionDir = join16(dir, SESSIONS_DIR, sid);
+      const hbPath = join16(sessionDir, HEARTBEAT_FILE);
+      if (existsSync15(hbPath)) {
         try {
-          const hb = Number.parseInt((await readFile12(hbPath, TEXT_ENCODING)).trim(), 10);
+          const hb = Number.parseInt((await readFile13(hbPath, TEXT_ENCODING)).trim(), 10);
           const ageSeconds = Math.floor(Date.now() / MILLISECONDS_PER_SECOND) - Math.floor(hb / MILLISECONDS_PER_SECOND);
           if (hb > 0 && ageSeconds <= HEARTBEAT_TTL_SECONDS) {
             sessionActive = true;
@@ -6977,10 +6824,10 @@ async function readAgentCaptureDetails(repoRoot3, enabledAgents) {
   return details;
 }
 async function readCodexCaptureCapabilities(repoRoot3) {
-  const hooksPath = join15(repoRoot3, ".codex", "hooks.json");
-  if (!existsSync14(hooksPath)) return [];
+  const hooksPath = join16(repoRoot3, ".codex", "hooks.json");
+  if (!existsSync15(hooksPath)) return [];
   try {
-    const content = await readFile12(hooksPath, TEXT_ENCODING);
+    const content = await readFile13(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
@@ -7004,10 +6851,10 @@ async function readCodexCaptureCapabilities(repoRoot3) {
   }
 }
 async function readCursorCaptureCapabilities(repoRoot3) {
-  const hooksPath = join15(repoRoot3, ".cursor", "hooks.json");
-  if (!existsSync14(hooksPath)) return [];
+  const hooksPath = join16(repoRoot3, ".cursor", "hooks.json");
+  if (!existsSync15(hooksPath)) return [];
   try {
-    const content = await readFile12(hooksPath, TEXT_ENCODING);
+    const content = await readFile13(hooksPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
@@ -7032,10 +6879,10 @@ async function readCursorCaptureCapabilities(repoRoot3) {
   }
 }
 async function readGeminiCaptureCapabilities(repoRoot3) {
-  const settingsPath = join15(repoRoot3, ".gemini", "settings.json");
-  if (!existsSync14(settingsPath)) return [];
+  const settingsPath = join16(repoRoot3, ".gemini", "settings.json");
+  if (!existsSync15(settingsPath)) return [];
   try {
-    const content = await readFile12(settingsPath, TEXT_ENCODING);
+    const content = await readFile13(settingsPath, TEXT_ENCODING);
     const parsed = JSON.parse(content);
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName) => (hooks[eventName] ?? []).some(
@@ -7062,10 +6909,10 @@ async function readManagedGitHooks(repoRoot3) {
   const hookDir = await resolveHookDir2(repoRoot3);
   const active = [];
   for (const name of GIT_HOOK_NAMES) {
-    const hookPath = join15(hookDir, name);
-    if (!existsSync14(hookPath)) continue;
+    const hookPath = join16(hookDir, name);
+    if (!existsSync15(hookPath)) continue;
     try {
-      const content = await readFile12(hookPath, TEXT_ENCODING);
+      const content = await readFile13(hookPath, TEXT_ENCODING);
       if (content.includes(AGENTNOTE_HOOK_MARKER)) {
         active.push(name);
       }
@@ -7077,19 +6924,15 @@ async function readManagedGitHooks(repoRoot3) {
 async function resolveHookDir2(repoRoot3) {
   const hooksPathConfig = (await gitSafe(["config", "--get", "core.hooksPath"])).stdout.trim();
   if (hooksPathConfig) {
-    return isAbsolute4(hooksPathConfig) ? hooksPathConfig : join15(repoRoot3, hooksPathConfig);
+    return isAbsolute4(hooksPathConfig) ? hooksPathConfig : join16(repoRoot3, hooksPathConfig);
   }
   const gitDir2 = (await gitSafe(["rev-parse", "--git-dir"])).stdout.trim();
-  const resolvedGitDir = isAbsolute4(gitDir2) ? gitDir2 : join15(repoRoot3, gitDir2);
-  return join15(resolvedGitDir, "hooks");
+  const resolvedGitDir = isAbsolute4(gitDir2) ? gitDir2 : join16(repoRoot3, gitDir2);
+  return join16(resolvedGitDir, "hooks");
 }
 
 // src/commands/why.ts
-init_constants();
-init_entry();
-init_storage();
-init_git();
-import { existsSync as existsSync15, realpathSync } from "node:fs";
+import { existsSync as existsSync16, realpathSync } from "node:fs";
 import { isAbsolute as isAbsolute5, posix, relative as relative3, resolve as resolvePath } from "node:path";
 var ALL_ZERO_COMMIT_RE = /^0{40}$/;
 var BLAME_HEADER_RE = /^([0-9a-f]{40})\s+\d+\s+\d+(?:\s+\d+)?$/i;
@@ -7215,13 +7058,13 @@ async function normalizeTargetPath(path) {
 }
 async function findExistingRepositoryPath(candidates) {
   const root2 = await repoRoot();
-  return candidates.find((candidate) => existsSync15(resolvePath(root2, candidate))) ?? null;
+  return candidates.find((candidate) => existsSync16(resolvePath(root2, candidate))) ?? null;
 }
 function stripPathMentionPrefix(value) {
   return value.startsWith(AI_PATH_MENTION_PREFIX) ? value.slice(AI_PATH_MENTION_PREFIX.length) : value;
 }
 function realpathIfExists(path) {
-  if (!existsSync15(path)) return path;
+  if (!existsSync16(path)) return path;
   try {
     return realpathSync.native(path);
   } catch {
@@ -7233,7 +7076,7 @@ async function stripOptionalPathMentionPrefix(value) {
   const withoutPrefix = stripPathMentionPrefix(value);
   if (!withoutPrefix) return value;
   const root2 = await repoRoot();
-  if (existsSync15(resolvePath(root2, value.replace(PATH_PREFIX_RE, "")))) return value;
+  if (existsSync16(resolvePath(root2, value.replace(PATH_PREFIX_RE, "")))) return value;
   return withoutPrefix;
 }
 function normalizeComparablePath(path) {
@@ -7375,7 +7218,6 @@ function printUsageAndExit() {
 }
 
 // src/cli.ts
-init_constants();
 var VERSION2 = "1.0.0";
 var HELP = `
 agent-note v${VERSION2} \u2014 remember why your code changed
@@ -7441,16 +7283,7 @@ switch (command) {
     await hook(args);
     break;
   case "record": {
-    const sid = args[0];
-    if (sid) {
-      try {
-        const { recordCommitEntry: recordCommitEntry2 } = await Promise.resolve().then(() => (init_record(), record_exports));
-        const { agentnoteDir: agentnoteDir2 } = await Promise.resolve().then(() => (init_paths(), paths_exports));
-        const dir = await agentnoteDir2();
-        await recordCommitEntry2({ agentnoteDirPath: dir, sessionId: sid });
-      } catch {
-      }
-    }
+    await record(args);
     break;
   }
   case "push-notes":

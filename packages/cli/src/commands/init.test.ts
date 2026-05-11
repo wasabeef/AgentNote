@@ -6,12 +6,14 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
+  CHANGES_FILE,
   HEARTBEAT_FILE,
   NOTES_REF_FULL,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
   TRAILER_KEY,
+  TURN_FILE,
 } from "../core/constants.js";
 
 function shellSingleQuote(value: string): string {
@@ -223,6 +225,89 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       readFileSync(recordableMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
       "sessions with prompts should receive a trailer",
     );
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions when file evidence matches", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-post-commit-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-3333-3333-3333-000000000333";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add stale rescue","turn":1}\n',
+    );
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"stale-rescue.ts","turn":1}\n',
+    );
+
+    writeFileSync(join(dir, "stale-rescue.ts"), "export const staleRescue = true;\n");
+    execSync("git add stale-rescue.ts", { cwd: dir });
+    execSync("git commit -m 'feat: stale rescue'", { cwd: dir });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(!message.includes(TRAILER_KEY), "stale heartbeat should still skip trailers");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "add stale rescue");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record stale prompt-only sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-prompt-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-4444-4444-4444-000000000444";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"just talking","turn":1}\n',
+    );
+
+    writeFileSync(join(dir, "human-only.ts"), "export const humanOnly = true;\n");
+    execSync("git add human-only.ts", { cwd: dir });
+    execSync("git commit -m 'chore: human only'", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
 
     rmSync(dir, { recursive: true, force: true });
   });

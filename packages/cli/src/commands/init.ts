@@ -155,12 +155,12 @@ fi
 const POST_COMMIT_SCRIPT = `#!/bin/sh
 ${AGENTNOTE_HOOK_MARKER}
 # Record agentnote entry as a git note on HEAD.
-# Read session ID from the finalized commit's trailer (source of truth),
-# not from the mutable session file. This eliminates TOCTOU races between
-# prepare-commit-msg and post-commit.
+# Prefer the finalized trailer as the source of truth. If no trailer was
+# injected because the session heartbeat was stale, the CLI may use a strict
+# HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
-if [ -z "$SESSION_ID" ]; then exit 0; fi
+if [ -z "$SESSION_ID" ]; then SESSION_ID="--fallback-head"; fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then

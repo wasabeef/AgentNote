@@ -388,10 +388,10 @@ Three git hooks handle commit integration and notes sharing:
 | Git hook | When | What it does |
 |---|---|---|
 | `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and recordable session data, then appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
-| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. Idempotent — skips if note already exists. |
+| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. If no trailer exists, calls `agent-note record --fallback-head`, which only records when active session file evidence intersects the committed files. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
-Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in git hooks = skip (fail closed).
+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in `prepare-commit-msg` skips trailer injection, but `post-commit` can still run a strict fallback when the active session has file evidence for the committed files.
 
 Trailer injection also requires recordable session data. Prompts, file-change records, or pre-edit blobs count as recordable data. Transcript paths are supporting metadata, not recordable data by themselves. Heartbeat, `SessionStart`, and `transcript_path` metadata alone do not receive dangling `Agentnote-Session` trailers.
 

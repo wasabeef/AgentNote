@@ -13,6 +13,7 @@ import {
 import { recordCommitEntry } from "../core/record.js";
 import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
+import { recordHeadFallback } from "./record.js";
 
 /**
  * Provide a hook-compatible manual commit path.
@@ -80,6 +81,12 @@ export async function commit(args: string[]): Promise<void> {
     } catch (err: unknown) {
       // Never let agentnote recording break a commit.
       console.error(`agent-note: warning: ${(err as Error).message}`);
+    }
+  } else {
+    try {
+      await recordHeadFallback();
+    } catch {
+      // Never let agentnote fallback recording break a commit.
     }
   }
 }

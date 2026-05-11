@@ -65,6 +65,7 @@ export async function recordCommitEntry(opts: {
   agentnoteDirPath: string;
   sessionId: string;
   transcriptPath?: string;
+  requireAiFileEvidence?: boolean;
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -539,7 +540,10 @@ export async function recordCommitEntry(opts: {
   // triggers post-commit but session data has already been rotated. Writing an
   // empty note would overwrite valuable data if notes are later copied from the
   // original SHA.
-  if (interactions.length === 0 && aiFiles.length === 0) {
+  if (
+    (opts.requireAiFileEvidence && aiFiles.length === 0) ||
+    (interactions.length === 0 && aiFiles.length === 0)
+  ) {
     return { promptCount: 0, aiRatio: 0 };
   }
 
@@ -578,6 +582,22 @@ export async function recordCommitEntry(opts: {
   // commitFileSet). Archives are purged at the start of the next turn by rotateLogs.
 
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
+}
+
+/** Return true when session file evidence intersects the current commit files. */
+export async function hasSessionCommitFileEvidence(
+  sessionDir: string,
+  commitFiles: string[],
+): Promise<boolean> {
+  const commitFileSet = new Set(commitFiles);
+  if (commitFileSet.size === 0) return false;
+
+  const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
+  const preBlobEntries = await readAllSessionJsonl(sessionDir, PRE_BLOBS_FILE);
+  return [...changeEntries, ...preBlobEntries].some((entry) => {
+    const file = typeof entry.file === "string" ? entry.file : "";
+    return file !== "" && commitFileSet.has(file);
+  });
 }
 
 /**
