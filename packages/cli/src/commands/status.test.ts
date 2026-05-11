@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +9,8 @@ import { AGENTNOTE_DIR, HEARTBEAT_FILE, SESSION_FILE } from "../core/constants.j
 describe("agentnote status", () => {
   let testDir: string;
   const cliPath = join(process.cwd(), "dist", "cli.js");
+  const runCli = (args: string[], cwd = testDir): string =>
+    execFileSync("node", [cliPath, ...args], { cwd, encoding: "utf-8" });
 
   before(() => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-status-"));
@@ -23,10 +25,7 @@ describe("agentnote status", () => {
   });
 
   it("shows 'not configured' before start", () => {
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("not configured"), "should show not configured");
     assert.ok(output.includes("commit:  not configured"), "should show commit not configured");
@@ -34,12 +33,9 @@ describe("agentnote status", () => {
   });
 
   it("shows 'active' after start", () => {
-    execSync(`node ${cliPath} init --agent cursor --hooks --no-git-hooks`, { cwd: testDir });
+    runCli(["init", "--agent", "cursor", "--hooks", "--no-git-hooks"]);
 
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("agent:   active"), "should show agent hooks active");
     assert.ok(
@@ -51,12 +47,9 @@ describe("agentnote status", () => {
   });
 
   it("shows Codex transcript-driven capture details", () => {
-    execSync(`node ${cliPath} init --agent codex --hooks --no-git-hooks`, { cwd: testDir });
+    runCli(["init", "--agent", "codex", "--hooks", "--no-git-hooks"]);
 
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("agent:   active"), "should show agent hooks active");
     assert.ok(
@@ -126,10 +119,7 @@ describe("agentnote status", () => {
         })}\n`,
       );
 
-      const output = execSync(`node ${cliPath} status`, {
-        cwd: repo,
-        encoding: "utf-8",
-      });
+      const output = runCli(["status"], repo);
 
       assert.ok(
         output.includes("codex(prompt, response, transcript)"),
@@ -149,12 +139,9 @@ describe("agentnote status", () => {
   });
 
   it("shows git hooks as the primary commit path when fully configured", () => {
-    execSync(`node ${cliPath} init --agent cursor --no-action`, { cwd: testDir });
+    runCli(["init", "--agent", "cursor", "--no-action"]);
 
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("agent:   active"), "should show agent hooks active");
     assert.ok(
@@ -177,19 +164,13 @@ describe("agentnote status", () => {
     execSync(`mkdir -p "${sessionDir}"`);
     writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
 
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("a1b2c3d4…"), "should show truncated session ID");
   });
 
   it("shows linked commit count", () => {
-    const output = execSync(`node ${cliPath} status`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = runCli(["status"]);
 
     assert.ok(output.includes("linked:"), "should show linked count");
   });
