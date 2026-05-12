@@ -285,7 +285,7 @@ export async function recordCommitEntry(opts: {
       allInteractions = await adapter.extractInteractions(transcriptPath);
       allInteractions = filterTranscriptInteractionsForCommitWindow(
         allInteractions,
-        opts.allowEnvironmentTranscriptFallback ? parentCommitTimestampMs : null,
+        null,
         commitTimestampMs,
       );
     } catch (err) {
@@ -498,8 +498,12 @@ export async function recordCommitEntry(opts: {
       );
       useSelectableTranscriptAttribution = true;
     } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
-      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
         transcriptMatched,
+        parentCommitTimestampMs,
+      );
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        envTranscriptMatched,
         commitFileSet,
         consumedPromptState,
       );
@@ -508,11 +512,16 @@ export async function recordCommitEntry(opts: {
       );
       attributionTranscriptMatched = envMatched;
       useSelectableTranscriptAttribution = true;
-    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
+    } else if (
+      !crossTurnCommit &&
+      transcriptMatched.length === 0 &&
+      canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)
+    ) {
       interactions = selectTranscriptFallbackInteractions(
         allInteractions,
         commitFileSet,
         currentUnattributedToolPromptIds,
+        { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true },
       );
       useCommitLevelAttribution = interactions.length > 0;
     } else {
@@ -796,6 +805,37 @@ function filterTranscriptInteractionsForCommitWindow(
   });
 }
 
+/** Prefer parent-to-HEAD transcript evidence, but recover work prepared just before the parent. */
+function selectEnvironmentTranscriptSourceInteractions(
+  interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  const bounded = filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs);
+  return bounded.length > 0 ? bounded : interactions;
+}
+
+/** Keep transcript rows after the parent commit when that newer evidence exists. */
+function filterTranscriptInteractionsAfterParent(
+  interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  if (parentCommitTimestampMs === null) return interactions;
+  const lowerBoundMs = parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs === null || interactionMs >= lowerBoundMs;
+  });
+}
+
+/** Env fallback can use unmatched transcript rows only when they are shell-only evidence. */
+function canUseUnmatchedTranscriptFallback(
+  allowEnvironmentTranscriptFallback: boolean | undefined,
+  interactions: TranscriptInteraction[],
+): boolean {
+  if (!allowEnvironmentTranscriptFallback) return true;
+  return !interactions.some((interaction) => (interaction.files_touched ?? []).length > 0);
+}
+
 /**
  * Convert an agent transcript row into the persisted interaction shape.
  *
@@ -846,7 +886,11 @@ function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
   preferredPromptIds = new Set<string>(),
+  opts: { requireMutationTool?: boolean } = {},
 ): Interaction[] {
+  const isEligible = (interaction: TranscriptInteraction) =>
+    (interaction.tools?.length ?? 0) > 0 &&
+    (!opts.requireMutationTool || hasMutationToolEvidence(interaction));
   const preferredToolBacked =
     preferredPromptIds.size > 0
       ? [...interactions]
@@ -855,15 +899,17 @@ function selectTranscriptFallbackInteractions(
             (interaction) =>
               !!interaction.prompt_id &&
               preferredPromptIds.has(interaction.prompt_id) &&
-              (interaction.tools?.length ?? 0) > 0,
+              isEligible(interaction),
           )
       : undefined;
   if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
 
-  const latestToolBacked = [...interactions]
-    .reverse()
-    .find((interaction) => (interaction.tools?.length ?? 0) > 0);
+  const latestToolBacked = [...interactions].reverse().find(isEligible);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+
+function hasMutationToolEvidence(interaction: TranscriptInteraction): boolean {
+  return (interaction.mutation_tools?.length ?? 0) > 0;
 }
 
 /** Select the newest transcript rows needed to cover commit files for env fallback. */

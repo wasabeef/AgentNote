@@ -708,9 +708,11 @@ import { isAbsolute, join as join2, relative, resolve as resolve2, sep as sep2 }
 import { createInterface } from "node:readline";
 var CONFIG_REL_PATH = ".codex/config.toml";
 var ENV_CODEX_HOME = "CODEX_HOME";
+var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var HOOKS_REL_PATH = ".codex/hooks.json";
 var HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
 var TRANSCRIPT_PREVIEW_CHARS = 4096;
+var SHELL_MUTATION_COMMAND_RE = /(^|[;&|]\s*)(apply_patch|cat\s+>|cp\b|install\b|mkdir\b|mv\b|npm\s+(audit\s+fix|dedupe|install|update|version)\b|perl\s+-[^\n;&|]*i|pnpm\s+(add|install|update)\b|rm\b|sed\s+-[^\n;&|]*i|tee\b|touch\b|yarn\s+(add|install|upgrade)\b)|(\s|^)(>|>>)\s*\S+/;
 var CODEX_HOOK_EVENTS = {
   sessionStart: "SessionStart",
   userPromptSubmit: "UserPromptSubmit",
@@ -778,6 +780,29 @@ function collectPatchStrings(value, seen = /* @__PURE__ */ new Set()) {
     ...collectPatchStrings(value.arguments, seen),
     ...collectPatchStrings(value.content, seen),
     ...collectPatchStrings(value.text, seen)
+  ];
+}
+function collectCommandStrings(value, seen = /* @__PURE__ */ new Set()) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      const parsed = parseJsonString(value);
+      if (parsed !== value) return collectCommandStrings(parsed, seen);
+    }
+    return [trimmed];
+  }
+  if (!value || seen.has(value)) return [];
+  seen.add(value);
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectCommandStrings(item, seen));
+  }
+  if (!isRecord(value)) return [];
+  return [
+    ...collectCommandStrings(value.cmd, seen),
+    ...collectCommandStrings(value.command, seen),
+    ...collectCommandStrings(value.script, seen),
+    ...collectCommandStrings(value.shell, seen)
   ];
 }
 function readTranscriptSessionId(candidate) {
@@ -963,6 +988,15 @@ function appendInteractionTool(interaction, toolName) {
   if (tools.includes(toolName)) return;
   interaction.tools = [...tools, toolName];
 }
+function appendInteractionMutationTool(interaction, toolName) {
+  if (!toolName) return;
+  const tools = interaction.mutation_tools ?? [];
+  if (tools.includes(toolName)) return;
+  interaction.mutation_tools = [...tools, toolName];
+}
+function isMutatingShellCommand(command2) {
+  return SHELL_MUTATION_COMMAND_RE.test(command2);
+}
 var codex = {
   name: AGENT_NAMES.codex,
   settingsRelPath: CONFIG_REL_PATH,
@@ -1065,6 +1099,9 @@ var codex = {
     if (!existsSync2(sessionsDir)) return null;
     return findTranscriptCandidate(sessionsDir, sessionId);
   },
+  readEnvironmentSessionId() {
+    return process.env[ENV_CODEX_THREAD_ID] ?? null;
+  },
   async extractInteractions(transcriptPath) {
     if (!isValidTranscriptPath2(transcriptPath)) {
       throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
@@ -1117,6 +1154,12 @@ ${response}` : response;
         const toolName = typeof payload.name === "string" ? payload.name : typeof payload.call_name === "string" ? payload.call_name : void 0;
         if ((payloadType === "custom_tool_call" || payloadType === "function_call" || payloadType === "tool_use") && toolName) {
           appendInteractionTool(current, toolName);
+          if (toolName === "exec_command" && [
+            ...collectCommandStrings(payload.input),
+            ...collectCommandStrings(payload.arguments)
+          ].some(isMutatingShellCommand)) {
+            appendInteractionMutationTool(current, toolName);
+          }
         }
         if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
           const patchInputs = [
@@ -1146,6 +1189,7 @@ ${response}` : response;
           if (files.length > 0) {
             current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], ...files])];
           }
+          appendInteractionMutationTool(current, toolName);
           if (Object.keys(current.line_stats).length === 0) {
             delete current.line_stats;
           }
@@ -3546,7 +3590,7 @@ async function recordCommitEntry(opts) {
       allInteractions = await adapter.extractInteractions(transcriptPath);
       allInteractions = filterTranscriptInteractionsForCommitWindow(
         allInteractions,
-        opts.allowEnvironmentTranscriptFallback ? parentCommitTimestampMs : null,
+        null,
         commitTimestampMs
       );
     } catch (err) {
@@ -3696,8 +3740,12 @@ async function recordCommitEntry(opts) {
       );
       useSelectableTranscriptAttribution = true;
     } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
-      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
         transcriptMatched,
+        parentCommitTimestampMs
+      );
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        envTranscriptMatched,
         commitFileSet,
         consumedPromptState
       );
@@ -3706,11 +3754,12 @@ async function recordCommitEntry(opts) {
       );
       attributionTranscriptMatched = envMatched;
       useSelectableTranscriptAttribution = true;
-    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
+    } else if (!crossTurnCommit && transcriptMatched.length === 0 && canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)) {
       interactions = selectTranscriptFallbackInteractions(
         allInteractions,
         commitFileSet,
-        currentUnattributedToolPromptIds
+        currentUnattributedToolPromptIds,
+        { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true }
       );
       useCommitLevelAttribution = interactions.length > 0;
     } else {
@@ -3882,6 +3931,22 @@ function filterTranscriptInteractionsForCommitWindow(interactions, parentCommitT
     return upperBoundMs === null || interactionMs <= upperBoundMs;
   });
 }
+function selectEnvironmentTranscriptSourceInteractions(interactions, parentCommitTimestampMs) {
+  const bounded = filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs);
+  return bounded.length > 0 ? bounded : interactions;
+}
+function filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs) {
+  if (parentCommitTimestampMs === null) return interactions;
+  const lowerBoundMs = parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs === null || interactionMs >= lowerBoundMs;
+  });
+}
+function canUseUnmatchedTranscriptFallback(allowEnvironmentTranscriptFallback, interactions) {
+  if (!allowEnvironmentTranscriptFallback) return true;
+  return !interactions.some((interaction) => (interaction.files_touched ?? []).length > 0);
+}
 function toRecordedInteraction(interaction, commitFileSet, consumedPromptState) {
   const recorded = {
     prompt: interaction.prompt,
@@ -3908,13 +3973,17 @@ function filterInteractionCommitFiles(interaction, commitFileSet, consumedPrompt
     (file) => !consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file))
   );
 }
-function selectTranscriptFallbackInteractions(interactions, commitFileSet, preferredPromptIds = /* @__PURE__ */ new Set()) {
+function selectTranscriptFallbackInteractions(interactions, commitFileSet, preferredPromptIds = /* @__PURE__ */ new Set(), opts = {}) {
+  const isEligible = (interaction) => (interaction.tools?.length ?? 0) > 0 && (!opts.requireMutationTool || hasMutationToolEvidence(interaction));
   const preferredToolBacked = preferredPromptIds.size > 0 ? [...interactions].reverse().find(
-    (interaction) => !!interaction.prompt_id && preferredPromptIds.has(interaction.prompt_id) && (interaction.tools?.length ?? 0) > 0
+    (interaction) => !!interaction.prompt_id && preferredPromptIds.has(interaction.prompt_id) && isEligible(interaction)
   ) : void 0;
   if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
-  const latestToolBacked = [...interactions].reverse().find((interaction) => (interaction.tools?.length ?? 0) > 0);
+  const latestToolBacked = [...interactions].reverse().find(isEligible);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+function hasMutationToolEvidence(interaction) {
+  return (interaction.mutation_tools?.length ?? 0) > 0;
 }
 function selectEnvironmentTranscriptMatchedInteractions(interactions, commitFileSet, consumedPromptState) {
   const uncoveredFiles = new Set(commitFileSet);
@@ -4826,7 +4895,6 @@ import { mkdir as mkdir5, readFile as readFile8, stat as stat2 } from "node:fs/p
 import { join as join8 } from "node:path";
 var FALLBACK_HEAD_FLAG = "--fallback-head";
 var FALLBACK_ENV_FLAG = "--fallback-env";
-var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 var UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -4890,22 +4958,29 @@ async function readActiveSessionId(agentnoteDirPath) {
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
 }
 async function resolveEnvironmentSessionId(agentnoteDirPath) {
-  const codexSessionId = sanitizeSessionId(process.env[ENV_CODEX_THREAD_ID]);
-  if (!codexSessionId) return null;
-  const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, codexSessionId);
-  await mkdir5(sessionDir, { recursive: true });
+  for (const agentName of listAgents()) {
+    const candidate = await resolveAgentEnvironmentSession(agentnoteDirPath, agentName);
+    if (candidate) return candidate;
+  }
+  return null;
+}
+async function resolveAgentEnvironmentSession(agentnoteDirPath, agentName) {
+  const adapter = getAgent(agentName);
+  const sessionId = sanitizeSessionId(adapter.readEnvironmentSessionId?.() ?? void 0);
+  if (!sessionId) return null;
+  const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, sessionId);
   const existingAgent = await readSessionAgent(sessionDir);
-  if (existingAgent && existingAgent !== AGENT_NAMES.codex) return null;
-  if (!existingAgent) await writeSessionAgent(sessionDir, AGENT_NAMES.codex);
+  if (existingAgent && existingAgent !== agentName) return null;
   const savedTranscriptPath = await readSessionTranscriptPath(sessionDir);
-  const transcriptPath = savedTranscriptPath ?? getAgent(AGENT_NAMES.codex).findTranscript(codexSessionId);
-  if (!savedTranscriptPath && transcriptPath)
-    await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  const transcriptPath = savedTranscriptPath ?? adapter.findTranscript(sessionId);
   if (!await hasFreshEnvironmentEvidence(sessionDir, transcriptPath)) {
-    debugRecord(`env fallback skipped: no fresh evidence for ${codexSessionId}`);
+    debugRecord(`env fallback skipped: no fresh evidence for ${agentName} ${sessionId}`);
     return null;
   }
-  return codexSessionId;
+  await mkdir5(sessionDir, { recursive: true });
+  if (!existingAgent) await writeSessionAgent(sessionDir, agentName);
+  if (!savedTranscriptPath && transcriptPath) await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  return sessionId;
 }
 function debugRecord(message) {
   if (process.env[ENV_AGENTNOTE_DEBUG]) console.error(`agent-note: debug: ${message}`);

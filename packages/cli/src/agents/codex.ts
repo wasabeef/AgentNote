@@ -16,9 +16,12 @@ import {
 
 const CONFIG_REL_PATH = ".codex/config.toml";
 const ENV_CODEX_HOME = "CODEX_HOME";
+const ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 const HOOKS_REL_PATH = ".codex/hooks.json";
 const HOOK_COMMAND = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
 const TRANSCRIPT_PREVIEW_CHARS = 4096;
+const SHELL_MUTATION_COMMAND_RE =
+  /(^|[;&|]\s*)(apply_patch|cat\s+>|cp\b|install\b|mkdir\b|mv\b|npm\s+(audit\s+fix|dedupe|install|update|version)\b|perl\s+-[^\n;&|]*i|pnpm\s+(add|install|update)\b|rm\b|sed\s+-[^\n;&|]*i|tee\b|touch\b|yarn\s+(add|install|upgrade)\b)|(\s|^)(>|>>)\s*\S+/;
 const CODEX_HOOK_EVENTS = {
   sessionStart: "SessionStart",
   userPromptSubmit: "UserPromptSubmit",
@@ -123,6 +126,34 @@ function collectPatchStrings(value: unknown, seen = new Set<unknown>()): string[
     ...collectPatchStrings(value.arguments, seen),
     ...collectPatchStrings(value.content, seen),
     ...collectPatchStrings(value.text, seen),
+  ];
+}
+
+function collectCommandStrings(value: unknown, seen = new Set<unknown>()): string[] {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      const parsed = parseJsonString(value);
+      if (parsed !== value) return collectCommandStrings(parsed, seen);
+    }
+    return [trimmed];
+  }
+
+  if (!value || seen.has(value)) return [];
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectCommandStrings(item, seen));
+  }
+
+  if (!isRecord(value)) return [];
+
+  return [
+    ...collectCommandStrings(value.cmd, seen),
+    ...collectCommandStrings(value.command, seen),
+    ...collectCommandStrings(value.script, seen),
+    ...collectCommandStrings(value.shell, seen),
   ];
 }
 
@@ -362,6 +393,20 @@ function appendInteractionTool(
   interaction.tools = [...tools, toolName];
 }
 
+function appendInteractionMutationTool(
+  interaction: TranscriptInteraction,
+  toolName: string | undefined,
+): void {
+  if (!toolName) return;
+  const tools = interaction.mutation_tools ?? [];
+  if (tools.includes(toolName)) return;
+  interaction.mutation_tools = [...tools, toolName];
+}
+
+function isMutatingShellCommand(command: string): boolean {
+  return SHELL_MUTATION_COMMAND_RE.test(command);
+}
+
 /** Codex CLI adapter for transcript-driven prompt, patch, and attribution recovery. */
 export const codex: AgentAdapter = {
   name: AGENT_NAMES.codex,
@@ -484,6 +529,10 @@ export const codex: AgentAdapter = {
     return findTranscriptCandidate(sessionsDir, sessionId);
   },
 
+  readEnvironmentSessionId(): string | null {
+    return process.env[ENV_CODEX_THREAD_ID] ?? null;
+  },
+
   async extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]> {
     if (!isValidTranscriptPath(transcriptPath)) {
       throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
@@ -556,6 +605,15 @@ export const codex: AgentAdapter = {
           toolName
         ) {
           appendInteractionTool(current, toolName);
+          if (
+            toolName === "exec_command" &&
+            [
+              ...collectCommandStrings(payload.input),
+              ...collectCommandStrings(payload.arguments),
+            ].some(isMutatingShellCommand)
+          ) {
+            appendInteractionMutationTool(current, toolName);
+          }
         }
 
         if (
@@ -592,6 +650,7 @@ export const codex: AgentAdapter = {
           if (files.length > 0) {
             current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
           }
+          appendInteractionMutationTool(current, toolName);
 
           if (Object.keys(current.line_stats).length === 0) {
             delete current.line_stats;

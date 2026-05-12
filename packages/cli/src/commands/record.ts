@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { getAgent } from "../agents/index.js";
-import { AGENT_NAMES } from "../agents/types.js";
+import { getAgent, listAgents } from "../agents/index.js";
+import type { AgentName } from "../agents/types.js";
 import {
   HEARTBEAT_FILE,
   HEARTBEAT_TTL_SECONDS,
@@ -25,7 +25,6 @@ import { agentnoteDir } from "../paths.js";
 
 const FALLBACK_HEAD_FLAG = "--fallback-head";
 const FALLBACK_ENV_FLAG = "--fallback-env";
-const ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 const SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 const UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -105,27 +104,37 @@ async function readActiveSessionId(agentnoteDirPath: string): Promise<string | n
 }
 
 async function resolveEnvironmentSessionId(agentnoteDirPath: string): Promise<string | null> {
-  const codexSessionId = sanitizeSessionId(process.env[ENV_CODEX_THREAD_ID]);
-  if (!codexSessionId) return null;
+  for (const agentName of listAgents()) {
+    const candidate = await resolveAgentEnvironmentSession(agentnoteDirPath, agentName);
+    if (candidate) return candidate;
+  }
+  return null;
+}
 
-  const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, codexSessionId);
-  await mkdir(sessionDir, { recursive: true });
+async function resolveAgentEnvironmentSession(
+  agentnoteDirPath: string,
+  agentName: AgentName,
+): Promise<string | null> {
+  const adapter = getAgent(agentName);
+  const sessionId = sanitizeSessionId(adapter.readEnvironmentSessionId?.() ?? undefined);
+  if (!sessionId) return null;
 
+  const sessionDir = join(agentnoteDirPath, SESSIONS_DIR, sessionId);
   const existingAgent = await readSessionAgent(sessionDir);
-  if (existingAgent && existingAgent !== AGENT_NAMES.codex) return null;
-  if (!existingAgent) await writeSessionAgent(sessionDir, AGENT_NAMES.codex);
+  if (existingAgent && existingAgent !== agentName) return null;
 
   const savedTranscriptPath = await readSessionTranscriptPath(sessionDir);
-  const transcriptPath =
-    savedTranscriptPath ?? getAgent(AGENT_NAMES.codex).findTranscript(codexSessionId);
-  if (!savedTranscriptPath && transcriptPath)
-    await writeSessionTranscriptPath(sessionDir, transcriptPath);
-
+  const transcriptPath = savedTranscriptPath ?? adapter.findTranscript(sessionId);
   if (!(await hasFreshEnvironmentEvidence(sessionDir, transcriptPath))) {
-    debugRecord(`env fallback skipped: no fresh evidence for ${codexSessionId}`);
+    debugRecord(`env fallback skipped: no fresh evidence for ${agentName} ${sessionId}`);
     return null;
   }
-  return codexSessionId;
+
+  await mkdir(sessionDir, { recursive: true });
+  if (!existingAgent) await writeSessionAgent(sessionDir, agentName);
+  if (!savedTranscriptPath && transcriptPath)
+    await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  return sessionId;
 }
 
 function debugRecord(message: string): void {
