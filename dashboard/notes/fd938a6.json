@@ -1,0 +1,168 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-12T13:18:08.047Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "それと、リリースノート生成時に頭文字が小文字だったら大文字にしたほうがいいんじゃないか？置換で。\n英文的には。",
+      "response": "賛成です。`fix:` / `feat:` の conventional commit subject は英語だと動詞始まりになりやすいので、release note bullet では `Generate...` のように先頭大文字へ正規化した方が読みやすいです。`git-cliff` の template 側で `upper_first` を噛ませれば、PR / commit 運用に頼りきらず最低限の見た目を揃えられます。\n実装は `.github/cliff.toml` の template を直すだけで済みます。あわせて docs 側に「generator が safety net として先頭を大文字化するが、人間/Agent は最初から自然な英文を書く」ルールも残します。\n`upper_first` を入れました。これで自動生成時に `recover...` のような bullet は `Recover...` になります。念のため、実際の `git-cliff` 出力で v1.0.1 の先頭小文字 bullet が大文字化されることを確認します。\n確認できました。`git-cliff` 出力では `generate...` が `Generate...` になっています。これは release note の見た目改善として PR #73 に含めるのが自然なので、追加 commit して PR description も更新します。",
+      "files_touched": [
+        ".github/cliff.toml",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/engineering.md",
+        "docs/architecture.md"
+      ],
+      "tools": [
+        "apply_patch",
+        "exec_command"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/cliff.toml",
+      "by_ai": true
+    },
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/engineering.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 10,
+      "total_added": 10,
+      "deleted": 2
+    }
+  },
+  "commit": {
+    "sha": "fd938a6eee6f9536c07cd61fd41d795680175480",
+    "short_sha": "fd938a6",
+    "message": "docs: capitalize generated release notes",
+    "date": "2026-05-12T22:18:06+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": ".github/cliff.toml",
+        "lines": [
+          "index 76fbcdf..5611cde 100644",
+          "--- a/.github/cliff.toml",
+          "+++ b/.github/cliff.toml",
+          "@@ -20,9 +20,9 @@ body = \"\"\"",
+          "         {% for commit in commits %}",
+          "             {% if group != \"Changed\" or (commit.body and \"Release note:\" in commit.body) %}",
+          "                 {% if commit.body and \"Release note:\" in commit.body -%}",
+          "-                    - {{ commit.body | split(pat=\"Release note:\") | last | split(pat=\"\\n\") | first | trim }}",
+          "+                    - {{ commit.body | split(pat=\"Release note:\") | last | split(pat=\"\\n\") | first | trim | upper_first }}",
+          "                 {% else -%}",
+          "-                    - {{ commit.message | split(pat=\"\\n\") | first | trim }}",
+          "+                    - {{ commit.message | split(pat=\"\\n\") | first | trim | upper_first }}",
+          "                 {% endif %}",
+          "             {% endif %}",
+          "         {% endfor %}"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index fb43543..0b89631 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -142,6 +142,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " - **Use the body when the subject is not enough.** Good AI-generated commits should include `Why`, `User impact`, `Verification`, and `Release note:` sections. Do not write `Why:`, `User impact:`, or `Verification:` with colons because git-cliff may parse them as commit footers instead of body text.",
+          " - **Release note rules.** `feat:`, `fix:`, and `perf:` commits are included by default. `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, and `build:` commits are omitted unless the body contains `Release note:` with a value other than `skip`.",
+          " - **Keep release notes human-sized.** A multi-commit PR should normally produce one clear release bullet per user-visible change, not one bullet per review fix. Put the public wording on the primary implementation commit with `Release note: <sentence>`, and add `Release note: skip` to follow-up commits such as `address review findings`, `tighten fallback`, `bound window`, or generated bundle syncs unless they describe a distinct user-visible outcome.",
+          "+- **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.",
+          " - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.",
+          " - **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.",
+          " - **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index 9e9218c..c543aa8 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -142,6 +142,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " - **Use the body when the subject is not enough.** Good AI-generated commits should include `Why`, `User impact`, `Verification`, and `Release note:` sections. Do not write `Why:`, `User impact:`, or `Verification:` with colons because git-cliff may parse them as commit footers instead of body text.",
+          " - **Release note rules.** `feat:`, `fix:`, and `perf:` commits are included by default. `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, and `build:` commits are omitted unless the body contains `Release note:` with a value other than `skip`.",
+          " - **Keep release notes human-sized.** A multi-commit PR should normally produce one clear release bullet per user-visible change, not one bullet per review fix. Put the public wording on the primary implementation commit with `Release note: <sentence>`, and add `Release note: skip` to follow-up commits such as `address review findings`, `tighten fallback`, `bound window`, or generated bundle syncs unless they describe a distinct user-visible outcome.",
+          "+- **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.",
+          " - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.",
+          " - **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.",
+          " - **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit."
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index bc09968..75bb0a3 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -578,6 +578,11 @@ user-facing. When a PR contains several follow-up commits for the same behavior,",
+          " keep only the primary implementation commit visible in the release note and mark",
+          " review-fix commits with `Release note: skip`.",
+          " ",
+          "+The changelog template applies `upper_first` to each rendered bullet so a",
+          "+mechanical commit subject such as `recover Codex env sessions` becomes",
+          "+`Recover Codex env sessions`. This is only a safety net; release-worthy wording",
+          "+should still be written as a clear sentence in the commit body.",
+          "+",
+          " The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.",
+          " ",
+          " Release steps:"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/engineering.md",
+        "lines": [
+          "index d35b0af..726cd57 100644",
+          "--- a/docs/engineering.md",
+          "+++ b/docs/engineering.md",
+          "@@ -106,6 +106,7 @@ subject as public copy unless the commit type is intentionally internal.",
+          " - Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.",
+          " - Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.",
+          " - Keep multi-commit PRs readable in the generated release note. Review follow-up commits should usually be `Release note: skip` unless they are a separate user-visible change.",
+          "+- The release generator capitalizes the first character of each bullet as a safety net. Still write natural English yourself; this only fixes mechanical lower-case commit subjects.",
+          " - A PR title is not the release-note source, but it should still read like the top-level release summary for the PR. If the title would be a bad release bullet, improve it before opening or merging the PR.",
+          " - Before tagging, run `git-cliff --config .github/cliff.toml --latest --strip header`. If the output reads like an implementation log, rewrite commit subjects/bodies before cutting the release."
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 73,
+    "title": "docs: improve release note guidance",
+    "state": "open"
+  }
+}
