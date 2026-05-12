@@ -415,6 +415,6 @@
   "pull_request": {
     "number": 74,
     "title": "fix(record): preserve env fallback prompt context",
-    "state": "open"
+    "state": "merged"
   }
 }
