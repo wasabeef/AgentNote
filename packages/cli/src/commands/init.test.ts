@@ -97,11 +97,11 @@ function writeCodexShellTranscript(
   cwd: string,
   prompt: string,
   command: string,
+  baseTimestampMs = Date.now(),
 ): string {
   const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
   mkdirSync(transcriptDir, { recursive: true });
   const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-30-00-${sessionId}.jsonl`);
-  const baseTimestampMs = Date.now();
   const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();
   writeFileSync(
     transcriptPath,
@@ -145,9 +145,12 @@ function writeCodexShellTranscript(
 
 describe("agentnote init", () => {
   let testDir: string;
+  let originalCodexThreadId: string | undefined;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
+    originalCodexThreadId = process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_THREAD_ID;
     testDir = mkdtempSync(join(tmpdir(), "agentnote-init-"));
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
@@ -159,6 +162,11 @@ describe("agentnote init", () => {
   });
 
   after(() => {
+    if (originalCodexThreadId === undefined) {
+      delete process.env.CODEX_THREAD_ID;
+    } else {
+      process.env.CODEX_THREAD_ID = originalCodexThreadId;
+    }
     rmSync(testDir, { recursive: true, force: true });
   });
 
@@ -759,6 +767,54 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "inspect repository status",
       "git status --short",
     );
+
+    writeFileSync(join(dir, "manual.ts"), "export const manual = true;\n");
+    execSync("git add manual.ts", { cwd: dir });
+    execSync("git commit -m 'chore: manual edit'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores old unmatched mutating shell transcripts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-old-shell-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    writeCodexShellTranscript(
+      codexHome,
+      codexSessionId,
+      dir,
+      "old generated mutation",
+      "perl -pi -e s/old/new/g generated.ts",
+      Date.now() - 2 * 60 * 1000,
+    );
+
+    writeFileSync(join(dir, "parent.txt"), "parent\n");
+    execSync("git add parent.txt", { cwd: dir });
+    execSync("git commit -m 'chore: unrelated parent'", {
+      cwd: dir,
+      env: withoutCodexThreadEnv(),
+    });
 
     writeFileSync(join(dir, "manual.ts"), "export const manual = true;\n");
     execSync("git add manual.ts", { cwd: dir });

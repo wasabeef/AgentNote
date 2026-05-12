@@ -3755,8 +3755,9 @@ async function recordCommitEntry(opts) {
       attributionTranscriptMatched = envMatched;
       useSelectableTranscriptAttribution = true;
     } else if (!crossTurnCommit && transcriptMatched.length === 0 && canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)) {
+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs) : allInteractions;
       interactions = selectTranscriptFallbackInteractions(
-        allInteractions,
+        fallbackSourceInteractions,
         commitFileSet,
         currentUnattributedToolPromptIds,
         { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true }
@@ -4979,7 +4980,8 @@ async function resolveAgentEnvironmentSession(agentnoteDirPath, agentName) {
   }
   await mkdir5(sessionDir, { recursive: true });
   if (!existingAgent) await writeSessionAgent(sessionDir, agentName);
-  if (!savedTranscriptPath && transcriptPath) await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  if (!savedTranscriptPath && transcriptPath)
+    await writeSessionTranscriptPath(sessionDir, transcriptPath);
   return sessionId;
 }
 function debugRecord(message) {

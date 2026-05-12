@@ -519,8 +519,11 @@ export async function recordCommitEntry(opts: {
       transcriptMatched.length === 0 &&
       canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)
     ) {
+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback
+        ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs)
+        : allInteractions;
       interactions = selectTranscriptFallbackInteractions(
-        allInteractions,
+        fallbackSourceInteractions,
         commitFileSet,
         currentUnattributedToolPromptIds,
         { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true },
