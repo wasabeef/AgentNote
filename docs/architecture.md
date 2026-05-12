@@ -600,12 +600,12 @@ Release steps:
    commit subjects or add `Release note:` / `Release note: skip` lines before
    tagging.
 6. Commit the version bump to `main`.
-7. Create and push the matching git tag, for example `v1.0.1`.
+7. Create and push the matching git tag, for example `vX.Y.Z`.
 
 Important:
 
 - Do **not** cut a release tag before the package version bump lands on `main`.
-- If `packages/cli/package.json` still says `1.0.0` and you push `v1.0.1`, the workflow will still try to publish `1.0.0` and npm will reject it as an already published version.
+- If `packages/cli/package.json` still has the previous version when you push the next tag, the workflow will try to publish that previous version and npm will reject it if it is already published.
 - Treat `@wasabeef/agentnote` as a reserved alias only. Do not use it in README or website installation commands unless the project intentionally changes the canonical package name.
 - The npm publish job is rerun-safe: if either `agent-note@<version>` or `@wasabeef/agentnote@<version>` is already published, that package publish step is skipped.
 - The workflow updates the floating major tag (`v1` for `v1.x.y` releases) after the GitHub release is created, but it does not manage package.json versions for you.
