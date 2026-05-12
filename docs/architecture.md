@@ -625,7 +625,7 @@ Notes are automatically pushed to the remote via the `pre-push` git hook install
 - **All source in English.** Comments, output, tests.
 - **Git hooks for commit ops.** Trailer injection (`prepare-commit-msg`) and note recording (`post-commit`) use git hooks, not agent hooks. Respects `core.hooksPath` and chains with existing hooks.
 - **No telemetry, no auth, no external services.** Data stays local until pushed. The `pre-push` git hook (installed by `agent-note init`) auto-pushes notes alongside code on every `git push`.
-- **Input validation.** Session IDs must match `/^[0-9a-f-]{36}$/` (UUID v4). `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
+- **Input validation.** Environment-provided session IDs must use canonical UUID format. `transcript_path` must be under `~/.claude/` (or agent equivalent). Reject anything else silently.
 - **Full response storage.** AI responses are stored in full. Git notes blobs are compressed and well within GitHub limits.
 
 ## Security
@@ -644,7 +644,7 @@ Agent Note records prompts, optional display-only context excerpts, and AI respo
 | Threat | Mitigation |
 |---|---|
 | Secrets in prompts/context/responses | **Not automatically redacted.** Users are responsible for reviewing notes before pushing them to public repos. |
-| Command injection via session ID | Session ID validated as UUID v4 before trailer injection. Non-matching IDs are silently dropped. |
+| Command injection via session ID | Environment-provided session IDs are validated as canonical UUIDs before fallback recording. Non-matching IDs are silently dropped. |
 | Transcript path traversal | `transcript_path` must be under `~/.claude/` (or agent equivalent). Paths outside are rejected. |
 | git notes tampering | Anyone with repo write access can modify or delete notes. Notes are **not signed or encrypted**. Treat them as advisory, not as audit trail. |
 | GitHub Action markdown injection | PR Report renders prompts/context/responses as markdown inside the PR body. Treat git notes as trusted repository data; do not push untrusted prompt content to public notes. |

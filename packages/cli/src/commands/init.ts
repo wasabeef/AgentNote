@@ -26,6 +26,7 @@ export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 const TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
 const ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
+const SHELL_CODEX_THREAD_ID = `$${ENV_CODEX_THREAD_ID}`;
 
 const PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
@@ -172,7 +173,7 @@ if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
   if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
     SESSION_ID="--fallback-head"
-  elif [ -n "$${ENV_CODEX_THREAD_ID}" ]; then
+  elif [ -n "${SHELL_CODEX_THREAD_ID}" ]; then
     SESSION_ID="--fallback-env"
   else
     exit 0

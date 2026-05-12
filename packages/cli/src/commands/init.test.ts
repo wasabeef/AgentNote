@@ -174,6 +174,14 @@ describe("agentnote init", () => {
       !postCommitHook.includes("npx --yes agent-note record"),
       "post-commit should not resolve an unpinned package at commit time",
     );
+    assert.ok(
+      postCommitHook.includes('[ -n "$CODEX_THREAD_ID" ]'),
+      "post-commit should check the real Codex session environment variable",
+    );
+    assert.ok(
+      !postCommitHook.includes("ENV_CODEX_THREAD_ID"),
+      "post-commit should not leave TypeScript constant names in shell output",
+    );
   });
 
   it("is idempotent", () => {
@@ -575,6 +583,42 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     writeFileSync(join(dir, filePath), "export const staleCmuxEnvFallback = true;\n");
     execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
     execSync("git commit -m 'chore: stale cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores non-UUID Codex session ids", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-invalid-session-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "codex-session-not-a-uuid";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/invalid-env-session.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const invalidEnvSession = true;\n");
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'chore: invalid env session'", {
       cwd: dir,
       env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
     });

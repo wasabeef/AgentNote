@@ -28,6 +28,7 @@ const FALLBACK_ENV_FLAG = "--fallback-env";
 const ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 const SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+const UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
 const RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"] as const;
 
@@ -134,7 +135,7 @@ function debugRecord(message: string): void {
 function sanitizeSessionId(value: string | undefined): string | null {
   const sessionId = value?.trim();
   if (!sessionId || sessionId === "." || sessionId === "..") return null;
-  return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+  return UUID_SESSION_ID_RE.test(sessionId) ? sessionId.toLowerCase() : null;
 }
 
 async function hasFreshEnvironmentEvidence(

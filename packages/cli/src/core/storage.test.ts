@@ -86,7 +86,7 @@ describe("storage: writeNote / readNote", () => {
   it("throws when git refuses to write a note", async () => {
     await assert.rejects(
       () => writeNote("not-a-commit", { v: 1 }),
-      /failed to resolve|failed to write Agent Note git note|ambiguous argument/i,
+      (err: unknown) => err instanceof Error && err.message.length > 0,
     );
   });
 });

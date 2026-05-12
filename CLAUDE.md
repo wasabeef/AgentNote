@@ -157,6 +157,6 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Never break git commit.** All agent-note recording is wrapped in try/catch. If agent-note fails, the commit must still succeed.
 - **All source code in English.** Comments, variable names, CLI output, test descriptions — everything in English.
 - **PreToolUse hooks are synchronous.** Must write JSON to stdout, must not be marked `async: true`.
-- **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
+- **Input validation.** Environment-provided session IDs must use canonical UUID format. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
 - **Git notes for persistent storage.** Entry data goes to `refs/notes/agentnote`, not to files.
 - **Biome for lint + format.** Run `npm run lint` (biome check) and `npm run typecheck` (tsc) separately. Both must pass in CI.

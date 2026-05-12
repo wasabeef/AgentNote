@@ -4817,6 +4817,7 @@ var FALLBACK_ENV_FLAG = "--fallback-env";
 var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+var UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
 var RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"];
 async function record(args2) {
@@ -4900,7 +4901,7 @@ function debugRecord(message) {
 function sanitizeSessionId(value) {
   const sessionId = value?.trim();
   if (!sessionId || sessionId === "." || sessionId === "..") return null;
-  return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+  return UUID_SESSION_ID_RE.test(sessionId) ? sessionId.toLowerCase() : null;
 }
 async function hasFreshEnvironmentEvidence(sessionDir, transcriptPath) {
   if (await hasRecordableSessionData(sessionDir) && await isFreshFile(join8(sessionDir, HEARTBEAT_FILE))) {
@@ -5029,6 +5030,7 @@ var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 var TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
 var ENV_CODEX_THREAD_ID2 = "CODEX_THREAD_ID";
+var SHELL_CODEX_THREAD_ID = `$${ENV_CODEX_THREAD_ID2}`;
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -5164,7 +5166,7 @@ if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
   if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
     SESSION_ID="--fallback-head"
-  elif [ -n "$${ENV_CODEX_THREAD_ID2}" ]; then
+  elif [ -n "${SHELL_CODEX_THREAD_ID}" ]; then
     SESSION_ID="--fallback-env"
   else
     exit 0
