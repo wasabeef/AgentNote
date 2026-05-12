@@ -66,8 +66,12 @@ schema は [仕組み](./how-it-works/#note-スキーマ) にあります。
 Agent Note は agent が見たものすべてを保存するわけではありません。
 
 - workspace 全体は保存しません。
-- shell command output を file evidence として保存しません。信頼できる Agent transcript がある場合は commit-level attribution を作ることがあります。
+- shell command output を file evidence として保存しません。
 - Agent Note の backend へ data を upload しません。
+
+<Aside>
+  信頼できる transcript を提供する Agent では、commit 時点の新しい transcript evidence を検証して commit-level attribution を作ることがあります。shell command output 自体は保存しません。
+</Aside>
 
 ## チーム内での見え方
 

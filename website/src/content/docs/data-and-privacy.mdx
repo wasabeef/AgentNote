@@ -66,8 +66,12 @@ The schema is shown in [How It Works](./how-it-works/#note-schema).
 Agent Note does not store everything the agent can see.
 
 - It does not store your full workspace.
-- It does not store shell command output as file evidence; trusted Agent transcripts may still produce commit-level attribution.
+- It does not store shell command output as file evidence.
 - It does not upload data to an Agent Note backend.
+
+<Aside>
+  With agents that expose trusted transcripts, Agent Note may still produce commit-level attribution from fresh transcript evidence recorded at commit time, without storing shell command output.
+</Aside>
 
 ## Team Visibility
 

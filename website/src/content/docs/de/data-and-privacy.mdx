@@ -54,8 +54,12 @@ Das Schema steht in [How It Works](./how-it-works/#note-schema).
 ## Nicht gespeicherte Daten
 
 - Der vollständige Workspace.
-- Shell command output wird nicht als file evidence gespeichert. Vertrauenswürdige Agent transcripts können trotzdem commit-level attribution erzeugen.
+- Shell command output wird nicht als file evidence gespeichert.
 - Daten an einen Agent Note Backend-Service.
+
+<Aside>
+  Bei Agents mit vertrauenswürdigen transcripts kann Agent Note trotzdem commit-level attribution aus frischer transcript evidence erzeugen, die zum Commit-Zeitpunkt aufgezeichnet wurde, ohne shell command output zu speichern.
+</Aside>
 
 ## Sichtbarkeit im Team
 

@@ -54,8 +54,12 @@ El schema completo está en [Cómo funciona](./how-it-works/#note-schema).
 ## Qué no se guarda
 
 - Todo el workspace.
-- No se guarda output de shell commands como file evidence. Los Agent transcripts confiables aún pueden producir commit-level attribution.
+- No se guarda output de shell commands como file evidence.
 - Datos enviados a un backend de Agent Note.
+
+<Aside>
+  Con Agents que exponen transcripts confiables, Agent Note aún puede producir commit-level attribution a partir de transcript evidence reciente registrada en el momento del commit, sin guardar output de shell commands.
+</Aside>
 
 ## Visibilidad del equipo
 

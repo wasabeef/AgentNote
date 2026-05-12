@@ -54,8 +54,12 @@ Schema lengkap ada di [Cara kerja](./how-it-works/#note-schema).
 ## Yang tidak disimpan
 
 - Seluruh workspace.
-- Output shell command tidak disimpan sebagai file evidence. Agent transcripts yang tepercaya masih dapat menghasilkan commit-level attribution.
+- Output shell command tidak disimpan sebagai file evidence.
 - Data yang dikirim ke backend Agent Note.
+
+<Aside>
+  Pada Agent yang menyediakan transcripts tepercaya, Agent Note masih dapat menghasilkan commit-level attribution dari transcript evidence baru yang tercatat saat commit, tanpa menyimpan output shell command.
+</Aside>
 
 ## Visibilitas tim
 
