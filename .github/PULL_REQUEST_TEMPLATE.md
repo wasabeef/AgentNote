@@ -4,6 +4,19 @@
 
 <!-- What changed, and why? -->
 
+## Release Note Plan
+
+<!--
+If this PR changes user-visible behavior, write the intended release note
+sentence here and make sure it exists in a commit body as:
+
+Release note: <one clear user-facing sentence>
+
+If this PR should not appear in release notes, write:
+
+Release note: skip
+-->
+
 ## Type of Change
 
 - [ ] Fix

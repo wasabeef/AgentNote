@@ -571,6 +571,18 @@ and `build:`) stay out of release notes unless their body contains a
 `Release note:` line. `Release note: skip` hides an otherwise public-looking
 commit.
 
+GitHub Release notes do not use PR titles directly. PR titles should still be
+written as release-summary-quality text because they are the review-time signal
+that the underlying commit subjects and `Release note:` lines are also
+user-facing. When a PR contains several follow-up commits for the same behavior,
+keep only the primary implementation commit visible in the release note and mark
+review-fix commits with `Release note: skip`.
+
+The changelog template applies `upper_first` to each rendered bullet so a
+mechanical commit subject such as `recover Codex env sessions` becomes
+`Recover Codex env sessions`. This is only a safety net; release-worthy wording
+should still be written as a clear sentence in the commit body.
+
 The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
 
 Release steps:
@@ -582,8 +594,11 @@ Release steps:
    - `npm -w packages/cli test`
 4. Review the generated release note locally before tagging:
    - `git-cliff --config .github/cliff.toml --latest --strip header`
-5. Commit the version bump to `main`.
-6. Create and push the matching git tag, for example `v1.0.1`.
+5. If the generated note reads like an implementation log, rewrite the relevant
+   commit subjects or add `Release note:` / `Release note: skip` lines before
+   tagging.
+6. Commit the version bump to `main`.
+7. Create and push the matching git tag, for example `v1.0.1`.
 
 Important:
 
