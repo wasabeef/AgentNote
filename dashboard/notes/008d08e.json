@@ -1,0 +1,519 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-12T08:57:09.042Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "<skill>\n<name>coderabbit-review</name>\n<path>/Users/a12622/git/context-history/.codex/skills/coderabbit-review/SKILL.md</path>\n---\nname: coderabbit-review\ndescription: Fetch CodeRabbit review feedback for the current PR, classify actionable items, implement fixes, verify them, and resolve only addressed review threads.\n---\n\n# CodeRabbit Review Workflow\n\nUse this skill when the task asks to address CodeRabbit comments, review CodeRabbit feedback, or resolve CodeRabbit threads.\n\n## Fetch\n\nDetermine the pull request before fetching review feedback:\n\n1. Use the PR number from the user when one is provided.\n2. Otherwise run `gh pr view --json number,url` for the current branch.\n3. If that fails, run `gh pr list --head \"$(git branch --show-current)\" --json number,url,state`.\n4. If no PR can be identified, stop and report that the current branch has no open PR.\n\nFetch review threads with GraphQL, then keep only unresolved CodeRabbit-authored threads. Replace the variables with the current repository and PR:\n\n```bash\ngh api graphql \\\n  -f query='query($owner:String!,$repo:String!,$number:Int!,$after:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated path line startLine comments(first:50){nodes{id databaseId body url author{login}}}}}}}}' \\\n  -F owner=<owner> \\\n  -F repo=<repo> \\\n  -F number=<pr-number>\n```\n\nFor later pages, rerun the same command with `-F after=<endCursor>`.\n\nFetch CodeRabbit summary comments when useful:\n\n```bash\ngh api 'repos/<owner>/<repo>/issues/<pr-number>/comments?per_page=100'\n```\n\nFilter both outputs to CodeRabbit authors. For review threads, keep threads where `isResolved` is `false` and at least one comment author is CodeRabbit; use the latest CodeRabbit-authored comment as the actionable text. Treat those unresolved review threads as the primary action list.\n\nIf `pageInfo.hasNextPage` is `true`, repeat the GraphQL query with `after: <endCursor>` until all review threads have been checked.\n\n## Triage\n\n- Treat unresolved review threads as the primary action list.\n- Treat summary comments as context, not as automatic TODOs.\n- Classify each thread as `fix`, `false-positive`, `already-fixed`, or `needs-user-decision`.\n- Inspect the referenced file and surrounding code before deciding.\n- Do not resolve a thread until the fix is present and verified.\n\n## Fix\n\n- Prefer the smallest source change that addresses the review.\n- If the comment points at a generated file, update the source and regenerate the generated file.\n- Keep unrelated refactors out of the fix unless they are required for safety.\n- Preserve Agent Note behavior: commits must not fail because review automation failed.\n\n## Verify\n\n- Run the narrowest relevant test first.\n- Run broader checks when behavior, generated files, docs, or public output changed.\n- If no automated check is relevant, explain the manual verification.\n\n## Resolve\n\nResolve fixed review threads with:\n\n```bash\ngh api graphql \\\n  -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' \\\n  -F threadId=<review-thread-id>\n```\n\nAlways run the resolve command for threads that are fixed and verified.\n\nIf a thread will not be changed, leave it unresolved and add a short rationale comment in English instead. Do not silently resolve rejected, deferred, or uncertain feedback.\n\nReply to an unresolved review comment without resolving it by using the latest CodeRabbit review comment `databaseId` from the GraphQL output:\n\n```bash\ngh api --method POST \\\n  repos/<owner>/<repo>/pulls/<pr-number>/comments/<comment-database-id>/replies \\\n  -f body='<short English rationale>'\n```\n\nDo not resolve issue comments or summary comments; only GitHub review threads can be resolved.\n\n## Report\n\nEnd with:\n\n- Fixed threads\n- Threads intentionally left unresolved\n- Checks run\n- Any remaining risk\n\n</skill>",
+      "response": "`coderabbit-review` skill を使って、PR #72 の未解決 CodeRabbit review thread を確認します。指摘が valid なら最小差分で直し、直したものだけ resolve、採用しないものは英語で理由を返信します。\nPR #72 を対象にします。作業ツリーは未追跡の `docs/blog/` だけなので、今回も触らず CodeRabbit の thread だけ確認します。\n未解決 thread は 7 件ありました。大きく分けると、実装側 2 件（test env の determinism、unmatched env fallback の window 境界）、docs/website 文言 5 件です。どれも修正できる内容なので、まず該当箇所を読んで最小差分で直します。\n実装側の `record.ts` 指摘は valid ですが、CodeRabbit の suggested patch は既存 helper の fallback semantics だと古い shell row をまだ拾えるので、unmatched env fallback だけは hard-bound にします。これで「parent より前の file-matched work は救済、古い shell-only mutation は拾わない」という線引きになります。\nwebsite は CodeRabbit 指摘箇所だけでなく、同じ重複が他 locale にもありました。ここは locale parity の観点でまとめて整えます。技術用語は無理に訳さず、shell command / file evidence / Agent transcript / commit-level attribution は残す方針にします。\nCodeRabbit の実装指摘 2 件と docs/website 指摘を修正しました。特に fallback は suggested patch より少し強めにして、unmatched shell-only env fallback では parent→HEAD より前の古い mutating shell を拾わないようにしています。次に bundle 更新と focused regression を回します。\nfocused regression 73 件が通りました。追加した「古い unmatched mutating shell transcript を拾わない」ケースも通っています。docs/website も触ったので、full test と website build まで確認します。\nfull test は 451 件すべて通り、website build も通りました。ここで差分を最終確認して、CodeRabbit の fixed thread を resolve できる状態にします。\n差分確認では、実装変更は `record.ts` の unmatched fallback source window と `init.test.ts` の env sanitize / regression だけです。`pre-push` の `&` は古い hook を upgrade するテスト fixture 内にだけ残っているため問題ありません。これをコミットして push します。",
+      "files_touched": [
+        "docs/architecture.md",
+        "packages/cli/src/core/record.ts",
+        "packages/cli/src/commands/init.test.ts",
+        "website/src/content/docs/data-and-privacy.mdx",
+        "website/src/content/docs/ja/data-and-privacy.mdx",
+        "website/src/content/docs/es/data-and-privacy.mdx",
+        "website/src/content/docs/fr/data-and-privacy.mdx",
+        "website/src/content/docs/id/data-and-privacy.mdx",
+        "website/src/content/docs/it/data-and-privacy.mdx",
+        "website/src/content/docs/ko/data-and-privacy.mdx",
+        "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "website/src/content/docs/ru/data-and-privacy.mdx",
+        "website/src/content/docs/de/data-and-privacy.mdx"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/core/record.ts",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/de/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/es/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/id/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/it/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+      "by_ai": true
+    },
+    {
+      "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "008d08eeeacdc65cc6d0eb24cc2123ffb09a87a9",
+    "short_sha": "008d08e",
+    "message": "fix(record): harden env fallback review cases",
+    "date": "2026-05-12T17:57:07+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index 7986069..1d78076 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -389,7 +389,7 @@ Three git hooks handle commit integration and notes sharing:",
+          " |---|---|---|",
+          " | `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and file evidence (`changes.jsonl` or `pre_blobs.jsonl`), then appends `Agentnote-Session` trailer. Prompt-only active sessions are skipped for plain git commits. Skips amend/reuse (`$2=commit`). |",
+          " | `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. If `prepare-commit-msg` explicitly marked a stale-heartbeat fallback, calls `agent-note record --fallback-head`, which only records when a session post-edit blob matches a committed HEAD blob. If no trailer or marker exists but the current process exposes an adapter-supported session environment such as `CODEX_THREAD_ID`, calls `agent-note record --fallback-env`; fresh mutating transcript work can become commit-level attribution even when exact `files_touched` is unavailable. Idempotent — skips if note already exists. |",
+          "-| `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |",
+          "+| `pre-push` | Before push to remote | Pushes `refs/notes/agentnote` to the actual remote (`$1`) and waits for `push-notes` to finish. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |",
+          " ",
+          " Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing heartbeat in `prepare-commit-msg` skips trailer injection. Stale heartbeat writes a one-shot fallback marker for brand-new commits only; `post-commit` consumes that marker and records only if the active session has post-edit blob evidence that matches the committed HEAD blobs. Agent-hosted terminals may also expose the current session through adapter-specific environment variables. Today, Codex exposes `CODEX_THREAD_ID`, which lets `post-commit` recover a fresh Codex transcript even when `.git/agentnote/session` points at a stale or unrelated session.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 5d2b3ec..d017882 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -3755,8 +3755,9 @@ async function recordCommitEntry(opts) {",
+          "       attributionTranscriptMatched = envMatched;",
+          "       useSelectableTranscriptAttribution = true;",
+          "     } else if (!crossTurnCommit && transcriptMatched.length === 0 && canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)) {",
+          "+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs) : allInteractions;",
+          "       interactions = selectTranscriptFallbackInteractions(",
+          "-        allInteractions,",
+          "+        fallbackSourceInteractions,",
+          "         commitFileSet,",
+          "         currentUnattributedToolPromptIds,",
+          "         { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true }",
+          "@@ -4979,7 +4980,8 @@ async function resolveAgentEnvironmentSession(agentnoteDirPath, agentName) {",
+          "   }",
+          "   await mkdir5(sessionDir, { recursive: true });",
+          "   if (!existingAgent) await writeSessionAgent(sessionDir, agentName);",
+          "-  if (!savedTranscriptPath && transcriptPath) await writeSessionTranscriptPath(sessionDir, transcriptPath);",
+          "+  if (!savedTranscriptPath && transcriptPath)",
+          "+    await writeSessionTranscriptPath(sessionDir, transcriptPath);",
+          "   return sessionId;",
+          " }",
+          " function debugRecord(message) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/init.test.ts",
+        "lines": [
+          "index 380bb02..4e0b799 100644",
+          "--- a/packages/cli/src/commands/init.test.ts",
+          "+++ b/packages/cli/src/commands/init.test.ts",
+          "@@ -97,11 +97,11 @@ function writeCodexShellTranscript(",
+          "   cwd: string,",
+          "   prompt: string,",
+          "   command: string,",
+          "+  baseTimestampMs = Date.now(),",
+          " ): string {",
+          "   const transcriptDir = join(codexHome, \"sessions\", \"2026\", \"05\", \"12\");",
+          "   mkdirSync(transcriptDir, { recursive: true });",
+          "   const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-30-00-${sessionId}.jsonl`);",
+          "-  const baseTimestampMs = Date.now();",
+          "   const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();",
+          "   writeFileSync(",
+          "     transcriptPath,",
+          "@@ -145,9 +145,12 @@ function writeCodexShellTranscript(",
+          " ",
+          " describe(\"agentnote init\", () => {",
+          "   let testDir: string;",
+          "+  let originalCodexThreadId: string | undefined;",
+          "   const cliPath = join(process.cwd(), \"dist\", \"cli.js\");",
+          " ",
+          "   before(() => {",
+          "+    originalCodexThreadId = process.env.CODEX_THREAD_ID;",
+          "+    delete process.env.CODEX_THREAD_ID;",
+          "     testDir = mkdtempSync(join(tmpdir(), \"agentnote-init-\"));",
+          "     execSync(\"git init\", { cwd: testDir });",
+          "     execSync(\"git config user.email test@test.com\", { cwd: testDir });",
+          "@@ -159,6 +162,11 @@ describe(\"agentnote init\", () => {",
+          "   });",
+          " ",
+          "   after(() => {",
+          "+    if (originalCodexThreadId === undefined) {",
+          "+      delete process.env.CODEX_THREAD_ID;",
+          "+    } else {",
+          "+      process.env.CODEX_THREAD_ID = originalCodexThreadId;",
+          "+    }",
+          "     rmSync(testDir, { recursive: true, force: true });",
+          "   });",
+          " ",
+          "@@ -778,6 +786,54 @@ AGENTNOTE_PUSHING=1 git push \"$REMOTE\" refs/notes/agentnote 2>/dev/null &",
+          "     rmSync(dir, { recursive: true, force: true });",
+          "   });",
+          " ",
+          "+  it(\"post-commit environment fallback ignores old unmatched mutating shell transcripts\", () => {",
+          "+    const dir = mkdtempSync(join(tmpdir(), \"agentnote-codex-env-old-shell-\"));",
+          "+    execSync(\"git init\", { cwd: dir });",
+          "+    execSync(\"git config user.email test@test.com\", { cwd: dir });",
+          "+    execSync(\"git config user.name Test\", { cwd: dir });",
+          "+    execSync(\"git commit --allow-empty -m 'init'\", { cwd: dir });",
+          "+",
+          "+    execSync(`node ${cliPath} init --agent codex --no-action`, {",
+          "+      cwd: dir,",
+          "+      encoding: \"utf-8\",",
+          "+    });",
+          "+",
+          "+    const codexSessionId = \"019da962-23cc-7aa0-bbe3-a10f60fddada\";",
+          "+    const codexHome = join(dir, \"codex-home\");",
+          "+    writeCodexShellTranscript(",
+          "+      codexHome,",
+          "+      codexSessionId,",
+          "+      dir,",
+          "+      \"old generated mutation\",",
+          "+      \"perl -pi -e s/old/new/g generated.ts\",",
+          "+      Date.now() - 2 * 60 * 1000,",
+          "+    );",
+          "+",
+          "+    writeFileSync(join(dir, \"parent.txt\"), \"parent\\n\");",
+          "+    execSync(\"git add parent.txt\", { cwd: dir });",
+          "+    execSync(\"git commit -m 'chore: unrelated parent'\", {",
+          "+      cwd: dir,",
+          "+      env: withoutCodexThreadEnv(),",
+          "+    });",
+          "+",
+          "+    writeFileSync(join(dir, \"manual.ts\"), \"export const manual = true;\\n\");",
+          "+    execSync(\"git add manual.ts\", { cwd: dir });",
+          "+    execSync(\"git commit -m 'chore: manual edit'\", {",
+          "+      cwd: dir,",
+          "+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },",
+          "+    });",
+          "+",
+          "+    assert.throws(() => {",
+          "+      execFileSync(\"git\", [\"notes\", \"--ref=agentnote\", \"show\", \"HEAD\"], {",
+          "+        cwd: dir,",
+          "+        encoding: \"utf-8\",",
+          "+        stdio: \"pipe\",",
+          "+      });",
+          "+    });",
+          "+",
+          "+    rmSync(dir, { recursive: true, force: true });",
+          "+  });",
+          "+",
+          "   it(\"post-commit environment fallback keeps mutating shell transcripts\", () => {",
+          "     const dir = mkdtempSync(join(tmpdir(), \"agentnote-codex-env-mutating-shell-\"));",
+          "     execSync(\"git init\", { cwd: dir });"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/core/record.ts",
+        "lines": [
+          "index 749e761..580894c 100644",
+          "--- a/packages/cli/src/core/record.ts",
+          "+++ b/packages/cli/src/core/record.ts",
+          "@@ -519,8 +519,11 @@ export async function recordCommitEntry(opts: {",
+          "       transcriptMatched.length === 0 &&",
+          "       canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)",
+          "     ) {",
+          "+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback",
+          "+        ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs)",
+          "+        : allInteractions;",
+          "       interactions = selectTranscriptFallbackInteractions(",
+          "-        allInteractions,",
+          "+        fallbackSourceInteractions,",
+          "         commitFileSet,",
+          "         currentUnattributedToolPromptIds,",
+          "         { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true },"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/data-and-privacy.mdx",
+        "lines": [
+          "index ff4a217..5b834d7 100644",
+          "--- a/website/src/content/docs/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/data-and-privacy.mdx",
+          "@@ -66,7 +66,6 @@ The schema is shown in [How It Works](./how-it-works/#note-schema).",
+          " Agent Note does not store everything the agent can see.",
+          " ",
+          " - It does not store your full workspace.",
+          "-- It does not store every shell command output.",
+          " - It does not store shell command output as file evidence; trusted Agent transcripts may still produce commit-level attribution.",
+          " - It does not upload data to an Agent Note backend.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/de/data-and-privacy.mdx",
+        "lines": [
+          "index 900303d..72605ae 100644",
+          "--- a/website/src/content/docs/de/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/de/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ Das Schema steht in [How It Works](./how-it-works/#note-schema).",
+          " ## Nicht gespeicherte Daten",
+          " ",
+          " - Der vollständige Workspace.",
+          "-- Alle Shell-Ausgaben.",
+          " - Shell command output wird nicht als file evidence gespeichert. Vertrauenswürdige Agent transcripts können trotzdem commit-level attribution erzeugen.",
+          " - Daten an einen Agent Note Backend-Service.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/es/data-and-privacy.mdx",
+        "lines": [
+          "index d739214..c7af6ae 100644",
+          "--- a/website/src/content/docs/es/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/es/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ El schema completo está en [Cómo funciona](./how-it-works/#note-schema).",
+          " ## Qué no se guarda",
+          " ",
+          " - Todo el workspace.",
+          "-- Todos los outputs de shell commands.",
+          " - No se guarda output de shell commands como file evidence. Los Agent transcripts confiables aún pueden producir commit-level attribution.",
+          " - Datos enviados a un backend de Agent Note.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/fr/data-and-privacy.mdx",
+        "lines": [
+          "index 4b5b6e5..61edef7 100644",
+          "--- a/website/src/content/docs/fr/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/fr/data-and-privacy.mdx",
+          "@@ -54,8 +54,7 @@ Le schema complet est décrit dans [Fonctionnement](./how-it-works/#note-schema)",
+          " ## Ce qui n’est pas stocké",
+          " ",
+          " - L’ensemble du workspace.",
+          "-- Tous les outputs de commandes shell.",
+          "-- Les outputs de shell commands ne sont pas stockés comme file evidence. Des Agent transcripts fiables peuvent quand même produire une commit-level attribution.",
+          "+- Les sorties des commandes shell ne sont pas stockées comme file evidence. Des Agent transcripts fiables peuvent quand même produire une commit-level attribution.",
+          " - Des données envoyées vers un backend Agent Note.",
+          " ",
+          " ## Visibilité d’équipe"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/id/data-and-privacy.mdx",
+        "lines": [
+          "index 1eccb12..5d76658 100644",
+          "--- a/website/src/content/docs/id/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/id/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ Schema lengkap ada di [Cara kerja](./how-it-works/#note-schema).",
+          " ## Yang tidak disimpan",
+          " ",
+          " - Seluruh workspace.",
+          "-- Semua output shell command.",
+          " - Output shell command tidak disimpan sebagai file evidence. Agent transcripts yang tepercaya masih dapat menghasilkan commit-level attribution.",
+          " - Data yang dikirim ke backend Agent Note.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/it/data-and-privacy.mdx",
+        "lines": [
+          "index 331bb36..b37de1d 100644",
+          "--- a/website/src/content/docs/it/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/it/data-and-privacy.mdx",
+          "@@ -54,8 +54,7 @@ Lo schema completo è in [Come funziona](./how-it-works/#note-schema).",
+          " ## Cosa non viene salvato",
+          " ",
+          " - L’intero workspace.",
+          "-- Tutti gli output dei shell command.",
+          "-- Output dei shell command non viene salvato come file evidence. Agent transcripts affidabili possono comunque produrre commit-level attribution.",
+          "+- Gli output dei shell command non vengono salvati come file evidence. Agent transcripts affidabili possono comunque produrre commit-level attribution.",
+          " - Dati inviati a un backend Agent Note.",
+          " ",
+          " ## Visibilità del team"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ja/data-and-privacy.mdx",
+        "lines": [
+          "index 5bcebf8..76451e5 100644",
+          "--- a/website/src/content/docs/ja/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ja/data-and-privacy.mdx",
+          "@@ -66,7 +66,6 @@ schema は [仕組み](./how-it-works/#note-スキーマ) にあります。",
+          " Agent Note は agent が見たものすべてを保存するわけではありません。",
+          " ",
+          " - workspace 全体は保存しません。",
+          "-- すべての shell command output は保存しません。",
+          " - shell command output を file evidence として保存しません。信頼できる Agent transcript がある場合は commit-level attribution を作ることがあります。",
+          " - Agent Note の backend へ data を upload しません。",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ko/data-and-privacy.mdx",
+        "lines": [
+          "index ca851e1..86409ac 100644",
+          "--- a/website/src/content/docs/ko/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ko/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ repository root 의 `.agentnoteignore` 와 일치하는 path 도 `files` 에 남",
+          " ## 저장하지 않는 것",
+          " ",
+          " - 전체 workspace.",
+          "-- 모든 shell command output.",
+          " - shell command output 을 file evidence 로 저장하지 않습니다. 신뢰할 수 있는 Agent transcript 가 있으면 commit-level attribution 은 만들 수 있습니다.",
+          " - Agent Note backend 로 전송되는 데이터.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/pt-br/data-and-privacy.mdx",
+        "lines": [
+          "index ac4abee..d8c5270 100644",
+          "--- a/website/src/content/docs/pt-br/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/pt-br/data-and-privacy.mdx",
+          "@@ -54,8 +54,7 @@ O schema completo está em [Como funciona](./how-it-works/#note-schema).",
+          " ## O que não é salvo",
+          " ",
+          " - O workspace inteiro.",
+          "-- Todos os outputs de shell command.",
+          "-- Output de shell commands não é salvo como file evidence. Agent transcripts confiáveis ainda podem produzir commit-level attribution.",
+          "+- Outputs de shell command não são salvos como file evidence. Agent transcripts confiáveis ainda podem produzir commit-level attribution.",
+          " - Dados enviados para um backend do Agent Note.",
+          " ",
+          " ## Visibilidade do time"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/ru/data-and-privacy.mdx",
+        "lines": [
+          "index af009b4..ebb0997 100644",
+          "--- a/website/src/content/docs/ru/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/ru/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ Agent Note создан для команд, которым нужна AI review",
+          " ## Что не хранится",
+          " ",
+          " - Весь workspace.",
+          "-- Все shell command outputs.",
+          " - Shell command output не сохраняется как file evidence. Надежные Agent transcripts могут все равно дать commit-level attribution.",
+          " - Данные, отправленные в Agent Note backend.",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-cn/data-and-privacy.mdx",
+        "lines": [
+          "index 22a3497..1948ab6 100644",
+          "--- a/website/src/content/docs/zh-cn/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/zh-cn/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ Agent Note 面向希望保留 AI review history、但不想依赖 hosted backend",
+          " ## 不保存的内容",
+          " ",
+          " - 整个 workspace。",
+          "-- 所有 shell command output。",
+          " - 不把 shell command output 当作 file evidence 保存。可信的 Agent transcript 仍然可以生成 commit-level attribution。",
+          " - 上传到 Agent Note backend 的数据。",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "website/src/content/docs/zh-tw/data-and-privacy.mdx",
+        "lines": [
+          "index 3bc80ae..4162f76 100644",
+          "--- a/website/src/content/docs/zh-tw/data-and-privacy.mdx",
+          "+++ b/website/src/content/docs/zh-tw/data-and-privacy.mdx",
+          "@@ -54,7 +54,6 @@ Agent Note 面向希望保留 AI review history、但不想依賴 hosted backend",
+          " ## 不保存的內容",
+          " ",
+          " - 整個 workspace。",
+          "-- 所有 shell command output。",
+          " - 不把 shell command output 當作 file evidence 保存。可信的 Agent transcript 仍然可以產生 commit-level attribution。",
+          " - 上傳到 Agent Note backend 的資料。"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 72,
+    "title": "fix(hooks): recover Codex env sessions",
+    "state": "open"
+  }
+}
