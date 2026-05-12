@@ -226,6 +226,7 @@ type CodexShellOnlyFallbackSimulationCase = {
   crossTurnCommit: boolean;
   expectedSkip: boolean;
   legacySkip: boolean;
+  expectedCommitLevelAttribution: boolean;
 };
 
 const PROMPT_BOUNDARY_SIMULATION_ANCHOR_SHAPE_SCORE = 44;
@@ -654,6 +655,8 @@ function buildCodexShellOnlyFallbackSimulationCases(): CodexShellOnlyFallbackSim
                   ...promptCase,
                   expectedSkip: shouldSkipCodexHumanOnlySimulation(promptCase, "current"),
                   legacySkip: shouldSkipCodexHumanOnlySimulation(promptCase, "legacy"),
+                  expectedCommitLevelAttribution:
+                    shouldUseCodexCommitLevelAttributionSimulation(promptCase),
                 });
               }
             }
@@ -667,7 +670,10 @@ function buildCodexShellOnlyFallbackSimulationCases(): CodexShellOnlyFallbackSim
 }
 
 function shouldSkipCodexHumanOnlySimulation(
-  promptCase: Omit<CodexShellOnlyFallbackSimulationCase, "name" | "expectedSkip" | "legacySkip">,
+  promptCase: Omit<
+    CodexShellOnlyFallbackSimulationCase,
+    "name" | "expectedSkip" | "legacySkip" | "expectedCommitLevelAttribution"
+  >,
   mode: "current" | "legacy",
 ): boolean {
   const hasCurrentUnattributedTool = promptCase.currentToolName !== "none";
@@ -680,6 +686,23 @@ function shouldSkipCodexHumanOnlySimulation(
     !promptCase.canUsePromptOnlyFallback &&
     (mode === "legacy" || !canUseCurrentToolFallback)
   );
+}
+
+function shouldUseCodexCommitLevelAttributionSimulation(
+  promptCase: Omit<
+    CodexShellOnlyFallbackSimulationCase,
+    "name" | "expectedSkip" | "legacySkip" | "expectedCommitLevelAttribution"
+  >,
+): boolean {
+  if (promptCase.hasPromptWindow || promptCase.hasAiFiles || promptCase.transcriptEditsCommit) {
+    return false;
+  }
+
+  const hasCurrentToolFallback =
+    promptCase.currentToolName !== "none" && !promptCase.crossTurnCommit;
+  const hasPromptWindowFallback =
+    promptCase.canUsePromptOnlyFallback && promptCase.transcriptEditsOthers;
+  return hasPromptWindowFallback || hasCurrentToolFallback;
 }
 
 describe("prompt task-boundary policy simulation", () => {
@@ -833,7 +856,7 @@ describe("prompt task-boundary policy simulation", () => {
     );
     assert.ok(
       fixedLegacySkips.every((promptCase) => promptCase.currentToolName !== "none"),
-      "only current no-file tool activity should rescue the prompt-only note",
+      "only current no-file tool activity should rescue the commit-level note",
     );
     assert.ok(
       fixedLegacySkips.every((promptCase) => !promptCase.crossTurnCommit),
@@ -867,6 +890,44 @@ describe("prompt task-boundary policy simulation", () => {
         )
         .every((promptCase) => promptCase.expectedSkip),
       "cross-turn shell-only activity must not be rescued without stronger evidence",
+    );
+
+    const commitLevelCases = cases.filter(
+      (promptCase) => promptCase.expectedCommitLevelAttribution,
+    );
+    assert.ok(
+      commitLevelCases.length >= 16,
+      "the simulation should cover many v0.2-style commit-level attribution rescues",
+    );
+    assert.ok(
+      commitLevelCases.every((promptCase) => !promptCase.expectedSkip),
+      "commit-level attribution rescue must never apply to skipped human-only cases",
+    );
+    assert.ok(
+      commitLevelCases.some(
+        (promptCase) =>
+          promptCase.currentToolName !== "none" &&
+          !promptCase.canUsePromptOnlyFallback &&
+          !promptCase.crossTurnCommit,
+      ),
+      "current tool-backed Codex work should regain v0.2-style commit-level attribution",
+    );
+    assert.ok(
+      commitLevelCases.some((promptCase) => promptCase.canUsePromptOnlyFallback),
+      "prompt-window fallback should also regain commit-level attribution",
+    );
+    assert.ok(
+      cases
+        .filter(
+          (promptCase) =>
+            promptCase.currentToolName === "none" &&
+            !promptCase.canUsePromptOnlyFallback &&
+            !promptCase.hasPromptWindow &&
+            !promptCase.hasAiFiles &&
+            !promptCase.transcriptEditsCommit,
+        )
+        .every((promptCase) => !promptCase.expectedCommitLevelAttribution),
+      "prompt-only stale pointer cases without current tool evidence must stay unattributed",
     );
   });
 });
@@ -1880,7 +1941,7 @@ describe("recordCommitEntry", () => {
       });
 
       const note = await readNote(commitSha);
-      assert.ok(note !== null, "missing transcript should still leave a prompt-only note");
+      assert.ok(note !== null, "missing transcript should still leave a file-level note");
       const interactions = note.interactions as Array<{
         prompt: string;
         response: string | null;
@@ -2073,7 +2134,7 @@ describe("recordCommitEntry", () => {
     writeFileSync(
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","prompt":"long earlier discussion about generated files and dashboard deploy details that is no longer the best explanation","turn":1,"timestamp":"2026-04-13T10:00:00Z"}\n' +
-        '{"event":"prompt","prompt":"Missing commit notes should keep a prompt-only note when Codex misses commit files\\n- keep the human-only skip\\n- rescue only the current implementation thread","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
+        '{"event":"prompt","prompt":"Missing commit notes should keep commit-level attribution when Codex misses commit files\\n- keep the human-only skip\\n- rescue only the current implementation thread","turn":2,"timestamp":"2026-04-13T10:00:01Z"}\n' +
         '{"event":"prompt","prompt":"yes, implement that","turn":3,"timestamp":"2026-04-13T10:00:02Z"}\n' +
         '{"event":"prompt","prompt":"apply the record fallback in record.ts","turn":4,"timestamp":"2026-04-13T10:00:03Z"}\n',
     );
@@ -2100,7 +2161,7 @@ describe("recordCommitEntry", () => {
       (interaction) => interaction.prompt,
     );
     assert.deepEqual(prompts, [
-      "Missing commit notes should keep a prompt-only note when Codex misses commit files\n- keep the human-only skip\n- rescue only the current implementation thread",
+      "Missing commit notes should keep commit-level attribution when Codex misses commit files\n- keep the human-only skip\n- rescue only the current implementation thread",
       "yes, implement that",
       "apply the record fallback in record.ts",
     ]);
@@ -2765,7 +2826,7 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("transcript-driven Codex keeps prompt-only notes for current shell-only tool turns without guessing files", async () => {
+  it("transcript-driven Codex gives current shell-only tool turns commit-level attribution", async () => {
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
@@ -2817,7 +2878,11 @@ describe("recordCommitEntry", () => {
 
       const note = await readNote(commitSha);
       assert.ok(note !== null, "current shell-only Codex work should still leave a note");
-      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
+      assert.equal((note.attribution as { ai_ratio: number; method: string }).method, "file");
+      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+      assert.deepEqual(note.files, [
+        { path: "website/src/content/docs/agent-support.mdx", by_ai: true },
+      ]);
       const interactions = note.interactions as Array<{
         prompt: string;
         response: string | null;
@@ -2844,7 +2909,7 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("mid-session Codex commit keeps a prompt-only note when transcript attribution misses commit files", async () => {
+  it("mid-session Codex commit keeps AI attribution when transcript file matching misses", async () => {
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
@@ -2905,7 +2970,7 @@ describe("recordCommitEntry", () => {
       });
 
       const note = await readNote(commitSha);
-      assert.ok(note !== null, "mid-session false negative should still leave a prompt-only note");
+      assert.ok(note !== null, "mid-session false negative should still leave a file-level note");
       const interactions = note.interactions as Array<{
         prompt: string;
         response: string | null;
@@ -2922,7 +2987,12 @@ describe("recordCommitEntry", () => {
       assert.equal(interactions[1].response, "Proceeding with the workflow cleanup.");
       assert.equal(interactions[0].files_touched, undefined);
       assert.equal(interactions[1].files_touched, undefined);
-      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 0);
+      assert.equal((note.attribution as { ai_ratio: number; method: string }).method, "file");
+      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
+      assert.deepEqual(note.files, [
+        { path: ".github/workflows/test.yml", by_ai: true },
+        { path: "docs.md", by_ai: true },
+      ]);
     } finally {
       if (prevCodexHome === undefined) {
         delete process.env.CODEX_HOME;
@@ -2933,7 +3003,7 @@ describe("recordCommitEntry", () => {
     }
   });
 
-  it("mid-session Codex prompt-only fallback trims stale discussion before the commit window anchor", async () => {
+  it("mid-session Codex commit-level fallback trims stale discussion before the commit window anchor", async () => {
     const codexHome = mkdtempSync(join(tmpdir(), "codex-home-"));
     const prevCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
@@ -2953,7 +3023,7 @@ describe("recordCommitEntry", () => {
           '{"timestamp":"2026-04-15T09:30:03Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"c1","arguments":"{\\"input\\":\\"*** Begin Patch\\\\n*** Add File: first.ts\\\\n+export const first = 1;\\\\n*** End Patch\\"}"}}',
           '{"timestamp":"2026-04-15T09:30:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor"}]}}',
           '{"timestamp":"2026-04-15T09:30:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"older context"}]}}',
-          '{"timestamp":"2026-04-15T09:30:06Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window"}]}}',
+          '{"timestamp":"2026-04-15T09:30:06Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"keep commit-level attribution for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window"}]}}',
           '{"timestamp":"2026-04-15T09:30:07Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I\\u0027ll keep the fallback scoped to the current commit window."}]}}',
           '{"timestamp":"2026-04-15T09:30:08Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"yes, implement that"}]}}',
           '{"timestamp":"2026-04-15T09:30:09Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Implementing the narrow fallback now."}]}}',
@@ -2965,7 +3035,7 @@ describe("recordCommitEntry", () => {
         join(sessionDir, PROMPTS_FILE),
         '{"event":"prompt","prompt":"edit first.ts","prompt_id":"id-first","turn":1,"timestamp":"2026-04-15T09:30:01Z"}\n' +
           '{"event":"prompt","prompt":"older prompt-selection v2 and generated artifact discussion that should not be the main note anchor","prompt_id":"id-old","turn":2,"timestamp":"2026-04-15T09:30:04Z"}\n' +
-          '{"event":"prompt","prompt":"keep a prompt-only note for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window","prompt_id":"id-plan","turn":3,"timestamp":"2026-04-15T09:30:06Z"}\n' +
+          '{"event":"prompt","prompt":"keep commit-level attribution for Codex when transcript attribution misses commit files\\n- keep human-only commits skipped\\n- keep only the current commit window","prompt_id":"id-plan","turn":3,"timestamp":"2026-04-15T09:30:06Z"}\n' +
           '{"event":"prompt","prompt":"yes, implement that","prompt_id":"id-go","turn":4,"timestamp":"2026-04-15T09:30:08Z"}\n',
       );
       writeFileSync(join(sessionDir, TURN_FILE), "4\n");
@@ -2998,11 +3068,13 @@ describe("recordCommitEntry", () => {
 
       const note = await readNote(commitSha);
       assert.ok(note !== null);
+      assert.equal((note.attribution as { ai_ratio: number; method: string }).method, "file");
+      assert.equal((note.attribution as { ai_ratio: number }).ai_ratio, 100);
       const interactions = note.interactions as Array<{ prompt: string }>;
       assert.deepEqual(
         interactions.map((interaction) => interaction.prompt),
         [
-          "keep a prompt-only note for Codex when transcript attribution misses commit files\n- keep human-only commits skipped\n- keep only the current commit window",
+          "keep commit-level attribution for Codex when transcript attribution misses commit files\n- keep human-only commits skipped\n- keep only the current commit window",
           "yes, implement that",
         ],
       );

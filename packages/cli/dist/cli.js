@@ -3526,6 +3526,7 @@ async function recordCommitEntry(opts) {
   }
   let interactions;
   let transcriptLineCounts;
+  let useCommitLevelAttribution = false;
   let consumedPromptEntries = [];
   let consumedTranscriptPromptFiles = [];
   let allInteractions = [];
@@ -3609,6 +3610,7 @@ async function recordCommitEntry(opts) {
       return { prompt: entry2.prompt ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
+    useCommitLevelAttribution = true;
   } else if (transcriptPath && allInteractions.length > 0) {
     const transcriptMatched = allInteractions.filter(
       (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
@@ -3682,6 +3684,7 @@ async function recordCommitEntry(opts) {
         commitFileSet,
         currentUnattributedToolPromptIds
       );
+      useCommitLevelAttribution = interactions.length > 0;
     } else {
       interactions = [];
     }
@@ -3707,6 +3710,9 @@ async function recordCommitEntry(opts) {
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
+  }
+  if (useCommitLevelAttribution && aiFiles.length === 0 && interactions.length > 0) {
+    aiFiles = commitFiles;
   }
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
   await attachInteractionContexts(

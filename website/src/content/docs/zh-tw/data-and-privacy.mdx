@@ -55,7 +55,7 @@ Agent Note 面向希望保留 AI review history、但不想依賴 hosted backend
 
 - 整個 workspace。
 - 所有 shell command output。
-- 只根據 shell command 推測出的 AI 修改檔案。
+- 不把 shell command output 當作 file evidence 保存。可信的 Agent transcript 仍然可以產生 commit-level attribution。
 - 上傳到 Agent Note backend 的資料。
 
 ## 團隊可見性

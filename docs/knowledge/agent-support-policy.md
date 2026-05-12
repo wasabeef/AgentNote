@@ -170,7 +170,8 @@ Codex CLI は `Supported` とする。
 - patch 行数が commit と一致したときの safe line-level upgrade は成立している
 - 通常は file-level attribution で説明可能である
 - transcript が読めない、または不確かな場合は note を作らず安全側に倒れる
-- shell-only の変更を transcript だけから AI-authored file と推測しない
+- shell command text だけから per-prompt `files_touched` は作らない
+- current Agent transcript を信頼できる場合は commit-level attribution として commit files を AI-assisted 扱いできる
 
 判断:
 
@@ -235,7 +236,7 @@ Status: 完了。
 
 - transcript path validation の hardening
 - parser の fixture 強化
-- shell-only change recovery の到達範囲を docs に明示
+- shell-only change recovery と commit-level attribution の到達範囲を docs に明示
 - `status` で Codex の capture 詳細を表示するか検討し、必要なら追加する
 - README と website の `Codex CLI | Supported` を維持する
 

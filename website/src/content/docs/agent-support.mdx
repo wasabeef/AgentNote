@@ -66,7 +66,7 @@ Claude Code provides hook-native prompt, response, and edit data. Agent Note rec
 
 Codex CLI support is transcript-driven. Agent Note reads local transcripts, connects `apply_patch` operations to committed files, and upgrades to line-level only when patch counts match the final diff.
 
-Shell-only edits are not guessed from command text. If no reliable transcript is available, Agent Note avoids writing uncertain attribution.
+Shell-only edits do not create per-prompt `files_touched` from command text. When the current Codex transcript is trusted, Agent Note can still mark the commit files as AI-assisted at commit-level.
 
 ### Cursor
 

@@ -263,6 +263,7 @@ export async function recordCommitEntry(opts: {
 
   let interactions: Interaction[];
   let transcriptLineCounts: LineCounts | undefined;
+  let useCommitLevelAttribution = false;
   // Session entries that contributed to this commit's interactions. Passed
   // to recordConsumedPairs so maxConsumedTurn advances even when no
   // file_change/pre_blob entries exist (e.g. Codex transcript-driven path).
@@ -307,7 +308,7 @@ export async function recordCommitEntry(opts: {
   // Two restrictions keep this narrow:
   //   1. transcript must reference edits on other files — a shell-only
   //      Codex session legitimately wants the prompt/response preserved
-  //      even with no file attribution.
+  //      with commit-level file attribution.
   //   2. transcript must NOT reference commit files — legitimate AI work on
   //      this commit still goes through the pairing path below.
   const transcriptEditsCommit = allInteractions.some((i) =>
@@ -401,6 +402,7 @@ export async function recordCommitEntry(opts: {
       return { prompt: (entry.prompt as string) ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
+    useCommitLevelAttribution = true;
   } else if (transcriptPath && allInteractions.length > 0) {
     // Transcript-driven path: sessions that don't emit `file_change` events
     // (e.g. Codex) derive their causal window from transcript interactions.
@@ -490,6 +492,7 @@ export async function recordCommitEntry(opts: {
         commitFileSet,
         currentUnattributedToolPromptIds,
       );
+      useCommitLevelAttribution = interactions.length > 0;
     } else {
       interactions = [];
     }
@@ -516,6 +519,13 @@ export async function recordCommitEntry(opts: {
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
+  }
+
+  // If the current Agent transcript proves tool-backed work but exact file
+  // touches are unavailable, keep the v0.2-style commit-level attribution.
+  // Per-prompt files_touched still stays empty because that data is not exact.
+  if (useCommitLevelAttribution && aiFiles.length === 0 && interactions.length > 0) {
+    aiFiles = commitFiles;
   }
 
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
@@ -773,7 +783,7 @@ function filterInteractionCommitFiles(
   );
 }
 
-/** Prefer tool-backed fallback rows without guessing shell-only file authorship. */
+/** Prefer tool-backed fallback rows when exact file touches are unavailable. */
 function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
@@ -798,7 +808,7 @@ function selectTranscriptFallbackInteractions(
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
 }
 
-/** Current-window tool turns without file evidence, kept as prompt-only notes. */
+/** Current-window tool turns without per-file evidence. */
 function collectCurrentUnattributedToolPromptIds(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],

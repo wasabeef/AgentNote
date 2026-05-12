@@ -224,8 +224,9 @@ not make them the primary user action.
   confirmation for every commit.
 - Preserve existing hooks and workflows. If a hook or workflow exists, update it
   carefully rather than replacing it blindly.
-- Never infer AI-authored files from shell-only evidence. Follow Agent Note's
-  recorded note data.
+- Do not invent per-prompt `files_touched` from shell command text. Follow
+  Agent Note's recorded note data; commit-level attribution may still mark
+  files AI-assisted when the current Agent transcript is trusted.
 - When troubleshooting missing data, distinguish "no tracked commits" from a
   true `0%` AI Ratio.
 

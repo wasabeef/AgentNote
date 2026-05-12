@@ -322,7 +322,7 @@ describe("agentnote codex", () => {
     );
   });
 
-  it("records shell-only Codex transcripts without guessing AI-authored files", () => {
+  it("records shell-only Codex transcripts with commit-level AI attribution", () => {
     const sessionId = "codex-session-shell-only";
     const transcriptDir = join(testHome, ".codex", "sessions");
     mkdirSync(transcriptDir, { recursive: true });
@@ -357,7 +357,7 @@ describe("agentnote codex", () => {
       env: { ...process.env, HOME: testHome },
       encoding: "utf-8",
     });
-    assert.match(output, /agent-note: 1 prompts, AI ratio 0%/);
+    assert.match(output, /agent-note: 1 prompts, AI ratio 100%/);
 
     const note = JSON.parse(
       execSync("git notes --ref=agentnote show HEAD", {
@@ -366,8 +366,8 @@ describe("agentnote codex", () => {
       }),
     );
     assert.equal(note.attribution.method, "file");
-    assert.equal(note.attribution.ai_ratio, 0);
-    assert.deepEqual(note.files, [{ path: "shell-note.txt", by_ai: false }]);
+    assert.equal(note.attribution.ai_ratio, 100);
+    assert.deepEqual(note.files, [{ path: "shell-note.txt", by_ai: true }]);
     assert.equal(note.interactions[0].prompt, "Update shell-note.txt via shell.");
     assert.equal(note.interactions[0].response, "I will update it with a shell command.");
     assert.deepEqual(note.interactions[0].tools, ["exec_command"]);
@@ -379,7 +379,7 @@ describe("agentnote codex", () => {
       encoding: "utf-8",
     });
     assert.ok(showOutput.includes("shell-note.txt"), "show should list the committed file");
-    assert.ok(showOutput.includes("0%"), "show should report zero AI attribution");
+    assert.ok(showOutput.includes("100%"), "show should report commit-level AI attribution");
   });
 
   it("does not write a git note when the Codex transcript cannot be read", () => {

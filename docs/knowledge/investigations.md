@@ -47,15 +47,16 @@
 - 観測結果: PR `#71` の直近 commit 群は長時間作業ではなく短時間でも欠落しました。`17c2d1d` も `Agentnote-Session` trailer と git note を持たないため、PR Report では `—` になります。
 - 原因: `.git/agentnote/session` が現在の Codex 作業 session を正しく表しておらず、fresh な active session pointer が `prompts.jsonl` だけを持つ状態でした。plain `git commit` の `prepare-commit-msg` は commit command が Agent 内で観測されたかを判断できないため、prompt-only session に trailer を付けると別 session hijack の危険があります。
 - 修正: plain `git commit` 経路（`prepare-commit-msg`）は、fresh heartbeat に加えて `changes.jsonl` または `pre_blobs.jsonl` の file evidence がある session だけに trailer を付けます。Agent の `PreToolUse git commit` 経路は、commit command 自体が Agent 内で観測されているため prompt-only rescue を維持します。`agent-note commit` も wrapper 内で session を確認できるため、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかを recordable data として扱います。
-- Follow-up 修正: cmux などの Agent host 上では、`.git/agentnote/session` が更新されなくても process environment に現在の Agent session が残る場合があります。`CODEX_THREAD_ID` がある場合、`post-commit` は `--fallback-env` で fresh な Codex transcript を探し、transcript が現在 commit file に接続できる場合だけ note を作ります。古い transcript mtime は拒否するため、stale な Codex session は救済しません。
+- Follow-up 修正: cmux などの Agent host 上では、`.git/agentnote/session` が更新されなくても process environment に現在の Agent session が残る場合があります。`CODEX_THREAD_ID` がある場合、`post-commit` は `--fallback-env` で fresh な Codex transcript を探します。transcript が現在 commit file に直接接続できる場合は通常の file/line attribution を使い、file touch を特定できなくても current transcript の tool-backed work がある場合は v0.2 系に近い commit-level attribution として commit files を AI 扱いします。古い transcript mtime は拒否するため、stale な Codex session は救済しません。
 
 #### Safe fallback
 
 - `prepare-commit-msg` が stale heartbeat のため trailer 注入を skip した場合だけ、one-shot の `post_commit_fallback` marker を書きます。
 - `post-commit` は trailer がなく、かつ marker がある場合だけ `agent-note record --fallback-head` を呼びます。
 - fallback は `.git/agentnote/session` を無条件に信じません。active session に recordable data があり、かつ `changes.jsonl` の post-edit `blob` が HEAD の committed blob と一致する場合だけ `recordCommitEntry()` に進みます。
-- prompt-only / metadata-only / unrelated file evidence / same-path different-blob evidence は救済しません。
-- environment fallback は `.git/agentnote/session` を使わず、現在 process の `CODEX_THREAD_ID` だけを候補にします。Codex transcript は adapter の transcript discovery で探し、heartbeat または transcript mtime が fresh な場合だけ `recordCommitEntry()` に進みます。これは cmux のような host が Codex process environment を維持しているケースの救済であり、古い active pointer を再び信用するものではありません。
+- `--fallback-head` は prompt-only / metadata-only / unrelated file evidence / same-path different-blob evidence を救済しません。これは stale `.git/agentnote/session` pointer を再び信用しないためです。
+- `--fallback-env` は `.git/agentnote/session` を使わず、現在 process の `CODEX_THREAD_ID` だけを候補にします。Codex transcript は adapter の transcript discovery で探し、heartbeat または transcript mtime が fresh な場合だけ `recordCommitEntry()` に進みます。これは cmux のような host が Codex process environment を維持しているケースの救済であり、古い active pointer を再び信用するものではありません。
+- `--fallback-env` で選ばれた current Codex transcript に tool-backed interaction がある場合、file touch が取れなくても commit-level attribution として commit files を `by_ai: true` にします。これは v1 の stale pointer guard は残しつつ、v0.2 系の「AI が関わった commit を見失わない」挙動へ戻すためです。`files_touched` は per-prompt file evidence なので推測では埋めません。
 - HEAD blob 読み取りは `git diff-tree -z --raw` を使います。NUL 区切りで読むことで、Git の `core.quotePath=true` による path quote を避け、`src/日本語 file.ts` のような path でも post-edit blob evidence を正しく照合します。
 
 #### Display behavior
@@ -76,11 +77,11 @@
 - 対象 PR: `#59`
 - 対象 commit: `afcb2d9 docs: normalize agent names on website`
 - 観測結果: commit message には `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` が入っていましたが、`git notes --ref=agentnote show afcb2d9` は `no note found` でした。そのため PR Report では AI 判定できず、commit table では prompt / file 情報が欠落しました。
-- 直接原因: 変更は Codex の `apply_patch` ではなく shell command による一括置換で行われていました。Codex adapter は安全側のため、shell command だけから `files_touched` や AI-authored files を推測しません。
+- 直接原因: 変更は Codex の `apply_patch` ではなく shell command による一括置換で行われていました。当時の Codex adapter は安全側のため、shell command だけから `files_touched` や AI-authored files を推測しませんでした。
 - 設計漏れ: transcript 内に古い `apply_patch` edit が残っている場合、human-only skip guard が「current commit file には transcript edit がなく、別 file への transcript edit だけがある」と判断し、current turn の shell-only tool activity まで空 note として skip していました。結果として trailer はあるのに note がない状態が再発しました。
-- 修正: current prompt window に `files_touched` を持たない tool-backed Codex interaction がある場合は、shell-only work として prompt-only note を残します。ただし shell command から file attribution は推測せず、`files_touched` は付けず、AI ratio は 0% のままにします。cross-turn commit では shell-only fallback を出さず、古い `apply_patch` が別 file にあるだけの human-only commit は引き続き skip します。
+- 修正: current prompt window に `files_touched` を持たない tool-backed Codex interaction がある場合は、shell-only work として note を残します。v1 の初期修正では AI ratio を 0% にしていましたが、これは v0.2 系の良かった「AI が関わった commit を広く拾う」体験を落としすぎました。現在は、guard を通過した current tool-backed work については commit-level attribution として commit files を `by_ai: true` にします。ただし shell command から per-prompt file attribution は推測せず、`files_touched` は付けません。cross-turn commit では shell-only fallback を出さず、古い `apply_patch` が別 file にあるだけの human-only commit は引き続き skip します。
 - 追加修正: Codex でも `transcript_path` だけの metadata-only session は recordable としません。少なくとも `prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかが必要です。
-- Regression coverage: `packages/cli/src/core/record.test.ts` に PR #59 型の shell-only Codex regression を追加し、古い transcript edit があっても current shell-only prompt が prompt-only note として残ること、file attribution は付かないことを確認します。同じ test file に 100+ case の shell-only fallback simulation を追加し、current no-file tool activity だけが rescue され、true human-only commit は skip されることを確認します。`packages/cli/src/core/session.test.ts` に 100+ case の recordable session matrix を追加し、`transcript_path` 単体ではどの Agent でも recordable にならないことを確認します。`packages/cli/src/commands/codex.test.ts` は shell の `echo` 経由ではなく stdin に JSON を直接渡すようにし、改行を含む prompt でも実際の hook と同じ形で `prompts.jsonl` が作られることを確認します。
+- Regression coverage: `packages/cli/src/core/record.test.ts` に PR #59 型の shell-only Codex regression を追加し、古い transcript edit があっても current shell-only prompt が note として残り、commit files が AI 扱いになること、ただし `files_touched` は推測されないことを確認します。同じ test file に 100+ case の shell-only fallback simulation を追加し、current no-file tool activity だけが rescue され、true human-only commit は skip されることを確認します。`packages/cli/src/core/session.test.ts` に 100+ case の recordable session matrix を追加し、`transcript_path` 単体ではどの Agent でも recordable にならないことを確認します。`packages/cli/src/commands/codex.test.ts` は shell の `echo` 経由ではなく stdin に JSON を直接渡すようにし、改行を含む prompt でも実際の hook と同じ形で `prompts.jsonl` が作られることを確認します。
 
 ### Prompt window policy の module 分離
 
