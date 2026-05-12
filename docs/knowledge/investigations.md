@@ -12,33 +12,59 @@
 - 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。
 - tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。
 
+### Codex hook diagnostics
+
+- `.codex/hooks.json` が存在しても、現在の Codex runtime が Agent Note hook を呼んで `.git/agentnote/session` を更新しているとは限りません。
+- 次 PR では `agent-note status` か専用診断で、active session の `agent` / 最終 heartbeat / recordable files / installed git hook template version / agent hook enabled state を表示し、`Codex hook config exists but no recent Codex session was recorded` のような warning を出せるようにします。
+- これにより、note がない原因を PR Report からではなく local diagnostics で切り分けられるようにします。
+
 ## Resolved Investigations
 
-### Long-running session で commit note が作成されない
+### Missing commit notes after long or mismatched sessions
 
-- 対象 PR: `#57`
-- 対象 commit: `b28d52f feat(report): add reviewer context`
-- 観測結果: PR body の Agent Note が `Total AI Ratio: ░░░░░░░░ 0%` になり、commit table も `AI Ratio` / `Prompts` / `Files` がすべて `—` でした。`git notes --ref=agentnote show b28d52f` も `no note found` です。
-- 正常例: PR `#56` の commit `dfd82eb docs: make README language more user-facing` は commit message に `Agentnote-Session: 019da962-23cc-7aa0-bbe3-a10f60fddada` を持ち、git note も正常に作成されています。
-- 差分: PR `#57` の commit message には `Agentnote-Session` trailer がありません。`post-commit` hook は HEAD の trailer を source of truth として `agent-note record <session_id>` を呼ぶため、trailer がない commit は記録対象になりません。
-- 原因: `prepare-commit-msg` hook は `.git/agentnote/session` と session heartbeat を確認し、heartbeat が 1 時間より古い場合は安全側で trailer 注入を skip します。旧実装は `prompt` で heartbeat を更新していましたが、長い single turn 中の `file_change`、`response`、`pre_commit` では更新していませんでした。そのため、1 時間を超える長い AI 作業の最後に `git commit` すると、commit 直前に agent hook event が来ていても heartbeat が stale のままになり得ました。
+- 対象 PR: `#57`, `#58`, `#71`
+- 対象 commit: `b28d52f feat(report): add reviewer context`, `56e6b48 fix(hooks): refresh heartbeat during long turns`, `17c2d1d docs: clarify trailer evidence paths`
+
+この調査は、PR Report の commit table が `—` になる原因を 3 つに分けて整理します。`—` は PR Report の表示バグではなく、対象 commit に Agent Note の git note が存在しないことを意味します。
+
+#### Case 1: stale heartbeat で trailer が付かない
+
+- 観測結果: PR `#57` の `b28d52f` は `Agentnote-Session` trailer を持たず、`git notes --ref=agentnote show b28d52f` も `no note found` でした。
+- 原因: 旧実装は `prompt` で heartbeat を更新していましたが、長い single turn 中の `file_change`、`response`、`pre_commit` では更新していませんでした。そのため、1 時間を超える AI 作業の最後に `git commit` すると、commit 直前に Agent hook event が来ていても heartbeat が stale のままになり、`prepare-commit-msg` が trailer 注入を skip しました。
 - 修正: `agent-note hook` は、正規化された hook event を受けた時点で session heartbeat を更新します。これにより、長い turn の tool event、response、commit hook event が session freshness を延長します。Gemini の `SessionEnd` は true session termination なので、従来通り最後に heartbeat を削除します。
-- 表示修正: PR Report は `tracked_commits === 0 && total_commits > 0` の場合、`Total AI Ratio: ░░░░░░░░ 0%` ではなく `Total AI Ratio: —` と `Agent Note data: No tracked commits` を表示します。これで missing note と true 0% attribution commit を分離します。
-- Follow-up: PR `#58` の commit `56e6b48 fix(hooks): refresh heartbeat during long turns` では `Agentnote-Session` trailer は入ったものの、git note は作成されませんでした。原因は heartbeat ではなく、commit 時点の session が `SessionStart` / `transcript_path` / heartbeat だけの metadata-only session だったことです。`recordCommitEntry()` は `interactions.length === 0 && aiFiles.length === 0` の空 note を安全側で skip するため、trailer だけが残りました。
-- Follow-up 修正: plain `git commit` 経路（`prepare-commit-msg`）は、fresh heartbeat に加えて `changes.jsonl` または `pre_blobs.jsonl` の file evidence がある session だけに trailer を付けます。`agent-note commit` と Agent の `PreToolUse git commit` trailer injection は、commit command が wrapper / Agent hook 内で観測されているため `prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかを recordable data として扱います。`transcript_path` は補助 metadata であり、単体では recordable data として扱いません。これにより、metadata-only session と plain prompt-only session に dangling `Agentnote-Session` trailer を付けません。
-- 追加 Follow-up: PR `#71` の follow-up commit では、作業自体は長時間化していませんでしたが、runtime hook が現在の Codex session として発火しておらず、`.git/agentnote/session` が実際の作業 session ではない古い active pointer を指したままでした。この状態では `prepare-commit-msg` が heartbeat stale と判断し、trailer を入れないため、`post-commit` も従来は記録できませんでした。PR Report は git note を読むだけなので、表示可否は実際に使った Agent 名ではなく、対象 commit に git note が作られているかで決まります。
-- 採用した追加修正: `prepare-commit-msg` が stale heartbeat のため trailer 注入を skip した場合だけ、one-shot の `post_commit_fallback` marker を書きます。`post-commit` は trailer がなく、かつ marker がある場合だけ `agent-note record --fallback-head` を呼びます。amend / reuse commit は marker を書かず、既存 marker も先に削除するため fallback 対象外です。
-- fallback は `.git/agentnote/session` を無条件に信じません。active session に recordable data があり、かつ `changes.jsonl` の post-edit `blob` が HEAD の committed blob と一致する場合だけ `recordCommitEntry()` に進みます。prompt-only / metadata-only / unrelated file evidence / same-path different-blob evidence は救済しません。
-- fallback の HEAD blob 読み取りは `git diff-tree -z --raw` を使います。Git の default `core.quotePath=true` では非 ASCII や空白を含む path が quote されるため、通常の `--raw` text parsing だと session JSONL の path と一致しません。NUL 区切りで読むことで、`src/日本語 file.ts` のような path でも post-edit blob evidence を正しく照合します。
-- 追加 Follow-up 2: PR `#71` の直近 commit 群は長時間作業ではなく短時間でも欠落しました。原因は stale ではなく、fresh な active session pointer が `prompts.jsonl` だけを持ち、実際の commit file evidence を持たない状態で、plain `git commit` の `prepare-commit-msg` が trailer を注入していたことです。PR `#71` の作業では Codex だけを使っていたため、この観測は「別 Agent で作業した」証拠ではなく、active pointer が現在の Codex 作業 session を正しく表していなかったことを示します。後段の `recordCommitEntry()` は `interactions.length === 0 && aiFiles.length === 0` と判断して note を安全側で skip するため、`trailer あり / note なし` になりました。修正後の plain git hook は `changes.jsonl` または `pre_blobs.jsonl` がある場合だけ trailer を注入します。Agent の `PreToolUse git commit` 経路は、commit command 自体が Agent 内で観測されているため prompt-only rescue を維持します。
-- 設計判断: `heartbeat` は active status と fast trailer injection の signal として残します。一方で、commit 紐づけの最後の判断は post-commit fallback marker、post-edit blob match、`recordCommitEntry()` の既存 causal filter に委ねます。これにより、1 時間を超える正当な作業は救いつつ、古い prompt-only session や同一 path の後続 human-only commit の誤 attribution を避けます。
-- 未解決の次作業: `.codex/hooks.json` が存在しても、現在の Codex runtime が Agent Note hook を呼んで `.git/agentnote/session` を更新しているとは限りません。次 PR では `agent-note status` か専用診断で、active session の `agent` / 最終 heartbeat / recordable files / installed git hook template version / agent hook enabled state を表示し、`Codex hook config exists but no recent Codex session was recorded` のような warning を出せるようにします。これにより、note がない原因を PR Report からではなく local diagnostics で切り分けられるようにします。
-- Regression coverage:
-  - `packages/cli/src/commands/hook.test.ts`: `PreToolUse` の `git commit` hook が stale heartbeat を更新すること、metadata-only session では trailer を注入しないことを確認します。
-  - `packages/cli/src/commands/init.test.ts`: 生成された `prepare-commit-msg` hook が metadata-only session と fresh prompt-only session を skip し、file evidence がある session だけに trailer を入れることを確認します。同じ test file で、stale heartbeat のため trailer がない commit でも post-edit blob が HEAD blob と一致すれば post-commit fallback が note を作成し、stale prompt-only session、same-path different-blob session、amend commit は note を作らないこと、root commit と quoted raw diff path でも fallback が動くことを確認します。
-  - `packages/cli/src/core/record.test.ts`: 180 case の fallback evidence simulation を追加し、`Claude` / `Codex` / `Cursor` / `Gemini`、current / rotated `changes` / `pre_blobs`、matching / unrelated / empty evidence、prompt-only noise を組み合わせて fallback predicate を検証します。
-  - `packages/cli/src/commands/commit.test.ts`: manual `agent-note commit` も同じ条件を使うことを確認します。
-  - `packages/pr-report/src/report.test.ts`: note missing commit は `Total AI Ratio: —`、true 0% attribution commit は従来通り `░░░░░░░░ 0%` と表示されることを確認します。
+
+#### Case 2: metadata-only session に trailer だけ付く
+
+- 観測結果: PR `#58` の `56e6b48` は `Agentnote-Session` trailer を持っていましたが、git note は作成されませんでした。
+- 原因: commit 時点の session は `SessionStart` / `transcript_path` / heartbeat だけの metadata-only session でした。`recordCommitEntry()` は `interactions.length === 0 && aiFiles.length === 0` の空 note を安全側で skip するため、trailer だけが残りました。
+- 修正: `transcript_path` は補助 metadata であり、単体では recordable data として扱いません。`prepare-commit-msg`、`agent-note commit`、Agent の `PreToolUse git commit` は、metadata-only session に trailer を付けません。
+
+#### Case 3: fresh prompt-only active pointer が plain git commit を hijack する
+
+- 観測結果: PR `#71` の直近 commit 群は長時間作業ではなく短時間でも欠落しました。`17c2d1d` も `Agentnote-Session` trailer と git note を持たないため、PR Report では `—` になります。
+- 原因: `.git/agentnote/session` が現在の Codex 作業 session を正しく表しておらず、fresh な active session pointer が `prompts.jsonl` だけを持つ状態でした。plain `git commit` の `prepare-commit-msg` は commit command が Agent 内で観測されたかを判断できないため、prompt-only session に trailer を付けると別 session hijack の危険があります。
+- 修正: plain `git commit` 経路（`prepare-commit-msg`）は、fresh heartbeat に加えて `changes.jsonl` または `pre_blobs.jsonl` の file evidence がある session だけに trailer を付けます。Agent の `PreToolUse git commit` 経路は、commit command 自体が Agent 内で観測されているため prompt-only rescue を維持します。`agent-note commit` も wrapper 内で session を確認できるため、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかを recordable data として扱います。
+
+#### Safe fallback
+
+- `prepare-commit-msg` が stale heartbeat のため trailer 注入を skip した場合だけ、one-shot の `post_commit_fallback` marker を書きます。
+- `post-commit` は trailer がなく、かつ marker がある場合だけ `agent-note record --fallback-head` を呼びます。
+- fallback は `.git/agentnote/session` を無条件に信じません。active session に recordable data があり、かつ `changes.jsonl` の post-edit `blob` が HEAD の committed blob と一致する場合だけ `recordCommitEntry()` に進みます。
+- prompt-only / metadata-only / unrelated file evidence / same-path different-blob evidence は救済しません。
+- HEAD blob 読み取りは `git diff-tree -z --raw` を使います。NUL 区切りで読むことで、Git の `core.quotePath=true` による path quote を避け、`src/日本語 file.ts` のような path でも post-edit blob evidence を正しく照合します。
+
+#### Display behavior
+
+- PR Report は git note を読むだけなので、表示可否は実際に使った Agent 名ではなく、対象 commit に git note が作られているかで決まります。
+- `tracked_commits === 0 && total_commits > 0` の場合、`Total AI Ratio: ░░░░░░░░ 0%` ではなく `Total AI Ratio: —` と `Agent Note data: No tracked commits` を表示します。これで missing note と true 0% attribution commit を分離します。
+
+#### Regression coverage
+
+- `packages/cli/src/commands/hook.test.ts`: `PreToolUse` の `git commit` hook が stale heartbeat を更新すること、metadata-only session では trailer を注入しないことを確認します。
+- `packages/cli/src/commands/init.test.ts`: 生成された `prepare-commit-msg` hook が metadata-only session と fresh prompt-only session を skip し、file evidence がある session だけに trailer を入れることを確認します。同じ test file で、stale heartbeat のため trailer がない commit でも post-edit blob が HEAD blob と一致すれば post-commit fallback が note を作成し、stale prompt-only session、same-path different-blob session、amend commit は note を作らないこと、root commit と quoted raw diff path でも fallback が動くことを確認します。
+- `packages/cli/src/core/record.test.ts`: 180 case の fallback evidence simulation を追加し、`Claude` / `Codex` / `Cursor` / `Gemini`、current / rotated `changes` / `pre_blobs`、matching / unrelated / empty evidence、prompt-only noise を組み合わせて fallback predicate を検証します。
+- `packages/cli/src/commands/commit.test.ts`: manual `agent-note commit` も同じ条件を使うことを確認します。
+- `packages/pr-report/src/report.test.ts`: note missing commit は `Total AI Ratio: —`、true 0% attribution commit は従来通り `░░░░░░░░ 0%` と表示されることを確認します。
 
 ### PR #59 Codex shell-only commit が trailer 付き no-note になる
 
