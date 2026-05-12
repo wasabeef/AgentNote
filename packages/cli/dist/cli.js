@@ -7033,7 +7033,7 @@ function truncateLines(text, maxLen) {
 import { existsSync as existsSync15 } from "node:fs";
 import { readFile as readFile13 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4, join as join16 } from "node:path";
-var VERSION = "1.0.1";
+var VERSION = "1.0.2";
 var CAPABILITY_LABELS = {
   edits: "edits",
   prompt: "prompt",
@@ -7562,7 +7562,7 @@ function printUsageAndExit() {
 }
 
 // src/cli.ts
-var VERSION2 = "1.0.1";
+var VERSION2 = "1.0.2";
 var HELP = `
 agent-note v${VERSION2} \u2014 remember why your code changed
 
