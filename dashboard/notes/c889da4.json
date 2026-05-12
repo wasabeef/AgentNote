@@ -766,6 +766,6 @@
   "pull_request": {
     "number": 71,
     "title": "fix(init): update v1 workflows and harden hook recording",
-    "state": "open"
+    "state": "merged"
   }
 }
