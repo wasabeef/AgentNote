@@ -59,6 +59,8 @@ type AgentnoteIgnorePattern = {
 const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
+// Git commit timestamps and transcript JSONL writes can differ slightly.
+// Keep the window small enough to exclude post-commit debug prompts.
 const TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1000;
 const TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1000;
 
