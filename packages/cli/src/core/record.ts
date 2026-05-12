@@ -60,6 +60,7 @@ const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 const TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1000;
+const TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1000;
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -105,6 +106,7 @@ export async function recordCommitEntry(opts: {
     // Subject is only a prompt-trimming hint. Recording should still proceed.
   }
   const commitTimestampMs = await readHeadCommitTimestampMs();
+  const parentCommitTimestampMs = await readHeadParentCommitTimestampMs();
   let commitDiffText = "";
   try {
     commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
@@ -281,8 +283,9 @@ export async function recordCommitEntry(opts: {
   if (transcriptPath) {
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
-      allInteractions = filterTranscriptInteractionsBeforeCommit(
+      allInteractions = filterTranscriptInteractionsForCommitWindow(
         allInteractions,
+        opts.allowEnvironmentTranscriptFallback ? parentCommitTimestampMs : null,
         commitTimestampMs,
       );
     } catch (err) {
@@ -765,16 +768,31 @@ async function readHeadCommitTimestampMs(): Promise<number | null> {
   }
 }
 
-/** Drop transcript rows written after the commit being recorded. */
-function filterTranscriptInteractionsBeforeCommit(
+async function readHeadParentCommitTimestampMs(): Promise<number | null> {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD^"]));
+  } catch {
+    return null;
+  }
+}
+
+/** Keep transcript rows inside the parent-to-HEAD commit window when timestamps exist. */
+function filterTranscriptInteractionsForCommitWindow(
   interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
   commitTimestampMs: number | null,
 ): TranscriptInteraction[] {
-  if (commitTimestampMs === null) return interactions;
-  const upperBoundMs = commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
+  const lowerBoundMs =
+    parentCommitTimestampMs === null
+      ? null
+      : parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  const upperBoundMs =
+    commitTimestampMs === null ? null : commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
   return interactions.filter((interaction) => {
     const interactionMs = parseTimestampMs(interaction.timestamp);
-    return interactionMs === null || interactionMs <= upperBoundMs;
+    if (interactionMs === null) return true;
+    if (lowerBoundMs !== null && interactionMs < lowerBoundMs) return false;
+    return upperBoundMs === null || interactionMs <= upperBoundMs;
   });
 }
 

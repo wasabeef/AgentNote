@@ -3393,6 +3393,7 @@ var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 var AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 var AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 var TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1e3;
+var TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1e3;
 async function recordCommitEntry(opts) {
   const sessionDir = join6(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -3422,6 +3423,7 @@ async function recordCommitEntry(opts) {
   } catch {
   }
   const commitTimestampMs = await readHeadCommitTimestampMs();
+  const parentCommitTimestampMs = await readHeadParentCommitTimestampMs();
   let commitDiffText = "";
   try {
     commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
@@ -3542,8 +3544,9 @@ async function recordCommitEntry(opts) {
   if (transcriptPath) {
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
-      allInteractions = filterTranscriptInteractionsBeforeCommit(
+      allInteractions = filterTranscriptInteractionsForCommitWindow(
         allInteractions,
+        opts.allowEnvironmentTranscriptFallback ? parentCommitTimestampMs : null,
         commitTimestampMs
       );
     } catch (err) {
@@ -3862,12 +3865,21 @@ async function readHeadCommitTimestampMs() {
     return null;
   }
 }
-function filterTranscriptInteractionsBeforeCommit(interactions, commitTimestampMs) {
-  if (commitTimestampMs === null) return interactions;
-  const upperBoundMs = commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
+async function readHeadParentCommitTimestampMs() {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD^"]));
+  } catch {
+    return null;
+  }
+}
+function filterTranscriptInteractionsForCommitWindow(interactions, parentCommitTimestampMs, commitTimestampMs) {
+  const lowerBoundMs = parentCommitTimestampMs === null ? null : parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  const upperBoundMs = commitTimestampMs === null ? null : commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
   return interactions.filter((interaction) => {
     const interactionMs = parseTimestampMs(interaction.timestamp);
-    return interactionMs === null || interactionMs <= upperBoundMs;
+    if (interactionMs === null) return true;
+    if (lowerBoundMs !== null && interactionMs < lowerBoundMs) return false;
+    return upperBoundMs === null || interactionMs <= upperBoundMs;
   });
 }
 function toRecordedInteraction(interaction, commitFileSet, consumedPromptState) {

@@ -37,7 +37,7 @@ function writeCodexTranscript(
   const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
   mkdirSync(transcriptDir, { recursive: true });
   const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-00-00-${sessionId}.jsonl`);
-  const baseTimestampMs = Date.now() - 60 * 1000;
+  const baseTimestampMs = Date.now();
   const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();
   const patch = [
     "*** Begin Patch",
@@ -479,10 +479,36 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
     const codexHome = join(dir, "codex-home");
     const filePath = "src/stale-local-prompt.ts";
+    const oldFilePath = "src/old-package-task.ts";
     const transcriptPath = writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
     writeFileSync(
       transcriptPath,
       `${[
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2000-01-01T00:00:00Z",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "old package task" }],
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2000-01-01T00:00:01Z",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            arguments: {
+              patch: [
+                "*** Begin Patch",
+                `*** Add File: ${oldFilePath}`,
+                "+export const oldPackageTask = true;",
+                "*** End Patch",
+              ].join("\n"),
+            },
+          },
+        }),
         JSON.stringify({
           type: "response_item",
           timestamp: "2999-01-01T00:00:00Z",
@@ -525,7 +551,10 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     mkdirSync(join(dir, "src"), { recursive: true });
     writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
-    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    writeFileSync(join(dir, oldFilePath), "export const oldPackageTask = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)} ${shellSingleQuote(oldFilePath)}`, {
+      cwd: dir,
+    });
     execSync("git commit -m 'feat: transcript-only cmux env fallback'", {
       cwd: dir,
       env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
@@ -538,7 +567,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     const entry = JSON.parse(note);
     assert.equal(entry.agent, "codex");
     assert.equal(entry.session_id, codexSessionId);
-    assert.equal(entry.attribution.method, "line");
+    assert.equal(entry.attribution.method, "file");
     assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
     assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
     assert.equal(
@@ -550,12 +579,22 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     );
     assert.equal(
       entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "old package task",
+      ),
+      false,
+      "transcript rows before the parent commit should not be selected",
+    );
+    assert.equal(
+      entry.interactions.some(
         (interaction: { prompt?: string }) => interaction.prompt === "future debug prompt",
       ),
       false,
       "transcript rows written after the commit should not be selected",
     );
-    assert.deepEqual(entry.files, [{ path: filePath, by_ai: true }]);
+    assert.deepEqual(entry.files, [
+      { path: oldFilePath, by_ai: false },
+      { path: filePath, by_ai: true },
+    ]);
 
     rmSync(dir, { recursive: true, force: true });
   });
