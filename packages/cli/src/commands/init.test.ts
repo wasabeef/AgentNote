@@ -18,6 +18,7 @@ import {
   HEARTBEAT_FILE,
   NOTES_REF_FULL,
   PROMPTS_FILE,
+  SESSION_AGENT_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
   TRAILER_KEY,
@@ -516,6 +517,71 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
 
     const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
     assert.ok(!message.includes(TRAILER_KEY), "env fallback should not inject a trailer");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback retries when a stale trailer writes no note", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-stale-trailer-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const staleSessionId = "11111111-1111-4111-8111-111111111111";
+    const staleSessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, staleSessionId);
+    mkdirSync(staleSessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), staleSessionId);
+    writeFileSync(join(staleSessionDir, SESSION_AGENT_FILE), "claude\n");
+    writeFileSync(join(staleSessionDir, HEARTBEAT_FILE), String(Date.now()));
+    writeFileSync(join(staleSessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(staleSessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-05-12T10:00:00Z","prompt":"old unrelated work","turn":1}\n',
+    );
+    writeFileSync(join(dir, "unrelated-claude.ts"), "export const unrelatedClaude = true;\n");
+    const unrelatedBlob = execSync("git hash-object -w unrelated-claude.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(staleSessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"unrelated-claude.ts","blob":"${unrelatedBlob}","turn":1}\n`,
+    );
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/stale-trailer-env.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: stale trailer env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(
+      message.includes(`${TRAILER_KEY}: ${staleSessionId}`),
+      "the stale active session should still reproduce the wrong trailer shape",
+    );
 
     const note = execSync("git notes --ref=agentnote show HEAD", {
       cwd: dir,

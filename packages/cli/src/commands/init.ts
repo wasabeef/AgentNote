@@ -8,6 +8,7 @@ import {
   GIT_HOOK_NAMES,
   HEARTBEAT_TTL_SECONDS,
   NOTES_FETCH_REFSPEC,
+  NOTES_REF,
   NOTES_REF_FULL,
   POST_COMMIT_FALLBACK_FILE,
   POST_COMMIT_FALLBACK_HEAD,
@@ -180,18 +181,27 @@ if [ -z "$SESSION_ID" ]; then
   fi
   rm -f "$FALLBACK_FILE" 2>/dev/null || true
 fi
-# Prefer the repo-local shim created at init time so post-commit uses the
-# exact CLI version that generated these hooks.
-if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
-  "$GIT_DIR/agentnote/bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
-  exit 0
-fi
-# Fall back to stable local/global binaries only.
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
-  "$REPO_ROOT/node_modules/.bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
-elif command -v agent-note >/dev/null 2>&1; then
-  agent-note record "$SESSION_ID" 2>/dev/null || true
+record_agentnote() {
+  RECORD_SESSION_ID="$1"
+  if [ -z "$RECORD_SESSION_ID" ]; then return; fi
+  # Prefer the repo-local shim created at init time so post-commit uses the
+  # exact CLI version that generated these hooks.
+  if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
+    "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+    return
+  fi
+  # Fall back to stable local/global binaries only.
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+  if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
+    "$REPO_ROOT/node_modules/.bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+  elif command -v agent-note >/dev/null 2>&1; then
+    agent-note record "$RECORD_SESSION_ID" 2>/dev/null || true
+  fi
+}
+
+record_agentnote "$SESSION_ID"
+if [ "$SESSION_ID" != "--fallback-env" ] && [ -n "${SHELL_CODEX_THREAD_ID}" ] && ! git notes --ref=${NOTES_REF} show HEAD >/dev/null 2>&1; then
+  record_agentnote "--fallback-env"
 fi
 `;
 

@@ -7,6 +7,7 @@ import {
   HEARTBEAT_FILE,
   HEARTBEAT_TTL_SECONDS,
   MILLISECONDS_PER_SECOND,
+  NOTES_REF,
   SESSION_FILE,
   SESSIONS_DIR,
   TEXT_ENCODING,
@@ -20,7 +21,7 @@ import {
   writeSessionAgent,
   writeSessionTranscriptPath,
 } from "../core/session.js";
-import { git } from "../git.js";
+import { git, gitSafe } from "../git.js";
 import { agentnoteDir } from "../paths.js";
 
 const FALLBACK_HEAD_FLAG = "--fallback-head";
@@ -75,10 +76,12 @@ export async function recordHeadFallback(): Promise<void> {
 
 /** Recover notes for agent-hosted terminals that expose the current session id. */
 export async function recordEnvironmentFallback(): Promise<void> {
-  if (await readHeadTrailerSessionId()) {
-    debugRecord("env fallback skipped: HEAD already has trailer");
+  if (await hasHeadAgentNote()) {
+    debugRecord("env fallback skipped: HEAD already has an Agent Note");
     return;
   }
+  if (await readHeadTrailerSessionId())
+    debugRecord("env fallback continuing after empty trailer record");
 
   const agentnoteDirPath = await agentnoteDir();
   const sessionId = await resolveEnvironmentSessionId(agentnoteDirPath);
@@ -101,6 +104,11 @@ async function readActiveSessionId(agentnoteDirPath: string): Promise<string | n
   const sessionId = (await readFile(activeSessionPath, TEXT_ENCODING)).trim();
   if (sessionId === "." || sessionId === "..") return null;
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+
+async function hasHeadAgentNote(): Promise<boolean> {
+  const result = await gitSafe(["notes", `--ref=${NOTES_REF}`, "show", "HEAD"]);
+  return result.exitCode === 0 && result.stdout.trim() !== "";
 }
 
 async function resolveEnvironmentSessionId(agentnoteDirPath: string): Promise<string | null> {
