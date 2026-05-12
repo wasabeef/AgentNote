@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -23,6 +23,11 @@ describe("agent-note dist CLI e2e smoke", () => {
   let scopedCommit = "";
 
   before(() => {
+    assert.equal(
+      existsSync(cliPath),
+      true,
+      "Missing dist/cli.js. Run `npm run build` in packages/cli before running this test.",
+    );
     testDir = mkdtempSync(join(tmpdir(), "agentnote-e2e-smoke-"));
     homeDir = join(testDir, ".home");
     mkdirSync(homeDir, { recursive: true });
