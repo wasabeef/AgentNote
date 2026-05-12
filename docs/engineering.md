@@ -45,6 +45,14 @@ if (eventName === "pull_request") {
 }
 ```
 
+## Generated Artifacts
+
+- Keep `packages/pr-report/dist/index.js` tracked. It is the GitHub Action runtime bundle referenced by `action.yml`, so published Action users must not need a build step before the Action can start.
+- Keep `packages/cli/dist/cli.js` tracked for v1.x. It is the npm `bin` target, the CLI smoke-test target, and the path pinned by repo-local git hook shims.
+- Do not hand-edit generated bundles. Change source first, rebuild with the package build script, and commit the generated bundle only as the source change requires.
+- `.agentnoteignore` excludes generated bundles from AI Ratio. It does not mean those files are untracked or unimportant release artifacts.
+- Reconsider untracking `packages/cli/dist/cli.js` only after release, tests, and repo-local hook shims no longer depend on a checked-in bundle. Do not untrack `packages/pr-report/dist/index.js` without changing the Action runtime architecture.
+
 ## Comments
 
 - Explain why code exists, not what an obvious assignment or function call does.

@@ -6,12 +6,6 @@
 
 ## Open Follow-ups
 
-### CLI dist tracking
-
-- 現状では `packages/cli/dist/cli.js` は package contract 上必要です。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、publish 対象も `dist` のみで、CI も `node packages/cli/dist/cli.js version` を直接実行しています。
-- 一方で、repository が `dist` を tracked artifact として持ち続けるべきかは再検討します。`prepublishOnly` / CI が必ず build する設計にできるなら、`dist` tracking は PR noise になる可能性があります。
-- tracked `dist` を外す場合は、CI、test、release docs、local git hook shim の前提を更新し、実行前に必ず build するか source CLI を解決する形へ揃える必要があります。
-
 ### Codex hook diagnostics
 
 - `.codex/hooks.json` が存在しても、現在の Codex runtime が Agent Note hook を呼んで `.git/agentnote/session` を更新しているとは限りません。
@@ -19,6 +13,15 @@
 - これにより、note がない原因を PR Report からではなく local diagnostics で切り分けられるようにします。
 
 ## Resolved Investigations
+
+### CLI dist tracking policy
+
+- 決定: `packages/pr-report/dist/index.js` は tracked artifact として維持します。`action.yml` が GitHub Action runtime でこの bundle を直接実行するため、repository に存在しないと published Action が動きません。
+- 決定: `packages/cli/dist/cli.js` も v1.x では tracked artifact として維持します。`packages/cli/package.json` の `bin.agent-note` は `./dist/cli.js` を指し、CI は build 後に `node packages/cli/dist/cli.js version` を smoke test し、repo-local git hook shim も現在の built CLI path を pin します。
+- 理由: CLI package は `prepublishOnly` と release workflow で build しますが、tracked `dist/cli.js` は npm package contract、test contract、repo-local development hook contract の 3 つを同時に満たしています。公開直後の v1 系では、この安定性を PR diff の小ささより優先します。
+- 運用: generated bundle は手編集しません。source を変更したら対応する build script で再生成し、必要な bundle 差分も同じ PR に含めます。`.agentnoteignore` は `packages/cli/dist/**` と `packages/pr-report/dist/**` を AI Ratio から除外しますが、git tracking から除外するものではありません。
+- 将来 `packages/cli/dist/cli.js` を untrack する条件: release workflow が source から build した `npm pack` を検証すること、CLI tests が checked-in dist に依存しないこと、repo-local hook shim が source CLI または build-before-run strategy に移行していること、`AGENTS.md` / `CLAUDE.md` / docs が新しい前提に更新されていること。
+- 非推奨: `packages/pr-report/dist/index.js` の untrack は、Action を composite から build-on-run / Docker / external package download に変える大きな設計変更なしには行いません。GitHub Action は checkout された action contents だけで即実行できるべきです。
 
 ### Missing commit notes after long or mismatched sessions
 
