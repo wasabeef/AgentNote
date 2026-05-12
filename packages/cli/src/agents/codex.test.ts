@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
@@ -237,5 +237,80 @@ describe("codex adapter", () => {
       codex.extractInteractions(join(codexHome, "..", "outside", "session.jsonl")),
       /Invalid Codex transcript path/,
     );
+  });
+
+  describe("hooks config", () => {
+    function writeCodexConfig(repoRoot: string, hooksCommand: string, extraCommand?: string): void {
+      const codexDir = join(repoRoot, ".codex");
+      mkdirSync(codexDir, { recursive: true });
+      writeFileSync(join(codexDir, "config.toml"), "[features]\ncodex_hooks = true\n");
+      writeFileSync(
+        join(codexDir, "hooks.json"),
+        `${JSON.stringify(
+          {
+            hooks: {
+              SessionStart: [
+                {
+                  hooks: [
+                    { type: "command", command: hooksCommand },
+                    ...(extraCommand ? [{ type: "command", command: extraCommand }] : []),
+                  ],
+                },
+              ],
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+    }
+
+    it("accepts repo-local dist hook commands as managed Codex hooks", async () => {
+      const repoRoot = mkdtempSync(join(tmpdir(), "agentnote-codex-repo-"));
+      try {
+        writeCodexConfig(repoRoot, "node packages/cli/dist/cli.js hook --agent codex");
+
+        assert.equal(await codex.isEnabled(repoRoot), true);
+      } finally {
+        rmSync(repoRoot, { recursive: true, force: true });
+      }
+    });
+
+    it("removes legacy repo-local dist hooks while preserving unrelated hooks", async () => {
+      const repoRoot = mkdtempSync(join(tmpdir(), "agentnote-codex-repo-"));
+      try {
+        writeCodexConfig(
+          repoRoot,
+          "node packages/cli/dist/cli.js hook --agent codex",
+          "echo keep-me",
+        );
+
+        await codex.removeHooks(repoRoot);
+
+        const hooksContent = readFileSync(join(repoRoot, ".codex", "hooks.json"), "utf8");
+        assert.equal(hooksContent.includes("cli.js hook --agent codex"), false);
+        assert.equal(hooksContent.includes("echo keep-me"), true);
+      } finally {
+        rmSync(repoRoot, { recursive: true, force: true });
+      }
+    });
+
+    it("upgrades legacy repo-local dist hooks to the public Codex hook command", async () => {
+      const repoRoot = mkdtempSync(join(tmpdir(), "agentnote-codex-repo-"));
+      try {
+        writeCodexConfig(repoRoot, "node packages/cli/dist/cli.js hook --agent codex");
+
+        await codex.installHooks(repoRoot);
+
+        const hooksContent = readFileSync(join(repoRoot, ".codex", "hooks.json"), "utf8");
+        assert.equal(
+          hooksContent.includes("node packages/cli/dist/cli.js hook --agent codex"),
+          false,
+        );
+        assert.equal(hooksContent.includes("npx --yes agent-note hook --agent codex"), true);
+      } finally {
+        rmSync(repoRoot, { recursive: true, force: true });
+      }
+    });
   });
 });

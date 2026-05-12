@@ -5,6 +5,7 @@ import { init } from "./commands/init.js";
 import { log } from "./commands/log.js";
 import { pr } from "./commands/pr.js";
 import { pushNotes } from "./commands/push-notes.js";
+import { record } from "./commands/record.js";
 import { session } from "./commands/session.js";
 import { show } from "./commands/show.js";
 import { status } from "./commands/status.js";
@@ -84,19 +85,7 @@ switch (command) {
   case "record": {
     // Record agentnote entry for HEAD — used by post-commit git hook.
     // Unlike `commit`, this does NOT run `git commit`.
-    // Session ID is passed as argument (validated by the hook) to avoid re-reading
-    // the session file and prevent TOCTOU races with concurrent sessions.
-    const sid = args[0];
-    if (sid) {
-      try {
-        const { recordCommitEntry } = await import("./core/record.js");
-        const { agentnoteDir } = await import("./paths.js");
-        const dir = await agentnoteDir();
-        await recordCommitEntry({ agentnoteDirPath: dir, sessionId: sid });
-      } catch {
-        /* never break git */
-      }
-    }
+    await record(args);
     break;
   }
   case "push-notes":

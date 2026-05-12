@@ -281,7 +281,7 @@ La root action ha due mode:
 PR Report Mode è il default:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ Imposta `prompt_detail` su `compact` o `full` quando vuoi una cronologia dei Pro
 Dashboard Mode usa la stessa action con `dashboard: true`:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ Se hai già un sito GitHub Pages, consulta le [Dashboard Docs](https://wasabeef.
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

@@ -167,7 +167,7 @@ Agent Note et Entire résolvent des problèmes proches, mais différents.
 | **Stop** | Journalise l’événement stop (le heartbeat reste actif — Stop = fin de réponse, pas fin de session) |
 
 <Aside>
-  Les git hooks vérifient la fraîcheur de la session via le heartbeat et exigent des données de session enregistrables avant d’injecter les trailers ou d’enregistrer les notes. Le heartbeat est rafraîchi par les hook events pendant les longs turns ; les sessions metadata-only sont ignorées. Un chemin de transcript seul est une metadata de support, pas une donnée enregistrable.
+  Les plain Git hooks exigent une session récente avec file evidence avant d’injecter des trailers. Le sauvetage prompt-only reste limité aux commits où la commande `commit` a été observée dans un Agent hook.
 </Aside>
 
 <Aside type="tip">

@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
+import { isAgentNoteHookCommand } from "../agents/hook-command.js";
 import { getAgent, listAgents } from "../agents/index.js";
 import { AGENT_NAMES, type AgentName } from "../agents/types.js";
 import {
-  AGENTNOTE_HOOK_COMMAND,
   AGENTNOTE_HOOK_MARKER,
   GIT_HOOK_NAMES,
   HEARTBEAT_FILE,
@@ -206,7 +206,11 @@ async function readCodexCaptureCapabilities(repoRoot: string): Promise<string[]>
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((hook) => hook.command?.includes(AGENTNOTE_HOOK_COMMAND)),
+        (group.hooks ?? []).some(
+          (hook) =>
+            typeof hook.command === "string" &&
+            isAgentNoteHookCommand(hook.command, AGENT_NAMES.codex),
+        ),
       );
 
     const capabilities: string[] = [];
@@ -238,7 +242,11 @@ async function readCursorCaptureCapabilities(repoRoot: string): Promise<string[]
     const parsed = JSON.parse(content) as CursorHooksConfig;
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
-      (hooks[eventName] ?? []).some((entry) => entry.command?.includes(AGENTNOTE_HOOK_COMMAND));
+      (hooks[eventName] ?? []).some(
+        (entry) =>
+          typeof entry.command === "string" &&
+          isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor),
+      );
 
     const capabilities: string[] = [];
     if (hasAgentnoteHook(CURSOR_STATUS_HOOK_EVENTS.beforeSubmitPrompt)) {
@@ -282,7 +290,10 @@ async function readGeminiCaptureCapabilities(repoRoot: string): Promise<string[]
     const hooks = parsed.hooks ?? {};
     const hasAgentnoteHook = (eventName: string): boolean =>
       (hooks[eventName] ?? []).some((group) =>
-        (group.hooks ?? []).some((h) => h.command?.includes(AGENTNOTE_HOOK_COMMAND)),
+        (group.hooks ?? []).some(
+          (h) =>
+            typeof h.command === "string" && isAgentNoteHookCommand(h.command, AGENT_NAMES.gemini),
+        ),
       );
 
     const capabilities: string[] = [];

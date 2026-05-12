@@ -6,12 +6,14 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
+  CHANGES_FILE,
   HEARTBEAT_FILE,
   NOTES_REF_FULL,
   PROMPTS_FILE,
   SESSION_FILE,
   SESSIONS_DIR,
   TRAILER_KEY,
+  TURN_FILE,
 } from "../core/constants.js";
 
 function shellSingleQuote(value: string): string {
@@ -60,7 +62,7 @@ describe("agentnote init", () => {
     const workflowPath = join(testDir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist");
     const workflow = readFileSync(workflowPath, "utf-8");
-    assert.ok(workflow.includes("wasabeef/AgentNote@v0"), "workflow should reference the action");
+    assert.ok(workflow.includes("wasabeef/AgentNote@v1"), "workflow should reference the action");
 
     // Notes fetch config
     const fetchConfig = execSync("git config --get-all remote.origin.fetch", {
@@ -185,7 +187,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("prepare-commit-msg skips metadata-only sessions before injecting trailers", () => {
+  it("prepare-commit-msg requires file evidence before injecting trailers", () => {
     const dir = mkdtempSync(join(tmpdir(), "agentnote-prepare-session-data-"));
     execSync("git init", { cwd: dir });
     execSync("git config user.email test@test.com", { cwd: dir });
@@ -216,13 +218,343 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       join(sessionDir, PROMPTS_FILE),
       '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"commit this change"}\n',
     );
-    const recordableMessagePath = join(dir, "recordable-message.txt");
-    writeFileSync(recordableMessagePath, "subject\n");
-    execFileSync(hookPath, [recordableMessagePath], { cwd: dir });
+    const promptOnlyMessagePath = join(dir, "prompt-only-message.txt");
+    writeFileSync(promptOnlyMessagePath, "subject\n");
+    execFileSync(hookPath, [promptOnlyMessagePath], { cwd: dir });
     assert.ok(
-      readFileSync(recordableMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
-      "sessions with prompts should receive a trailer",
+      !readFileSync(promptOnlyMessagePath, "utf-8").includes(TRAILER_KEY),
+      "prompt-only sessions should not receive a plain git hook trailer",
     );
+
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      '{"event":"file_change","tool":"Write","file":"src/app.ts","blob":"abc123","turn":1}\n',
+    );
+    const fileEvidenceMessagePath = join(dir, "file-evidence-message.txt");
+    writeFileSync(fileEvidenceMessagePath, "subject\n");
+    execFileSync(hookPath, [fileEvidenceMessagePath], { cwd: dir });
+    assert.ok(
+      readFileSync(fileEvidenceMessagePath, "utf-8").includes(`${TRAILER_KEY}: ${sessionId}`),
+      "sessions with file evidence should receive a trailer",
+    );
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions when file evidence matches", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-post-commit-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-3333-3333-3333-000000000333";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add stale rescue","turn":1}\n',
+    );
+    writeFileSync(join(dir, "stale-rescue.ts"), "export const staleRescue = true;\n");
+    const staleRescueBlob = execSync("git hash-object -w stale-rescue.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"stale-rescue.ts","blob":"${staleRescueBlob}","turn":1}\n`,
+    );
+
+    execSync("git add stale-rescue.ts", { cwd: dir });
+    execSync("git commit -m 'feat: stale rescue'", { cwd: dir });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(!message.includes(TRAILER_KEY), "stale heartbeat should still skip trailers");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "add stale rescue");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("plain git commit does not attach fresh prompt-only active sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-fresh-prompt-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-9999-9999-9999-000000000999";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), String(Date.now()));
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"fresh prompt only","turn":1}\n',
+    );
+
+    writeFileSync(join(dir, "terminal-only.ts"), "export const terminalOnly = true;\n");
+    execSync("git add terminal-only.ts", { cwd: dir });
+    execSync("git commit -m 'chore: terminal only'", { cwd: dir });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(
+      !message.includes(TRAILER_KEY),
+      "fresh prompt-only sessions should not hijack plain terminal commits",
+    );
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions for quoted raw diff paths", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-quoted-path-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-8888-8888-8888-000000000888";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    const filePath = "src/日本語 file.ts";
+    mkdirSync(join(dir, "src"), { recursive: true });
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"add quoted path fallback","turn":1}\n',
+    );
+    writeFileSync(join(dir, filePath), "export const quotedPathFallback = true;\n");
+    const quotedPathBlob = execSync(`git hash-object -w ${shellSingleQuote(filePath)}`, {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"${filePath}","blob":"${quotedPathBlob}","turn":1}\n`,
+    );
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: quoted path fallback'", { cwd: dir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "add quoted path fallback");
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record stale prompt-only sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-prompt-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-4444-4444-4444-000000000444";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"just talking","turn":1}\n',
+    );
+
+    writeFileSync(join(dir, "human-only.ts"), "export const humanOnly = true;\n");
+    execSync("git add human-only.ts", { cwd: dir });
+    execSync("git commit -m 'chore: human only'", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record stale same-path sessions when blobs differ", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-blob-mismatch-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-5555-5555-5555-000000000555";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"old same path edit","turn":1}\n',
+    );
+    writeFileSync(join(dir, "same-path.ts"), "export const stale = true;\n");
+    const staleBlob = execSync("git hash-object -w same-path.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"same-path.ts","blob":"${staleBlob}","turn":1}\n`,
+    );
+
+    writeFileSync(join(dir, "same-path.ts"), "export const human = true;\n");
+    execSync("git add same-path.ts", { cwd: dir });
+    execSync("git commit -m 'chore: human same path'", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback does not record amend commits", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-amend-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    writeFileSync(join(dir, "amend.ts"), "export const before = true;\n");
+    execSync("git add amend.ts", { cwd: dir });
+    execSync("git commit -m 'feat: initial amend target'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-6666-6666-6666-000000000666";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"amend should stay skipped","turn":1}\n',
+    );
+    writeFileSync(join(dir, "amend.ts"), "export const after = true;\n");
+    const amendBlob = execSync("git hash-object -w amend.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"amend.ts","blob":"${amendBlob}","turn":1}\n`,
+    );
+
+    execSync("git add amend.ts", { cwd: dir });
+    execSync("git commit --amend --no-edit", { cwd: dir });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit fallback records stale sessions on root commits", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-root-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent claude --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const sessionId = "a1b2c3d4-7777-7777-7777-000000000777";
+    const sessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, sessionId);
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), sessionId);
+    writeFileSync(join(sessionDir, HEARTBEAT_FILE), "1");
+    writeFileSync(join(sessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(sessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"root commit fallback","turn":1}\n',
+    );
+    writeFileSync(join(dir, "root.ts"), "export const rootFallback = true;\n");
+    const rootBlob = execSync("git hash-object -w root.ts", {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    writeFileSync(
+      join(sessionDir, CHANGES_FILE),
+      `{"event":"file_change","tool":"Write","file":"root.ts","blob":"${rootBlob}","turn":1}\n`,
+    );
+
+    execSync("git add root.ts", { cwd: dir });
+    execSync("git commit -m 'feat: root fallback'", { cwd: dir });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, sessionId);
+    assert.equal(entry.interactions[0].prompt, "root commit fallback");
 
     rmSync(dir, { recursive: true, force: true });
   });
@@ -375,7 +707,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should have the new name",
     );
     assert.ok(
-      dashboardWorkflow.includes("uses: wasabeef/AgentNote@v0"),
+      dashboardWorkflow.includes("uses: wasabeef/AgentNote@v1"),
       "dashboard workflow should use the public Agent Note action",
     );
     assert.ok(
@@ -405,7 +737,7 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       "dashboard workflow should keep Pages artifact paths inside the shared action",
     );
     assert.ok(
-      !dashboardWorkflow.includes("packages/dashboard@v0"),
+      !dashboardWorkflow.includes("packages/dashboard@"),
       "dashboard workflow should not expose the internal Dashboard package path",
     );
     assert.ok(

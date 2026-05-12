@@ -530,6 +530,11 @@ describe("gemini adapter", () => {
                       type: "command",
                       command: "npx --yes agent-note hook --agent gemini",
                     },
+                    {
+                      name: "agentnote-before-shell-legacy",
+                      type: "command",
+                      command: "node packages/cli/dist/cli.js hook --agent gemini",
+                    },
                     { name: "my-custom-hook", type: "command", command: "echo hello" },
                   ],
                 },
@@ -548,6 +553,10 @@ describe("gemini adapter", () => {
       };
       const allHooks = settings.hooks?.BeforeTool?.flatMap((g) => g.hooks).map((h) => h.name) ?? [];
       assert.ok(!allHooks.includes("agentnote-before-shell"), "agent-note hook should be removed");
+      assert.ok(
+        !allHooks.includes("agentnote-before-shell-legacy"),
+        "repo-local agent-note hook should be removed",
+      );
       assert.ok(allHooks.includes("my-custom-hook"), "custom hook should be preserved");
     });
 
@@ -560,6 +569,32 @@ describe("gemini adapter", () => {
   describe("isEnabled", () => {
     it("returns true when hooks are installed", async () => {
       await gemini.installHooks(repoRoot);
+      const enabled = await gemini.isEnabled(repoRoot);
+      assert.equal(enabled, true);
+    });
+
+    it("returns true for legacy repo-local dist hooks", async () => {
+      const settingsDir = join(repoRoot, ".gemini");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    name: "agentnote-session-start",
+                    type: "command",
+                    command: "node packages/cli/dist/cli.js hook --agent gemini",
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
       const enabled = await gemini.isEnabled(repoRoot);
       assert.equal(enabled, true);
     });

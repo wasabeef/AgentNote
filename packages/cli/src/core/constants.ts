@@ -49,6 +49,10 @@ export const SESSION_FILE = "session";
 export const SESSION_AGENT_FILE = "agent";
 /** Gemini pending commit state file used between BeforeTool and AfterTool. */
 export const PENDING_COMMIT_FILE = "pending_commit.json";
+/** One-shot marker allowing post-commit to recover a stale-heartbeat session. */
+export const POST_COMMIT_FALLBACK_FILE = "post_commit_fallback";
+/** Marker value indicating that post-commit may try strict HEAD recovery. */
+export const POST_COMMIT_FALLBACK_HEAD = "head";
 
 // ─── Display limits ───
 /** Maximum commits scanned by commands that need bounded history traversal. */
@@ -89,6 +93,8 @@ export const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 export const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 /** Session files that prove a commit can produce a non-empty git note. */
 export const RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE] as const;
+/** Session files that let plain git hooks safely attach a session trailer. */
+export const TRAILER_SESSION_FILES = [CHANGES_FILE, PRE_BLOBS_FILE] as const;
 
 // ─── Git ───
 /** SHA-1 hash of a git blob with empty content (canonical git empty blob). */

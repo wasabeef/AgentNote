@@ -45,7 +45,7 @@ git push
 
 3. GitHub Pages 에서 source 로 **GitHub Actions** 를 선택합니다.
 
-생성된 Dashboard workflow 는 `wasabeef/AgentNote@v0` 에 `dashboard: true` 를 전달해 restore, sync, build, artifact upload, note 저장을 실행하고, 공유용 `/dashboard/` 화면을 공개합니다. 같은 job 에서 이미 GitHub Pages artifact 를 업로드하고 있다면 Agent Note 는 기존 site 를 바꾸지 않고 그 artifact 의 `dashboard/` 디렉터리에 Dashboard 를 추가합니다. 다른 job 이나 workflow 가 이미 Pages 를 공개하고 있다면 Agent Note 는 standalone publish 를 건너뜁니다. docs site 와 Dashboard 를 합치려면 `actions/upload-pages-artifact` 앞의 같은 job 에 Agent Note 를 두세요.
+생성된 Dashboard workflow 는 `wasabeef/AgentNote@v1` 에 `dashboard: true` 를 전달해 restore, sync, build, artifact upload, note 저장을 실행하고, 공유용 `/dashboard/` 화면을 공개합니다. 같은 job 에서 이미 GitHub Pages artifact 를 업로드하고 있다면 Agent Note 는 기존 site 를 바꾸지 않고 그 artifact 의 `dashboard/` 디렉터리에 Dashboard 를 추가합니다. 다른 job 이나 workflow 가 이미 Pages 를 공개하고 있다면 Agent Note 는 standalone publish 를 건너뜁니다. docs site 와 Dashboard 를 합치려면 `actions/upload-pages-artifact` 앞의 같은 job 에 Agent Note 를 두세요.
 
 ## 공개 URL
 
@@ -68,7 +68,7 @@ git push
 ## 동작 방식
 
 - `refs/notes/agentnote` 는 계속 Source of Truth 로 남습니다
-- Dashboard Mode 의 `wasabeef/AgentNote@v0` 가 note snapshot 을 `gh-pages/dashboard/notes/*.json` 에 씁니다
+- Dashboard Mode 의 `wasabeef/AgentNote@v1` 가 note snapshot 을 `gh-pages/dashboard/notes/*.json` 에 씁니다
 - GitHub Pages 가 build 된 Dashboard 를 `/dashboard/` 에서 제공합니다
 
 리포지토리 자체에는 Dashboard 용 sample JSON 을 commit 하지 않습니다. 새 Dashboard 는 workflow 가 note file 을 복원하거나 생성할 때까지 비어 있습니다. `pull_request` 는 Open 상태를 공개하고, `default branch` 로의 push 는 이를 Merged 상태로 바꿉니다.

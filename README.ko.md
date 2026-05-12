@@ -281,7 +281,7 @@ root action 에는 두 가지 mode 가 있습니다.
 PR Report Mode 가 기본값입니다.
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ Prompt 기록을 핵심 중심으로 보거나 전체로 보려면 `prompt_detai
 Dashboard Mode 는 같은 action 에 `dashboard: true` 를 전달합니다.
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ npx agent-note init --agent claude --dashboard
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

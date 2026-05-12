@@ -9,9 +9,11 @@ import {
   HEARTBEAT_TTL_SECONDS,
   NOTES_FETCH_REFSPEC,
   NOTES_REF_FULL,
-  RECORDABLE_SESSION_FILES,
+  POST_COMMIT_FALLBACK_FILE,
+  POST_COMMIT_FALLBACK_HEAD,
   TEXT_ENCODING,
   TRAILER_KEY,
+  TRAILER_SESSION_FILES,
 } from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
 import { agentnoteDir, root } from "../paths.js";
@@ -22,7 +24,7 @@ export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 export const DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 
 const [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
-const RECORDABLE_SESSION_FILE_LIST = RECORDABLE_SESSION_FILES.join(" ");
+const TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
 
 const PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
@@ -42,7 +44,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: wasabeef/AgentNote@v0
+      - uses: wasabeef/AgentNote@v1
         env:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
@@ -75,7 +77,7 @@ jobs:
     steps:
       - name: Build Dashboard bundle
         id: dashboard
-        uses: wasabeef/AgentNote@v0
+        uses: wasabeef/AgentNote@v1
         with:
           dashboard: true
 
@@ -122,9 +124,11 @@ ${AGENTNOTE_HOOK_MARKER}
 # Skip amend/reword/reuse (-c/-C/--amend) — only brand-new commits get a trailer.
 # $2 values: "" (normal), "template", "merge", "squash" = new commits.
 # "commit" = -c/-C/--amend (reuse). Skip those.
-case "$2" in commit) exit 0;; esac
-# Fail closed: no session file, no heartbeat, stale heartbeat, or metadata-only session → skip.
+# Fail closed: no session file, no heartbeat, or no file evidence → skip.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+rm -f "$FALLBACK_FILE" 2>/dev/null || true
+case "$2" in commit) exit 0;; esac
 SESSION_FILE="$GIT_DIR/agentnote/session"
 if [ ! -f "$SESSION_FILE" ]; then exit 0; fi
 SESSION_ID=$(cat "$SESSION_FILE" 2>/dev/null | tr -d '\\n')
@@ -137,15 +141,18 @@ NOW=$(date +%s)
 HB=$(cat "$HEARTBEAT_FILE" 2>/dev/null | tr -d '\\n')
 HB_SEC=\${HB%???}
 AGE=$((NOW - HB_SEC))
-if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then exit 0; fi
-HAS_RECORDABLE_DATA=0
-for FILE_NAME in ${RECORDABLE_SESSION_FILE_LIST}; do
+HAS_TRAILER_DATA=0
+for FILE_NAME in ${TRAILER_SESSION_FILE_LIST}; do
   if [ -s "$SESSION_DIR/$FILE_NAME" ]; then
-    HAS_RECORDABLE_DATA=1
+    HAS_TRAILER_DATA=1
     break
   fi
 done
-if [ "$HAS_RECORDABLE_DATA" -ne 1 ]; then exit 0; fi
+if [ "$HAS_TRAILER_DATA" -ne 1 ]; then exit 0; fi
+if [ "$AGE" -gt ${HEARTBEAT_TTL_SECONDS} ] 2>/dev/null; then
+  printf '%s\\n' '${POST_COMMIT_FALLBACK_HEAD}' > "$FALLBACK_FILE" 2>/dev/null || true
+  exit 0
+fi
 if ! grep -q "${TRAILER_KEY}" "$1" 2>/dev/null; then
   echo "" >> "$1"
   echo "${TRAILER_KEY}: $SESSION_ID" >> "$1"
@@ -155,12 +162,20 @@ fi
 const POST_COMMIT_SCRIPT = `#!/bin/sh
 ${AGENTNOTE_HOOK_MARKER}
 # Record agentnote entry as a git note on HEAD.
-# Read session ID from the finalized commit's trailer (source of truth),
-# not from the mutable session file. This eliminates TOCTOU races between
-# prepare-commit-msg and post-commit.
+# Prefer the finalized trailer as the source of truth. If no trailer was
+# injected because the session heartbeat was stale, the CLI may use a strict
+# HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
-if [ -z "$SESSION_ID" ]; then exit 0; fi
+if [ -z "$SESSION_ID" ]; then
+  FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
+  if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
+    SESSION_ID="--fallback-head"
+  else
+    exit 0
+  fi
+  rm -f "$FALLBACK_FILE" 2>/dev/null || true
+fi
 # Prefer the repo-local shim created at init time so post-commit uses the
 # exact CLI version that generated these hooks.
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then

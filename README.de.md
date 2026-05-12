@@ -281,7 +281,7 @@ Die root action hat zwei Modi:
 PR Report Mode ist der Standard:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ Setze `prompt_detail` auf `compact` oder `full`, wenn du die Prompt-Historie fok
 Dashboard Mode nutzt dieselbe action mit `dashboard: true`:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ Wenn Sie bereits eine GitHub Pages Site haben, finden Sie die sichere kombiniert
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

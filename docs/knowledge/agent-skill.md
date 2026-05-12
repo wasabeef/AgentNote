@@ -179,7 +179,7 @@ for Agent Note outcomes, not merely for generic words like `git`, `PR`,
 | "Set up Agent Note" | `agent-note init` | Detect likely agent, suggest explicit `--agent` values, run init only after checking repo state. | Public |
 | "Set up Agent Note for Claude / Codex / Cursor / Gemini" | `agent-note init --agent ...` | Use the named agent, explain generated hook files, and remind the user to review config changes. | Public |
 | "Remove Agent Note" | `agent-note deinit` | Remove generated hooks and agent config for the named agents. Use `--remove-workflow` only when the user also wants generated workflows removed, and `--keep-notes` when notes auto-fetch should remain. | Public |
-| "Enable PR Report" | GitHub Action inputs | Add or update the workflow that uses `wasabeef/AgentNote@v0`. Do not ask the user to run the PR renderer locally. | Public workflow setup |
+| "Enable PR Report" | GitHub Action inputs | Add or update the workflow that uses `wasabeef/AgentNote@v1`. Do not ask the user to run the PR renderer locally. | Public workflow setup |
 | "Enable Dashboard" | GitHub Action `dashboard: true` and Pages output | Add or update Dashboard workflow settings, explain Pages requirements, and verify `permissions` / `pages` behavior. | Public workflow setup |
 | "Why did this line change?" | `agent-note why <target>` | Accept `path:line`, `path#Lline`, GitHub URLs, editor URLs, and `@path` mentions copied from AI output. Run the command and summarize evidence level. | Public |
 | "Show recent Agent Note history" | `agent-note log` / `agent-note show` | Use read-only commands to inspect notes and summarize relevant prompts, responses, files, and ratio. | Public |

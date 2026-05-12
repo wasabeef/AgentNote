@@ -2,8 +2,9 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
+import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
+import { isAgentNoteHookCommand } from "./hook-command.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -226,7 +227,10 @@ function stripAgentnoteGroups(groups: GeminiHookGroup[]): GeminiHookGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      hooks: group.hooks.filter((hook) => !hook.command.includes(AGENTNOTE_HOOK_COMMAND)),
+      hooks: group.hooks.filter(
+        (hook) =>
+          !isAgentNoteHookCommand(hook.command, AGENT_NAMES.gemini, { allowMissingAgent: true }),
+      ),
     }))
     .filter((group) => group.hooks.length > 0);
 }
@@ -356,7 +360,12 @@ export const gemini: AgentAdapter = {
     if (!existsSync(settingsPath)) return false;
     try {
       const content = await readFile(settingsPath, TEXT_ENCODING);
-      return content.includes(HOOK_COMMAND);
+      const parsed = JSON.parse(content) as GeminiSettingsConfig;
+      return Object.values(parsed.hooks ?? {}).some((groups) =>
+        groups.some((group) =>
+          group.hooks.some((hook) => isAgentNoteHookCommand(hook.command, AGENT_NAMES.gemini)),
+        ),
+      );
     } catch {
       return false;
     }

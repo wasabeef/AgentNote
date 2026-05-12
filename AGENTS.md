@@ -53,7 +53,7 @@ Tests shell out to `node dist/cli.js`, so always build before running tests.
 
 ```
 Agent hooks → agent-note hook --agent <name> (stdin JSON) → .git/agentnote/sessions/<id>/*.jsonl (local temp)
-git commit → prepare-commit-msg injects trailer when session data exists → post-commit calls agent-note record → git note written
+git commit → prepare-commit-msg injects trailer when file evidence exists → post-commit calls agent-note record → git note written
 git push → pre-push auto-pushes refs/notes/agentnote
 agent-note show/log/why → reads git notes --ref=agentnote
 ```
@@ -93,8 +93,8 @@ Gemini-specific event handling:
 
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
-- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and recordable session data before injecting an `Agentnote-Session` trailer. `transcript_path` alone is metadata, not recordable data. Skips amends.
-- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note.
+- **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and file evidence (`changes.jsonl` or `pre_blobs.jsonl`) before injecting an `Agentnote-Session` trailer for plain git commits. Prompt-only sessions do not get plain git hook trailers. Agent `PreToolUse git commit` hooks may still inject trailers for prompt-only rescue because the commit command itself came from the agent. Skips amends.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.
@@ -125,6 +125,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 
 - `init` modifies agent config (`.claude/settings.json` for Claude Code, `.codex/` for Codex, `.cursor/hooks.json` for Cursor, `.gemini/settings.json` for Gemini CLI) and installs git hooks (prepare-commit-msg, post-commit, pre-push). Agent config is intended to be committed to git so the team shares the same hooks config.
 - `hook` is called by the coding agent at runtime. It never modifies config files.
+- Public user installs generate agent hooks that call `npx --yes agent-note hook --agent <name>`. This repository may keep repo-local development hooks that call `node packages/cli/dist/cli.js hook --agent <name>` so local changes can be tested before publishing. Treat `cli.js hook` as a maintainer-only compatibility path, not public setup guidance.
 
 ### Harness hooks
 

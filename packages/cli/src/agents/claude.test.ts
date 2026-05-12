@@ -510,6 +510,15 @@ describe("claude adapter", () => {
                       command: "npx --yes agent-note hook --agent claude",
                       async: true,
                     },
+                    {
+                      type: "command",
+                      command: "node packages/cli/dist/cli.js hook --agent claude",
+                      async: true,
+                    },
+                    {
+                      type: "command",
+                      command: "echo keep-inline",
+                    },
                   ],
                 },
                 {
@@ -532,10 +541,13 @@ describe("claude adapter", () => {
       const allCommands =
         settings.hooks?.PostToolUse?.flatMap((g) => g.hooks).map((h) => h.command) ?? [];
       assert.ok(
-        !allCommands.some((c) => c?.includes("agent-note hook")),
+        !allCommands.some(
+          (c) => c?.includes("agent-note hook") || c?.includes("cli.js hook --agent claude"),
+        ),
         "agent-note hook should be removed",
       );
       assert.ok(allCommands.includes("echo custom-hook"), "custom hook should be preserved");
+      assert.ok(allCommands.includes("echo keep-inline"), "inline custom hook should be preserved");
     });
 
     it("is a no-op when settings.json does not exist", async () => {
@@ -549,6 +561,117 @@ describe("claude adapter", () => {
       await claude.installHooks(repoRoot);
       const enabled = await claude.isEnabled(repoRoot);
       assert.equal(enabled, true);
+    });
+
+    it("returns true for legacy repo-local dist hooks", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "node packages/cli/dist/cli.js hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, true);
+    });
+
+    it("removes legacy repo-local dist hooks from SessionStart", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "node packages/cli/dist/cli.js hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      await claude.removeHooks(repoRoot);
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
+    });
+
+    it("does not infer enabled state from unrelated hook command fragments", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "echo agent-note hook",
+                    async: true,
+                  },
+                  {
+                    type: "command",
+                    command: "echo --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
+    });
+
+    it("does not infer enabled state from an unrelated single command", async () => {
+      const settingsDir = join(repoRoot, ".claude");
+      mkdirSync(settingsDir, { recursive: true });
+      writeFileSync(
+        join(settingsDir, "settings.json"),
+        `${JSON.stringify({
+          hooks: {
+            SessionStart: [
+              {
+                hooks: [
+                  {
+                    type: "command",
+                    command: "echo agent-note hook --agent claude",
+                    async: true,
+                  },
+                ],
+              },
+            ],
+          },
+        })}\n`,
+      );
+
+      const enabled = await claude.isEnabled(repoRoot);
+      assert.equal(enabled, false);
     });
 
     it("returns false when hooks are not installed", async () => {

@@ -122,7 +122,7 @@ test("resolvePagesTarget blocks when the Pages artifact belongs to another job",
 jobs:
   dashboard:
     steps:
-      - uses: wasabeef/AgentNote@v0
+      - uses: wasabeef/AgentNote@v1
         with:
           dashboard: true
   build:
@@ -147,7 +147,7 @@ test("resolvePagesTarget blocks standalone publish when another workflow owns Pa
 jobs:
   build:
     steps:
-      - uses: wasabeef/AgentNote@v0
+      - uses: wasabeef/AgentNote@v1
         with:
           dashboard: true
 `,

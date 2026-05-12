@@ -53,6 +53,7 @@ describe("cursor adapter", () => {
           version: 1,
           hooks: {
             beforeSubmitPrompt: [{ command: "npx --yes agent-note hook" }, { command: "echo ok" }],
+            afterShellExecution: [{ command: "node packages/cli/dist/cli.js hook --agent cursor" }],
           },
         },
         null,
@@ -82,6 +83,22 @@ describe("cursor adapter", () => {
     assert.equal(parsed.hooks.beforeShellExecution.length, 1);
     assert.equal(parsed.hooks.afterShellExecution.length, 1);
     assert.equal(parsed.hooks.stop.length, 1);
+  });
+
+  it("accepts repo-local dist hook commands as managed Cursor hooks", async () => {
+    const hooksPath = join(repoRoot, ".cursor", "hooks.json");
+    mkdirSync(join(repoRoot, ".cursor"), { recursive: true });
+    writeFileSync(
+      hooksPath,
+      `${JSON.stringify({
+        version: 1,
+        hooks: {
+          beforeSubmitPrompt: [{ command: "node packages/cli/dist/cli.js hook --agent cursor" }],
+        },
+      })}\n`,
+    );
+
+    assert.equal(await cursor.isEnabled(repoRoot), true);
   });
 
   it("parses prompt and file edit events", () => {

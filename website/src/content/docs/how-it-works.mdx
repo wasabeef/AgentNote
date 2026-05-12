@@ -167,7 +167,7 @@ Agent Note and Entire solve related but different problems.
 | **Stop** | Logs stop event (heartbeat stays active — Stop = response end, not session end) |
 
 <Aside>
-  Git hooks verify session freshness and recordable session data before injecting trailers or recording notes. Heartbeat is refreshed by hook events during long turns; metadata-only sessions are skipped. A transcript path by itself is supporting metadata, not recordable data.
+  Plain Git hooks require fresh session file evidence before injecting trailers. Prompt-only rescue is kept for commits observed inside an Agent hook, where the commit command itself is part of the AI session.
 </Aside>
 
 <Aside type="tip">

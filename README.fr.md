@@ -281,7 +281,7 @@ L'action racine a deux modes:
 PR Report Mode est le mode par défaut:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -291,7 +291,7 @@ Définissez `prompt_detail` sur `compact` ou `full` pour obtenir un historique d
 Dashboard Mode utilise la même action avec `dashboard: true`:
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
     prompt_detail: compact
@@ -313,7 +313,7 @@ Si vous avez déjà un Site GitHub Pages, consultez les [docs Dashboard](https:/
 <summary>Full example with outputs</summary>
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main

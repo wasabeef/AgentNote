@@ -112,7 +112,7 @@ The PR Report action reads the same git note schema that the CLI writes and the 
 
 The dashboard package is a static Astro app. `packages/dashboard/public/notes/` is only the build input inside the workspace; generated note JSON is not committed to `main`.
 
-For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v0` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard Mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard Mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
+For the live site, the generated Pages workflow calls `wasabeef/AgentNote@v1` with `dashboard: true`. The root Action delegates restore, sync, build, artifact upload, and note persistence to `packages/dashboard`. If the caller workflow already contains an `actions/upload-pages-artifact` step in the same job, Dashboard Mode auto-detects that artifact path and writes the built app under its `dashboard/` directory instead of uploading a standalone artifact. If another job or another workflow already owns Pages publishing, Dashboard Mode skips standalone publishing to avoid overwriting the existing site. This lets repositories with an existing docs site keep one combined Pages artifact without adding another input. It treats `gh-pages/dashboard/notes/*.json` as the durable store:
 
 - restore those files into `packages/dashboard/public/notes/`
 - on `pull_request` (`opened`, `reopened`, `synchronize`), rewrite the current PR's note set and persist it back to `gh-pages`
@@ -122,14 +122,14 @@ A brand-new Repository can therefore accumulate Dashboard note data before the D
 
 ### Root action.yml dispatcher
 
-GitHub resolves `uses: wasabeef/AgentNote@v0` by looking for `action.yml` at the repo root. The root file is the public facade:
+GitHub resolves `uses: wasabeef/AgentNote@v1` by looking for `action.yml` at the repo root. The root file is the public facade:
 
 ```yaml
 # PR Report Mode
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
 
 # Dashboard Mode
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   with:
     dashboard: true
 ```
@@ -142,6 +142,8 @@ The implementation stays split by responsibility: `packages/pr-report` owns PR b
 
 1. **CLI** (`packages/cli/`) — public user commands are `agent-note init`, `agent-note deinit`, `agent-note status`, `agent-note log`, `agent-note show`, and `agent-note why`. Automation-facing commands such as `agent-note pr`, `agent-note hook`, `agent-note record`, `agent-note commit`, and `agent-note push-notes` are kept for generated workflows and hooks.
 2. **Hook handler** — `agent-note hook`, called by agent-specific hooks via stdin JSON (`--agent claude`, `codex`, `cursor`, or `gemini`). All data collection.
+
+Public user installs generate agent hooks that call `npx --yes agent-note hook --agent <name>`. The Agent Note repository itself may use repo-local development hooks such as `node packages/cli/dist/cli.js hook --agent <name>` so maintainers can exercise the built CLI before publishing. That `cli.js hook` form is a maintainer-only compatibility path and should not appear in public setup guidance.
 
 ### Data flow
 
@@ -374,10 +376,10 @@ Agentnote-Session: a1b2c3d4-5678-4abc-8def-111122223333
 ```
 
 Injected via two parallel paths:
-1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session`, verifies the session is fresh and has recordable data, then appends the trailer to the commit message file.
-2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook applies the same guard before rewriting the git commit command to inject `--trailer` directly.
+1. **Git hook** (`prepare-commit-msg`): reads session ID from `.git/agentnote/session`, verifies the session is fresh and has file evidence, then appends the trailer to the commit message file.
+2. **Agent hook** (`PreToolUse Bash(*git commit*)`): Claude Code's hook can inject `--trailer` directly because the commit command itself came from the agent.
 
-Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook can still inject the trailer when the session has recordable data.
+Both paths are redundant by design — if git hooks are not installed (e.g., first clone before `agent-note init`), the agent hook can still inject the trailer when the agent itself runs `git commit`.
 
 ### Git hooks for commit integration
 
@@ -385,13 +387,13 @@ Three git hooks handle commit integration and notes sharing:
 
 | Git hook | When | What it does |
 |---|---|---|
-| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and recordable session data, then appends `Agentnote-Session` trailer. Skips amend/reuse (`$2=commit`). |
-| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. Idempotent — skips if note already exists. |
+| `prepare-commit-msg` | Before commit message editor opens | Checks session freshness and file evidence (`changes.jsonl` or `pre_blobs.jsonl`), then appends `Agentnote-Session` trailer. Prompt-only active sessions are skipped for plain git commits. Skips amend/reuse (`$2=commit`). |
+| `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. If `prepare-commit-msg` explicitly marked a stale-heartbeat fallback, calls `agent-note record --fallback-head`, which only records when a session post-edit blob matches a committed HEAD blob. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Auto-pushes `refs/notes/agentnote` to the actual remote (`$1`) in background. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
-Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing or stale heartbeat in git hooks = skip (fail closed).
+Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing heartbeat in `prepare-commit-msg` skips trailer injection. Stale heartbeat writes a one-shot fallback marker for brand-new commits only; `post-commit` consumes that marker and records only if the active session has post-edit blob evidence that matches the committed HEAD blobs.
 
-Trailer injection also requires recordable session data. Prompts, file-change records, or pre-edit blobs count as recordable data. Transcript paths are supporting metadata, not recordable data by themselves. Heartbeat, `SessionStart`, and `transcript_path` metadata alone do not receive dangling `Agentnote-Session` trailers.
+Plain git hook trailer injection also requires file evidence. File-change records or pre-edit blobs count as safe evidence because they can be matched back to committed files. Prompts alone are not enough for plain git hooks: a fresh prompt-only active session might belong to another agent or terminal workflow. Agent hook trailer injection can still preserve prompt-only work because the commit command itself was observed inside the agent. Transcript paths are supporting metadata, not recordable data by themselves. Heartbeat, `SessionStart`, and `transcript_path` metadata alone do not receive dangling `Agentnote-Session` trailers.
 
 ### Git hook installation
 
@@ -502,7 +504,7 @@ JSON output structure:
 ### Usage
 
 ```yaml
-- uses: wasabeef/AgentNote@v0
+- uses: wasabeef/AgentNote@v1
   id: agent-note
   with:
     base: main
@@ -553,7 +555,7 @@ In Dashboard Mode (`dashboard: true`), it prepares the caller repository without
 
 ```
 CLI:    npx agent-note init          (or npm install --save-dev)
-Action: uses: wasabeef/AgentNote@v0             (Marketplace)
+Action: uses: wasabeef/AgentNote@v1             (Marketplace)
 ```
 
 ### Release procedure
@@ -579,15 +581,15 @@ Release steps:
 4. Review the generated release note locally before tagging:
    - `git-cliff --config .github/cliff.toml --latest --strip header`
 5. Commit the version bump to `main`.
-6. Create and push the matching git tag, for example `v0.1.11`.
+6. Create and push the matching git tag, for example `v1.0.1`.
 
 Important:
 
 - Do **not** cut a release tag before the package version bump lands on `main`.
-- If `packages/cli/package.json` still says `0.1.9` and you push `v0.1.10`, the workflow will still try to publish `0.1.9` and npm will reject it as an already published version.
+- If `packages/cli/package.json` still says `1.0.0` and you push `v1.0.1`, the workflow will still try to publish `1.0.0` and npm will reject it as an already published version.
 - Treat `@wasabeef/agentnote` as a reserved alias only. Do not use it in README or website installation commands unless the project intentionally changes the canonical package name.
 - The npm publish job is rerun-safe: if either `agent-note@<version>` or `@wasabeef/agentnote@<version>` is already published, that package publish step is skipped.
-- The workflow updates the floating major tag (`v0`) after the GitHub release is created, but it does not manage package.json versions for you.
+- The workflow updates the floating major tag (`v1` for `v1.x.y` releases) after the GitHub release is created, but it does not manage package.json versions for you.
 
 ### Team workflow
 

@@ -3,8 +3,9 @@ import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
-import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
+import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
+import { isAgentNoteHookCommand } from "./hook-command.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -366,7 +367,10 @@ function stripAgentnoteHooks(config: CursorHooksConfig): CursorHooksConfig {
     Object.entries(config.hooks)
       .map(([event, entries]) => [
         event,
-        entries.filter((entry) => !entry.command.includes(AGENTNOTE_HOOK_COMMAND)),
+        entries.filter(
+          (entry) =>
+            !isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor, { allowMissingAgent: true }),
+        ),
       ])
       .filter(([, entries]) => entries.length > 0),
   );
@@ -433,7 +437,10 @@ export const cursor: AgentAdapter = {
 
     try {
       const content = await readFile(hooksPath, TEXT_ENCODING);
-      return content.includes(HOOK_COMMAND);
+      const parsed = JSON.parse(content) as CursorHooksConfig;
+      return Object.values(parsed.hooks ?? {}).some((entries) =>
+        entries.some((entry) => isAgentNoteHookCommand(entry.command, AGENT_NAMES.cursor)),
+      );
     } catch {
       return false;
     }

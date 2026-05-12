@@ -2,7 +2,8 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { AGENTNOTE_HOOK_COMMAND, TEXT_ENCODING } from "../core/constants.js";
+import { TEXT_ENCODING } from "../core/constants.js";
+import { isAgentNoteHookCommand } from "./hook-command.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -259,7 +260,12 @@ function stripAgentnoteHooks(config: CodexHooksFile): CodexHooksFile {
         const filteredGroups = groups
           .map((group) => ({
             ...group,
-            hooks: group.hooks.filter((hook) => !hook.command.includes(AGENTNOTE_HOOK_COMMAND)),
+            hooks: group.hooks.filter(
+              (hook) =>
+                !isAgentNoteHookCommand(hook.command, AGENT_NAMES.codex, {
+                  allowMissingAgent: true,
+                }),
+            ),
           }))
           .filter((group) => group.hooks.length > 0);
         return [event, filteredGroups];
@@ -411,7 +417,12 @@ export const codex: AgentAdapter = {
         configContent.includes("features.codex_hooks = true") ||
         (configContent.includes("[features]") &&
           configContent.match(/^\s*codex_hooks\s*=\s*true\s*$/m) !== null);
-      const hasHook = hooksContent.includes(HOOK_COMMAND);
+      const parsed = JSON.parse(hooksContent) as CodexHooksFile;
+      const hasHook = Object.values(parsed.hooks ?? {}).some((groups) =>
+        groups.some((group) =>
+          group.hooks.some((hook) => isAgentNoteHookCommand(hook.command, AGENT_NAMES.codex)),
+        ),
+      );
       return configOk && hasHook;
     } catch {
       return false;

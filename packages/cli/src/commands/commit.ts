@@ -13,6 +13,24 @@ import {
 import { recordCommitEntry } from "../core/record.js";
 import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
+import { recordHeadFallback } from "./record.js";
+
+const AMEND_LIKE_COMMIT_ARGS = new Set([
+  "--amend",
+  "-c",
+  "-C",
+  "--reuse-message",
+  "--reedit-message",
+]);
+const AMEND_LIKE_COMMIT_ARG_PREFIXES = ["--reuse-message=", "--reedit-message="] as const;
+
+/** True for git commit flags that rewrite or reuse an existing commit message. */
+export function isAmendLikeCommitArg(arg: string): boolean {
+  return (
+    AMEND_LIKE_COMMIT_ARGS.has(arg) ||
+    AMEND_LIKE_COMMIT_ARG_PREFIXES.some((prefix) => arg.startsWith(prefix))
+  );
+}
 
 /**
  * Provide a hook-compatible manual commit path.
@@ -24,8 +42,9 @@ import { agentnoteDir, sessionFile } from "../paths.js";
 export async function commit(args: string[]): Promise<void> {
   const sf = await sessionFile();
   let sessionId = "";
+  const skipAgentNoteRecording = args.some((arg) => isAmendLikeCommitArg(arg));
 
-  if (existsSync(sf)) {
+  if (!skipAgentNoteRecording && existsSync(sf)) {
     sessionId = (await readFile(sf, TEXT_ENCODING)).trim();
     // Check heartbeat validity — must match prepare-commit-msg and status logic:
     // heartbeat must exist, be non-zero, and be at most 1 hour old.
@@ -80,6 +99,13 @@ export async function commit(args: string[]): Promise<void> {
     } catch (err: unknown) {
       // Never let agentnote recording break a commit.
       console.error(`agent-note: warning: ${(err as Error).message}`);
+    }
+  } else if (!skipAgentNoteRecording) {
+    try {
+      await recordHeadFallback();
+    } catch (err: unknown) {
+      // Never let agentnote fallback recording break a commit.
+      console.error(`agent-note: warning: fallback recording failed: ${(err as Error).message}`);
     }
   }
 }

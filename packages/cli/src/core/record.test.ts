@@ -16,7 +16,7 @@ import {
   TURN_FILE,
 } from "./constants.js";
 import { analyzePromptSelection, toPersistedSelection } from "./prompt-window.js";
-import { recordCommitEntry } from "./record.js";
+import { hasSessionHeadBlobEvidence, recordCommitEntry } from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";
@@ -868,6 +868,83 @@ describe("prompt task-boundary policy simulation", () => {
         .every((promptCase) => promptCase.expectedSkip),
       "cross-turn shell-only activity must not be rescued without stronger evidence",
     );
+  });
+});
+
+describe("post-commit fallback evidence simulation", () => {
+  it("requires matching post-edit blob evidence across 100+ generated cases", async () => {
+    const root = mkdtempSync(join(tmpdir(), "agentnote-fallback-evidence-"));
+    const agents = ["claude", "codex", "cursor", "gemini"] as const;
+    const evidenceFiles = [
+      CHANGES_FILE,
+      PRE_BLOBS_FILE,
+      "changes-m3h8k2n1.jsonl",
+      "pre_blobs-m3h8k2n1.jsonl",
+      "none",
+    ] as const;
+    const relations = ["match", "unrelated", "empty"] as const;
+    const noiseModes = ["none", "matching-prompt-only", "unrelated-extra"] as const;
+    let caseCount = 0;
+
+    try {
+      for (const agent of agents) {
+        for (const evidenceFile of evidenceFiles) {
+          for (const relation of relations) {
+            for (const noiseMode of noiseModes) {
+              caseCount++;
+              const sessionDir = join(root, `${agent}-${caseCount}`);
+              mkdirSync(sessionDir, { recursive: true });
+              writeFileSync(
+                join(sessionDir, PROMPTS_FILE),
+                `{"event":"prompt","prompt":"${agent} case ${caseCount}","turn":1}\n`,
+              );
+
+              if (evidenceFile !== "none") {
+                const file =
+                  relation === "match"
+                    ? "src/commit-file.ts"
+                    : relation === "unrelated"
+                      ? "src/other-file.ts"
+                      : "";
+                const blob = relation === "match" ? "abc123" : "def456";
+                writeFileSync(
+                  join(sessionDir, evidenceFile),
+                  file
+                    ? `{"event":"file_change","tool":"Write","file":"${file}","blob":"${blob}","turn":1}\n`
+                    : '{"event":"file_change","tool":"Write","turn":1}\n',
+                );
+              }
+
+              if (noiseMode === "matching-prompt-only") {
+                writeFileSync(
+                  join(sessionDir, "prompts-m3h8k2n2.jsonl"),
+                  '{"event":"prompt","prompt":"src/commit-file.ts","turn":2}\n',
+                );
+              } else if (noiseMode === "unrelated-extra") {
+                writeFileSync(
+                  join(sessionDir, "changes-m3h8k2n3.jsonl"),
+                  '{"event":"file_change","tool":"Write","file":"src/unrelated-extra.ts","turn":3}\n',
+                );
+              }
+
+              const hasEvidence = await hasSessionHeadBlobEvidence(
+                sessionDir,
+                new Map([["src/commit-file.ts", "abc123"]]),
+              );
+              assert.equal(
+                hasEvidence,
+                evidenceFile.includes("changes") && relation === "match",
+                `${agent}/${evidenceFile}/${relation}/${noiseMode}`,
+              );
+            }
+          }
+        }
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+
+    assert.ok(caseCount >= 100, "simulation should cover at least 100 fallback cases");
   });
 });
 

@@ -65,6 +65,7 @@ export async function recordCommitEntry(opts: {
   agentnoteDirPath: string;
   sessionId: string;
   transcriptPath?: string;
+  requireAiFileEvidence?: boolean;
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -80,8 +81,16 @@ export async function recordCommitEntry(opts: {
   // Get files in THIS specific commit.
   let commitFiles: string[] = [];
   try {
-    const raw = await git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
-    commitFiles = raw.split("\n").filter(Boolean);
+    const raw = await git([
+      "diff-tree",
+      "-z",
+      "--root",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "HEAD",
+    ]);
+    commitFiles = raw.split("\0").filter(Boolean);
   } catch {
     // empty
   }
@@ -539,7 +548,10 @@ export async function recordCommitEntry(opts: {
   // triggers post-commit but session data has already been rotated. Writing an
   // empty note would overwrite valuable data if notes are later copied from the
   // original SHA.
-  if (interactions.length === 0 && aiFiles.length === 0) {
+  if (
+    (opts.requireAiFileEvidence && aiFiles.length === 0) ||
+    (interactions.length === 0 && aiFiles.length === 0)
+  ) {
     return { promptCount: 0, aiRatio: 0 };
   }
 
@@ -578,6 +590,21 @@ export async function recordCommitEntry(opts: {
   // commitFileSet). Archives are purged at the start of the next turn by rotateLogs.
 
   return { promptCount: interactions.length, aiRatio: entry.attribution.ai_ratio };
+}
+
+/** Return true when a session post-edit blob survives as a HEAD commit blob. */
+export async function hasSessionHeadBlobEvidence(
+  sessionDir: string,
+  committedBlobs: Map<string, string>,
+): Promise<boolean> {
+  if (committedBlobs.size === 0) return false;
+
+  const changeEntries = await readAllSessionJsonl(sessionDir, CHANGES_FILE);
+  return changeEntries.some((entry) => {
+    const file = typeof entry.file === "string" ? entry.file : "";
+    const blob = typeof entry.blob === "string" ? entry.blob : "";
+    return file !== "" && blob !== "" && committedBlobs.get(file) === blob;
+  });
 }
 
 /**
