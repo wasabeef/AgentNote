@@ -1,0 +1,136 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-12T17:02:34.041Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "マージしたので main もどって pull",
+      "response": "main に戻して最新を pull します。PR 外のローカル変更があるので、ブランチ切替で衝突しないかだけ確認しながら進めます。\n未コミットの `docs/knowledge/investigations.md` と未追跡 `docs/blog/` が残っています。main への移動は可能そうなので、そのまま保持して切り替えます。\nmain に戻りました。続けて `git pull` で merge 済みの内容を取り込みます。\nmain に戻して pull 済みです。`origin/main` の最新 `dff3a30` まで fast-forward されました。\n\nローカルには引き続き PR 外の変更が残っています。\n\n- `docs/knowledge/investigations.md`\n- `docs/blog/`",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "docs/knowledge/investigations.md を確認して、これは claude が追記しています。判断が妥当なものある？",
+      "response": "`docs/knowledge/investigations.md` の追記内容を確認して、事実関係・判断・今後方針として妥当かを切り分けます。まず差分と該当セクションを読みにいきます。\n追記内容はざっと見る限り「すぐ TODO 化すべき重大バグ」ではなく、将来の改善候補としては概ね筋が良いです。ただし、いくつかは表現が強すぎる/事実が少し怪しいので、該当コードも照合して判断します。\n確認しました。結論としては、Claude の追記は「将来改善候補」としてはかなり妥当です。ただし、そのまま残すなら一部の表現は直した方がいいです。\n\n**妥当な項目**\n- `1. Codex transcript 読み取りエラーの原情報を保存する` は妥当です。`catch { throw new Error(...) }` で元 error が落ちているので、`cause` を残す価値があります。低リスク・低コストです。\n- `3. 環境衝突テストの追加候補` も妥当です。既存 guard の境界テストなので、壊れてはいないけど足す価値はあります。\n- `4. SHELL_MUTATION_COMMAND_RE の網羅性` も妥当です。ただしこれは false negative を減らす話なので、急いで広げすぎると false positive が増えます。慎重に追加がよいです。\n- `5. catastrophic transcript size` も理論上は妥当です。ただし通常利用ではかなり低頻度なので、優先度は低めです。\n\n**修正した方がいい判断**\n- `2. session ID 検証の regex 不整合` は注意が必要です。`readActiveSessionId` を UUID strict にするのは「挙動変更なし」とは言い切れません。今の permissive path は legacy / stale fallback の安全弁として意味がある可能性があります。ここは「不整合なので揃える」ではなく、「strict 化できるか要検討」に弱めるべきです。\n- 冒頭の「PR #72 のマージ後に 10 ループの徹底 audit を実施した結果、機能的バグは見つかりませんでした」は、今となっては少しミスリードです。PR #74 で実際に follow-up bug を直しているので、「当時の audit では blocker は見つからなかったが、後続の実運用で追加課題が見つかった」くらいに直した方が自然です。\n\nあと、このファイルは「未解決 TODO list ではない」と冒頭に書いてあるので、`Open Follow-ups` が増えすぎるのは少し違和感があります。残すなら「優先度低の follow-up candidates」として、明確に TODO ではない形に整理するのがよさそうです。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "妥当なものは詳細調査して、必要なら更新して",
+      "response": "妥当そうな follow-up だけ、実コードとテスト状況をもう一段深く調べて、残すべき内容に整えます。判断が怪しい項目は「TODO」化せず、調査メモとして正確な表現に直します。\n調査の結果、Claude 追記は「方向性は良いけど、PR #74 後の状態としては表現を更新した方がよい」内容でした。`session ID` の strict 化だけは挙動変更リスクがあるので、改善案から「要検討」に弱めます。\n調査結果に合わせて文書を更新しました。特に `session ID` strict 化は「挙動変更なし」ではないため、status warning 先行の方針に弱めています。差分を確認します。\n`docs/knowledge/investigations.md` の Claude 追記を、実装とテストに照らして精査します。妥当なものは残しつつ、事実関係が強すぎる・誤解を招くところはその場で整えます。\n追記は「全部そのまま採用」ではなく、実装上の境界とテスト状況を照らして扱うのがよさそうです。特に session ID strict 化は一見きれいですが、互換性に触れるので慎重に見ています。",
+      "files_touched": [
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "終わった commit しといて",
+      "response": "`docs/knowledge/investigations.md` だけをコミットします。未追跡の `docs/blog/` は今回の変更と別物なので触らず、差分の対象を絞ります。\n差分確認で 1 箇所だけ、Claude 追記由来の日本語 punctuation 前スペースが混ざっていました。コミット前にここだけ整えて、調査メモとして読みやすい状態にします。\n整え終わりました。これから対象ファイルだけ stage して、docs-only のコミットにします。",
+      "files_touched": [
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "d0e377544f4e3d4f86fb89570d52ecfbc98eaae9",
+    "short_sha": "d0e3775",
+    "message": "docs: document env fallback follow-ups",
+    "date": "2026-05-13T02:02:32+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "docs/knowledge/investigations.md",
+        "lines": [
+          "index e6c2f67..fcfd1e2 100644",
+          "--- a/docs/knowledge/investigations.md",
+          "+++ b/docs/knowledge/investigations.md",
+          "@@ -12,6 +12,59 @@",
+          " - 次 PR では `agent-note status` か専用診断で、active session の `agent` / 最終 heartbeat / recordable files / installed git hook template version / agent hook enabled state を表示し、`Codex hook config exists but no recent Codex session was recorded` のような warning を出せるようにします。",
+          " - これにより、note がない原因を PR Report からではなく local diagnostics で切り分けられるようにします。",
+          " ",
+          "+### PR #72 / #74 follow-up: env fallback の改善候補",
+          "+",
+          "+PR #72 で `--fallback-env` を導入し、PR #74 で stale trailer retry と bounded display context を追加しました。現在の主要 regression は test で固定済みですが、追加調査の結果、以下は将来 PR で検討する価値がある改善候補です。いずれも現時点の blocker ではなく、debug 性・保守性・false negative 低減のための候補として扱います。",
+          "+",
+          "+#### 1. Codex transcript 読み取りエラーの原情報を保存する",
+          "+",
+          "+- 対象: `packages/cli/src/agents/codex.ts` `extractInteractions`",
+          "+- 現状: stream の `for await` を try/catch で囲み、内部エラーを `throw new Error(\\`Failed to read Codex transcript: ${transcriptPath}\\`)` で再 throw します。元のエラー (EACCES、EISDIR、stream error 等) が失われ、debug 困難。",
+          "+- 影響: 機能には影響なし。`record` の outer catch で warning として表示されるため commit は壊れません。",
+          "+- 判断: 妥当。低リスクで、巨大 transcript / permission / filesystem error の切り分けが楽になります。",
+          "+- 改善案: `throw new Error(message, { cause: err })` で原因を保持し、必要なら warning 側で `cause` の message も出します。",
+          "+",
+          "+#### 2. session ID 検証の regex 不整合",
+          "+",
+          "+- 対象: `packages/cli/src/commands/record.ts`",
+          "+- 現状:",
+          "+  - `readActiveSessionId`: `SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/` (permissive)",
+          "+  - `sanitizeSessionId` (env path): `UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i` (strict)",
+          "+- 理由: active session pointer は repo-local internal state で、env 変数は process environment 由来です。そのため env path だけ strict UUID v4 にする設計は自然です。",
+          "+- 影響: `readActiveSessionId` を strict 化すると、legacy / corrupted / manually-created session pointer を fallback で拾えなくなる可能性があります。これは「挙動変更なし」とは言い切れません。",
+          "+- 判断: すぐ strict 化するより、まず診断表示を強化する方が安全です。",
+          "+- 改善案: `agent-note status` などで active session id が UUID v4 でない場合に warning を出します。strict 化は、過去 version / repo-local hook との互換性を確認してから検討します。",
+          "+",
+          "+#### 3. 環境衝突テストの追加候補",
+          "+",
+          "+- 既存 test gap:",
+          "+  - `existingAgent !== \"codex\"` で env fallback が reject される regression test なし",
+          "+  - `recordHeadFallback` 直後に `recordEnvironmentFallback` が呼ばれた場合に `existingNote` idempotency で no-op する regression test なし",
+          "+- 影響: 既存の integration tests は env fallback の成功・失敗・stale transcript・read-only shell・mutating shell・future row・stale trailer retry を広くカバーしています。一方、この 2 つは defensive guards の直接 test としてはまだ弱いです。",
+          "+- 判断: 妥当。ただし現時点の挙動が壊れているわけではありません。",
+          "+- 改善案: 上記 2 つの境界条件をテストとして固定する。",
+          "+",
+          "+#### 4. SHELL_MUTATION_COMMAND_RE の網羅性",
+          "+",
+          "+- 対象: `packages/cli/src/agents/codex.ts` `SHELL_MUTATION_COMMAND_RE`",
+          "+- 現状: `apply_patch`, `cat >`, `cp`, `install`, `mkdir`, `mv`, `npm install/update/audit fix/dedupe/version`, `perl -i`, `pnpm add/install/update`, `rm`, `sed -i`, `tee`, `touch`, `yarn add/install/upgrade`, `>` `>>` をカバー。",
+          "+- 未カバー: `chmod`, `chown`, `git apply`, `ln`, `dd`, `make` で生成、`pip install`, `gem install`, `bundle install`, `if true; then rm foo; fi` のような conditional 経由。",
+          "+- 影響: false negative 方向 (under-attribute) 。Codex の mutating shell を 100% 検出しないが、false positive (manual edit を AI 認定) は起こらないため安全側。",
+          "+- 判断: 妥当。ただし mutation regex は広げすぎると false positive を増やすため、追加は実データで頻出した command に限定します。",
+          "+- 改善案: まず `git apply`、`chmod` / `chown`、`ln`、`make` のような developer workflow で頻出する command を候補にし、それぞれ read-only command と paired test を追加します。conditional shell は regex で無理に追わず、false negative として扱います。",
+          "+",
+          "+#### 5. catastrophic transcript size (単一行 GB 級)",
+          "+",
+          "+- 対象: streaming 化された Codex transcript reader",
+          "+- 現状: 600MB の transcript ファイルを stream で読めるが、単一行が極大の場合 readline が 1 行をメモリにバッファするため OOM 可能性。",
+          "+- 影響: 通常の Codex transcript (1 event = 1 line ≒ 数 KB 〜数百 KB) では問題なし。悪意ある単一巨大 line のみが OOM トリガー。",
+          "+- 判断: 妥当だが優先度は低いです。通常の Codex JSONL では 1 event が 1 line なので、現実的な問題は transcript 全体サイズよりも 1 line の異常肥大です。",
+          "+- 改善案: line size limit を追加し、超過行は skip または safe error にします。実装する場合は、巨大 line で commit hook が壊れず warning になる regression test を追加します。",
+          "+",
+          "+---",
+          "+",
+          "+これらの項目は、PR #74 時点で確認済みの機能的デグレではありません。実装する場合は、救済 path だけでなく false-positive path も同時に test で固定します。",
+          "+",
+          " ## Resolved Investigations",
+          " ",
+          " ### CLI dist tracking policy"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  }
+}
