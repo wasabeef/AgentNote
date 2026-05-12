@@ -12,6 +12,59 @@
 - 次 PR では `agent-note status` か専用診断で、active session の `agent` / 最終 heartbeat / recordable files / installed git hook template version / agent hook enabled state を表示し、`Codex hook config exists but no recent Codex session was recorded` のような warning を出せるようにします。
 - これにより、note がない原因を PR Report からではなく local diagnostics で切り分けられるようにします。
 
+### PR #72 / #74 follow-up: env fallback の改善候補
+
+PR #72 で `--fallback-env` を導入し、PR #74 で stale trailer retry と bounded display context を追加しました。現在の主要 regression は test で固定済みですが、追加調査の結果、以下は将来 PR で検討する価値がある改善候補です。いずれも現時点の blocker ではなく、debug 性・保守性・false negative 低減のための候補として扱います。
+
+#### 1. Codex transcript 読み取りエラーの原情報を保存する
+
+- 対象: `packages/cli/src/agents/codex.ts` `extractInteractions`
+- 現状: stream の `for await` を try/catch で囲み、内部エラーを `throw new Error(\`Failed to read Codex transcript: ${transcriptPath}\`)` で再 throw します。元のエラー (EACCES、EISDIR、stream error 等) が失われ、debug 困難。
+- 影響: 機能には影響なし。`record` の outer catch で warning として表示されるため commit は壊れません。
+- 判断: 妥当。低リスクで、巨大 transcript / permission / filesystem error の切り分けが楽になります。
+- 改善案: `throw new Error(message, { cause: err })` で原因を保持し、必要なら warning 側で `cause` の message も出します。
+
+#### 2. session ID 検証の regex 不整合
+
+- 対象: `packages/cli/src/commands/record.ts`
+- 現状:
+  - `readActiveSessionId`: `SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/` (permissive)
+  - `sanitizeSessionId` (env path): `UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i` (strict)
+- 理由: active session pointer は repo-local internal state で、env 変数は process environment 由来です。そのため env path だけ strict UUID v4 にする設計は自然です。
+- 影響: `readActiveSessionId` を strict 化すると、legacy / corrupted / manually-created session pointer を fallback で拾えなくなる可能性があります。これは「挙動変更なし」とは言い切れません。
+- 判断: すぐ strict 化するより、まず診断表示を強化する方が安全です。
+- 改善案: `agent-note status` などで active session id が UUID v4 でない場合に warning を出します。strict 化は、過去 version / repo-local hook との互換性を確認してから検討します。
+
+#### 3. 環境衝突テストの追加候補
+
+- 既存 test gap:
+  - `existingAgent !== "codex"` で env fallback が reject される regression test なし
+  - `recordHeadFallback` 直後に `recordEnvironmentFallback` が呼ばれた場合に `existingNote` idempotency で no-op する regression test なし
+- 影響: 既存の integration tests は env fallback の成功・失敗・stale transcript・read-only shell・mutating shell・future row・stale trailer retry を広くカバーしています。一方、この 2 つは defensive guards の直接 test としてはまだ弱いです。
+- 判断: 妥当。ただし現時点の挙動が壊れているわけではありません。
+- 改善案: 上記 2 つの境界条件をテストとして固定する。
+
+#### 4. SHELL_MUTATION_COMMAND_RE の網羅性
+
+- 対象: `packages/cli/src/agents/codex.ts` `SHELL_MUTATION_COMMAND_RE`
+- 現状: `apply_patch`, `cat >`, `cp`, `install`, `mkdir`, `mv`, `npm install/update/audit fix/dedupe/version`, `perl -i`, `pnpm add/install/update`, `rm`, `sed -i`, `tee`, `touch`, `yarn add/install/upgrade`, `>` `>>` をカバー。
+- 未カバー: `chmod`, `chown`, `git apply`, `ln`, `dd`, `make` で生成、`pip install`, `gem install`, `bundle install`, `if true; then rm foo; fi` のような conditional 経由。
+- 影響: false negative 方向 (under-attribute) 。Codex の mutating shell を 100% 検出しないが、false positive (manual edit を AI 認定) は起こらないため安全側。
+- 判断: 妥当。ただし mutation regex は広げすぎると false positive を増やすため、追加は実データで頻出した command に限定します。
+- 改善案: まず `git apply`、`chmod` / `chown`、`ln`、`make` のような developer workflow で頻出する command を候補にし、それぞれ read-only command と paired test を追加します。conditional shell は regex で無理に追わず、false negative として扱います。
+
+#### 5. catastrophic transcript size (単一行 GB 級)
+
+- 対象: streaming 化された Codex transcript reader
+- 現状: 600MB の transcript ファイルを stream で読めるが、単一行が極大の場合 readline が 1 行をメモリにバッファするため OOM 可能性。
+- 影響: 通常の Codex transcript (1 event = 1 line ≒ 数 KB 〜数百 KB) では問題なし。悪意ある単一巨大 line のみが OOM トリガー。
+- 判断: 妥当だが優先度は低いです。通常の Codex JSONL では 1 event が 1 line なので、現実的な問題は transcript 全体サイズよりも 1 line の異常肥大です。
+- 改善案: line size limit を追加し、超過行は skip または safe error にします。実装する場合は、巨大 line で commit hook が壊れず warning になる regression test を追加します。
+
+---
+
+これらの項目は、PR #74 時点で確認済みの機能的デグレではありません。実装する場合は、救済 path だけでなく false-positive path も同時に test で固定します。
+
 ## Resolved Investigations
 
 ### CLI dist tracking policy
