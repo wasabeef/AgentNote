@@ -571,12 +571,14 @@ and `build:`) stay out of release notes unless their body contains a
 `Release note:` line. `Release note: skip` hides an otherwise public-looking
 commit.
 
-GitHub Release notes do not use PR titles directly. PR titles should still be
-written as release-summary-quality text because they are the review-time signal
-that the underlying commit subjects and `Release note:` lines are also
-user-facing. When a PR contains several follow-up commits for the same behavior,
-keep only the primary implementation commit visible in the release note and mark
-review-fix commits with `Release note: skip`.
+GitHub Release notes do not use PR titles as release-copy bullets. PR titles
+should still be written as release-summary-quality text because they are the
+review-time signal that the underlying commit subjects and `Release note:` lines
+are also user-facing. Merge commits are rendered only as a final "Merged Pull
+Requests" section with links back to GitHub PRs. When a PR contains several
+follow-up commits for the same behavior, keep only the primary implementation
+commit visible in the release note and mark review-fix commits with
+`Release note: skip`.
 
 The changelog template applies `upper_first` to each rendered bullet so a
 mechanical commit subject such as `recover Codex env sessions` becomes

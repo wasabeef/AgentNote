@@ -9,6 +9,7 @@ body = """
     ## [Unreleased]
 {% endif -%}
 {% for group, commits in commits | group_by(attribute="group") %}
+    {% if group != "Merged Pull Requests" %}
     {% set_global visible_commits = 0 %}
     {% for commit in commits %}
         {% if group != "Changed" or (commit.body and "Release note:" in commit.body) %}
@@ -27,7 +28,25 @@ body = """
             {% endif %}
         {% endfor %}
     {% endif %}
-{% endfor %}\n
+    {% endif %}
+{% endfor %}
+{% set_global merged_pr_count = 0 %}
+{% for commit in commits %}
+    {% if commit.group == "Merged Pull Requests" %}
+        {% set_global merged_pr_count = merged_pr_count + 1 %}
+    {% endif %}
+{% endfor %}
+{% if merged_pr_count > 0 %}
+    ### Merged Pull Requests
+    {% for commit in commits %}
+        {% if commit.group == "Merged Pull Requests" %}
+            {% set pr_number = commit.message | split(pat="#") | last | split(pat=" ") | first | trim %}
+            {% set pr_title = commit.message | split(pat="\n\n") | last | trim | upper_first %}
+            - [#{{ pr_number }}](https://github.com/wasabeef/AgentNote/pull/{{ pr_number }}) {{ pr_title }}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+\n
 """
 trim = true
 postprocessors = [
@@ -37,8 +56,10 @@ postprocessors = [
 
 [git]
 conventional_commits = true
-filter_unconventional = true
+filter_unconventional = false
 commit_parsers = [
+    # Keep merge commits out of release copy, but expose merged PR links.
+    { message = "^Merge pull request #[0-9]+", group = "Merged Pull Requests" },
     # `Release note:` lives in the commit body. `Release note: skip` lets a
     # public-looking fix/feat stay out of the generated GitHub Release.
     { body = "Release note: skip", skip = true },

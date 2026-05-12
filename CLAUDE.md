@@ -145,7 +145,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.
 - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.
 - **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.
-- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.
+- **Do not rely on merge commits for release copy.** Release notes include merged PR links from `Merge pull request...` commits, but the user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits stay hidden.
 - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.
 - **Before committing**, all four checks must pass (run from `packages/cli/`):
   1. `npm run build` — esbuild bundle

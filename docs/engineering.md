@@ -107,7 +107,7 @@ subject as public copy unless the commit type is intentionally internal.
 - Use `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, or `build:` for internal work that should normally stay out of release notes.
 - If an internal-looking commit has public impact, add a body line: `Release note: <one clear user-facing sentence>`.
 - If a public-looking commit should be hidden, add `Release note: skip`.
-- Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.
+- Do not put release-worthy wording only in a PR title or merge commit. Merge commits are used only for the generated "Merged Pull Requests" links; user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits are excluded from release notes.
 - Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.
 - Keep multi-commit PRs readable in the generated release note. Review-fix follow-up commits in a multi-commit PR should usually use `Release note: skip` unless they describe a distinct user-visible change.
 - The release generator capitalizes the first character of each bullet as a safety net. Still write natural English yourself; this only fixes mechanical lower-case commit subjects.
