@@ -1,0 +1,214 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-12T17:25:04.478Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "cliff",
+      "response": null
+    },
+    {
+      "prompt": "<turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>",
+      "response": null
+    },
+    {
+      "prompt": "cliff の出力よくなったけど、マージされたPRのリンクが貼られるようにしといて",
+      "response": "`git-cliff` の release note 出力に merged PR へのリンクを入れるよう、まず `.github/cliff.toml` と commit/PR 由来の metadata の使い方を確認します。出力がまた機械的にならないよう、最小変更で template 側を整えます。\n現在の cliff config は commit 単位で release note を作っていて、merge commit は出さない設計です。PR link は commit message だけでは取れないので、`git-cliff --context` で template に渡っている metadata を確認します。\nPR link は 2 通りあります。各 release bullet に紐付けるには GitHub API metadata が必要ですが、確実に出すなら merge commit から「Merged Pull Requests」セクションを生成できます。まず後者をローカルで検証します。\n方針は「本文の release bullets は今まで通り commit / `Release note:` 由来、末尾に `Merged Pull Requests` を追加」です。これなら PR title に依存しすぎず、でも release から該当 PR にすぐ飛べます。\ntemplate と maintainer docs を揃えました。次に `git-cliff` の実出力を確認して、既存の v1.0.2 release body も同じ形式に更新できる状態にします。",
+      "files_touched": [
+        ".github/cliff.toml",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/engineering.md",
+        "docs/architecture.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/cliff.toml",
+      "by_ai": true
+    },
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/engineering.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "90ec61b8e56f2764d66e5b5ac5831e1243832d34",
+    "short_sha": "90ec61b",
+    "message": "docs: link merged PRs in release notes",
+    "date": "2026-05-13T02:25:01+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": ".github/cliff.toml",
+        "lines": [
+          "index 5611cde..f376c8f 100644",
+          "--- a/.github/cliff.toml",
+          "+++ b/.github/cliff.toml",
+          "@@ -9,6 +9,7 @@ body = \"\"\"",
+          "     ## [Unreleased]",
+          " {% endif -%}",
+          " {% for group, commits in commits | group_by(attribute=\"group\") %}",
+          "+    {% if group != \"Merged Pull Requests\" %}",
+          "     {% set_global visible_commits = 0 %}",
+          "     {% for commit in commits %}",
+          "         {% if group != \"Changed\" or (commit.body and \"Release note:\" in commit.body) %}",
+          "@@ -27,7 +28,25 @@ body = \"\"\"",
+          "             {% endif %}",
+          "         {% endfor %}",
+          "     {% endif %}",
+          "-{% endfor %}\\n",
+          "+    {% endif %}",
+          "+{% endfor %}",
+          "+{% set_global merged_pr_count = 0 %}",
+          "+{% for commit in commits %}",
+          "+    {% if commit.group == \"Merged Pull Requests\" %}",
+          "+        {% set_global merged_pr_count = merged_pr_count + 1 %}",
+          "+    {% endif %}",
+          "+{% endfor %}",
+          "+{% if merged_pr_count > 0 %}",
+          "+    ### Merged Pull Requests",
+          "+    {% for commit in commits %}",
+          "+        {% if commit.group == \"Merged Pull Requests\" %}",
+          "+            {% set pr_number = commit.message | split(pat=\"#\") | last | split(pat=\" \") | first | trim %}",
+          "+            {% set pr_title = commit.message | split(pat=\"\\n\\n\") | last | trim | upper_first %}",
+          "+            - [#{{ pr_number }}](https://github.com/wasabeef/AgentNote/pull/{{ pr_number }}) {{ pr_title }}",
+          "+        {% endif %}",
+          "+    {% endfor %}",
+          "+{% endif %}",
+          "+\\n",
+          " \"\"\"",
+          " trim = true",
+          " postprocessors = [",
+          "@@ -37,8 +56,10 @@ postprocessors = [",
+          " ",
+          " [git]",
+          " conventional_commits = true",
+          "-filter_unconventional = true",
+          "+filter_unconventional = false",
+          " commit_parsers = [",
+          "+    # Keep merge commits out of release copy, but expose merged PR links.",
+          "+    { message = \"^Merge pull request #[0-9]+\", group = \"Merged Pull Requests\" },",
+          "     # `Release note:` lives in the commit body. `Release note: skip` lets a",
+          "     # public-looking fix/feat stay out of the generated GitHub Release.",
+          "     { body = \"Release note: skip\", skip = true },"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index 279b001..d8e3453 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -145,7 +145,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " - **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.",
+          " - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.",
+          " - **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.",
+          "-- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.",
+          "+- **Do not rely on merge commits for release copy.** Release notes include merged PR links from `Merge pull request...` commits, but the user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits stay hidden.",
+          " - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.",
+          " - **Before committing**, all four checks must pass (run from `packages/cli/`):",
+          "   1. `npm run build` — esbuild bundle"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index 3fe4d69..1fa7d55 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -145,7 +145,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr",
+          " - **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.",
+          " - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.",
+          " - **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.",
+          "-- **Do not rely on merge commits.** Release notes ignore `Merge pull request...`, version bumps, and generated bundle sync commits, so squash the important public wording into the real implementation commit.",
+          "+- **Do not rely on merge commits for release copy.** Release notes include merged PR links from `Merge pull request...` commits, but the user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits stay hidden.",
+          " - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.",
+          " - **Before committing**, all four checks must pass (run from `packages/cli/`):",
+          "   1. `npm run build` — esbuild bundle"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index b2733ed..0ac92dc 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -571,12 +571,14 @@ and `build:`) stay out of release notes unless their body contains a",
+          " `Release note:` line. `Release note: skip` hides an otherwise public-looking",
+          " commit.",
+          " ",
+          "-GitHub Release notes do not use PR titles directly. PR titles should still be",
+          "-written as release-summary-quality text because they are the review-time signal",
+          "-that the underlying commit subjects and `Release note:` lines are also",
+          "-user-facing. When a PR contains several follow-up commits for the same behavior,",
+          "-keep only the primary implementation commit visible in the release note and mark",
+          "-review-fix commits with `Release note: skip`.",
+          "+GitHub Release notes do not use PR titles as release-copy bullets. PR titles",
+          "+should still be written as release-summary-quality text because they are the",
+          "+review-time signal that the underlying commit subjects and `Release note:` lines",
+          "+are also user-facing. Merge commits are rendered only as a final \"Merged Pull",
+          "+Requests\" section with links back to GitHub PRs. When a PR contains several",
+          "+follow-up commits for the same behavior, keep only the primary implementation",
+          "+commit visible in the release note and mark review-fix commits with",
+          "+`Release note: skip`.",
+          " ",
+          " The changelog template applies `upper_first` to each rendered bullet so a",
+          " mechanical commit subject such as `recover Codex env sessions` becomes"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/engineering.md",
+        "lines": [
+          "index b68bbfa..737f05c 100644",
+          "--- a/docs/engineering.md",
+          "+++ b/docs/engineering.md",
+          "@@ -107,7 +107,7 @@ subject as public copy unless the commit type is intentionally internal.",
+          " - Use `docs:`, `test:`, `refactor:`, `ci:`, `chore:`, or `build:` for internal work that should normally stay out of release notes.",
+          " - If an internal-looking commit has public impact, add a body line: `Release note: <one clear user-facing sentence>`.",
+          " - If a public-looking commit should be hidden, add `Release note: skip`.",
+          "-- Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.",
+          "+- Do not put release-worthy wording only in a PR title or merge commit. Merge commits are used only for the generated \"Merged Pull Requests\" links; user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits are excluded from release notes.",
+          " - Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.",
+          " - Keep multi-commit PRs readable in the generated release note. Review-fix follow-up commits in a multi-commit PR should usually use `Release note: skip` unless they describe a distinct user-visible change.",
+          " - The release generator capitalizes the first character of each bullet as a safety net. Still write natural English yourself; this only fixes mechanical lower-case commit subjects."
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  }
+}
