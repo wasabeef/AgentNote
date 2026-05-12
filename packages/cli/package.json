@@ -1,6 +1,6 @@
 {
   "name": "agent-note",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Remember why your code changed. Link AI agent sessions to git commits.",
   "author": "Daichi Furiya (wasabeef)",
   "type": "module",
