@@ -48,6 +48,10 @@
 - 原因: `.git/agentnote/session` が現在の Codex 作業 session を正しく表しておらず、fresh な active session pointer が `prompts.jsonl` だけを持つ状態でした。plain `git commit` の `prepare-commit-msg` は commit command が Agent 内で観測されたかを判断できないため、prompt-only session に trailer を付けると別 session hijack の危険があります。
 - 修正: plain `git commit` 経路（`prepare-commit-msg`）は、fresh heartbeat に加えて `changes.jsonl` または `pre_blobs.jsonl` の file evidence がある session だけに trailer を付けます。Agent の `PreToolUse git commit` 経路は、commit command 自体が Agent 内で観測されているため prompt-only rescue を維持します。`agent-note commit` も wrapper 内で session を確認できるため、`prompts.jsonl` / `changes.jsonl` / `pre_blobs.jsonl` のいずれかを recordable data として扱います。
 - Follow-up 修正: cmux などの Agent host 上では、`.git/agentnote/session` が更新されなくても process environment に現在の Agent session が残る場合があります。`CODEX_THREAD_ID` がある場合、`post-commit` は `--fallback-env` で fresh な Codex transcript を探します。transcript が現在 commit file に直接接続できる場合は通常の file/line attribution を使い、file touch を特定できなくても current transcript の tool-backed work がある場合は v0.2 系に近い commit-level attribution として commit files を AI 扱いします。古い transcript mtime は拒否するため、stale な Codex session は救済しません。
+- Follow-up 修正 2: `--fallback-env` は current process の fresh transcript を信用する一方で、record 時の prompt selection が stale な `.git/agentnote/sessions/<id>/prompts.jsonl` に引きずられると、fresh transcript が commit file に接続できても note が作られないことがありました。environment fallback では stale repo-local prompt window に依存せず、fresh transcript の末尾から commit files を覆う最小の matched interaction を選びます。これにより、cmux のような host で `.git/agentnote/session` が古くても、現在の Codex transcript に file evidence があれば note が作られます。
+- Follow-up 修正 3: 実 repository の Codex transcript は 600MB を超えることがあり、adapter が `readFile()` で transcript 全体を文字列化すると Node の string size / memory 制限で失敗し、post-commit hook の safety catch により note が silently skipped されました。Codex transcript parser は JSONL を stream で読み、巨大 transcript でも現在 commit に接続できる interaction を抽出できるようにします。
+- Follow-up 修正 4: 後追い recording や遅延した fallback では、fresh transcript の中に対象 commit 後の debug / verification conversation も含まれます。recording は HEAD commit timestamp より後の transcript row を除外し、未来の同一 file edit を誤って prompt として採用しません。
+- Follow-up 修正 5: `writeNote()` が `git notes add` の non-zero exit を `gitSafe()` 経由で飲み込むと、recording は `promptCount > 0` を返すのに git note が存在しない状態になります。`writeNote()` は git note 書き込み失敗を例外にし、hook entrypoint 側の safety catch で warning に変換します。これにより commit は壊さず、PR Report の `—` 原因を診断できます。
 
 #### Safe fallback
 
@@ -56,8 +60,12 @@
 - fallback は `.git/agentnote/session` を無条件に信じません。active session に recordable data があり、かつ `changes.jsonl` の post-edit `blob` が HEAD の committed blob と一致する場合だけ `recordCommitEntry()` に進みます。
 - `--fallback-head` は prompt-only / metadata-only / unrelated file evidence / same-path different-blob evidence を救済しません。これは stale `.git/agentnote/session` pointer を再び信用しないためです。
 - `--fallback-env` は `.git/agentnote/session` を使わず、現在 process の `CODEX_THREAD_ID` だけを候補にします。Codex transcript は adapter の transcript discovery で探し、heartbeat または transcript mtime が fresh な場合だけ `recordCommitEntry()` に進みます。これは cmux のような host が Codex process environment を維持しているケースの救済であり、古い active pointer を再び信用するものではありません。
+- `--fallback-env` で選ばれた current Codex transcript に commit file と直接つながる interaction がある場合、stale な repo-local prompt window ではなく transcript 側の matched interaction を採用します。複数 file の commit では、transcript 末尾から commit files を覆う最小の interaction set を使います。
 - `--fallback-env` で選ばれた current Codex transcript に tool-backed interaction がある場合、file touch が取れなくても commit-level attribution として commit files を `by_ai: true` にします。これは v1 の stale pointer guard は残しつつ、v0.2 系の「AI が関わった commit を見失わない」挙動へ戻すためです。`files_touched` は per-prompt file evidence なので推測では埋めません。
+- Codex transcript は stream で読みます。これは memory optimization ではなく correctness requirement です。長期 session の transcript が巨大化しても、recording should fail safe only for unreadable files, not for large but valid JSONL.
+- Transcript row の timestamp が HEAD commit timestamp より後の場合は recording から除外します。これは後追い `--fallback-env` で、対象 commit 後に実行した調査・debug prompt が PR Report に混入することを防ぐためです。
 - HEAD blob 読み取りは `git diff-tree -z --raw` を使います。NUL 区切りで読むことで、Git の `core.quotePath=true` による path quote を避け、`src/日本語 file.ts` のような path でも post-edit blob evidence を正しく照合します。
+- Git note 書き込み失敗は silent success にしません。`record` command は warning を出して終了し、git commit 自体は成功させます。
 
 #### Display behavior
 
@@ -67,8 +75,9 @@
 #### Regression coverage
 
 - `packages/cli/src/commands/hook.test.ts`: `PreToolUse` の `git commit` hook が stale heartbeat を更新すること、metadata-only session では trailer を注入しないことを確認します。
-- `packages/cli/src/commands/init.test.ts`: 生成された `prepare-commit-msg` hook が metadata-only session と fresh prompt-only session を skip し、file evidence がある session だけに trailer を入れることを確認します。同じ test file で、stale heartbeat のため trailer がない commit でも post-edit blob が HEAD blob と一致すれば post-commit fallback が note を作成し、stale prompt-only session、same-path different-blob session、amend commit は note を作らないこと、root commit と quoted raw diff path でも fallback が動くことを確認します。さらに、`.git/agentnote/session` が unrelated prompt-only session を指していても、fresh な `CODEX_THREAD_ID` transcript が commit file に接続できる場合だけ environment fallback が note を作り、stale transcript は拒否することを確認します。
+- `packages/cli/src/commands/init.test.ts`: 生成された `prepare-commit-msg` hook が metadata-only session と fresh prompt-only session を skip し、file evidence がある session だけに trailer を入れることを確認します。同じ test file で、stale heartbeat のため trailer がない commit でも post-edit blob が HEAD blob と一致すれば post-commit fallback が note を作成し、stale prompt-only session、same-path different-blob session、amend commit は note を作らないこと、root commit と quoted raw diff path でも fallback が動くことを確認します。さらに、`.git/agentnote/session` が unrelated prompt-only session を指していても、fresh な `CODEX_THREAD_ID` transcript が commit file に接続できる場合だけ environment fallback が note を作り、stale transcript は拒否することを確認します。Codex session directory に古い `prompts.jsonl` が残っていても、fresh transcript が commit file に直接接続できれば note が作られる regression と、commit 後の future transcript row を選ばない regression もここで固定します。
 - `packages/cli/src/core/record.test.ts`: 180 case の fallback evidence simulation を追加し、`Claude` / `Codex` / `Cursor` / `Gemini`、current / rotated `changes` / `pre_blobs`、matching / unrelated / empty evidence、prompt-only noise を組み合わせて fallback predicate を検証します。
+- `packages/cli/src/core/storage.test.ts`: `git notes add` が失敗した場合に `writeNote()` が例外を返すことを確認し、`promptCount > 0` なのに note がない silent success を防ぎます。
 - `packages/cli/src/commands/commit.test.ts`: manual `agent-note commit` も同じ条件を使うことを確認します。
 - `packages/pr-report/src/report.test.ts`: note missing commit は `Total AI Ratio: —`、true 0% attribution commit は従来通り `░░░░░░░░ 0%` と表示されることを確認します。
 

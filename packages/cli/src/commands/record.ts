@@ -26,6 +26,7 @@ import { agentnoteDir } from "../paths.js";
 const FALLBACK_HEAD_FLAG = "--fallback-head";
 const FALLBACK_ENV_FLAG = "--fallback-env";
 const ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
+const ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 const SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 const RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
 const RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"] as const;
@@ -45,8 +46,9 @@ export async function record(args: string[]): Promise<void> {
     const sessionId = args[0];
     if (!sessionId) return;
     await recordCommitEntry({ agentnoteDirPath: await agentnoteDir(), sessionId });
-  } catch {
+  } catch (err: unknown) {
     // Never break git commit hooks.
+    console.error(`agent-note: warning: recording failed: ${(err as Error).message}`);
   }
 }
 
@@ -73,13 +75,24 @@ export async function recordHeadFallback(): Promise<void> {
 
 /** Recover notes for agent-hosted terminals that expose the current session id. */
 export async function recordEnvironmentFallback(): Promise<void> {
-  if (await readHeadTrailerSessionId()) return;
+  if (await readHeadTrailerSessionId()) {
+    debugRecord("env fallback skipped: HEAD already has trailer");
+    return;
+  }
 
   const agentnoteDirPath = await agentnoteDir();
   const sessionId = await resolveEnvironmentSessionId(agentnoteDirPath);
-  if (!sessionId) return;
+  if (!sessionId) {
+    debugRecord("env fallback skipped: no fresh environment session");
+    return;
+  }
 
-  await recordCommitEntry({ agentnoteDirPath, sessionId });
+  const result = await recordCommitEntry({
+    agentnoteDirPath,
+    sessionId,
+    allowEnvironmentTranscriptFallback: true,
+  });
+  debugRecord(`env fallback recorded ${result.promptCount} prompt(s), aiRatio=${result.aiRatio}`);
 }
 
 async function readActiveSessionId(agentnoteDirPath: string): Promise<string | null> {
@@ -101,13 +114,21 @@ async function resolveEnvironmentSessionId(agentnoteDirPath: string): Promise<st
   if (existingAgent && existingAgent !== AGENT_NAMES.codex) return null;
   if (!existingAgent) await writeSessionAgent(sessionDir, AGENT_NAMES.codex);
 
+  const savedTranscriptPath = await readSessionTranscriptPath(sessionDir);
   const transcriptPath =
-    (await readSessionTranscriptPath(sessionDir)) ??
-    getAgent(AGENT_NAMES.codex).findTranscript(codexSessionId);
-  if (transcriptPath) await writeSessionTranscriptPath(sessionDir, transcriptPath);
+    savedTranscriptPath ?? getAgent(AGENT_NAMES.codex).findTranscript(codexSessionId);
+  if (!savedTranscriptPath && transcriptPath)
+    await writeSessionTranscriptPath(sessionDir, transcriptPath);
 
-  if (!(await hasFreshEnvironmentEvidence(sessionDir, transcriptPath))) return null;
+  if (!(await hasFreshEnvironmentEvidence(sessionDir, transcriptPath))) {
+    debugRecord(`env fallback skipped: no fresh evidence for ${codexSessionId}`);
+    return null;
+  }
   return codexSessionId;
+}
+
+function debugRecord(message: string): void {
+  if (process.env[ENV_AGENTNOTE_DEBUG]) console.error(`agent-note: debug: ${message}`);
 }
 
 function sanitizeSessionId(value: string | undefined): string | null {

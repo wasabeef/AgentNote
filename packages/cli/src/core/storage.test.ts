@@ -82,4 +82,11 @@ describe("storage: writeNote / readNote", () => {
     const result = await readNote(commitSha);
     assert.deepEqual(result, data);
   });
+
+  it("throws when git refuses to write a note", async () => {
+    await assert.rejects(
+      () => writeNote("not-a-commit", { v: 1 }),
+      /failed to resolve|failed to write Agent Note git note|ambiguous argument/i,
+    );
+  });
 });

@@ -37,6 +37,8 @@ function writeCodexTranscript(
   const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
   mkdirSync(transcriptDir, { recursive: true });
   const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-00-00-${sessionId}.jsonl`);
+  const baseTimestampMs = Date.now() - 60 * 1000;
+  const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();
   const patch = [
     "*** Begin Patch",
     `*** Add File: ${filePath}`,
@@ -48,12 +50,12 @@ function writeCodexTranscript(
     `${[
       JSON.stringify({
         type: "session_meta",
-        timestamp: "2026-05-12T12:00:00Z",
+        timestamp: timestamp(0),
         payload: { id: sessionId, cwd },
       }),
       JSON.stringify({
         type: "response_item",
-        timestamp: "2026-05-12T12:00:01Z",
+        timestamp: timestamp(1000),
         payload: {
           type: "message",
           role: "user",
@@ -62,7 +64,7 @@ function writeCodexTranscript(
       }),
       JSON.stringify({
         type: "response_item",
-        timestamp: "2026-05-12T12:00:02Z",
+        timestamp: timestamp(2000),
         payload: {
           type: "message",
           role: "assistant",
@@ -71,7 +73,7 @@ function writeCodexTranscript(
       }),
       JSON.stringify({
         type: "response_item",
-        timestamp: "2026-05-12T12:00:03Z",
+        timestamp: timestamp(3000),
         payload: {
           type: "function_call",
           name: "apply_patch",
@@ -450,6 +452,102 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
     assert.equal(entry.session_id, codexSessionId);
     assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
     assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores stale local prompts when the Codex transcript is fresh", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-transcript-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/stale-local-prompt.ts";
+    const transcriptPath = writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    writeFileSync(
+      transcriptPath,
+      `${[
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2999-01-01T00:00:00Z",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "future debug prompt" }],
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2999-01-01T00:00:01Z",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            arguments: {
+              patch: [
+                "*** Begin Patch",
+                `*** Update File: ${filePath}`,
+                "@@",
+                "-export const cmuxEnvFallback = true;",
+                "+export const futureDebug = true;",
+                "*** End Patch",
+              ].join("\n"),
+            },
+          },
+        }),
+      ].join("\n")}\n`,
+      { flag: "a" },
+    );
+
+    const codexSessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, codexSessionId);
+    mkdirSync(codexSessionDir, { recursive: true });
+    writeFileSync(join(codexSessionDir, "agent"), "codex\n");
+    writeFileSync(join(codexSessionDir, TURN_FILE), "1196\n");
+    writeFileSync(
+      join(codexSessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-05-10T03:27:40Z","prompt":"old CodeRabbit task","prompt_id":"old-prompt","turn":1196}\n',
+    );
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: transcript-only cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.attribution.method, "line");
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+    assert.equal(
+      entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "old CodeRabbit task",
+      ),
+      false,
+      "stale repo-local prompts should not be revived by env fallback",
+    );
+    assert.equal(
+      entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "future debug prompt",
+      ),
+      false,
+      "transcript rows written after the commit should not be selected",
+    );
+    assert.deepEqual(entry.files, [{ path: filePath, by_ai: true }]);
 
     rmSync(dir, { recursive: true, force: true });
   });

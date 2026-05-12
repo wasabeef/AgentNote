@@ -4,7 +4,10 @@ import { NOTES_REF } from "./constants.js";
 /** Write an Agent Note entry as a git note on a commit. */
 export async function writeNote(commitSha: string, data: Record<string, unknown>): Promise<void> {
   const body = JSON.stringify(data, null, 2);
-  await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+  const result = await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || "failed to write Agent Note git note");
+  }
 }
 
 /** Read an Agent Note entry from a git note, returning null when none exists. */

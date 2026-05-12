@@ -1,7 +1,8 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { createReadStream, type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createInterface } from "node:readline";
 import { TEXT_ENCODING } from "../core/constants.js";
 import { isAgentNoteHookCommand } from "./hook-command.js";
 import {
@@ -491,112 +492,114 @@ export const codex: AgentAdapter = {
       throw new Error(`Codex transcript not found: ${transcriptPath}`);
     }
 
-    let content: string;
-    try {
-      content = await readFile(transcriptPath, TEXT_ENCODING);
-    } catch {
-      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
-    }
-
     const interactions: TranscriptInteraction[] = [];
     let current: TranscriptInteraction | null = null;
     let sessionCwd: string | undefined;
 
-    for (const rawLine of content.split("\n")) {
-      const line = rawLine.trim();
-      if (!line) continue;
+    const lines = createInterface({
+      input: createReadStream(transcriptPath, { encoding: TEXT_ENCODING }),
+      crlfDelay: Number.POSITIVE_INFINITY,
+    });
 
-      let entry: RolloutLine;
-      try {
-        entry = JSON.parse(line) as RolloutLine;
-      } catch {
-        continue;
-      }
+    try {
+      for await (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
 
-      if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
-        sessionCwd = entry.payload.cwd;
-        continue;
-      }
-
-      if (entry.type !== "response_item" || !entry.payload) continue;
-      const payload = entry.payload;
-      const payloadType = typeof payload.type === "string" ? payload.type : undefined;
-      const payloadRole = typeof payload.role === "string" ? payload.role : undefined;
-
-      if (payloadType === "message" && payloadRole === "user") {
-        const prompt = collectMessageText(payload.content).join("\n");
-        if (!prompt) continue;
-        if (current) interactions.push(current);
-        current = { prompt, response: null };
-        if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
-        continue;
-      }
-
-      if (!current) continue;
-
-      if (payloadType === "message" && payloadRole === "assistant") {
-        const response = collectMessageText(payload.content).join("\n");
-        if (response) {
-          current.response = current.response ? `${current.response}\n${response}` : response;
+        let entry: RolloutLine;
+        try {
+          entry = JSON.parse(line) as RolloutLine;
+        } catch {
+          continue;
         }
-        continue;
-      }
 
-      const toolName =
-        typeof payload.name === "string"
-          ? payload.name
-          : typeof payload.call_name === "string"
-            ? payload.call_name
-            : undefined;
+        if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
+          sessionCwd = entry.payload.cwd;
+          continue;
+        }
 
-      if (
-        (payloadType === "custom_tool_call" ||
-          payloadType === "function_call" ||
-          payloadType === "tool_use") &&
-        toolName
-      ) {
-        appendInteractionTool(current, toolName);
-      }
+        if (entry.type !== "response_item" || !entry.payload) continue;
+        const payload = entry.payload;
+        const payloadType = typeof payload.type === "string" ? payload.type : undefined;
+        const payloadRole = typeof payload.role === "string" ? payload.role : undefined;
 
-      if (
-        (payloadType === "custom_tool_call" || payloadType === "function_call") &&
-        toolName === "apply_patch"
-      ) {
-        const patchInputs = [
-          ...collectPatchStrings(payload.input),
-          ...collectPatchStrings(payload.arguments),
-        ];
-        const files: string[] = [];
-        const fileSeen = new Set<string>();
-        current.line_stats = current.line_stats ?? {};
+        if (payloadType === "message" && payloadRole === "user") {
+          const prompt = collectMessageText(payload.content).join("\n");
+          if (!prompt) continue;
+          if (current) interactions.push(current);
+          current = { prompt, response: null };
+          if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
+          continue;
+        }
 
-        for (const patchInput of patchInputs) {
-          for (const file of extractFilesFromApplyPatch(patchInput)) {
-            const normalized = normalizeInteractionFilePath(file, sessionCwd);
-            if (!normalized) continue;
-            appendUnique(files, fileSeen, normalized);
+        if (!current) continue;
+
+        if (payloadType === "message" && payloadRole === "assistant") {
+          const response = collectMessageText(payload.content).join("\n");
+          if (response) {
+            current.response = current.response ? `${current.response}\n${response}` : response;
+          }
+          continue;
+        }
+
+        const toolName =
+          typeof payload.name === "string"
+            ? payload.name
+            : typeof payload.call_name === "string"
+              ? payload.call_name
+              : undefined;
+
+        if (
+          (payloadType === "custom_tool_call" ||
+            payloadType === "function_call" ||
+            payloadType === "tool_use") &&
+          toolName
+        ) {
+          appendInteractionTool(current, toolName);
+        }
+
+        if (
+          (payloadType === "custom_tool_call" || payloadType === "function_call") &&
+          toolName === "apply_patch"
+        ) {
+          const patchInputs = [
+            ...collectPatchStrings(payload.input),
+            ...collectPatchStrings(payload.arguments),
+          ];
+          const files: string[] = [];
+          const fileSeen = new Set<string>();
+          current.line_stats = current.line_stats ?? {};
+
+          for (const patchInput of patchInputs) {
+            for (const file of extractFilesFromApplyPatch(patchInput)) {
+              const normalized = normalizeInteractionFilePath(file, sessionCwd);
+              if (!normalized) continue;
+              appendUnique(files, fileSeen, normalized);
+            }
+
+            const lineStats = extractLineStatsFromApplyPatch(patchInput);
+            for (const [file, stats] of Object.entries(lineStats)) {
+              const normalized = normalizeInteractionFilePath(file, sessionCwd);
+              if (!normalized) continue;
+              const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
+              current.line_stats[normalized] = {
+                added: previous.added + stats.added,
+                deleted: previous.deleted + stats.deleted,
+              };
+            }
           }
 
-          const lineStats = extractLineStatsFromApplyPatch(patchInput);
-          for (const [file, stats] of Object.entries(lineStats)) {
-            const normalized = normalizeInteractionFilePath(file, sessionCwd);
-            if (!normalized) continue;
-            const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
-            current.line_stats[normalized] = {
-              added: previous.added + stats.added,
-              deleted: previous.deleted + stats.deleted,
-            };
+          if (files.length > 0) {
+            current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
+          }
+
+          if (Object.keys(current.line_stats).length === 0) {
+            delete current.line_stats;
           }
         }
-
-        if (files.length > 0) {
-          current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
-        }
-
-        if (Object.keys(current.line_stats).length === 0) {
-          delete current.line_stats;
-        }
       }
+    } catch {
+      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
     }
 
     if (current) interactions.push(current);

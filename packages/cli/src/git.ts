@@ -52,14 +52,15 @@ export async function git(
 export async function gitSafe(
   args: string[],
   options?: Pick<ExecFileOptionsWithStringEncoding, "cwd" | "env" | "timeout">,
-): Promise<{ stdout: string; exitCode: number }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   try {
     const stdout = await git(args, options);
-    return { stdout, exitCode: 0 };
+    return { stdout, stderr: "", exitCode: 0 };
   } catch (err: unknown) {
     const e = err as Record<string, unknown>;
     return {
       stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+      stderr: typeof e.stderr === "string" ? e.stderr.trim() : "",
       exitCode: typeof e.code === "number" ? e.code : 1,
     };
   }

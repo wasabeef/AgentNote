@@ -59,6 +59,7 @@ type AgentnoteIgnorePattern = {
 const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
+const TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1000;
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -66,6 +67,7 @@ export async function recordCommitEntry(opts: {
   sessionId: string;
   transcriptPath?: string;
   requireAiFileEvidence?: boolean;
+  allowEnvironmentTranscriptFallback?: boolean;
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -102,6 +104,7 @@ export async function recordCommitEntry(opts: {
   } catch {
     // Subject is only a prompt-trimming hint. Recording should still proceed.
   }
+  const commitTimestampMs = await readHeadCommitTimestampMs();
   let commitDiffText = "";
   try {
     commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
@@ -278,6 +281,10 @@ export async function recordCommitEntry(opts: {
   if (transcriptPath) {
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
+      allInteractions = filterTranscriptInteractionsBeforeCommit(
+        allInteractions,
+        commitTimestampMs,
+      );
     } catch (err) {
       if (!crossTurnCommit) throw err;
       // cross-turn: fall through with no interactions — handled below as prompts-only.
@@ -416,6 +423,7 @@ export async function recordCommitEntry(opts: {
       consumedPromptState,
       currentTurn,
     );
+    let attributionTranscriptMatched = selectableTranscriptMatched;
     const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
       selectableTranscriptMatched,
       promptEntries,
@@ -486,6 +494,17 @@ export async function recordCommitEntry(opts: {
         toRecordedInteraction(i, commitFileSet, consumedPromptState),
       );
       useSelectableTranscriptAttribution = true;
+    } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        transcriptMatched,
+        commitFileSet,
+        consumedPromptState,
+      );
+      interactions = envMatched.map((i) =>
+        toRecordedInteraction(i, commitFileSet, consumedPromptState),
+      );
+      attributionTranscriptMatched = envMatched;
+      useSelectableTranscriptAttribution = true;
     } else if (!crossTurnCommit && transcriptMatched.length === 0) {
       interactions = selectTranscriptFallbackInteractions(
         allInteractions,
@@ -497,21 +516,21 @@ export async function recordCommitEntry(opts: {
       interactions = [];
     }
 
-    if (useSelectableTranscriptAttribution && selectableTranscriptMatched.length > 0) {
+    if (useSelectableTranscriptAttribution && attributionTranscriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
-          selectableTranscriptMatched.flatMap((i) =>
+          attributionTranscriptMatched.flatMap((i) =>
             filterInteractionCommitFiles(i, commitFileSet, consumedPromptState),
           ),
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         lineCountCommitFileSet,
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         consumedPromptState,
       );
       consumedTranscriptPromptFiles = collectConsumedTranscriptPromptFiles(
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         promptEntries,
         commitFileSet,
         consumedPromptState,
@@ -738,6 +757,27 @@ function parseTimestampMs(value: unknown): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+async function readHeadCommitTimestampMs(): Promise<number | null> {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD"]));
+  } catch {
+    return null;
+  }
+}
+
+/** Drop transcript rows written after the commit being recorded. */
+function filterTranscriptInteractionsBeforeCommit(
+  interactions: TranscriptInteraction[],
+  commitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  if (commitTimestampMs === null) return interactions;
+  const upperBoundMs = commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs === null || interactionMs <= upperBoundMs;
+  });
+}
+
 /**
  * Convert an agent transcript row into the persisted interaction shape.
  *
@@ -806,6 +846,27 @@ function selectTranscriptFallbackInteractions(
     .reverse()
     .find((interaction) => (interaction.tools?.length ?? 0) > 0);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+
+/** Select the newest transcript rows needed to cover commit files for env fallback. */
+function selectEnvironmentTranscriptMatchedInteractions(
+  interactions: TranscriptInteraction[],
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+): TranscriptInteraction[] {
+  const uncoveredFiles = new Set(commitFileSet);
+  const selected: TranscriptInteraction[] = [];
+
+  for (const interaction of [...interactions].reverse()) {
+    const files = filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState);
+    if (!files.some((file) => uncoveredFiles.has(file))) continue;
+
+    selected.push(interaction);
+    for (const file of files) uncoveredFiles.delete(file);
+    if (uncoveredFiles.size === 0) break;
+  }
+
+  return selected.reverse();
 }
 
 /** Current-window tool turns without per-file evidence. */
