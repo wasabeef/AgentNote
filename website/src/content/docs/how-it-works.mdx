@@ -167,7 +167,7 @@ Agent Note and Entire solve related but different problems.
 | **Stop** | Logs stop event (heartbeat stays active — Stop = response end, not session end) |
 
 <Aside>
-  Plain Git hooks require fresh session file evidence before injecting trailers. Prompt-only rescue is kept for commits observed inside an Agent hook, where the commit command itself is part of the AI session.
+  Plain Git hooks require fresh session file evidence before injecting trailers. When the current Agent transcript is trusted, Agent Note can still keep commit-level attribution even if exact per-prompt file touches are unavailable.
 </Aside>
 
 <Aside type="tip">

@@ -167,7 +167,7 @@ Agent Note e Entire resolvem problemas relacionados, mas diferentes.
 | **Stop** | Registra o evento stop (o heartbeat continua ativo — Stop = fim da response, não fim da sessão) |
 
 <Aside>
-  Plain Git hooks exigem uma sessão recente com file evidence antes de injetar trailers. O resgate prompt-only fica limitado a commits em que o commit command foi observado dentro de um Agent hook.
+  Plain Git hooks exigem uma sessão recente com file evidence antes de injetar trailers. Quando o Agent transcript atual é confiável, Agent Note ainda pode manter commit-level attribution mesmo sem file touches exatos por prompt.
 </Aside>
 
 <Aside type="tip">

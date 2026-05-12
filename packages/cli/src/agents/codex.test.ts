@@ -146,6 +146,7 @@ describe("codex adapter", () => {
       "I will inspect the current state and update the status output.",
     );
     assert.deepEqual(interactions[0].tools, ["exec_command", "apply_patch"]);
+    assert.deepEqual(interactions[0].mutation_tools, ["apply_patch"]);
     assert.deepEqual(interactions[0].files_touched, ["src/status.ts"]);
     assert.deepEqual(interactions[0].line_stats, {
       "src/status.ts": { added: 1, deleted: 0 },

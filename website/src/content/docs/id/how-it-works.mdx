@@ -167,7 +167,7 @@ Agent Note dan Entire menyelesaikan masalah yang berdekatan, tetapi berbeda.
 | **Stop** | Mencatat event stop (heartbeat tetap aktif — Stop = akhir response, bukan akhir sesi) |
 
 <Aside>
-  Plain Git hooks membutuhkan session yang masih fresh dan file evidence sebelum menyisipkan trailer. Prompt-only rescue hanya dipakai ketika commit command terlihat di dalam Agent hook.
+  Plain Git hooks membutuhkan session yang masih fresh dan file evidence sebelum menyisipkan trailer. Jika Agent transcript saat ini tepercaya, Agent Note tetap dapat menyimpan commit-level attribution meski file touches per prompt tidak tersedia.
 </Aside>
 
 <Aside type="tip">

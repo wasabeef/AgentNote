@@ -94,7 +94,7 @@ Gemini-specific event handling:
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
 - **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and file evidence (`changes.jsonl` or `pre_blobs.jsonl`) before injecting an `Agentnote-Session` trailer for plain git commits. Prompt-only sessions do not get plain git hook trailers. Agent `PreToolUse git commit` hooks may still inject trailers for prompt-only rescue because the commit command itself came from the agent. Skips amends.
-- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob. If no trailer or stale marker exists but the current process exposes an adapter-supported session environment such as `CODEX_THREAD_ID`, it calls `agent-note record --fallback-env` to recover a fresh Codex transcript without trusting a stale active-session pointer. Env fallback prefers transcript rows tied to current commit files, ignores rows after HEAD, can recover work prepared just before the previous commit when no newer match exists, and uses commit-level attribution only for mutating shell-only work without exact `files_touched`.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.
@@ -157,6 +157,6 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Never break git commit.** All agent-note recording is wrapped in try/catch. If agent-note fails, the commit must still succeed.
 - **All source code in English.** Comments, variable names, CLI output, test descriptions — everything in English.
 - **PreToolUse hooks are synchronous.** Must write JSON to stdout, must not be marked `async: true`.
-- **Input validation.** Session IDs must match UUID v4. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
+- **Input validation.** Environment-provided session IDs must use canonical UUID format. `transcript_path` must be under the agent's home directory (e.g. `~/.claude/` for Claude Code, `~/.gemini/` for Gemini CLI).
 - **Git notes for persistent storage.** Entry data goes to `refs/notes/agentnote`, not to files.
 - **Biome for lint + format.** Run `npm run lint` (biome check) and `npm run typecheck` (tsc) separately. Both must pass in CI.

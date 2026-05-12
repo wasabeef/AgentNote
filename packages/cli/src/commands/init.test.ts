@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -20,11 +28,129 @@ function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
+function withoutCodexThreadEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.CODEX_THREAD_ID;
+  return env;
+}
+
+function writeCodexTranscript(
+  codexHome: string,
+  sessionId: string,
+  cwd: string,
+  filePath: string,
+): string {
+  const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
+  mkdirSync(transcriptDir, { recursive: true });
+  const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-00-00-${sessionId}.jsonl`);
+  const baseTimestampMs = Date.now();
+  const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();
+  const patch = [
+    "*** Begin Patch",
+    `*** Add File: ${filePath}`,
+    "+export const cmuxEnvFallback = true;",
+    "*** End Patch",
+  ].join("\n");
+  writeFileSync(
+    transcriptPath,
+    `${[
+      JSON.stringify({
+        type: "session_meta",
+        timestamp: timestamp(0),
+        payload: { id: sessionId, cwd },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(1000),
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "add cmux env fallback" }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(2000),
+        payload: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "I will add the cmux fallback file." }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(3000),
+        payload: {
+          type: "function_call",
+          name: "apply_patch",
+          arguments: { patch },
+        },
+      }),
+    ].join("\n")}\n`,
+  );
+  return transcriptPath;
+}
+
+function writeCodexShellTranscript(
+  codexHome: string,
+  sessionId: string,
+  cwd: string,
+  prompt: string,
+  command: string,
+  baseTimestampMs = Date.now(),
+): string {
+  const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
+  mkdirSync(transcriptDir, { recursive: true });
+  const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-30-00-${sessionId}.jsonl`);
+  const timestamp = (offsetMs: number) => new Date(baseTimestampMs + offsetMs).toISOString();
+  writeFileSync(
+    transcriptPath,
+    `${[
+      JSON.stringify({
+        type: "session_meta",
+        timestamp: timestamp(0),
+        payload: { id: sessionId, cwd },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(1000),
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: prompt }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(2000),
+        payload: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "I will run the requested shell command." }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: timestamp(3000),
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          arguments: { cmd: command },
+        },
+      }),
+    ].join("\n")}\n`,
+  );
+  return transcriptPath;
+}
+
 describe("agentnote init", () => {
   let testDir: string;
+  let originalCodexThreadId: string | undefined;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
   before(() => {
+    originalCodexThreadId = process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_THREAD_ID;
     testDir = mkdtempSync(join(tmpdir(), "agentnote-init-"));
     execSync("git init", { cwd: testDir });
     execSync("git config user.email test@test.com", { cwd: testDir });
@@ -36,6 +162,11 @@ describe("agentnote init", () => {
   });
 
   after(() => {
+    if (originalCodexThreadId === undefined) {
+      delete process.env.CODEX_THREAD_ID;
+    } else {
+      process.env.CODEX_THREAD_ID = originalCodexThreadId;
+    }
     rmSync(testDir, { recursive: true, force: true });
   });
 
@@ -108,6 +239,14 @@ describe("agentnote init", () => {
     assert.ok(
       !postCommitHook.includes("npx --yes agent-note record"),
       "post-commit should not resolve an unpinned package at commit time",
+    );
+    assert.ok(
+      postCommitHook.includes('[ -n "$CODEX_THREAD_ID" ]'),
+      "post-commit should check the real Codex session environment variable",
+    );
+    assert.ok(
+      !postCommitHook.includes("ENV_CODEX_THREAD_ID"),
+      "post-commit should not leave TypeScript constant names in shell output",
     );
   });
 
@@ -322,6 +461,488 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       !message.includes(TRAILER_KEY),
       "fresh prompt-only sessions should not hijack plain terminal commits",
     );
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback records fresh Codex transcript sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-fallback-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const staleClaudeSessionId = "a1b2c3d4-7777-7777-7777-000000000777";
+    const staleClaudeSessionDir = join(
+      dir,
+      ".git",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
+      staleClaudeSessionId,
+    );
+    mkdirSync(staleClaudeSessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), staleClaudeSessionId);
+    writeFileSync(join(staleClaudeSessionDir, HEARTBEAT_FILE), String(Date.now()));
+    writeFileSync(join(staleClaudeSessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(staleClaudeSessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"unrelated prompt","turn":1}\n',
+    );
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/cmux-env.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(!message.includes(TRAILER_KEY), "env fallback should not inject a trailer");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores stale local prompts when the Codex transcript is fresh", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-transcript-only-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/stale-local-prompt.ts";
+    const oldFilePath = "src/old-package-task.ts";
+    const transcriptPath = writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    writeFileSync(
+      transcriptPath,
+      `${[
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2000-01-01T00:00:00Z",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "old package task" }],
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2000-01-01T00:00:01Z",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            arguments: {
+              patch: [
+                "*** Begin Patch",
+                `*** Add File: ${oldFilePath}`,
+                "+export const oldPackageTask = true;",
+                "*** End Patch",
+              ].join("\n"),
+            },
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2999-01-01T00:00:00Z",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "future debug prompt" }],
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          timestamp: "2999-01-01T00:00:01Z",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            arguments: {
+              patch: [
+                "*** Begin Patch",
+                `*** Update File: ${filePath}`,
+                "@@",
+                "-export const cmuxEnvFallback = true;",
+                "+export const futureDebug = true;",
+                "*** End Patch",
+              ].join("\n"),
+            },
+          },
+        }),
+      ].join("\n")}\n`,
+      { flag: "a" },
+    );
+
+    const codexSessionDir = join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, codexSessionId);
+    mkdirSync(codexSessionDir, { recursive: true });
+    writeFileSync(join(codexSessionDir, "agent"), "codex\n");
+    writeFileSync(join(codexSessionDir, TURN_FILE), "1196\n");
+    writeFileSync(
+      join(codexSessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-05-10T03:27:40Z","prompt":"old CodeRabbit task","prompt_id":"old-prompt","turn":1196}\n',
+    );
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+    writeFileSync(join(dir, oldFilePath), "export const oldPackageTask = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)} ${shellSingleQuote(oldFilePath)}`, {
+      cwd: dir,
+    });
+    execSync("git commit -m 'feat: transcript-only cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.attribution.method, "file");
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+    assert.equal(
+      entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "old CodeRabbit task",
+      ),
+      false,
+      "stale repo-local prompts should not be revived by env fallback",
+    );
+    assert.equal(
+      entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "old package task",
+      ),
+      false,
+      "transcript rows before the parent commit should not be selected",
+    );
+    assert.equal(
+      entry.interactions.some(
+        (interaction: { prompt?: string }) => interaction.prompt === "future debug prompt",
+      ),
+      false,
+      "transcript rows written after the commit should not be selected",
+    );
+    assert.deepEqual(entry.files, [
+      { path: oldFilePath, by_ai: false },
+      { path: filePath, by_ai: true },
+    ]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback recovers work prepared before the previous commit", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-prepared-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/prepared-before-parent.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+
+    writeFileSync(join(dir, "parent.txt"), "parent\n");
+    execSync("git add parent.txt", { cwd: dir });
+    execSync("git commit -m 'chore: unrelated parent'", {
+      cwd: dir,
+      env: withoutCodexThreadEnv(),
+    });
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: prepared env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores transcripts that only touch other files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-other-files-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const transcriptOnlyPath = "src/transcript-only.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, transcriptOnlyPath);
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, "human-only.ts"), "export const humanOnly = true;\n");
+    execSync("git add human-only.ts", { cwd: dir });
+    execSync("git commit -m 'chore: human only'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores read-only shell transcripts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-readonly-shell-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    writeCodexShellTranscript(
+      codexHome,
+      codexSessionId,
+      dir,
+      "inspect repository status",
+      "git status --short",
+    );
+
+    writeFileSync(join(dir, "manual.ts"), "export const manual = true;\n");
+    execSync("git add manual.ts", { cwd: dir });
+    execSync("git commit -m 'chore: manual edit'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores old unmatched mutating shell transcripts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-old-shell-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    writeCodexShellTranscript(
+      codexHome,
+      codexSessionId,
+      dir,
+      "old generated mutation",
+      "perl -pi -e s/old/new/g generated.ts",
+      Date.now() - 2 * 60 * 1000,
+    );
+
+    writeFileSync(join(dir, "parent.txt"), "parent\n");
+    execSync("git add parent.txt", { cwd: dir });
+    execSync("git commit -m 'chore: unrelated parent'", {
+      cwd: dir,
+      env: withoutCodexThreadEnv(),
+    });
+
+    writeFileSync(join(dir, "manual.ts"), "export const manual = true;\n");
+    execSync("git add manual.ts", { cwd: dir });
+    execSync("git commit -m 'chore: manual edit'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback keeps mutating shell transcripts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-mutating-shell-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    writeCodexShellTranscript(
+      codexHome,
+      codexSessionId,
+      dir,
+      "replace generated wording",
+      "perl -pi -e s/old/new/g generated.ts",
+    );
+
+    writeFileSync(join(dir, "generated.ts"), "export const generated = 'new';\n");
+    execSync("git add generated.ts", { cwd: dir });
+    execSync("git commit -m 'chore: generated wording'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.interactions[0].prompt, "replace generated wording");
+    assert.deepEqual(entry.files, [{ path: "generated.ts", by_ai: true }]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores stale Codex transcript sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-codex-env-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/stale-cmux-env.ts";
+    const transcriptPath = writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    utimesSync(transcriptPath, oldDate, oldDate);
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const staleCmuxEnvFallback = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'chore: stale cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+    assert.equal(
+      existsSync(join(dir, ".git", AGENTNOTE_DIR, SESSIONS_DIR, codexSessionId)),
+      false,
+      "stale environment candidates should not create empty session directories",
+    );
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores non-UUID Codex session ids", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-invalid-session-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "codex-session-not-a-uuid";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/invalid-env-session.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const invalidEnvSession = true;\n");
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'chore: invalid env session'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
     assert.throws(() => {
       execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
         cwd: dir,

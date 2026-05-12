@@ -54,9 +54,12 @@ Lo schema completo è in [Come funziona](./how-it-works/#note-schema).
 ## Cosa non viene salvato
 
 - L’intero workspace.
-- Tutti gli output dei shell command.
-- File attribuiti all'AI solo dai comandi shell.
+- Gli output dei shell command non vengono salvati come file evidence.
 - Dati inviati a un backend Agent Note.
+
+<Aside>
+  Con Agent che espongono transcripts affidabili, Agent Note può comunque produrre commit-level attribution da transcript evidence recente registrata al momento del commit, senza salvare output dei shell command.
+</Aside>
 
 ## Visibilità del team
 

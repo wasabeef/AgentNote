@@ -167,7 +167,7 @@ Agent Note 和 Entire 解決的是相關但不同的問題。
 | **Stop** | 記錄 stop 事件（heartbeat 會保持有效 —— Stop = response 結束，不是 session 結束） |
 
 <Aside>
-  Plain Git hooks 在注入 trailers 前要求 fresh session 和 file evidence。Prompt-only rescue 只保留給 commit command 在 Agent hook 內被觀測到的情況。
+  Plain Git hooks 在注入 trailers 前要求 fresh session 和 file evidence。如果目前的 Agent transcript 可信，即使沒有每個 prompt 的精確 file touch，Agent Note 也可以保留 commit-level attribution。
 </Aside>
 
 <Aside type="tip">

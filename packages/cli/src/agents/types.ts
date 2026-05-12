@@ -51,6 +51,7 @@ export interface TranscriptInteraction {
   files_touched?: string[];
   line_stats?: Record<string, { added: number; deleted: number }>;
   tools?: string[] | null;
+  mutation_tools?: string[] | null;
 }
 
 /** Agent-agnostic event shape consumed by the hook command. */
@@ -101,4 +102,7 @@ export interface AgentAdapter {
 
   /** Extract all prompt-response pairs from the agent's transcript. */
   extractInteractions(transcriptPath: string): Promise<TranscriptInteraction[]>;
+
+  /** Return an environment-provided current session id when the agent exposes one. */
+  readEnvironmentSessionId?(): string | null;
 }

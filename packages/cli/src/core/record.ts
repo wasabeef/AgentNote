@@ -59,6 +59,10 @@ type AgentnoteIgnorePattern = {
 const AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 const AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
+// Git commit timestamps and transcript JSONL writes can differ slightly.
+// Keep the window small enough to exclude post-commit debug prompts.
+const TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1000;
+const TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1000;
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -66,6 +70,7 @@ export async function recordCommitEntry(opts: {
   sessionId: string;
   transcriptPath?: string;
   requireAiFileEvidence?: boolean;
+  allowEnvironmentTranscriptFallback?: boolean;
 }): Promise<{ promptCount: number; aiRatio: number }> {
   const sessionDir = join(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -102,6 +107,8 @@ export async function recordCommitEntry(opts: {
   } catch {
     // Subject is only a prompt-trimming hint. Recording should still proceed.
   }
+  const commitTimestampMs = await readHeadCommitTimestampMs();
+  const parentCommitTimestampMs = await readHeadParentCommitTimestampMs();
   let commitDiffText = "";
   try {
     commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
@@ -263,6 +270,7 @@ export async function recordCommitEntry(opts: {
 
   let interactions: Interaction[];
   let transcriptLineCounts: LineCounts | undefined;
+  let useCommitLevelAttribution = false;
   // Session entries that contributed to this commit's interactions. Passed
   // to recordConsumedPairs so maxConsumedTurn advances even when no
   // file_change/pre_blob entries exist (e.g. Codex transcript-driven path).
@@ -277,6 +285,11 @@ export async function recordCommitEntry(opts: {
   if (transcriptPath) {
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
+      allInteractions = filterTranscriptInteractionsForCommitWindow(
+        allInteractions,
+        null,
+        commitTimestampMs,
+      );
     } catch (err) {
       if (!crossTurnCommit) throw err;
       // cross-turn: fall through with no interactions — handled below as prompts-only.
@@ -307,7 +320,7 @@ export async function recordCommitEntry(opts: {
   // Two restrictions keep this narrow:
   //   1. transcript must reference edits on other files — a shell-only
   //      Codex session legitimately wants the prompt/response preserved
-  //      even with no file attribution.
+  //      with commit-level file attribution.
   //   2. transcript must NOT reference commit files — legitimate AI work on
   //      this commit still goes through the pairing path below.
   const transcriptEditsCommit = allInteractions.some((i) =>
@@ -401,6 +414,7 @@ export async function recordCommitEntry(opts: {
       return { prompt: (entry.prompt as string) ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
+    useCommitLevelAttribution = true;
   } else if (transcriptPath && allInteractions.length > 0) {
     // Transcript-driven path: sessions that don't emit `file_change` events
     // (e.g. Codex) derive their causal window from transcript interactions.
@@ -414,6 +428,7 @@ export async function recordCommitEntry(opts: {
       consumedPromptState,
       currentTurn,
     );
+    let attributionTranscriptMatched = selectableTranscriptMatched;
     const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
       selectableTranscriptMatched,
       promptEntries,
@@ -484,31 +499,55 @@ export async function recordCommitEntry(opts: {
         toRecordedInteraction(i, commitFileSet, consumedPromptState),
       );
       useSelectableTranscriptAttribution = true;
-    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
+    } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
+      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
+        transcriptMatched,
+        parentCommitTimestampMs,
+      );
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        envTranscriptMatched,
+        commitFileSet,
+        consumedPromptState,
+      );
+      interactions = envMatched.map((i) =>
+        toRecordedInteraction(i, commitFileSet, consumedPromptState),
+      );
+      attributionTranscriptMatched = envMatched;
+      useSelectableTranscriptAttribution = true;
+    } else if (
+      !crossTurnCommit &&
+      transcriptMatched.length === 0 &&
+      canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)
+    ) {
+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback
+        ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs)
+        : allInteractions;
       interactions = selectTranscriptFallbackInteractions(
-        allInteractions,
+        fallbackSourceInteractions,
         commitFileSet,
         currentUnattributedToolPromptIds,
+        { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true },
       );
+      useCommitLevelAttribution = interactions.length > 0;
     } else {
       interactions = [];
     }
 
-    if (useSelectableTranscriptAttribution && selectableTranscriptMatched.length > 0) {
+    if (useSelectableTranscriptAttribution && attributionTranscriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
-          selectableTranscriptMatched.flatMap((i) =>
+          attributionTranscriptMatched.flatMap((i) =>
             filterInteractionCommitFiles(i, commitFileSet, consumedPromptState),
           ),
         ),
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         lineCountCommitFileSet,
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         consumedPromptState,
       );
       consumedTranscriptPromptFiles = collectConsumedTranscriptPromptFiles(
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         promptEntries,
         commitFileSet,
         consumedPromptState,
@@ -516,6 +555,13 @@ export async function recordCommitEntry(opts: {
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
+  }
+
+  // If the current Agent transcript proves tool-backed work but exact file
+  // touches are unavailable, keep the v0.2-style commit-level attribution.
+  // Per-prompt files_touched still stays empty because that data is not exact.
+  if (useCommitLevelAttribution && aiFiles.length === 0 && interactions.length > 0) {
+    aiFiles = commitFiles;
   }
 
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
@@ -728,6 +774,73 @@ function parseTimestampMs(value: unknown): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+async function readHeadCommitTimestampMs(): Promise<number | null> {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD"]));
+  } catch {
+    return null;
+  }
+}
+
+async function readHeadParentCommitTimestampMs(): Promise<number | null> {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD^"]));
+  } catch {
+    return null;
+  }
+}
+
+/** Keep transcript rows inside the parent-to-HEAD commit window when timestamps exist. */
+function filterTranscriptInteractionsForCommitWindow(
+  interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
+  commitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  const lowerBoundMs =
+    parentCommitTimestampMs === null
+      ? null
+      : parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  const upperBoundMs =
+    commitTimestampMs === null ? null : commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    if (interactionMs === null) return true;
+    if (lowerBoundMs !== null && interactionMs < lowerBoundMs) return false;
+    return upperBoundMs === null || interactionMs <= upperBoundMs;
+  });
+}
+
+/** Prefer parent-to-HEAD transcript evidence, but recover work prepared just before the parent. */
+function selectEnvironmentTranscriptSourceInteractions(
+  interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  const bounded = filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs);
+  return bounded.length > 0 ? bounded : interactions;
+}
+
+/** Keep transcript rows after the parent commit when that newer evidence exists. */
+function filterTranscriptInteractionsAfterParent(
+  interactions: TranscriptInteraction[],
+  parentCommitTimestampMs: number | null,
+): TranscriptInteraction[] {
+  if (parentCommitTimestampMs === null) return interactions;
+  const lowerBoundMs = parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs === null || interactionMs >= lowerBoundMs;
+  });
+}
+
+/** Env fallback can use unmatched transcript rows only when they are shell-only evidence. */
+function canUseUnmatchedTranscriptFallback(
+  allowEnvironmentTranscriptFallback: boolean | undefined,
+  interactions: TranscriptInteraction[],
+): boolean {
+  if (!allowEnvironmentTranscriptFallback) return true;
+  return !interactions.some((interaction) => (interaction.files_touched ?? []).length > 0);
+}
+
 /**
  * Convert an agent transcript row into the persisted interaction shape.
  *
@@ -773,12 +886,16 @@ function filterInteractionCommitFiles(
   );
 }
 
-/** Prefer tool-backed fallback rows without guessing shell-only file authorship. */
+/** Prefer tool-backed fallback rows when exact file touches are unavailable. */
 function selectTranscriptFallbackInteractions(
   interactions: TranscriptInteraction[],
   commitFileSet: Set<string>,
   preferredPromptIds = new Set<string>(),
+  opts: { requireMutationTool?: boolean } = {},
 ): Interaction[] {
+  const isEligible = (interaction: TranscriptInteraction) =>
+    (interaction.tools?.length ?? 0) > 0 &&
+    (!opts.requireMutationTool || hasMutationToolEvidence(interaction));
   const preferredToolBacked =
     preferredPromptIds.size > 0
       ? [...interactions]
@@ -787,18 +904,41 @@ function selectTranscriptFallbackInteractions(
             (interaction) =>
               !!interaction.prompt_id &&
               preferredPromptIds.has(interaction.prompt_id) &&
-              (interaction.tools?.length ?? 0) > 0,
+              isEligible(interaction),
           )
       : undefined;
   if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
 
-  const latestToolBacked = [...interactions]
-    .reverse()
-    .find((interaction) => (interaction.tools?.length ?? 0) > 0);
+  const latestToolBacked = [...interactions].reverse().find(isEligible);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
 }
 
-/** Current-window tool turns without file evidence, kept as prompt-only notes. */
+function hasMutationToolEvidence(interaction: TranscriptInteraction): boolean {
+  return (interaction.mutation_tools?.length ?? 0) > 0;
+}
+
+/** Select the newest transcript rows needed to cover commit files for env fallback. */
+function selectEnvironmentTranscriptMatchedInteractions(
+  interactions: TranscriptInteraction[],
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+): TranscriptInteraction[] {
+  const uncoveredFiles = new Set(commitFileSet);
+  const selected: TranscriptInteraction[] = [];
+
+  for (const interaction of [...interactions].reverse()) {
+    const files = filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState);
+    if (!files.some((file) => uncoveredFiles.has(file))) continue;
+
+    selected.push(interaction);
+    for (const file of files) uncoveredFiles.delete(file);
+    if (uncoveredFiles.size === 0) break;
+  }
+
+  return selected.reverse();
+}
+
+/** Current-window tool turns without per-file evidence. */
 function collectCurrentUnattributedToolPromptIds(
   interactions: TranscriptInteraction[],
   promptEntries: Record<string, unknown>[],

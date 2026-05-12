@@ -54,9 +54,12 @@ Agent Note создан для команд, которым нужна AI review
 ## Что не хранится
 
 - Весь workspace.
-- Все shell command outputs.
-- Файлы, приписанные AI только по shell command.
+- Shell command output не сохраняется как file evidence.
 - Данные, отправленные в Agent Note backend.
+
+<Aside>
+  Для Agents с надежными transcripts Agent Note может все равно создать commit-level attribution из свежей transcript evidence, записанной во время commit, не сохраняя shell command output.
+</Aside>
 
 ## Видимость для команды
 

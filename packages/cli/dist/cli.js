@@ -95,11 +95,12 @@ async function git(args2, options) {
 async function gitSafe(args2, options) {
   try {
     const stdout = await git(args2, options);
-    return { stdout, exitCode: 0 };
+    return { stdout, stderr: "", exitCode: 0 };
   } catch (err) {
     const e = err;
     return {
       stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+      stderr: typeof e.stderr === "string" ? e.stderr.trim() : "",
       exitCode: typeof e.code === "number" ? e.code : 1
     };
   }
@@ -700,15 +701,18 @@ var claude = {
 };
 
 // src/agents/codex.ts
-import { existsSync as existsSync2, readdirSync as readdirSync2, readFileSync } from "node:fs";
+import { createReadStream, existsSync as existsSync2, readdirSync as readdirSync2, readFileSync } from "node:fs";
 import { mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
 import { isAbsolute, join as join2, relative, resolve as resolve2, sep as sep2 } from "node:path";
+import { createInterface } from "node:readline";
 var CONFIG_REL_PATH = ".codex/config.toml";
 var ENV_CODEX_HOME = "CODEX_HOME";
+var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var HOOKS_REL_PATH = ".codex/hooks.json";
 var HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
 var TRANSCRIPT_PREVIEW_CHARS = 4096;
+var SHELL_MUTATION_COMMAND_RE = /(^|[;&|]\s*)(apply_patch|cat\s+>|cp\b|install\b|mkdir\b|mv\b|npm\s+(audit\s+fix|dedupe|install|update|version)\b|perl\s+-[^\n;&|]*i|pnpm\s+(add|install|update)\b|rm\b|sed\s+-[^\n;&|]*i|tee\b|touch\b|yarn\s+(add|install|upgrade)\b)|(\s|^)(>|>>)\s*\S+/;
 var CODEX_HOOK_EVENTS = {
   sessionStart: "SessionStart",
   userPromptSubmit: "UserPromptSubmit",
@@ -776,6 +780,29 @@ function collectPatchStrings(value, seen = /* @__PURE__ */ new Set()) {
     ...collectPatchStrings(value.arguments, seen),
     ...collectPatchStrings(value.content, seen),
     ...collectPatchStrings(value.text, seen)
+  ];
+}
+function collectCommandStrings(value, seen = /* @__PURE__ */ new Set()) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      const parsed = parseJsonString(value);
+      if (parsed !== value) return collectCommandStrings(parsed, seen);
+    }
+    return [trimmed];
+  }
+  if (!value || seen.has(value)) return [];
+  seen.add(value);
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectCommandStrings(item, seen));
+  }
+  if (!isRecord(value)) return [];
+  return [
+    ...collectCommandStrings(value.cmd, seen),
+    ...collectCommandStrings(value.command, seen),
+    ...collectCommandStrings(value.script, seen),
+    ...collectCommandStrings(value.shell, seen)
   ];
 }
 function readTranscriptSessionId(candidate) {
@@ -961,6 +988,15 @@ function appendInteractionTool(interaction, toolName) {
   if (tools.includes(toolName)) return;
   interaction.tools = [...tools, toolName];
 }
+function appendInteractionMutationTool(interaction, toolName) {
+  if (!toolName) return;
+  const tools = interaction.mutation_tools ?? [];
+  if (tools.includes(toolName)) return;
+  interaction.mutation_tools = [...tools, toolName];
+}
+function isMutatingShellCommand(command2) {
+  return SHELL_MUTATION_COMMAND_RE.test(command2);
+}
 var codex = {
   name: AGENT_NAMES.codex,
   settingsRelPath: CONFIG_REL_PATH,
@@ -1063,6 +1099,9 @@ var codex = {
     if (!existsSync2(sessionsDir)) return null;
     return findTranscriptCandidate(sessionsDir, sessionId);
   },
+  readEnvironmentSessionId() {
+    return process.env[ENV_CODEX_THREAD_ID] ?? null;
+  },
   async extractInteractions(transcriptPath) {
     if (!isValidTranscriptPath2(transcriptPath)) {
       throw new Error(`Invalid Codex transcript path: ${transcriptPath}`);
@@ -1070,85 +1109,94 @@ var codex = {
     if (!existsSync2(transcriptPath)) {
       throw new Error(`Codex transcript not found: ${transcriptPath}`);
     }
-    let content;
-    try {
-      content = await readFile2(transcriptPath, TEXT_ENCODING);
-    } catch {
-      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
-    }
     const interactions = [];
     let current = null;
     let sessionCwd;
-    for (const rawLine of content.split("\n")) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      let entry;
-      try {
-        entry = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
-        sessionCwd = entry.payload.cwd;
-        continue;
-      }
-      if (entry.type !== "response_item" || !entry.payload) continue;
-      const payload = entry.payload;
-      const payloadType = typeof payload.type === "string" ? payload.type : void 0;
-      const payloadRole = typeof payload.role === "string" ? payload.role : void 0;
-      if (payloadType === "message" && payloadRole === "user") {
-        const prompt = collectMessageText(payload.content).join("\n");
-        if (!prompt) continue;
-        if (current) interactions.push(current);
-        current = { prompt, response: null };
-        if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
-        continue;
-      }
-      if (!current) continue;
-      if (payloadType === "message" && payloadRole === "assistant") {
-        const response = collectMessageText(payload.content).join("\n");
-        if (response) {
-          current.response = current.response ? `${current.response}
+    const lines = createInterface({
+      input: createReadStream(transcriptPath, { encoding: TEXT_ENCODING }),
+      crlfDelay: Number.POSITIVE_INFINITY
+    });
+    try {
+      for await (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        let entry;
+        try {
+          entry = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (entry.type === "session_meta" && typeof entry.payload?.cwd === "string") {
+          sessionCwd = entry.payload.cwd;
+          continue;
+        }
+        if (entry.type !== "response_item" || !entry.payload) continue;
+        const payload = entry.payload;
+        const payloadType = typeof payload.type === "string" ? payload.type : void 0;
+        const payloadRole = typeof payload.role === "string" ? payload.role : void 0;
+        if (payloadType === "message" && payloadRole === "user") {
+          const prompt = collectMessageText(payload.content).join("\n");
+          if (!prompt) continue;
+          if (current) interactions.push(current);
+          current = { prompt, response: null };
+          if (typeof entry.timestamp === "string") current.timestamp = entry.timestamp;
+          continue;
+        }
+        if (!current) continue;
+        if (payloadType === "message" && payloadRole === "assistant") {
+          const response = collectMessageText(payload.content).join("\n");
+          if (response) {
+            current.response = current.response ? `${current.response}
 ${response}` : response;
-        }
-        continue;
-      }
-      const toolName = typeof payload.name === "string" ? payload.name : typeof payload.call_name === "string" ? payload.call_name : void 0;
-      if ((payloadType === "custom_tool_call" || payloadType === "function_call" || payloadType === "tool_use") && toolName) {
-        appendInteractionTool(current, toolName);
-      }
-      if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
-        const patchInputs = [
-          ...collectPatchStrings(payload.input),
-          ...collectPatchStrings(payload.arguments)
-        ];
-        const files = [];
-        const fileSeen = /* @__PURE__ */ new Set();
-        current.line_stats = current.line_stats ?? {};
-        for (const patchInput of patchInputs) {
-          for (const file of extractFilesFromApplyPatch(patchInput)) {
-            const normalized = normalizeInteractionFilePath(file, sessionCwd);
-            if (!normalized) continue;
-            appendUnique(files, fileSeen, normalized);
           }
-          const lineStats = extractLineStatsFromApplyPatch(patchInput);
-          for (const [file, stats] of Object.entries(lineStats)) {
-            const normalized = normalizeInteractionFilePath(file, sessionCwd);
-            if (!normalized) continue;
-            const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
-            current.line_stats[normalized] = {
-              added: previous.added + stats.added,
-              deleted: previous.deleted + stats.deleted
-            };
+          continue;
+        }
+        const toolName = typeof payload.name === "string" ? payload.name : typeof payload.call_name === "string" ? payload.call_name : void 0;
+        if ((payloadType === "custom_tool_call" || payloadType === "function_call" || payloadType === "tool_use") && toolName) {
+          appendInteractionTool(current, toolName);
+          if (toolName === "exec_command" && [
+            ...collectCommandStrings(payload.input),
+            ...collectCommandStrings(payload.arguments)
+          ].some(isMutatingShellCommand)) {
+            appendInteractionMutationTool(current, toolName);
           }
         }
-        if (files.length > 0) {
-          current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], ...files])];
-        }
-        if (Object.keys(current.line_stats).length === 0) {
-          delete current.line_stats;
+        if ((payloadType === "custom_tool_call" || payloadType === "function_call") && toolName === "apply_patch") {
+          const patchInputs = [
+            ...collectPatchStrings(payload.input),
+            ...collectPatchStrings(payload.arguments)
+          ];
+          const files = [];
+          const fileSeen = /* @__PURE__ */ new Set();
+          current.line_stats = current.line_stats ?? {};
+          for (const patchInput of patchInputs) {
+            for (const file of extractFilesFromApplyPatch(patchInput)) {
+              const normalized = normalizeInteractionFilePath(file, sessionCwd);
+              if (!normalized) continue;
+              appendUnique(files, fileSeen, normalized);
+            }
+            const lineStats = extractLineStatsFromApplyPatch(patchInput);
+            for (const [file, stats] of Object.entries(lineStats)) {
+              const normalized = normalizeInteractionFilePath(file, sessionCwd);
+              if (!normalized) continue;
+              const previous = current.line_stats[normalized] ?? { added: 0, deleted: 0 };
+              current.line_stats[normalized] = {
+                added: previous.added + stats.added,
+                deleted: previous.deleted + stats.deleted
+              };
+            }
+          }
+          if (files.length > 0) {
+            current.files_touched = [.../* @__PURE__ */ new Set([...current.files_touched ?? [], ...files])];
+          }
+          appendInteractionMutationTool(current, toolName);
+          if (Object.keys(current.line_stats).length === 0) {
+            delete current.line_stats;
+          }
         }
       }
+    } catch {
+      throw new Error(`Failed to read Codex transcript: ${transcriptPath}`);
     }
     if (current) interactions.push(current);
     return interactions;
@@ -3369,7 +3417,10 @@ async function hasRecordableSessionData(sessionDir) {
 // src/core/storage.ts
 async function writeNote(commitSha, data) {
   const body = JSON.stringify(data, null, 2);
-  await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+  const result = await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || "failed to write Agent Note git note");
+  }
 }
 async function readNote(commitSha) {
   const { stdout, exitCode } = await gitSafe(["notes", `--ref=${NOTES_REF}`, "show", commitSha]);
@@ -3385,6 +3436,8 @@ async function readNote(commitSha) {
 var AGENTNOTE_IGNORE_MAX_PATTERN_LENGTH = 200;
 var AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 var AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
+var TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1e3;
+var TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1e3;
 async function recordCommitEntry(opts) {
   const sessionDir = join6(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -3395,7 +3448,15 @@ async function recordCommitEntry(opts) {
   if (existingNote) return { promptCount: 0, aiRatio: 0 };
   let commitFiles = [];
   try {
-    const raw = await git(["diff-tree", "-z", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+    const raw = await git([
+      "diff-tree",
+      "-z",
+      "--root",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "HEAD"
+    ]);
     commitFiles = raw.split("\0").filter(Boolean);
   } catch {
   }
@@ -3405,6 +3466,8 @@ async function recordCommitEntry(opts) {
     commitSubject = await git(["show", "-s", "--format=%s", "HEAD"]);
   } catch {
   }
+  const commitTimestampMs = await readHeadCommitTimestampMs();
+  const parentCommitTimestampMs = await readHeadParentCommitTimestampMs();
   let commitDiffText = "";
   try {
     commitDiffText = await git(["show", "--format=", "--patch", "--unified=0", "HEAD"]);
@@ -3518,12 +3581,18 @@ async function recordCommitEntry(opts) {
   }
   let interactions;
   let transcriptLineCounts;
+  let useCommitLevelAttribution = false;
   let consumedPromptEntries = [];
   let consumedTranscriptPromptFiles = [];
   let allInteractions = [];
   if (transcriptPath) {
     try {
       allInteractions = await adapter.extractInteractions(transcriptPath);
+      allInteractions = filterTranscriptInteractionsForCommitWindow(
+        allInteractions,
+        null,
+        commitTimestampMs
+      );
     } catch (err) {
       if (!crossTurnCommit) throw err;
     }
@@ -3601,6 +3670,7 @@ async function recordCommitEntry(opts) {
       return { prompt: entry2.prompt ?? "", response: null };
     });
     consumedPromptEntries = promptOnlyFallbackEntries.consumed;
+    useCommitLevelAttribution = true;
   } else if (transcriptPath && allInteractions.length > 0) {
     const transcriptMatched = allInteractions.filter(
       (i) => (i.files_touched ?? []).some((f) => commitFileSet.has(f))
@@ -3612,6 +3682,7 @@ async function recordCommitEntry(opts) {
       consumedPromptState,
       currentTurn
     );
+    let attributionTranscriptMatched = selectableTranscriptMatched;
     const transcriptPrimaryTurns = await selectTranscriptPrimaryTurns(
       selectableTranscriptMatched,
       promptEntries,
@@ -3668,30 +3739,48 @@ async function recordCommitEntry(opts) {
         (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
       );
       useSelectableTranscriptAttribution = true;
-    } else if (!crossTurnCommit && transcriptMatched.length === 0) {
-      interactions = selectTranscriptFallbackInteractions(
-        allInteractions,
-        commitFileSet,
-        currentUnattributedToolPromptIds
+    } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
+      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
+        transcriptMatched,
+        parentCommitTimestampMs
       );
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        envTranscriptMatched,
+        commitFileSet,
+        consumedPromptState
+      );
+      interactions = envMatched.map(
+        (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
+      );
+      attributionTranscriptMatched = envMatched;
+      useSelectableTranscriptAttribution = true;
+    } else if (!crossTurnCommit && transcriptMatched.length === 0 && canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)) {
+      const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs) : allInteractions;
+      interactions = selectTranscriptFallbackInteractions(
+        fallbackSourceInteractions,
+        commitFileSet,
+        currentUnattributedToolPromptIds,
+        { requireMutationTool: opts.allowEnvironmentTranscriptFallback === true }
+      );
+      useCommitLevelAttribution = interactions.length > 0;
     } else {
       interactions = [];
     }
-    if (useSelectableTranscriptAttribution && selectableTranscriptMatched.length > 0) {
+    if (useSelectableTranscriptAttribution && attributionTranscriptMatched.length > 0) {
       aiFiles = [
         ...new Set(
-          selectableTranscriptMatched.flatMap(
+          attributionTranscriptMatched.flatMap(
             (i) => filterInteractionCommitFiles(i, commitFileSet, consumedPromptState)
           )
         )
       ];
       transcriptLineCounts = await resolveTranscriptLineCounts(
         lineCountCommitFileSet,
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         consumedPromptState
       );
       consumedTranscriptPromptFiles = collectConsumedTranscriptPromptFiles(
-        selectableTranscriptMatched,
+        attributionTranscriptMatched,
         promptEntries,
         commitFileSet,
         consumedPromptState
@@ -3699,6 +3788,9 @@ async function recordCommitEntry(opts) {
     }
   } else {
     interactions = prompts.map((p) => ({ prompt: p, response: null }));
+  }
+  if (useCommitLevelAttribution && aiFiles.length === 0 && interactions.length > 0) {
+    aiFiles = commitFiles;
   }
   await fillInteractionResponsesFromEvents(sessionDir, relevantPromptEntries, interactions);
   await attachInteractionContexts(
@@ -3816,6 +3908,46 @@ function parseTimestampMs(value) {
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? null : parsed;
 }
+async function readHeadCommitTimestampMs() {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD"]));
+  } catch {
+    return null;
+  }
+}
+async function readHeadParentCommitTimestampMs() {
+  try {
+    return parseTimestampMs(await git(["show", "-s", "--format=%cI", "HEAD^"]));
+  } catch {
+    return null;
+  }
+}
+function filterTranscriptInteractionsForCommitWindow(interactions, parentCommitTimestampMs, commitTimestampMs) {
+  const lowerBoundMs = parentCommitTimestampMs === null ? null : parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  const upperBoundMs = commitTimestampMs === null ? null : commitTimestampMs + TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    if (interactionMs === null) return true;
+    if (lowerBoundMs !== null && interactionMs < lowerBoundMs) return false;
+    return upperBoundMs === null || interactionMs <= upperBoundMs;
+  });
+}
+function selectEnvironmentTranscriptSourceInteractions(interactions, parentCommitTimestampMs) {
+  const bounded = filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs);
+  return bounded.length > 0 ? bounded : interactions;
+}
+function filterTranscriptInteractionsAfterParent(interactions, parentCommitTimestampMs) {
+  if (parentCommitTimestampMs === null) return interactions;
+  const lowerBoundMs = parentCommitTimestampMs - TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS;
+  return interactions.filter((interaction) => {
+    const interactionMs = parseTimestampMs(interaction.timestamp);
+    return interactionMs === null || interactionMs >= lowerBoundMs;
+  });
+}
+function canUseUnmatchedTranscriptFallback(allowEnvironmentTranscriptFallback, interactions) {
+  if (!allowEnvironmentTranscriptFallback) return true;
+  return !interactions.some((interaction) => (interaction.files_touched ?? []).length > 0);
+}
 function toRecordedInteraction(interaction, commitFileSet, consumedPromptState) {
   const recorded = {
     prompt: interaction.prompt,
@@ -3842,13 +3974,29 @@ function filterInteractionCommitFiles(interaction, commitFileSet, consumedPrompt
     (file) => !consumedPromptState.promptFilePairs.has(promptFilePairKey(promptId, file))
   );
 }
-function selectTranscriptFallbackInteractions(interactions, commitFileSet, preferredPromptIds = /* @__PURE__ */ new Set()) {
+function selectTranscriptFallbackInteractions(interactions, commitFileSet, preferredPromptIds = /* @__PURE__ */ new Set(), opts = {}) {
+  const isEligible = (interaction) => (interaction.tools?.length ?? 0) > 0 && (!opts.requireMutationTool || hasMutationToolEvidence(interaction));
   const preferredToolBacked = preferredPromptIds.size > 0 ? [...interactions].reverse().find(
-    (interaction) => !!interaction.prompt_id && preferredPromptIds.has(interaction.prompt_id) && (interaction.tools?.length ?? 0) > 0
+    (interaction) => !!interaction.prompt_id && preferredPromptIds.has(interaction.prompt_id) && isEligible(interaction)
   ) : void 0;
   if (preferredToolBacked) return [toRecordedInteraction(preferredToolBacked, commitFileSet)];
-  const latestToolBacked = [...interactions].reverse().find((interaction) => (interaction.tools?.length ?? 0) > 0);
+  const latestToolBacked = [...interactions].reverse().find(isEligible);
   return latestToolBacked ? [toRecordedInteraction(latestToolBacked, commitFileSet)] : [];
+}
+function hasMutationToolEvidence(interaction) {
+  return (interaction.mutation_tools?.length ?? 0) > 0;
+}
+function selectEnvironmentTranscriptMatchedInteractions(interactions, commitFileSet, consumedPromptState) {
+  const uncoveredFiles = new Set(commitFileSet);
+  const selected = [];
+  for (const interaction of [...interactions].reverse()) {
+    const files = filterInteractionCommitFiles(interaction, commitFileSet, consumedPromptState);
+    if (!files.some((file) => uncoveredFiles.has(file))) continue;
+    selected.push(interaction);
+    for (const file of files) uncoveredFiles.delete(file);
+    if (uncoveredFiles.size === 0) break;
+  }
+  return selected.reverse();
 }
 function collectCurrentUnattributedToolPromptIds(interactions, promptEntries, maxConsumedTurn, currentTurn) {
   const candidatePromptIds = /* @__PURE__ */ new Set();
@@ -4744,10 +4892,13 @@ async function sessionFile() {
 
 // src/commands/record.ts
 import { existsSync as existsSync8 } from "node:fs";
-import { readFile as readFile8 } from "node:fs/promises";
+import { mkdir as mkdir5, readFile as readFile8, stat as stat2 } from "node:fs/promises";
 import { join as join8 } from "node:path";
 var FALLBACK_HEAD_FLAG = "--fallback-head";
+var FALLBACK_ENV_FLAG = "--fallback-env";
+var ENV_AGENTNOTE_DEBUG = "AGENTNOTE_DEBUG";
 var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+var UUID_SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
 var RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"];
 async function record(args2) {
@@ -4756,10 +4907,15 @@ async function record(args2) {
       await recordHeadFallback();
       return;
     }
+    if (args2[0] === FALLBACK_ENV_FLAG) {
+      await recordEnvironmentFallback();
+      return;
+    }
     const sessionId = args2[0];
     if (!sessionId) return;
     await recordCommitEntry({ agentnoteDirPath: await agentnoteDir(), sessionId });
-  } catch {
+  } catch (err) {
+    console.error(`agent-note: warning: recording failed: ${err.message}`);
   }
 }
 async function recordHeadFallback() {
@@ -4777,12 +4933,81 @@ async function recordHeadFallback() {
     requireAiFileEvidence: true
   });
 }
+async function recordEnvironmentFallback() {
+  if (await readHeadTrailerSessionId()) {
+    debugRecord("env fallback skipped: HEAD already has trailer");
+    return;
+  }
+  const agentnoteDirPath = await agentnoteDir();
+  const sessionId = await resolveEnvironmentSessionId(agentnoteDirPath);
+  if (!sessionId) {
+    debugRecord("env fallback skipped: no fresh environment session");
+    return;
+  }
+  const result = await recordCommitEntry({
+    agentnoteDirPath,
+    sessionId,
+    allowEnvironmentTranscriptFallback: true
+  });
+  debugRecord(`env fallback recorded ${result.promptCount} prompt(s), aiRatio=${result.aiRatio}`);
+}
 async function readActiveSessionId(agentnoteDirPath) {
   const activeSessionPath = join8(agentnoteDirPath, SESSION_FILE);
   if (!existsSync8(activeSessionPath)) return null;
   const sessionId = (await readFile8(activeSessionPath, TEXT_ENCODING)).trim();
   if (sessionId === "." || sessionId === "..") return null;
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+async function resolveEnvironmentSessionId(agentnoteDirPath) {
+  for (const agentName of listAgents()) {
+    const candidate = await resolveAgentEnvironmentSession(agentnoteDirPath, agentName);
+    if (candidate) return candidate;
+  }
+  return null;
+}
+async function resolveAgentEnvironmentSession(agentnoteDirPath, agentName) {
+  const adapter = getAgent(agentName);
+  const sessionId = sanitizeSessionId(adapter.readEnvironmentSessionId?.() ?? void 0);
+  if (!sessionId) return null;
+  const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, sessionId);
+  const existingAgent = await readSessionAgent(sessionDir);
+  if (existingAgent && existingAgent !== agentName) return null;
+  const savedTranscriptPath = await readSessionTranscriptPath(sessionDir);
+  const transcriptPath = savedTranscriptPath ?? adapter.findTranscript(sessionId);
+  if (!await hasFreshEnvironmentEvidence(sessionDir, transcriptPath)) {
+    debugRecord(`env fallback skipped: no fresh evidence for ${agentName} ${sessionId}`);
+    return null;
+  }
+  await mkdir5(sessionDir, { recursive: true });
+  if (!existingAgent) await writeSessionAgent(sessionDir, agentName);
+  if (!savedTranscriptPath && transcriptPath)
+    await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  return sessionId;
+}
+function debugRecord(message) {
+  if (process.env[ENV_AGENTNOTE_DEBUG]) console.error(`agent-note: debug: ${message}`);
+}
+function sanitizeSessionId(value) {
+  const sessionId = value?.trim();
+  if (!sessionId || sessionId === "." || sessionId === "..") return null;
+  return UUID_SESSION_ID_RE.test(sessionId) ? sessionId.toLowerCase() : null;
+}
+async function hasFreshEnvironmentEvidence(sessionDir, transcriptPath) {
+  if (await hasRecordableSessionData(sessionDir) && await isFreshFile(join8(sessionDir, HEARTBEAT_FILE))) {
+    return true;
+  }
+  if (transcriptPath && await isFreshFile(transcriptPath)) return true;
+  return false;
+}
+async function isFreshFile(filePath) {
+  try {
+    const stats = await stat2(filePath);
+    if (!stats.isFile()) return false;
+    const ageMs = Date.now() - stats.mtimeMs;
+    return ageMs >= 0 && ageMs <= HEARTBEAT_TTL_SECONDS * MILLISECONDS_PER_SECOND;
+  } catch {
+    return false;
+  }
 }
 async function readHeadCommittedBlobs() {
   const raw = await git(["diff-tree", "-z", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
@@ -4873,6 +5098,7 @@ async function commit(args2) {
   } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
+      await recordEnvironmentFallback();
     } catch (err) {
       console.error(`agent-note: warning: fallback recording failed: ${err.message}`);
     }
@@ -4886,12 +5112,14 @@ import { join as join11 } from "node:path";
 
 // src/commands/init.ts
 import { existsSync as existsSync10 } from "node:fs";
-import { chmod, mkdir as mkdir5, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
+import { chmod, mkdir as mkdir6, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
 import { isAbsolute as isAbsolute2, join as join10, resolve as resolve5 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 var TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
+var ENV_CODEX_THREAD_ID2 = "CODEX_THREAD_ID";
+var SHELL_CODEX_THREAD_ID = `$${ENV_CODEX_THREAD_ID2}`;
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -5027,6 +5255,8 @@ if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
   if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
     SESSION_ID="--fallback-head"
+  elif [ -n "${SHELL_CODEX_THREAD_ID}" ]; then
+    SESSION_ID="--fallback-env"
   else
     exit 0
   fi
@@ -5091,7 +5321,7 @@ async function init(args2) {
   }
   const repoRoot3 = await root();
   const results = [];
-  await mkdir5(await agentnoteDir(), { recursive: true });
+  await mkdir6(await agentnoteDir(), { recursive: true });
   if (!skipHooks && !actionOnly) {
     for (const agentName of agents) {
       const adapter = getAgent(agentName);
@@ -5109,7 +5339,7 @@ async function init(args2) {
   if (!skipGitHooks && !actionOnly) {
     await installLocalCliShim(await agentnoteDir());
     const hookDir = await resolveHookDir(repoRoot3);
-    await mkdir5(hookDir, { recursive: true });
+    await mkdir6(hookDir, { recursive: true });
     const installed = await installGitHook(
       hookDir,
       PREPARE_COMMIT_MSG_HOOK,
@@ -5130,7 +5360,7 @@ async function init(args2) {
   if (!skipAction && !hooksOnly) {
     const workflowDir = join10(repoRoot3, ".github", "workflows");
     const prReportWorkflowPath = join10(workflowDir, PR_REPORT_WORKFLOW_FILENAME);
-    await mkdir5(workflowDir, { recursive: true });
+    await mkdir6(workflowDir, { recursive: true });
     if (existsSync10(prReportWorkflowPath)) {
       results.push(
         `  \xB7 workflow already exists at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`
@@ -5236,7 +5466,7 @@ async function installLocalCliShim(agentnoteDirPath) {
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;
-  await mkdir5(shimDir, { recursive: true });
+  await mkdir6(shimDir, { recursive: true });
   await writeFile7(shimPath, shim);
   await chmod(shimPath, 493);
 }
@@ -5379,7 +5609,7 @@ async function deinit(args2) {
 // src/commands/hook.ts
 import { randomUUID } from "node:crypto";
 import { existsSync as existsSync13 } from "node:fs";
-import { mkdir as mkdir6, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
+import { mkdir as mkdir7, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, join as join13, relative as relative2 } from "node:path";
 
 // src/core/rotate.ts
@@ -5506,7 +5736,7 @@ async function hook(args2 = []) {
   }
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join13(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
-  await mkdir6(sessionDir, { recursive: true });
+  await mkdir7(sessionDir, { recursive: true });
   if (!(adapter.name === AGENT_NAMES.gemini && event.kind === NORMALIZED_EVENT_KINDS.stop)) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
@@ -6640,7 +6870,7 @@ async function session(sessionId) {
 }
 
 // src/commands/show.ts
-import { stat as stat2 } from "node:fs/promises";
+import { stat as stat3 } from "node:fs/promises";
 import { join as join15 } from "node:path";
 var DEFAULT_COMMIT_REF = "HEAD";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
@@ -6716,7 +6946,7 @@ async function show(commitRef) {
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
-    const stats = await stat2(transcriptPath);
+    const stats = await stat3(transcriptPath);
     const sizeKb = (stats.size / BYTES_PER_KILOBYTE).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }
