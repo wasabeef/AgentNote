@@ -1,16 +1,29 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import type { AgentnoteEntry } from "../core/entry.js";
+import { git as runGit } from "../git.js";
 
 type CliCase = {
   args: string[];
   includes?: RegExp;
   code?: number;
 };
+
+const CLI_ENV_PASSTHROUGH_KEYS = [
+  "PATH",
+  "Path",
+  "NODE_ENV",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "LANG",
+  "LC_ALL",
+] as const;
+const AGENT_ENV_PREFIX_RE = /^(AGENTNOTE_|CODEX_|CLAUDE_|CURSOR_|GEMINI_)/;
 
 describe("agent-note dist CLI e2e smoke", () => {
   const cliPath = join(process.cwd(), "dist", "cli.js");
@@ -22,7 +35,7 @@ describe("agent-note dist CLI e2e smoke", () => {
   let followupCommit = "";
   let scopedCommit = "";
 
-  before(() => {
+  before(async () => {
     assert.equal(
       existsSync(cliPath),
       true,
@@ -31,25 +44,25 @@ describe("agent-note dist CLI e2e smoke", () => {
     testDir = mkdtempSync(join(tmpdir(), "agentnote-e2e-smoke-"));
     homeDir = join(testDir, ".home");
     mkdirSync(homeDir, { recursive: true });
-    git(["init"]);
-    git(["config", "user.email", "e2e@example.com"]);
-    git(["config", "user.name", "Agent Note E2E"]);
+    await git(["init"]);
+    await git(["config", "user.email", "e2e@example.com"]);
+    await git(["config", "user.name", "Agent Note E2E"]);
 
     mkdirSync(join(testDir, "src"), { recursive: true });
     mkdirSync(join(testDir, "docs"), { recursive: true });
     writeFileSync(join(testDir, "README.md"), "# E2E\n\nSeed\n");
-    git(["add", "README.md"]);
-    git(["commit", "-m", "chore: seed readme"]);
-    baseCommit = gitOutput(["rev-parse", "HEAD"]);
+    await git(["add", "README.md"]);
+    await git(["commit", "-m", "chore: seed readme"]);
+    baseCommit = await gitOutput(["rev-parse", "HEAD"]);
 
     writeFileSync(
       join(testDir, "src", "app.ts"),
       "export const greeting = 'hello';\nexport const label = 'Agent Note';\n",
     );
-    git(["add", "src/app.ts"]);
-    git(["commit", "-m", "feat: add app label"]);
-    featureCommit = gitOutput(["rev-parse", "HEAD"]);
-    addNote(featureCommit, {
+    await git(["add", "src/app.ts"]);
+    await git(["commit", "-m", "feat: add app label"]);
+    featureCommit = await gitOutput(["rev-parse", "HEAD"]);
+    await addNote(featureCommit, {
       v: 1,
       agent: "codex",
       session_id: "11111111-2222-4333-8444-555555555555",
@@ -71,10 +84,10 @@ describe("agent-note dist CLI e2e smoke", () => {
       "export const greeting = 'hello';\nexport const label = 'Agent Note';\nexport const ready = true;\n",
     );
     writeFileSync(join(testDir, "docs", "space file.md"), "# Space File\n\nReady\n");
-    git(["add", "src/app.ts", "docs/space file.md"]);
-    git(["commit", "-m", "fix: mark app ready"]);
-    followupCommit = gitOutput(["rev-parse", "HEAD"]);
-    addNote(followupCommit, {
+    await git(["add", "src/app.ts", "docs/space file.md"]);
+    await git(["commit", "-m", "fix: mark app ready"]);
+    followupCommit = await gitOutput(["rev-parse", "HEAD"]);
+    await addNote(followupCommit, {
       v: 1,
       agent: "claude",
       session_id: "22222222-3333-4444-8555-666666666666",
@@ -96,10 +109,10 @@ describe("agent-note dist CLI e2e smoke", () => {
 
     mkdirSync(join(testDir, "@scope"), { recursive: true });
     writeFileSync(join(testDir, "@scope", "pkg.ts"), "export const scoped = true;\n");
-    git(["add", "@scope/pkg.ts"]);
-    git(["commit", "-m", "feat: add scoped package file"]);
-    scopedCommit = gitOutput(["rev-parse", "HEAD"]);
-    addNote(scopedCommit, {
+    await git(["add", "@scope/pkg.ts"]);
+    await git(["commit", "-m", "feat: add scoped package file"]);
+    scopedCommit = await gitOutput(["rev-parse", "HEAD"]);
+    await addNote(scopedCommit, {
       v: 1,
       agent: "cursor",
       session_id: "33333333-4444-4555-8666-777777777777",
@@ -118,7 +131,9 @@ describe("agent-note dist CLI e2e smoke", () => {
   });
 
   after(() => {
-    rmSync(testDir, { recursive: true, force: true });
+    if (testDir) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
   });
 
   it("runs many public commands against a note-rich repository", () => {
@@ -224,13 +239,13 @@ describe("agent-note dist CLI e2e smoke", () => {
     assert.ok(commandCount >= 50, `expected broad dist CLI coverage, got ${commandCount} commands`);
   });
 
-  it("runs setup and cleanup commands through the built CLI", () => {
+  it("runs setup and cleanup commands through the built CLI", async () => {
     for (const agent of ["claude", "codex", "cursor", "gemini"]) {
       const dir = mkdtempSync(join(tmpdir(), `agentnote-e2e-init-${agent}-`));
       try {
-        gitIn(dir, ["init"]);
-        gitIn(dir, ["config", "user.email", "e2e@example.com"]);
-        gitIn(dir, ["config", "user.name", "Agent Note E2E"]);
+        await gitIn(dir, ["init"]);
+        await gitIn(dir, ["config", "user.email", "e2e@example.com"]);
+        await gitIn(dir, ["config", "user.name", "Agent Note E2E"]);
         runCli(`init ${agent}`, {
           args: ["init", "--agent", agent, "--no-action"],
           cwd: dir,
@@ -256,7 +271,7 @@ describe("agent-note dist CLI e2e smoke", () => {
     commandCount++;
     const result = spawnSync(process.execPath, [cliPath, ...testCase.args], {
       cwd: testCase.cwd ?? testDir,
-      env: { ...process.env, HOME: homeDir, XDG_CONFIG_HOME: join(testDir, ".xdg") },
+      env: buildCliEnv(),
       encoding: "utf-8",
     });
     const expectedCode = testCase.code ?? 0;
@@ -275,21 +290,34 @@ describe("agent-note dist CLI e2e smoke", () => {
     assert.equal(new Set(keys).size, keys.length, `${label} CLI cases must be unique`);
   }
 
-  function git(args: string[]) {
-    gitIn(testDir, args);
+  function buildCliEnv(): NodeJS.ProcessEnv {
+    const env: NodeJS.ProcessEnv = {};
+    for (const key of CLI_ENV_PASSTHROUGH_KEYS) {
+      const value = process.env[key];
+      if (value !== undefined) env[key] = value;
+    }
+    env.HOME = homeDir;
+    env.XDG_CONFIG_HOME = join(testDir, ".xdg");
+    for (const key of Object.keys(env)) {
+      if (AGENT_ENV_PREFIX_RE.test(key)) delete env[key];
+    }
+    return env;
   }
 
-  function gitOutput(args: string[]): string {
-    return execFileSync("git", args, { cwd: testDir, encoding: "utf-8" }).trim();
+  function git(args: string[]): Promise<void> {
+    return gitIn(testDir, args);
   }
 
-  function gitIn(cwd: string, args: string[]) {
-    execFileSync("git", args, { cwd, encoding: "utf-8" });
+  function gitOutput(args: string[]): Promise<string> {
+    return runGit(args, { cwd: testDir });
   }
 
-  function addNote(commitSha: string, entry: AgentnoteEntry) {
-    execFileSync(
-      "git",
+  async function gitIn(cwd: string, args: string[]): Promise<void> {
+    await runGit(args, { cwd });
+  }
+
+  async function addNote(commitSha: string, entry: AgentnoteEntry): Promise<void> {
+    await runGit(
       ["notes", "--ref=agentnote", "add", "-f", "-m", JSON.stringify(entry), commitSha],
       {
         cwd: testDir,
