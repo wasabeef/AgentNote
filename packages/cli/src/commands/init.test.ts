@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -18,6 +26,61 @@ import {
 
 function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
+function writeCodexTranscript(
+  codexHome: string,
+  sessionId: string,
+  cwd: string,
+  filePath: string,
+): string {
+  const transcriptDir = join(codexHome, "sessions", "2026", "05", "12");
+  mkdirSync(transcriptDir, { recursive: true });
+  const transcriptPath = join(transcriptDir, `rollout-2026-05-12T12-00-00-${sessionId}.jsonl`);
+  const patch = [
+    "*** Begin Patch",
+    `*** Add File: ${filePath}`,
+    "+export const cmuxEnvFallback = true;",
+    "*** End Patch",
+  ].join("\n");
+  writeFileSync(
+    transcriptPath,
+    `${[
+      JSON.stringify({
+        type: "session_meta",
+        timestamp: "2026-05-12T12:00:00Z",
+        payload: { id: sessionId, cwd },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: "2026-05-12T12:00:01Z",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "add cmux env fallback" }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: "2026-05-12T12:00:02Z",
+        payload: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "I will add the cmux fallback file." }],
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        timestamp: "2026-05-12T12:00:03Z",
+        payload: {
+          type: "function_call",
+          name: "apply_patch",
+          arguments: { patch },
+        },
+      }),
+    ].join("\n")}\n`,
+  );
+  return transcriptPath;
 }
 
 describe("agentnote init", () => {
@@ -322,6 +385,102 @@ AGENTNOTE_PUSHING=1 git push "$REMOTE" refs/notes/agentnote 2>/dev/null &
       !message.includes(TRAILER_KEY),
       "fresh prompt-only sessions should not hijack plain terminal commits",
     );
+    assert.throws(() => {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+        cwd: dir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback records fresh Codex transcript sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-codex-env-fallback-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const staleClaudeSessionId = "a1b2c3d4-7777-7777-7777-000000000777";
+    const staleClaudeSessionDir = join(
+      dir,
+      ".git",
+      AGENTNOTE_DIR,
+      SESSIONS_DIR,
+      staleClaudeSessionId,
+    );
+    mkdirSync(staleClaudeSessionDir, { recursive: true });
+    writeFileSync(join(dir, ".git", AGENTNOTE_DIR, SESSION_FILE), staleClaudeSessionId);
+    writeFileSync(join(staleClaudeSessionDir, HEARTBEAT_FILE), String(Date.now()));
+    writeFileSync(join(staleClaudeSessionDir, TURN_FILE), "1");
+    writeFileSync(
+      join(staleClaudeSessionDir, PROMPTS_FILE),
+      '{"event":"prompt","timestamp":"2026-04-02T10:00:00Z","prompt":"unrelated prompt","turn":1}\n',
+    );
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/cmux-env.ts";
+    writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const cmuxEnvFallback = true;\n");
+
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'feat: cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
+    const message = execSync("git log -1 --format=%B", { cwd: dir, encoding: "utf-8" });
+    assert.ok(!message.includes(TRAILER_KEY), "env fallback should not inject a trailer");
+
+    const note = execSync("git notes --ref=agentnote show HEAD", {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const entry = JSON.parse(note);
+    assert.equal(entry.agent, "codex");
+    assert.equal(entry.session_id, codexSessionId);
+    assert.equal(entry.interactions[0].prompt, "add cmux env fallback");
+    assert.deepEqual(entry.interactions[0].files_touched, [filePath]);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("post-commit environment fallback ignores stale Codex transcript sessions", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-stale-codex-env-"));
+    execSync("git init", { cwd: dir });
+    execSync("git config user.email test@test.com", { cwd: dir });
+    execSync("git config user.name Test", { cwd: dir });
+    execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+    execSync(`node ${cliPath} init --agent codex --no-action`, {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    const codexSessionId = "019da962-23cc-7aa0-bbe3-a10f60fddada";
+    const codexHome = join(dir, "codex-home");
+    const filePath = "src/stale-cmux-env.ts";
+    const transcriptPath = writeCodexTranscript(codexHome, codexSessionId, dir, filePath);
+    const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    utimesSync(transcriptPath, oldDate, oldDate);
+
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, filePath), "export const staleCmuxEnvFallback = true;\n");
+    execSync(`git add ${shellSingleQuote(filePath)}`, { cwd: dir });
+    execSync("git commit -m 'chore: stale cmux env fallback'", {
+      cwd: dir,
+      env: { ...process.env, CODEX_HOME: codexHome, CODEX_THREAD_ID: codexSessionId },
+    });
+
     assert.throws(() => {
       execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
         cwd: dir,

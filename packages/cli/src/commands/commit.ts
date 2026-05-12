@@ -13,7 +13,7 @@ import {
 import { recordCommitEntry } from "../core/record.js";
 import { hasRecordableSessionData } from "../core/session.js";
 import { agentnoteDir, sessionFile } from "../paths.js";
-import { recordHeadFallback } from "./record.js";
+import { recordEnvironmentFallback, recordHeadFallback } from "./record.js";
 
 const AMEND_LIKE_COMMIT_ARGS = new Set([
   "--amend",
@@ -103,6 +103,7 @@ export async function commit(args: string[]): Promise<void> {
   } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
+      await recordEnvironmentFallback();
     } catch (err: unknown) {
       // Never let agentnote fallback recording break a commit.
       console.error(`agent-note: warning: fallback recording failed: ${(err as Error).message}`);

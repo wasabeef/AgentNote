@@ -94,7 +94,7 @@ Gemini-specific event handling:
 `agent-note init` installs three git hooks alongside the agent's hook config:
 
 - **`prepare-commit-msg`**: Checks heartbeat freshness (< 1 hour) and file evidence (`changes.jsonl` or `pre_blobs.jsonl`) before injecting an `Agentnote-Session` trailer for plain git commits. Prompt-only sessions do not get plain git hook trailers. Agent `PreToolUse git commit` hooks may still inject trailers for prompt-only rescue because the commit command itself came from the agent. Skips amends.
-- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob.
+- **`post-commit`**: Reads session ID from HEAD's trailer, calls `agent-note record <sid>` to write git note. If `prepare-commit-msg` marked a long-running session as too stale for trailer injection, it calls `agent-note record --fallback-head`, which records only when a session post-edit blob matches a committed HEAD blob. If no trailer or stale marker exists but the current process exposes `CODEX_THREAD_ID`, it calls `agent-note record --fallback-env` to recover a fresh Codex transcript without trusting a stale active-session pointer.
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.

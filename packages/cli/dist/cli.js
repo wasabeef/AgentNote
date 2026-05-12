@@ -3395,7 +3395,15 @@ async function recordCommitEntry(opts) {
   if (existingNote) return { promptCount: 0, aiRatio: 0 };
   let commitFiles = [];
   try {
-    const raw = await git(["diff-tree", "-z", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+    const raw = await git([
+      "diff-tree",
+      "-z",
+      "--root",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "HEAD"
+    ]);
     commitFiles = raw.split("\0").filter(Boolean);
   } catch {
   }
@@ -4744,9 +4752,11 @@ async function sessionFile() {
 
 // src/commands/record.ts
 import { existsSync as existsSync8 } from "node:fs";
-import { readFile as readFile8 } from "node:fs/promises";
+import { mkdir as mkdir5, readFile as readFile8, stat as stat2 } from "node:fs/promises";
 import { join as join8 } from "node:path";
 var FALLBACK_HEAD_FLAG = "--fallback-head";
+var FALLBACK_ENV_FLAG = "--fallback-env";
+var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var SESSION_ID_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 var RAW_DIFF_STATUS_RE = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z][0-9]*)$/;
 var RAW_DIFF_RENAME_OR_COPY_PREFIXES = ["R", "C"];
@@ -4754,6 +4764,10 @@ async function record(args2) {
   try {
     if (args2[0] === FALLBACK_HEAD_FLAG) {
       await recordHeadFallback();
+      return;
+    }
+    if (args2[0] === FALLBACK_ENV_FLAG) {
+      await recordEnvironmentFallback();
       return;
     }
     const sessionId = args2[0];
@@ -4777,12 +4791,54 @@ async function recordHeadFallback() {
     requireAiFileEvidence: true
   });
 }
+async function recordEnvironmentFallback() {
+  if (await readHeadTrailerSessionId()) return;
+  const agentnoteDirPath = await agentnoteDir();
+  const sessionId = await resolveEnvironmentSessionId(agentnoteDirPath);
+  if (!sessionId) return;
+  await recordCommitEntry({ agentnoteDirPath, sessionId });
+}
 async function readActiveSessionId(agentnoteDirPath) {
   const activeSessionPath = join8(agentnoteDirPath, SESSION_FILE);
   if (!existsSync8(activeSessionPath)) return null;
   const sessionId = (await readFile8(activeSessionPath, TEXT_ENCODING)).trim();
   if (sessionId === "." || sessionId === "..") return null;
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+async function resolveEnvironmentSessionId(agentnoteDirPath) {
+  const codexSessionId = sanitizeSessionId(process.env[ENV_CODEX_THREAD_ID]);
+  if (!codexSessionId) return null;
+  const sessionDir = join8(agentnoteDirPath, SESSIONS_DIR, codexSessionId);
+  await mkdir5(sessionDir, { recursive: true });
+  const existingAgent = await readSessionAgent(sessionDir);
+  if (existingAgent && existingAgent !== AGENT_NAMES.codex) return null;
+  if (!existingAgent) await writeSessionAgent(sessionDir, AGENT_NAMES.codex);
+  const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? getAgent(AGENT_NAMES.codex).findTranscript(codexSessionId);
+  if (transcriptPath) await writeSessionTranscriptPath(sessionDir, transcriptPath);
+  if (!await hasFreshEnvironmentEvidence(sessionDir, transcriptPath)) return null;
+  return codexSessionId;
+}
+function sanitizeSessionId(value) {
+  const sessionId = value?.trim();
+  if (!sessionId || sessionId === "." || sessionId === "..") return null;
+  return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+async function hasFreshEnvironmentEvidence(sessionDir, transcriptPath) {
+  if (await hasRecordableSessionData(sessionDir) && await isFreshFile(join8(sessionDir, HEARTBEAT_FILE))) {
+    return true;
+  }
+  if (transcriptPath && await isFreshFile(transcriptPath)) return true;
+  return false;
+}
+async function isFreshFile(filePath) {
+  try {
+    const stats = await stat2(filePath);
+    if (!stats.isFile()) return false;
+    const ageMs = Date.now() - stats.mtimeMs;
+    return ageMs >= 0 && ageMs <= HEARTBEAT_TTL_SECONDS * MILLISECONDS_PER_SECOND;
+  } catch {
+    return false;
+  }
 }
 async function readHeadCommittedBlobs() {
   const raw = await git(["diff-tree", "-z", "--raw", "--root", "--no-commit-id", "-r", "HEAD"]);
@@ -4873,6 +4929,7 @@ async function commit(args2) {
   } else if (!skipAgentNoteRecording) {
     try {
       await recordHeadFallback();
+      await recordEnvironmentFallback();
     } catch (err) {
       console.error(`agent-note: warning: fallback recording failed: ${err.message}`);
     }
@@ -4886,12 +4943,13 @@ import { join as join11 } from "node:path";
 
 // src/commands/init.ts
 import { existsSync as existsSync10 } from "node:fs";
-import { chmod, mkdir as mkdir5, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
+import { chmod, mkdir as mkdir6, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
 import { isAbsolute as isAbsolute2, join as join10, resolve as resolve5 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
 var TRAILER_SESSION_FILE_LIST = TRAILER_SESSION_FILES.join(" ");
+var ENV_CODEX_THREAD_ID2 = "CODEX_THREAD_ID";
 var PR_REPORT_WORKFLOW_TEMPLATE = `name: Agent Note PR Report
 on:
   pull_request:
@@ -5027,6 +5085,8 @@ if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
   if [ -f "$FALLBACK_FILE" ] && [ "$(cat "$FALLBACK_FILE" 2>/dev/null | tr -d '\\n')" = "${POST_COMMIT_FALLBACK_HEAD}" ]; then
     SESSION_ID="--fallback-head"
+  elif [ -n "$${ENV_CODEX_THREAD_ID2}" ]; then
+    SESSION_ID="--fallback-env"
   else
     exit 0
   fi
@@ -5091,7 +5151,7 @@ async function init(args2) {
   }
   const repoRoot3 = await root();
   const results = [];
-  await mkdir5(await agentnoteDir(), { recursive: true });
+  await mkdir6(await agentnoteDir(), { recursive: true });
   if (!skipHooks && !actionOnly) {
     for (const agentName of agents) {
       const adapter = getAgent(agentName);
@@ -5109,7 +5169,7 @@ async function init(args2) {
   if (!skipGitHooks && !actionOnly) {
     await installLocalCliShim(await agentnoteDir());
     const hookDir = await resolveHookDir(repoRoot3);
-    await mkdir5(hookDir, { recursive: true });
+    await mkdir6(hookDir, { recursive: true });
     const installed = await installGitHook(
       hookDir,
       PREPARE_COMMIT_MSG_HOOK,
@@ -5130,7 +5190,7 @@ async function init(args2) {
   if (!skipAction && !hooksOnly) {
     const workflowDir = join10(repoRoot3, ".github", "workflows");
     const prReportWorkflowPath = join10(workflowDir, PR_REPORT_WORKFLOW_FILENAME);
-    await mkdir5(workflowDir, { recursive: true });
+    await mkdir6(workflowDir, { recursive: true });
     if (existsSync10(prReportWorkflowPath)) {
       results.push(
         `  \xB7 workflow already exists at .github/workflows/${PR_REPORT_WORKFLOW_FILENAME}`
@@ -5236,7 +5296,7 @@ async function installLocalCliShim(agentnoteDirPath) {
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;
-  await mkdir5(shimDir, { recursive: true });
+  await mkdir6(shimDir, { recursive: true });
   await writeFile7(shimPath, shim);
   await chmod(shimPath, 493);
 }
@@ -5379,7 +5439,7 @@ async function deinit(args2) {
 // src/commands/hook.ts
 import { randomUUID } from "node:crypto";
 import { existsSync as existsSync13 } from "node:fs";
-import { mkdir as mkdir6, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
+import { mkdir as mkdir7, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, join as join13, relative as relative2 } from "node:path";
 
 // src/core/rotate.ts
@@ -5506,7 +5566,7 @@ async function hook(args2 = []) {
   }
   const agentnoteDirPath = await agentnoteDir();
   const sessionDir = join13(agentnoteDirPath, SESSIONS_DIR, event.sessionId);
-  await mkdir6(sessionDir, { recursive: true });
+  await mkdir7(sessionDir, { recursive: true });
   if (!(adapter.name === AGENT_NAMES.gemini && event.kind === NORMALIZED_EVENT_KINDS.stop)) {
     await refreshHeartbeat(agentnoteDirPath, event.sessionId);
   }
@@ -6640,7 +6700,7 @@ async function session(sessionId) {
 }
 
 // src/commands/show.ts
-import { stat as stat2 } from "node:fs/promises";
+import { stat as stat3 } from "node:fs/promises";
 import { join as join15 } from "node:path";
 var DEFAULT_COMMIT_REF = "HEAD";
 var COMMIT_REF_PATTERN = /^(HEAD|[0-9a-f]{7,40})$/i;
@@ -6716,7 +6776,7 @@ async function show(commitRef) {
   const transcriptPath = await readSessionTranscriptPath(sessionDir) ?? adapter.findTranscript(sessionId);
   if (transcriptPath) {
     console.log();
-    const stats = await stat2(transcriptPath);
+    const stats = await stat3(transcriptPath);
     const sizeKb = (stats.size / BYTES_PER_KILOBYTE).toFixed(1);
     console.log(`transcript: ${transcriptPath} (${sizeKb} KB)`);
   }
