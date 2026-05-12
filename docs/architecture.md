@@ -578,6 +578,11 @@ user-facing. When a PR contains several follow-up commits for the same behavior,
 keep only the primary implementation commit visible in the release note and mark
 review-fix commits with `Release note: skip`.
 
+The changelog template applies `upper_first` to each rendered bullet so a
+mechanical commit subject such as `recover Codex env sessions` becomes
+`Recover Codex env sessions`. This is only a safety net; release-worthy wording
+should still be written as a clear sentence in the commit body.
+
 The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
 
 Release steps:

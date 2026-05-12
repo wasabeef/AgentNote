@@ -106,6 +106,7 @@ subject as public copy unless the commit type is intentionally internal.
 - Do not put release-worthy wording only in a PR title or merge commit. Merge commits, version bumps, and generated bundle sync commits are excluded from release notes.
 - Avoid vague subjects such as `address review notes`, `sync generated bundle`, `polish docs`, or `fix tests`. Name the visible outcome instead.
 - Keep multi-commit PRs readable in the generated release note. Review follow-up commits should usually be `Release note: skip` unless they are a separate user-visible change.
+- The release generator capitalizes the first character of each bullet as a safety net. Still write natural English yourself; this only fixes mechanical lower-case commit subjects.
 - A PR title is not the release-note source, but it should still read like the top-level release summary for the PR. If the title would be a bad release bullet, improve it before opening or merging the PR.
 - Before tagging, run `git-cliff --config .github/cliff.toml --latest --strip header`. If the output reads like an implementation log, rewrite commit subjects/bodies before cutting the release.
 

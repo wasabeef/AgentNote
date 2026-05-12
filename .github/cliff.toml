@@ -20,9 +20,9 @@ body = """
         {% for commit in commits %}
             {% if group != "Changed" or (commit.body and "Release note:" in commit.body) %}
                 {% if commit.body and "Release note:" in commit.body -%}
-                    - {{ commit.body | split(pat="Release note:") | last | split(pat="\n") | first | trim }}
+                    - {{ commit.body | split(pat="Release note:") | last | split(pat="\n") | first | trim | upper_first }}
                 {% else -%}
-                    - {{ commit.message | split(pat="\n") | first | trim }}
+                    - {{ commit.message | split(pat="\n") | first | trim | upper_first }}
                 {% endif %}
             {% endif %}
         {% endfor %}
