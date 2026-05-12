@@ -68,6 +68,32 @@ describe("upsertDescription — replace when section already present", () => {
 		assert.ok(result.includes("new content"));
 		assert.ok(result.includes(DESCRIPTION_END));
 	});
+
+	it("preserves user-authored body comments while replacing the managed section", () => {
+		const existing = [
+			"Intro text",
+			"<!-- user-owned-hidden-note -->",
+			DESCRIPTION_BEGIN,
+			"old Agent Note report",
+			DESCRIPTION_END,
+			"Manual checklist",
+		].join("\n");
+		const markdown = [
+			"<!-- agentnote-reviewer-context",
+			"Hidden reviewer context",
+			"-->",
+			"new Agent Note report",
+		].join("\n");
+
+		const result = upsertDescription(existing, markdown);
+
+		assert.ok(result.includes("Intro text"));
+		assert.ok(result.includes("<!-- user-owned-hidden-note -->"));
+		assert.ok(result.includes("Hidden reviewer context"));
+		assert.ok(result.includes("new Agent Note report"));
+		assert.ok(result.includes("Manual checklist"));
+		assert.ok(!result.includes("old Agent Note report"));
+	});
 });
 
 describe("constants", () => {

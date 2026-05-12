@@ -119,6 +119,31 @@ test("mergeDashboardNotes removes stale notes for the current PR when no replace
   }
 });
 
+test("mergeDashboardNotes preserves malformed unrelated notes without crashing", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-malformed-test-"));
+  const dashboardNotesDir = join(tempDir, "dashboard-notes");
+  const snapshotDir = join(tempDir, "snapshot");
+
+  try {
+    mkdirSync(dashboardNotesDir, { recursive: true });
+    mkdirSync(snapshotDir, { recursive: true });
+    writeFileSync(join(dashboardNotesDir, "malformed.json"), "{not-json");
+    writeNote(join(dashboardNotesDir, "old-pr47.json"), 47, "old-pr47");
+    writeNote(join(snapshotDir, "new-pr47.json"), 47, "new-pr47");
+
+    mergeDashboardNotes(snapshotDir, dashboardNotesDir, {
+      eventName: "pull_request",
+      prNumber: 47,
+    });
+
+    assert.deepEqual(readdirSync(dashboardNotesDir).sort(), ["malformed.json", "new-pr47.json"]);
+    assert.equal(readFileSync(join(dashboardNotesDir, "malformed.json"), "utf-8"), "{not-json");
+    assert.equal(readNoteShortSha(join(dashboardNotesDir, "new-pr47.json")), "new-pr47");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("pruneDashboardNotes keeps the newest persisted note files", () => {
   const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-prune-test-"));
   const notesDir = join(tempDir, "notes");

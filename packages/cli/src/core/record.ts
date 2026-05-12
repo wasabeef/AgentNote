@@ -63,6 +63,23 @@ const AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 // Keep the window small enough to exclude post-commit debug prompts.
 const TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1000;
 const TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1000;
+/**
+ * Maximum prior transcript rows kept for env fallback display context.
+ *
+ * Env fallback has no reliable hook turn window, so this is a final safety cap:
+ * large enough to preserve an investigation-to-implementation thread, but
+ * small enough to prevent a continuous transcript backlog from becoming the
+ * commit note.
+ */
+const ENV_FALLBACK_CONTEXT_BEFORE_MATCH_LIMIT = 12;
+
+/**
+ * Maximum time gap allowed between adjacent env fallback context rows.
+ *
+ * A larger gap usually means the user switched tasks or returned later, so the
+ * display window stops there even when the transcript file itself is fresh.
+ */
+const ENV_FALLBACK_CONTEXT_MAX_GAP_MS = 45 * 60 * 1000;
 
 /** Record an agentnote entry as a git note after a successful commit. */
 export async function recordCommitEntry(opts: {
@@ -487,6 +504,31 @@ export async function recordCommitEntry(opts: {
           ? promptWindowConsumedEntries
           : relevantPromptEntries;
       useSelectableTranscriptAttribution = true;
+    } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
+      const envTranscriptSource = selectEnvironmentTranscriptSourceInteractions(
+        allInteractions,
+        parentCommitTimestampMs,
+      );
+      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
+        transcriptMatched,
+        parentCommitTimestampMs,
+      );
+      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
+        envTranscriptMatched,
+        commitFileSet,
+        consumedPromptState,
+      );
+      const envDisplay = selectEnvironmentTranscriptDisplayInteractions(
+        envTranscriptSource,
+        envMatched,
+        commitFileSet,
+        consumedPromptState,
+      );
+      interactions = envDisplay.map((i) =>
+        toRecordedInteraction(i, commitFileSet, consumedPromptState),
+      );
+      attributionTranscriptMatched = envMatched;
+      useSelectableTranscriptAttribution = true;
     } else if (
       selectableTranscriptMatched.length > 0 &&
       (promptEntries.length === 0 || transcriptPrimaryTurns.size > 0)
@@ -498,21 +540,6 @@ export async function recordCommitEntry(opts: {
       interactions = selectableTranscriptMatched.map((i) =>
         toRecordedInteraction(i, commitFileSet, consumedPromptState),
       );
-      useSelectableTranscriptAttribution = true;
-    } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
-      const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
-        transcriptMatched,
-        parentCommitTimestampMs,
-      );
-      const envMatched = selectEnvironmentTranscriptMatchedInteractions(
-        envTranscriptMatched,
-        commitFileSet,
-        consumedPromptState,
-      );
-      interactions = envMatched.map((i) =>
-        toRecordedInteraction(i, commitFileSet, consumedPromptState),
-      );
-      attributionTranscriptMatched = envMatched;
       useSelectableTranscriptAttribution = true;
     } else if (
       !crossTurnCommit &&
@@ -936,6 +963,87 @@ function selectEnvironmentTranscriptMatchedInteractions(
   }
 
   return selected.reverse();
+}
+
+/**
+ * Expand env fallback display prompts without changing attribution evidence.
+ *
+ * Env fallback may only have transcript evidence, so the file-matched row is
+ * often the final "implement it" prompt. Keeping bounded prior transcript rows
+ * preserves the decision context while `matchedInteractions` remains the sole
+ * source for AI file attribution and line counts.
+ */
+export function selectEnvironmentTranscriptDisplayInteractions(
+  sourceInteractions: TranscriptInteraction[],
+  matchedInteractions: TranscriptInteraction[],
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+): TranscriptInteraction[] {
+  if (matchedInteractions.length === 0) return [];
+
+  const matchedSet = new Set(matchedInteractions);
+  const firstMatchIndex = sourceInteractions.findIndex((interaction) =>
+    matchedSet.has(interaction),
+  );
+  if (firstMatchIndex < 0) return matchedInteractions;
+
+  const selected = new Set<TranscriptInteraction>(matchedInteractions);
+  let includedBeforeMatch = 0;
+  let nextInteraction = sourceInteractions[firstMatchIndex];
+
+  for (let index = firstMatchIndex - 1; index >= 0; index--) {
+    if (includedBeforeMatch >= ENV_FALLBACK_CONTEXT_BEFORE_MATCH_LIMIT) break;
+
+    const candidate = sourceInteractions[index];
+    if (
+      shouldStopEnvironmentTranscriptContext(
+        candidate,
+        nextInteraction,
+        commitFileSet,
+        consumedPromptState,
+      )
+    ) {
+      break;
+    }
+
+    selected.add(candidate);
+    includedBeforeMatch++;
+    nextInteraction = candidate;
+  }
+
+  return sourceInteractions.filter((interaction) => selected.has(interaction));
+}
+
+/**
+ * Decide whether a prior transcript row belongs to a different task.
+ *
+ * A prior row is safe display context when it has no file touch, or when its
+ * file touch still belongs to this commit. A different-file edit is treated as
+ * a hard boundary because it likely belongs to another commit/task.
+ */
+function shouldStopEnvironmentTranscriptContext(
+  candidate: TranscriptInteraction,
+  nextInteraction: TranscriptInteraction,
+  commitFileSet: Set<string>,
+  consumedPromptState: ConsumedPromptState,
+): boolean {
+  if (hasLargeTranscriptContextGap(candidate, nextInteraction)) return true;
+
+  const touched = candidate.files_touched ?? [];
+  if (touched.length === 0) return false;
+
+  return filterInteractionCommitFiles(candidate, commitFileSet, consumedPromptState).length === 0;
+}
+
+/** Return true when two transcript rows are too far apart to be one task. */
+function hasLargeTranscriptContextGap(
+  previous: TranscriptInteraction,
+  next: TranscriptInteraction,
+): boolean {
+  const previousMs = parseTimestampMs(previous.timestamp);
+  const nextMs = parseTimestampMs(next.timestamp);
+  if (previousMs === null || nextMs === null) return false;
+  return nextMs - previousMs > ENV_FALLBACK_CONTEXT_MAX_GAP_MS;
 }
 
 /** Current-window tool turns without per-file evidence. */

@@ -125,6 +125,35 @@ describe("renderMarkdown", () => {
     assert.ok(markdown.includes("| █████ 150% | 1 |"));
   });
 
+  it("omits reviewer context when no commits have Agent Note data", () => {
+    const markdown = renderMarkdown(
+      baseReport({
+        tracked_commits: 0,
+        total_prompts: 0,
+        commits: [
+          {
+            sha: "def456789012",
+            short: "def4567",
+            message: "chore: human-only commit",
+            session_id: null,
+            model: null,
+            ai_ratio: null,
+            attribution_method: null,
+            prompts_count: 0,
+            files_total: 0,
+            files_ai: 0,
+            files: [{ path: "src/human.ts", by_ai: false }],
+            interactions: [],
+            attribution: null,
+          },
+        ],
+      }),
+    );
+
+    assert.ok(!markdown.includes(REVIEWER_CONTEXT_BEGIN));
+    assert.ok(markdown.includes("**Agent Note data:** No tracked commits"));
+  });
+
   it("renders hidden reviewer context before the commit table", () => {
     const base = baseReport();
     const markdown = renderMarkdown(
@@ -357,6 +386,22 @@ describe("renderMarkdown", () => {
     const reviewerContext = extractReviewerContext(markdown);
 
     assert.ok(reviewerContext.includes("Keep - -&gt; inside reviewer context harmless"));
+    assert.equal(reviewerContext.slice(0, -REVIEWER_CONTEXT_END.length).includes("-->"), false);
+  });
+
+  it("keeps changed-area file paths from closing the hidden reviewer comment", () => {
+    const report = baseReport({
+      commits: [
+        {
+          ...baseReport().commits[0],
+          files: [{ path: "src/keep-->`path`.ts", by_ai: true }],
+        },
+      ],
+    });
+
+    const reviewerContext = extractReviewerContext(renderMarkdown(report));
+
+    assert.ok(reviewerContext.includes("src/keep- -&gt;\\`path\\`.ts"));
     assert.equal(reviewerContext.slice(0, -REVIEWER_CONTEXT_END.length).includes("-->"), false);
   });
 

@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import type { TranscriptInteraction } from "../agents/types.js";
 import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
@@ -15,8 +16,16 @@ import {
   SESSIONS_DIR,
   TURN_FILE,
 } from "./constants.js";
-import { analyzePromptSelection, toPersistedSelection } from "./prompt-window.js";
-import { hasSessionHeadBlobEvidence, recordCommitEntry } from "./record.js";
+import {
+  analyzePromptSelection,
+  type ConsumedPromptState,
+  toPersistedSelection,
+} from "./prompt-window.js";
+import {
+  hasSessionHeadBlobEvidence,
+  recordCommitEntry,
+  selectEnvironmentTranscriptDisplayInteractions,
+} from "./record.js";
 import { readNote } from "./storage.js";
 
 const SESSION_ID = "a0000000-0000-4000-8000-000000000001";
@@ -1006,6 +1015,95 @@ describe("post-commit fallback evidence simulation", () => {
     }
 
     assert.ok(caseCount >= 100, "simulation should cover at least 100 fallback cases");
+  });
+});
+
+describe("environment transcript display selection", () => {
+  it("keeps decision context while stopping at task boundaries across 50+ simulations", () => {
+    const commitFile = "src/target.ts";
+    const consumed: ConsumedPromptState = {
+      legacyPromptIds: new Set(),
+      promptFilePairs: new Set(),
+      tailPromptIds: new Set(),
+    };
+    const baseMs = Date.UTC(2026, 4, 13, 12, 0, 0);
+    const limitExpectedContext = (prompts: string[]) => prompts.slice(-12);
+    const modes = [
+      "plain-context",
+      "old-other-file-boundary",
+      "middle-other-file-boundary",
+      "old-time-gap",
+      "same-file-context",
+    ] as const;
+
+    let caseCount = 0;
+    for (let contextCount = 0; contextCount < 15; contextCount++) {
+      for (const mode of modes) {
+        const source: TranscriptInteraction[] = [];
+        let timestampMs = baseMs;
+        const pushInteraction = (
+          prompt: string,
+          filesTouched: string[] = [],
+          gapMs = 60 * 1000,
+        ): TranscriptInteraction => {
+          timestampMs += gapMs;
+          const interaction: TranscriptInteraction = {
+            prompt,
+            response: `response for ${prompt}`,
+            timestamp: new Date(timestampMs).toISOString(),
+            files_touched: filesTouched.length > 0 ? filesTouched : undefined,
+          };
+          source.push(interaction);
+          return interaction;
+        };
+        let expectedContextPrompts = Array.from(
+          { length: contextCount },
+          (_, index) => `${mode}: context ${index}`,
+        );
+
+        if (mode === "old-other-file-boundary") {
+          pushInteraction(`${mode}: previous task`, ["src/other.ts"]);
+        }
+
+        if (mode === "old-time-gap") {
+          pushInteraction(`${mode}: previous task`);
+        }
+
+        if (mode === "same-file-context") {
+          pushInteraction(`${mode}: same file setup`, [commitFile]);
+          expectedContextPrompts = [`${mode}: same file setup`, ...expectedContextPrompts];
+        }
+
+        for (let index = 0; index < contextCount; index++) {
+          if (mode === "middle-other-file-boundary" && index === Math.floor(contextCount / 2)) {
+            pushInteraction(`${mode}: previous task`, ["src/other.ts"]);
+            expectedContextPrompts = expectedContextPrompts.slice(index);
+          }
+          const gapMs = mode === "old-time-gap" && index === 0 ? 50 * 60 * 1000 : 60 * 1000;
+          pushInteraction(`${mode}: context ${index}`, [], gapMs);
+        }
+
+        const matchGapMs =
+          mode === "old-time-gap" && contextCount === 0 ? 50 * 60 * 1000 : 60 * 1000;
+        const matched = pushInteraction(`${mode}: implement`, [commitFile], matchGapMs);
+
+        const selected = selectEnvironmentTranscriptDisplayInteractions(
+          source,
+          [matched],
+          new Set([commitFile]),
+          consumed,
+        );
+        const prompts = selected.map((interaction) => interaction.prompt);
+        assert.deepEqual(
+          prompts,
+          [...limitExpectedContext(expectedContextPrompts), `${mode}: implement`],
+          `${mode}/${contextCount}`,
+        );
+        caseCount++;
+      }
+    }
+
+    assert.ok(caseCount >= 50, "simulation should cover at least 50 context cases");
   });
 });
 

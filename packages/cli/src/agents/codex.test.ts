@@ -23,6 +23,21 @@ function buildRealSessionPatchTranscript(opts: {
   );
 }
 
+function buildShellCommandTranscript(command: string): string {
+  return (
+    '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Run the shell command"}]}}\n' +
+    '{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Running it now."}]}}\n' +
+    `${JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "function_call",
+        name: "exec_command",
+        arguments: { cmd: command },
+      },
+    })}\n`
+  );
+}
+
 describe("codex adapter", () => {
   let codexHome: string;
   let previousCodexHome: string | undefined;
@@ -151,6 +166,63 @@ describe("codex adapter", () => {
     assert.deepEqual(interactions[0].line_stats, {
       "src/status.ts": { added: 1, deleted: 0 },
     });
+  });
+
+  it("marks mutating shell commands as mutation tools", async () => {
+    const transcriptDir = join(codexHome, "sessions", "shell-mutation");
+    mkdirSync(transcriptDir, { recursive: true });
+    const commands = [
+      "apply_patch <<'PATCH'\n*** Begin Patch\n*** Add File: src/app.ts\n+ok\n*** End Patch\nPATCH",
+      "cat > src/app.ts",
+      "cp src/a.ts src/b.ts",
+      "mkdir -p src/generated",
+      "mv src/a.ts src/b.ts",
+      "npm install",
+      "npm audit fix",
+      "perl -pi -e 's/a/b/g' src/app.ts",
+      "pnpm add left-pad",
+      "rm src/app.ts",
+      "sed -i '' 's/a/b/g' src/app.ts",
+      "tee src/app.ts",
+      "touch src/app.ts",
+      "yarn upgrade",
+      "printf ok > src/app.ts",
+    ];
+
+    for (const [index, command] of commands.entries()) {
+      const transcriptPath = join(transcriptDir, `mutating-${index}.jsonl`);
+      writeFileSync(transcriptPath, buildShellCommandTranscript(command));
+
+      const interactions = await codex.extractInteractions(transcriptPath);
+
+      assert.deepEqual(interactions[0].tools, ["exec_command"], command);
+      assert.deepEqual(interactions[0].mutation_tools, ["exec_command"], command);
+    }
+  });
+
+  it("does not mark read-only shell commands as mutation tools", async () => {
+    const transcriptDir = join(codexHome, "sessions", "shell-readonly");
+    mkdirSync(transcriptDir, { recursive: true });
+    const commands = [
+      "git status --short",
+      "npm test",
+      "pnpm test",
+      "yarn test",
+      "cat src/app.ts",
+      "grep rm src/app.ts",
+      'echo "rm src/app.ts"',
+      "printf '>'",
+    ];
+
+    for (const [index, command] of commands.entries()) {
+      const transcriptPath = join(transcriptDir, `readonly-${index}.jsonl`);
+      writeFileSync(transcriptPath, buildShellCommandTranscript(command));
+
+      const interactions = await codex.extractInteractions(transcriptPath);
+
+      assert.deepEqual(interactions[0].tools, ["exec_command"], command);
+      assert.equal(interactions[0].mutation_tools, undefined, command);
+    }
   });
 
   it("normalizes absolute patch paths and ignores nested patch markers inside added code", async () => {

@@ -3438,6 +3438,8 @@ var AGENTNOTE_IGNORE_MAX_WILDCARD_TOKENS = 10;
 var AGENTNOTE_IGNORE_OVERLAPPING_WILDCARD_RE = /\*{3,}|\*\.\*/;
 var TRANSCRIPT_COMMIT_FUTURE_TOLERANCE_MS = 30 * 1e3;
 var TRANSCRIPT_COMMIT_PAST_TOLERANCE_MS = 30 * 1e3;
+var ENV_FALLBACK_CONTEXT_BEFORE_MATCH_LIMIT = 12;
+var ENV_FALLBACK_CONTEXT_MAX_GAP_MS = 45 * 60 * 1e3;
 async function recordCommitEntry(opts) {
   const sessionDir = join6(opts.agentnoteDirPath, SESSIONS_DIR, opts.sessionId);
   const sessionAgent = await readSessionAgent(sessionDir);
@@ -3734,12 +3736,11 @@ async function recordCommitEntry(opts) {
       });
       consumedPromptEntries = promptWindowConsumedEntries.length > 0 ? promptWindowConsumedEntries : relevantPromptEntries;
       useSelectableTranscriptAttribution = true;
-    } else if (selectableTranscriptMatched.length > 0 && (promptEntries.length === 0 || transcriptPrimaryTurns.size > 0)) {
-      interactions = selectableTranscriptMatched.map(
-        (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
-      );
-      useSelectableTranscriptAttribution = true;
     } else if (opts.allowEnvironmentTranscriptFallback && transcriptMatched.length > 0) {
+      const envTranscriptSource = selectEnvironmentTranscriptSourceInteractions(
+        allInteractions,
+        parentCommitTimestampMs
+      );
       const envTranscriptMatched = selectEnvironmentTranscriptSourceInteractions(
         transcriptMatched,
         parentCommitTimestampMs
@@ -3749,10 +3750,21 @@ async function recordCommitEntry(opts) {
         commitFileSet,
         consumedPromptState
       );
-      interactions = envMatched.map(
+      const envDisplay = selectEnvironmentTranscriptDisplayInteractions(
+        envTranscriptSource,
+        envMatched,
+        commitFileSet,
+        consumedPromptState
+      );
+      interactions = envDisplay.map(
         (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
       );
       attributionTranscriptMatched = envMatched;
+      useSelectableTranscriptAttribution = true;
+    } else if (selectableTranscriptMatched.length > 0 && (promptEntries.length === 0 || transcriptPrimaryTurns.size > 0)) {
+      interactions = selectableTranscriptMatched.map(
+        (i) => toRecordedInteraction(i, commitFileSet, consumedPromptState)
+      );
       useSelectableTranscriptAttribution = true;
     } else if (!crossTurnCommit && transcriptMatched.length === 0 && canUseUnmatchedTranscriptFallback(opts.allowEnvironmentTranscriptFallback, allInteractions)) {
       const fallbackSourceInteractions = opts.allowEnvironmentTranscriptFallback ? filterTranscriptInteractionsAfterParent(allInteractions, parentCommitTimestampMs) : allInteractions;
@@ -3997,6 +4009,45 @@ function selectEnvironmentTranscriptMatchedInteractions(interactions, commitFile
     if (uncoveredFiles.size === 0) break;
   }
   return selected.reverse();
+}
+function selectEnvironmentTranscriptDisplayInteractions(sourceInteractions, matchedInteractions, commitFileSet, consumedPromptState) {
+  if (matchedInteractions.length === 0) return [];
+  const matchedSet = new Set(matchedInteractions);
+  const firstMatchIndex = sourceInteractions.findIndex(
+    (interaction) => matchedSet.has(interaction)
+  );
+  if (firstMatchIndex < 0) return matchedInteractions;
+  const selected = new Set(matchedInteractions);
+  let includedBeforeMatch = 0;
+  let nextInteraction = sourceInteractions[firstMatchIndex];
+  for (let index = firstMatchIndex - 1; index >= 0; index--) {
+    if (includedBeforeMatch >= ENV_FALLBACK_CONTEXT_BEFORE_MATCH_LIMIT) break;
+    const candidate = sourceInteractions[index];
+    if (shouldStopEnvironmentTranscriptContext(
+      candidate,
+      nextInteraction,
+      commitFileSet,
+      consumedPromptState
+    )) {
+      break;
+    }
+    selected.add(candidate);
+    includedBeforeMatch++;
+    nextInteraction = candidate;
+  }
+  return sourceInteractions.filter((interaction) => selected.has(interaction));
+}
+function shouldStopEnvironmentTranscriptContext(candidate, nextInteraction, commitFileSet, consumedPromptState) {
+  if (hasLargeTranscriptContextGap(candidate, nextInteraction)) return true;
+  const touched = candidate.files_touched ?? [];
+  if (touched.length === 0) return false;
+  return filterInteractionCommitFiles(candidate, commitFileSet, consumedPromptState).length === 0;
+}
+function hasLargeTranscriptContextGap(previous, next) {
+  const previousMs = parseTimestampMs(previous.timestamp);
+  const nextMs = parseTimestampMs(next.timestamp);
+  if (previousMs === null || nextMs === null) return false;
+  return nextMs - previousMs > ENV_FALLBACK_CONTEXT_MAX_GAP_MS;
 }
 function collectCurrentUnattributedToolPromptIds(interactions, promptEntries, maxConsumedTurn, currentTurn) {
   const candidatePromptIds = /* @__PURE__ */ new Set();
@@ -4934,10 +4985,12 @@ async function recordHeadFallback() {
   });
 }
 async function recordEnvironmentFallback() {
-  if (await readHeadTrailerSessionId()) {
-    debugRecord("env fallback skipped: HEAD already has trailer");
+  if (await hasHeadAgentNote()) {
+    debugRecord("env fallback skipped: HEAD already has an Agent Note");
     return;
   }
+  if (await readHeadTrailerSessionId())
+    debugRecord("env fallback continuing after empty trailer record");
   const agentnoteDirPath = await agentnoteDir();
   const sessionId = await resolveEnvironmentSessionId(agentnoteDirPath);
   if (!sessionId) {
@@ -4957,6 +5010,10 @@ async function readActiveSessionId(agentnoteDirPath) {
   const sessionId = (await readFile8(activeSessionPath, TEXT_ENCODING)).trim();
   if (sessionId === "." || sessionId === "..") return null;
   return SESSION_ID_SEGMENT_RE.test(sessionId) ? sessionId : null;
+}
+async function hasHeadAgentNote() {
+  const result = await gitSafe(["notes", `--ref=${NOTES_REF}`, "show", "HEAD"]);
+  return result.exitCode === 0 && result.stdout.trim() !== "";
 }
 async function resolveEnvironmentSessionId(agentnoteDirPath) {
   for (const agentName of listAgents()) {
@@ -5262,18 +5319,27 @@ if [ -z "$SESSION_ID" ]; then
   fi
   rm -f "$FALLBACK_FILE" 2>/dev/null || true
 fi
-# Prefer the repo-local shim created at init time so post-commit uses the
-# exact CLI version that generated these hooks.
-if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
-  "$GIT_DIR/agentnote/bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
-  exit 0
-fi
-# Fall back to stable local/global binaries only.
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
-  "$REPO_ROOT/node_modules/.bin/agent-note" record "$SESSION_ID" 2>/dev/null || true
-elif command -v agent-note >/dev/null 2>&1; then
-  agent-note record "$SESSION_ID" 2>/dev/null || true
+record_agentnote() {
+  RECORD_SESSION_ID="$1"
+  if [ -z "$RECORD_SESSION_ID" ]; then return; fi
+  # Prefer the repo-local shim created at init time so post-commit uses the
+  # exact CLI version that generated these hooks.
+  if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
+    "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+    return
+  fi
+  # Fall back to stable local/global binaries only.
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+  if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
+    "$REPO_ROOT/node_modules/.bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+  elif command -v agent-note >/dev/null 2>&1; then
+    agent-note record "$RECORD_SESSION_ID" 2>/dev/null || true
+  fi
+}
+
+record_agentnote "$SESSION_ID"
+if [ "$SESSION_ID" != "--fallback-env" ] && [ -n "${SHELL_CODEX_THREAD_ID}" ] && ! git notes --ref=${NOTES_REF} show HEAD >/dev/null 2>&1; then
+  record_agentnote "--fallback-env"
 fi
 `;
 var PRE_PUSH_SCRIPT = `#!/bin/sh

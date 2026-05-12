@@ -93,6 +93,10 @@ rmSync(path, { force: true });
 - If you touch Dashboard workflow code, verify the relevant `packages/dashboard` test/build path.
 - If you touch PR Report rendering or Action inputs, verify the relevant `packages/pr-report` test/build path.
 - If you touch CLI core or an agent adapter, verify `packages/cli` build, typecheck, lint, and tests.
+- Prefer characterization tests for user-visible contracts: CLI output, PR body updates, hidden reviewer context, Dashboard note persistence, and attribution fallback boundaries.
+- Do not inflate coverage by repeating the same scenario. Use unique command inputs or generated scenario matrices, and assert uniqueness when a smoke test is meant to represent broad coverage.
+- Dist CLI smoke tests must execute the built `packages/cli/dist/cli.js` in temporary repositories with isolated `HOME` / config paths. They should not depend on the developer's live repository state.
+- For heuristic or fallback logic, cover both the rescue path and the false-positive path. A fallback that records missing data must also prove it does not attribute unrelated human or read-only work.
 
 ## Commit Messages And Release Notes
 
