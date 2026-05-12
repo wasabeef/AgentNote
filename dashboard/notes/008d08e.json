@@ -514,6 +514,6 @@
   "pull_request": {
     "number": 72,
     "title": "fix(hooks): recover Codex env sessions",
-    "state": "open"
+    "state": "merged"
   }
 }
