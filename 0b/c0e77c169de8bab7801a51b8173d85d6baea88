@@ -62,8 +62,8 @@
     }
   ],
   "attribution": {
-    "ai_ratio": 0,
-    "method": "none",
+    "ai_ratio": 100,
+    "method": "file",
     "lines": {
       "ai_added": 0,
       "total_added": 0,
