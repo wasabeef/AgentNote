@@ -2,9 +2,17 @@ import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
+function resolveGitPath(cwd: string, value: string): string {
+  return isAbsolute(value) ? value : join(cwd, value);
+}
 
 describe("agentnote deinit", () => {
   let testDir: string;
@@ -175,6 +183,49 @@ describe("agentnote deinit", () => {
     assert.ok(!existsSync(shimPath), "shim should be removed after deinit");
 
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("removes worktree-local and common CLI shims when run inside a worktree", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-worktree-shim-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+      const worktreeDir = join(dir, "custom worktrees", "cleanup target");
+      mkdirSync(join(worktreeDir, ".."), { recursive: true });
+      execSync(`git worktree add -b cleanup-target ${shellSingleQuote(worktreeDir)}`, {
+        cwd: dir,
+      });
+
+      execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: worktreeDir });
+
+      const worktreeGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+      );
+      const commonGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-common-dir", {
+          cwd: worktreeDir,
+          encoding: "utf-8",
+        }).trim(),
+      );
+      const worktreeShimPath = join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note");
+      const commonShimPath = join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note");
+
+      assert.ok(existsSync(worktreeShimPath), "worktree-local shim should exist after init");
+      assert.ok(existsSync(commonShimPath), "common shim should exist after init");
+
+      execSync(`node ${cliPath} deinit --agent claude`, { cwd: worktreeDir });
+
+      assert.ok(!existsSync(worktreeShimPath), "worktree-local shim should be removed");
+      assert.ok(!existsSync(commonShimPath), "common shim should be removed");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("preserves workflow by default (requires --remove-workflow to delete)", () => {

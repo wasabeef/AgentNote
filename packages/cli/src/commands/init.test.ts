@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
   AGENTNOTE_DIR,
@@ -29,11 +29,21 @@ function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
+function resolveGitPath(cwd: string, value: string): string {
+  return isAbsolute(value) ? value : join(cwd, value);
+}
+
 function withoutCodexThreadEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   delete env.CODEX_THREAD_ID;
   return env;
 }
+
+type WorktreeLayout = {
+  name: string;
+  bare: boolean;
+  worktreePath: (dir: string) => string;
+};
 
 function writeCodexTranscript(
   codexHome: string,
@@ -181,13 +191,77 @@ describe("agentnote init", () => {
   let originalCodexThreadId: string | undefined;
   const cliPath = join(process.cwd(), "dist", "cli.js");
 
+  function configureUser(cwd: string): void {
+    execSync("git config user.email test@test.com", { cwd });
+    execSync("git config user.name Test", { cwd });
+  }
+
+  function runClaudeHook(cwd: string, payload: Record<string, unknown>): void {
+    execFileSync(process.execPath, [cliPath, "hook", "--agent", "claude"], {
+      cwd,
+      input: JSON.stringify(payload),
+      encoding: "utf-8",
+      env: withoutCodexThreadEnv(),
+    });
+  }
+
+  function recordClaudeWorktreeCommit(
+    cwd: string,
+    options: {
+      sessionId: string;
+      prompt: string;
+      fileName: string;
+      commitMessage: string;
+      content?: string;
+    },
+  ): Record<string, unknown> {
+    const filePath = join(cwd, options.fileName);
+    runClaudeHook(cwd, {
+      hook_event_name: "SessionStart",
+      session_id: options.sessionId,
+      model: "claude-opus-4-6",
+    });
+    runClaudeHook(cwd, {
+      hook_event_name: "UserPromptSubmit",
+      session_id: options.sessionId,
+      prompt: options.prompt,
+    });
+    runClaudeHook(cwd, {
+      hook_event_name: "PreToolUse",
+      session_id: options.sessionId,
+      tool_name: "Write",
+      tool_use_id: `tool-${options.sessionId}`,
+      tool_input: { file_path: filePath },
+    });
+    writeFileSync(filePath, options.content ?? `${options.prompt}\n`);
+    runClaudeHook(cwd, {
+      hook_event_name: "PostToolUse",
+      session_id: options.sessionId,
+      tool_name: "Write",
+      tool_use_id: `tool-${options.sessionId}`,
+      tool_input: { file_path: filePath },
+    });
+
+    execSync(`git add ${shellSingleQuote(options.fileName)}`, { cwd });
+    execSync(`git commit -m ${shellSingleQuote(options.commitMessage)}`, {
+      cwd,
+      env: withoutCodexThreadEnv(),
+    });
+
+    return JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd,
+        encoding: "utf-8",
+      }),
+    );
+  }
+
   before(() => {
     originalCodexThreadId = process.env.CODEX_THREAD_ID;
     delete process.env.CODEX_THREAD_ID;
     testDir = mkdtempSync(join(tmpdir(), "agentnote-init-"));
     execSync("git init", { cwd: testDir });
-    execSync("git config user.email test@test.com", { cwd: testDir });
-    execSync("git config user.name Test", { cwd: testDir });
+    configureUser(testDir);
     execSync("git remote add origin https://example.com/repo.git", {
       cwd: testDir,
     });
@@ -270,6 +344,10 @@ describe("agentnote init", () => {
       "post-commit should prefer the repo-local shim",
     );
     assert.ok(
+      postCommitHook.includes('"$COMMON_GIT_DIR/agentnote/bin/agent-note"'),
+      "post-commit should fall back to the shared worktree shim",
+    );
+    assert.ok(
       !postCommitHook.includes("npx --yes agent-note record"),
       "post-commit should not resolve an unpinned package at commit time",
     );
@@ -281,6 +359,449 @@ describe("agentnote init", () => {
       !postCommitHook.includes("ENV_CODEX_THREAD_ID"),
       "post-commit should not leave TypeScript constant names in shell output",
     );
+  });
+
+  it("records plain commits made from a git worktree using the common shim", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, {
+        cwd: dir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const commonGitDir = resolveGitPath(
+        dir,
+        execSync("git rev-parse --git-common-dir", { cwd: dir, encoding: "utf-8" }).trim(),
+      );
+      const commonShim = join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note");
+      assert.ok(existsSync(commonShim), "init should create a common shim for all worktrees");
+
+      const worktreeDir = join(dir, ".claude", "worktrees", "agent-view");
+      mkdirSync(join(dir, ".claude", "worktrees"), { recursive: true });
+      execSync(`git worktree add -b agent-view-test ${shellSingleQuote(worktreeDir)}`, {
+        cwd: dir,
+      });
+
+      const worktreeGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+      );
+      assert.ok(
+        !existsSync(join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+        "the regression must exercise the common shim, not a worktree-local shim",
+      );
+
+      const sessionId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+      const runClaudeHook = (payload: Record<string, unknown>) => {
+        execFileSync(process.execPath, [cliPath, "hook", "--agent", "claude"], {
+          cwd: worktreeDir,
+          input: JSON.stringify(payload),
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+        });
+      };
+
+      runClaudeHook({
+        hook_event_name: "SessionStart",
+        session_id: sessionId,
+        model: "claude-opus-4-6",
+      });
+      runClaudeHook({
+        hook_event_name: "UserPromptSubmit",
+        session_id: sessionId,
+        prompt: "Create the Agent View worktree fixture.",
+      });
+
+      const filePath = join(worktreeDir, "agent-view-worktree.txt");
+      runClaudeHook({
+        hook_event_name: "PreToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-worktree-write",
+        tool_input: { file_path: filePath },
+      });
+      writeFileSync(filePath, "Agent View worktree support\n");
+      runClaudeHook({
+        hook_event_name: "PostToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-worktree-write",
+        tool_input: { file_path: filePath },
+      });
+
+      execSync("git add agent-view-worktree.txt", { cwd: worktreeDir });
+      execSync("git commit -m 'feat: worktree agent note'", {
+        cwd: worktreeDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const note = JSON.parse(
+        execSync("git notes --ref=agentnote show HEAD", {
+          cwd: worktreeDir,
+          encoding: "utf-8",
+        }),
+      );
+      assert.equal(note.agent, "claude");
+      assert.equal(note.session_id, sessionId);
+      assert.equal(note.interactions[0].prompt, "Create the Agent View worktree fixture.");
+      assert.deepEqual(note.interactions[0].files_touched, ["agent-view-worktree.txt"]);
+      assert.equal(note.files[0].path, "agent-view-worktree.txt");
+      assert.equal(note.files[0].by_ai, true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("installs shared hooks and shims when init runs inside a git worktree", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-init-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+      const worktreeDir = join(dir, ".claude", "worktrees", "init-agent");
+      mkdirSync(join(dir, ".claude", "worktrees"), { recursive: true });
+      execSync(`git worktree add -b init-agent-test ${shellSingleQuote(worktreeDir)}`, {
+        cwd: dir,
+      });
+
+      execSync(`node ${cliPath} init --agent claude --no-action`, {
+        cwd: worktreeDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const worktreeGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+      );
+      const commonGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-common-dir", {
+          cwd: worktreeDir,
+          encoding: "utf-8",
+        }).trim(),
+      );
+
+      assert.ok(
+        existsSync(join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+        "worktree init should create a worktree-local shim",
+      );
+      assert.ok(
+        existsSync(join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+        "worktree init should also create a common shim for sibling worktrees",
+      );
+      assert.ok(
+        existsSync(join(commonGitDir, "hooks", "post-commit")),
+        "worktree init should install hooks in the shared git hook directory",
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("supports common-shim worktree commits across bare and non-bare layouts", () => {
+    const layouts: WorktreeLayout[] = [
+      {
+        name: "non-bare nested Agent View path",
+        bare: false,
+        worktreePath: (dir) => join(dir, "repo", ".claude", "worktrees", "agent-view"),
+      },
+      {
+        name: "non-bare custom sibling path with spaces",
+        bare: false,
+        worktreePath: (dir) => join(dir, "custom worktrees", "feature one"),
+      },
+      {
+        name: "bare branch directory path",
+        bare: true,
+        worktreePath: (dir) => join(dir, "repo.bare", "branch", "feature"),
+      },
+      {
+        name: "bare external custom path with spaces",
+        bare: true,
+        worktreePath: (dir) => join(dir, "external worktrees", "feature one"),
+      },
+    ];
+
+    for (const layout of layouts) {
+      const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-matrix-"));
+      try {
+        const mainDir = layout.bare ? join(dir, "repo.bare") : join(dir, "repo");
+        if (layout.bare) {
+          execSync(`git init --bare ${shellSingleQuote(mainDir)}`);
+          const seedDir = join(dir, "seed");
+          execSync(`git clone ${shellSingleQuote(mainDir)} ${shellSingleQuote(seedDir)}`);
+          execSync("git config user.email test@test.com", { cwd: seedDir });
+          execSync("git config user.name Test", { cwd: seedDir });
+          execSync("git commit --allow-empty -m 'init'", { cwd: seedDir });
+          execSync("git push origin HEAD:main", { cwd: seedDir });
+          rmSync(seedDir, { recursive: true, force: true });
+        } else {
+          execSync(`git init ${shellSingleQuote(mainDir)}`);
+          execSync("git config user.email test@test.com", { cwd: mainDir });
+          execSync("git config user.name Test", { cwd: mainDir });
+          execSync("git commit --allow-empty -m 'init'", { cwd: mainDir });
+        }
+
+        const baseCwd = layout.bare ? mainDir : mainDir;
+        const worktreeDir = layout.worktreePath(dir);
+        mkdirSync(join(worktreeDir, ".."), { recursive: true });
+        execSync(`git worktree add -b feature ${shellSingleQuote(worktreeDir)} main`, {
+          cwd: baseCwd,
+        });
+        execSync("git config user.email test@test.com", { cwd: worktreeDir });
+        execSync("git config user.name Test", { cwd: worktreeDir });
+
+        execSync(`node ${cliPath} init --agent claude --no-action`, {
+          cwd: worktreeDir,
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+        });
+
+        const worktreeGitDir = resolveGitPath(
+          worktreeDir,
+          execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+        );
+        const commonGitDir = resolveGitPath(
+          worktreeDir,
+          execSync("git rev-parse --git-common-dir", {
+            cwd: worktreeDir,
+            encoding: "utf-8",
+          }).trim(),
+        );
+        const hookPath = resolveGitPath(
+          worktreeDir,
+          execSync("git rev-parse --git-path hooks/post-commit", {
+            cwd: worktreeDir,
+            encoding: "utf-8",
+          }).trim(),
+        );
+
+        assert.ok(
+          existsSync(join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+          `${layout.name}: worktree-local shim should exist`,
+        );
+        assert.ok(
+          existsSync(join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+          `${layout.name}: common shim should exist`,
+        );
+        assert.ok(existsSync(hookPath), `${layout.name}: shared post-commit hook should exist`);
+
+        rmSync(join(worktreeGitDir, AGENTNOTE_DIR, "bin"), { recursive: true, force: true });
+        assert.ok(
+          !existsSync(join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+          `${layout.name}: regression should force common-shim fallback`,
+        );
+
+        const sessionId = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
+        const runClaudeHook = (payload: Record<string, unknown>) => {
+          execFileSync(process.execPath, [cliPath, "hook", "--agent", "claude"], {
+            cwd: worktreeDir,
+            input: JSON.stringify(payload),
+            encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+          });
+        };
+
+        runClaudeHook({
+          hook_event_name: "SessionStart",
+          session_id: sessionId,
+          model: "claude-opus-4-6",
+        });
+        runClaudeHook({
+          hook_event_name: "UserPromptSubmit",
+          session_id: sessionId,
+          prompt: `${layout.name}: create worktree fixture.`,
+        });
+
+        const fileName = "worktree-matrix.txt";
+        const filePath = join(worktreeDir, fileName);
+        runClaudeHook({
+          hook_event_name: "PreToolUse",
+          session_id: sessionId,
+          tool_name: "Write",
+          tool_use_id: `tool-${layout.name}`,
+          tool_input: { file_path: filePath },
+        });
+        writeFileSync(filePath, `${layout.name}\n`);
+        runClaudeHook({
+          hook_event_name: "PostToolUse",
+          session_id: sessionId,
+          tool_name: "Write",
+          tool_use_id: `tool-${layout.name}`,
+          tool_input: { file_path: filePath },
+        });
+
+        execSync(`git add ${shellSingleQuote(fileName)}`, { cwd: worktreeDir });
+        execSync(`git commit -m ${shellSingleQuote(`feat: ${layout.name}`)}`, {
+          cwd: worktreeDir,
+          env: withoutCodexThreadEnv(),
+        });
+
+        const note = JSON.parse(
+          execSync("git notes --ref=agentnote show HEAD", {
+            cwd: worktreeDir,
+            encoding: "utf-8",
+          }),
+        );
+        assert.equal(note.session_id, sessionId, `${layout.name}: note should use hook session`);
+        assert.deepEqual(
+          note.interactions[0].files_touched,
+          [fileName],
+          `${layout.name}: prompt should keep file evidence`,
+        );
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("records worktree commits across git worktree add modes and path mutations", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-modes-"));
+    try {
+      const repoDir = join(dir, "repo");
+      execSync(`git init ${shellSingleQuote(repoDir)}`);
+      configureUser(repoDir);
+      execSync("git commit --allow-empty -m 'init'", { cwd: repoDir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, {
+        cwd: repoDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const addWorktree = (args: string[]) => {
+        execFileSync("git", ["worktree", "add", ...args], {
+          cwd: repoDir,
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+          stdio: "pipe",
+        });
+      };
+      const recordAndAssert = (worktreeDir: string, name: string, index: number) => {
+        const sessionId = `cccccccc-dddd-4eee-8fff-${String(index).padStart(12, "0")}`;
+        const fileName = `worktree-mode-${index}.txt`;
+        const prompt = `${name}: record worktree mode.`;
+        const note = recordClaudeWorktreeCommit(worktreeDir, {
+          sessionId,
+          prompt,
+          fileName,
+          commitMessage: `feat: ${name}`,
+        }) as {
+          session_id?: string;
+          interactions?: Array<{ prompt?: string; files_touched?: string[] }>;
+        };
+
+        assert.equal(note.session_id, sessionId, `${name}: note should use the worktree session`);
+        assert.equal(note.interactions?.[0]?.prompt, prompt, `${name}: prompt should be recorded`);
+        assert.deepEqual(
+          note.interactions?.[0]?.files_touched,
+          [fileName],
+          `${name}: file evidence should be preserved`,
+        );
+      };
+
+      const detachedDir = join(dir, "detached worktree");
+      addWorktree(["--detach", detachedDir, "HEAD"]);
+      recordAndAssert(detachedDir, "detached HEAD worktree", 1);
+
+      const lockedDir = join(dir, "locked worktree");
+      addWorktree([
+        "--lock",
+        "--reason",
+        "agentnote regression",
+        "-b",
+        "locked-mode",
+        lockedDir,
+        "HEAD",
+      ]);
+      recordAndAssert(lockedDir, "locked worktree", 2);
+      execFileSync("git", ["worktree", "unlock", lockedDir], { cwd: repoDir });
+
+      const relativeDir = join(dir, "relative paths", "feature");
+      mkdirSync(join(relativeDir, ".."), { recursive: true });
+      addWorktree(["--relative-paths", "-b", "relative-mode", relativeDir, "HEAD"]);
+      recordAndAssert(relativeDir, "relative-paths worktree", 3);
+
+      const orphanDir = join(dir, "orphan worktree");
+      addWorktree(["--orphan", "-b", "orphan-mode", orphanDir]);
+      recordAndAssert(orphanDir, "orphan worktree", 4);
+
+      const firstDuplicateDir = join(dir, "duplicate-a", "feature");
+      const secondDuplicateDir = join(dir, "duplicate-b", "feature");
+      mkdirSync(join(firstDuplicateDir, ".."), { recursive: true });
+      mkdirSync(join(secondDuplicateDir, ".."), { recursive: true });
+      addWorktree(["-b", "duplicate-a-mode", firstDuplicateDir, "HEAD"]);
+      addWorktree(["-b", "duplicate-b-mode", secondDuplicateDir, "HEAD"]);
+      recordAndAssert(secondDuplicateDir, "duplicate basename worktree", 5);
+
+      const moveSourceDir = join(dir, "move source");
+      const moveTargetDir = join(dir, "moved worktrees", "move target");
+      mkdirSync(join(moveTargetDir, ".."), { recursive: true });
+      addWorktree(["-b", "moved-mode", moveSourceDir, "HEAD"]);
+      execFileSync("git", ["worktree", "move", moveSourceDir, moveTargetDir], {
+        cwd: repoDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+      recordAndAssert(moveTargetDir, "moved worktree", 6);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("respects worktree-specific hooksPath configuration", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-hooks-path-"));
+    try {
+      const repoDir = join(dir, "repo");
+      execSync(`git init ${shellSingleQuote(repoDir)}`);
+      configureUser(repoDir);
+      execSync("git commit --allow-empty -m 'init'", { cwd: repoDir });
+
+      const worktreeDir = join(dir, "configured worktree");
+      execSync(`git worktree add -b configured-hooks ${shellSingleQuote(worktreeDir)} HEAD`, {
+        cwd: repoDir,
+      });
+      execSync("git config extensions.worktreeConfig true", { cwd: repoDir });
+      execSync("git config --worktree core.hooksPath .custom-hooks", { cwd: worktreeDir });
+
+      execSync(`node ${cliPath} init --agent claude --no-action`, {
+        cwd: worktreeDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const postCommitHook = join(worktreeDir, ".custom-hooks", "post-commit");
+      assert.ok(
+        existsSync(postCommitHook),
+        "init should install hooks into the worktree-specific hooksPath",
+      );
+
+      const sessionId = "dddddddd-eeee-4fff-8aaa-000000000001";
+      const prompt = "configured hooksPath: record worktree commit.";
+      const note = recordClaudeWorktreeCommit(worktreeDir, {
+        sessionId,
+        prompt,
+        fileName: "configured-hooks-path.txt",
+        commitMessage: "feat: configured hooks path worktree",
+      }) as {
+        session_id?: string;
+        interactions?: Array<{ prompt?: string }>;
+      };
+
+      assert.equal(note.session_id, sessionId);
+      assert.equal(note.interactions?.[0]?.prompt, prompt);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("is idempotent", () => {
