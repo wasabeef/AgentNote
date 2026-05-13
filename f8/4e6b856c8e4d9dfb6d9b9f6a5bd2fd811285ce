@@ -1,0 +1,123 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-13T08:31:24.918Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "Claude Agent View の機能について詳細調査してほしい。Agent Note のセッション判断処理に大きな問題がでないかどうか",
+      "response": "Claude Agent View は外部仕様の変化が絡むので、まず公式情報を確認しつつ、こちらの Claude adapter / session 判定 / hook config との接点を洗います。ローカル実装と照らして「壊れる可能性がある箇所」と「今すぐ対策すべきか」を分けて見ます。\n公式 docs では Agent View は `claude agents` / `claude --bg` / `/bg` で background session を supervisor 管理にする機能でした。Agent Note 側で問題になりそうなのは「terminal attached でなくても session が走る」「global list が project 横断」「process が supervisor parent」「CLAUDE_CONFIG_DIR で別 instance」あたりです。次に Claude adapter と git hook の session 判定を照合します。\nClaude Agent View は「通常の Claude Code セッションが background 管理される」方向の機能なので、まず公式 docs と今の Claude adapter / git hook の session 選択を突き合わせます。ここは Agent Note の根っこなので、かなり慎重に見ます。\n公式 docs では Agent View は `claude agents` / `claude --bg` / `/bg` で background session を supervisor 管理にする機能でした。Agent Note 側で問題になりそうなのは「terminal attached でなくても session が走る」「global list が project 横断」「process が supervisor parent」「`CLAUDE_CONFIG_DIR` で別 instance」あたりです。次に Claude adapter と git hook の session 判定を照合します。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "claude-code の github から実装も確認すること",
+      "response": "Claude Code 側の実装も確認します。もし本体が非公開で GitHub には docs / issue / SDK しかない場合は、その範囲で「実装確認できたこと」と「確認不能なこと」を分けて扱います。\nGitHub 側は `anthropics/claude-code` が公開されていますが、README から見る限り本体 CLI の実装そのものは置かれておらず、plugins / scripts / examples 中心の可能性が高いです。ツリーを直接見て、Agent View や hook 実装が参照できるか確認します。\nAgent View の一番大きい差分は「background session は edit 前に `.claude/worktrees/` の git worktree へ移動する」点でした。これは単なる background 化より重要で、Agent Note の `.git/agentnote` 保存先や git hooks が worktree ごとにどう見えるかに影響します。ここを追加で確認しています。\n調査結果としては、**Agent View 自体は Agent Note と相性が悪いわけではない**ですが、Claude Code が background session を `.claude/worktrees/` の git worktree に移す点が、今の Agent Note の session / git hook 判定にかなり重要です。\n\n**結論**\n大きな問題になり得る箇所は 2 つあります。\n\n- **High:** Agent View の background session が worktree 内で commit した場合、`post-commit` hook が `$GIT_DIR/agentnote/bin/agent-note` を探しますが、worktree の `$GIT_DIR` は main repo の `.git` ではなく `.git/worktrees/<name>` になります。今の shim は main 側の `.git/agentnote/bin/agent-note` に作られるため、worktree commit では recording CLI が見つからず note が作られない可能性があります。\n- **Medium:** 複数 background agent が同一 repo で並列に動く場合、`.git/agentnote/session` は single active pointer なので、plain `git commit` では「最後に hook を発火した session」が勝ちます。commit 自体を Claude が `Bash(git commit)` で実行する場合は session ID を直接 trailer 注入するので比較的安全ですが、人間が main/worktree で commit する場合は取り違えや note 欠落が起き得ます。\n\n**確認した事実**\n- 公式 docs では Agent View は `claude agents` で開き、background session は terminal に attached されていなくても走ります。さらに各 background session は edit 前に isolated git worktree under `.claude/worktrees/` へ移動します。Source: https://code.claude.com/docs/en/agent-view\n- Claude hooks には `session_id`, `transcript_path`, `cwd` が入り、`UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `WorktreeCreate`, `WorktreeRemove` などの event が定義されています。Source: https://code.claude.com/docs/en/hooks\n- `anthropics/claude-code` GitHub repo も確認しましたが、公開 repo は plugins / examples / docs / scripts 中心で、Agent View supervisor / worktree 移動の本体実装は公開されていません。Source: https://github.com/anthropics/claude-code\n\n**Agent Note 側の照合**\n- Claude adapter は `SessionStart`, `Stop`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse` を設定しています: [claude.ts](/Users/a12622/git/context-history/packages/cli/src/agents/claude.ts:44)\n- `SessionStart` と `UserPromptSubmit` が `.git/agentnote/session` を上書きします: [hook.ts](/Users/a12622/git/context-history/packages/cli/src/commands/hook.ts:192)\n- `prepare-commit-msg` は active session + heartbeat + file evidence を見て trailer を入れます: [init.ts](/Users/a12622/git/context-history/packages/cli/src/commands/init.ts:124)\n- `agentnoteDir()` は `git rev-parse --git-dir` ベースなので、git worktree では worktree 固有の git dir に session data を保存します: [paths.ts](/Users/a12622/git/context-history/packages/cli/src/paths.ts:24)\n\n**推奨対応**\n次 PR でやるなら優先度はこれです。\n\n1. `post-commit` / `pre-push` の CLI 探索に `git rev-parse --git-common-dir` 側の `.git/agentnote/bin/agent-note` も見る fallback を追加する。これは Agent View worktree 対応としてかなり重要です。\n2. `resolveHookDir()` は `git rev-parse --git-path hooks` を使うようにする。worktree で `agent-note init` した場合でも実際に Git が使う hooks dir に入るようにできます。\n3. plain git commit の session 選択を single active pointer から、fresh sessions の file/blob evidence match に寄せる。複数 Agent View session が並列に動く時の取り違え対策です。\n4. regression test に git worktree を使ったケースを追加する。`git worktree add` → worktree 内で hook / commit → note が作られる、を固定したいです。\n\n今すぐ公開を止めるほどの「Agent View で必ず壊れる」ではないですが、**Agent View を正式に強くサポートしたいなら worktree 対応は入れたほうがいい**です。特に 1 と 2 は設計の筋も良く、既存挙動への悪影響も小さいです。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "worktree 対応とは？",
+      "response": "worktree 対応は少しややこしいので、Git の保存場所と Agent Note の保存場所を分けて噛み砕きます。要点は「同じ repository でも worktree だと `.git` の実体が別の場所を指す」ことです。\n`git worktree` は、同じ repository の別作業ディレクトリを作る Git 機能です。Claude Agent View は background agent ごとに `.claude/worktrees/...` のような作業場所を作って、そこで編集・commit する可能性があります。\n\n問題は、通常 repo と worktree で Git の場所が違うことです。\n\n```text\n通常の checkout\nrepo/.git/\n  hooks/\n  agentnote/\n    bin/agent-note\n    sessions/\n\nworktree\nrepo/.claude/worktrees/xxx/\n  .git  -> 実体は repo/.git/worktrees/xxx を指す\n\nGit が見る場所\nrepo/.git/worktrees/xxx/\n  agentnote/\n    sessions/\n```\n\n今の Agent Note は `git rev-parse --git-dir` を使って `.git/agentnote` を決めます。worktree 内ではこれが `repo/.git/worktrees/xxx` になります。\n\nつまり worktree 内で commit すると、\n\n```text\nmain repo 側にある:\nrepo/.git/agentnote/bin/agent-note\n\nworktree commit hook が探す:\nrepo/.git/worktrees/xxx/agentnote/bin/agent-note\n```\n\nとなり、hook が CLI を見つけられず note が作られない可能性があります。\n\n「worktree 対応」とは、ざっくり言うと次の対応です。\n\n- `post-commit` / `pre-push` が worktree 専用 git dir だけでなく、共通 git dir の `agentnote/bin/agent-note` も探す。\n- hook の install 先を `git rev-parse --git-path hooks` など Git が実際に使う path に合わせる。\n- session data / active session pointer が worktree ごとに分かれる前提で、plain commit 時の session 選択を誤らないようにする。\n- `git worktree add` を使った regression test を追加して、Claude Agent View 的な環境で note が落ちないことを保証する。\n\n要するに、Claude Agent View 対応の本質は **background かどうか**よりも、**commit が main checkout ではなく worktree で起きても Agent Note が同じように記録できるようにすること**です。"
+    },
+    {
+      "prompt": "そもそも Agent Note って git worktree に対応していなかった？",
+      "response": "まず現状のコード上の対応範囲を切り分けます。`git worktree` は「一部は自然に動くけど、CLI shim / hook 探索 / notes 共有で落とし穴がある」タイプなので、実際の挙動をローカルで小さく再現して確認します。\n正確に言うと、**部分対応はしているけど、完全対応とは言いにくい**です。\n\n今の Agent Note は `git rev-parse --git-dir` を使って `.git` 実体を解決しているので、worktree で `.git` が file になっている基本ケースには一応対応しています。つまり、worktree 内で `agent-note init` して、worktree 側の git dir に session data や shim が作られれば動く可能性はあります。\n\nただし、現在の実装だと落とし穴があります。\n\n- main checkout で `agent-note init` しただけでは、worktree 側の `$GIT_DIR/agentnote/bin/agent-note` は存在しません。\n- Git hooks 自体は common git dir 側の `hooks/` が使われますが、hook script 内では `$GIT_DIR/agentnote/bin/agent-note` を先に探します。\n- worktree 内の `$GIT_DIR` は `repo/.git/worktrees/<name>` なので、main checkout の `repo/.git/agentnote/bin/agent-note` を見に行きません。\n- 結果として、Agent View の worktree で commit した時に hook は走っても、record 用 CLI を見つけられず note が作られない可能性があります。\n\nローカル再現でもこうなりました。\n\n```text\ngit-dir=/.../main/.git/worktrees/wt\ngit-common-dir=/.../main/.git\ngit-path-hooks=/.../main/.git/hooks\nworktree-shim-exists=no\ncommon-shim-exists=yes\n```\n\nなので答えはこうです。\n\n**Agent Note は worktree の基本 path 解決には対応しているが、main checkout で init したあとに Agent View / worktree 側で commit するケースまでは十分に対応できていない**です。\n\n修正するなら、まずは hook script が以下の順で CLI を探すようにするのが自然です。\n\n```text\n1. $GIT_DIR/agentnote/bin/agent-note\n2. $(git rev-parse --git-common-dir)/agentnote/bin/agent-note\n3. repo/node_modules/.bin/agent-note\n4. global agent-note\n```\n\nこれで main 側で `agent-note init` していれば、worktree commit でも common dir の shim を拾えるようになります。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "ブランチきって、まずは worktree への完全対応を進めましょう。\nこれまでのログで worktree の対応ができてるかどうかも洗い出して。",
+      "response": "worktree は Agent View の本丸っぽいので、先に専用ブランチを切って、履歴・docs・実装の 3 面から「対応済みと言える範囲 / まだ穴がある範囲」を洗い出します。その上で hook の CLI 探索と session 保存先まわりを、実際の `git worktree` regression test で固定します。\n履歴では `4c08e7f fix: support git worktree by using git rev-parse --git-dir` があり、当時は「`.git` が file でも実 git dir を解決する」対応でした。ただし今回見えている穴は別で、main checkout に置いた local shim を worktree hook から見つけられない点と、hook install path が common hooks と噛み合うかです。ブランチを切ってそこを埋めます。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "entire の実装も参考にしつつ進めてほしい。（entireのバグがあればそれは解決すること）",
+      "response": "Entire の実装も見ます。ここでは「同じアイデアを真似る」より、worktree / git dir / hook / session storage の境界をどう扱っているかだけを抽出して、Agent Note 側の穴を潰す材料にします。\nEntire 側は README に「Git Worktrees は session tracking が worktree ごとに独立」と明記されています。Agent Note も同じ方向に寄せるべきですが、Entire は checkpoint branch 戦略なので、そのまま移植ではなく「worktree ごとの session 保存」と「common hooks / shim 解決」を Agent Note 流に実装します。\n実装方針は、session data は worktree ごとに分けたまま維持し、hook 実行時の CLI shim だけ common git dir も見に行く形にします。これは Entire の「worktree を分離境界にする」思想に近く、Agent Note の git notes 設計にも一番自然です。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "worktree より良い実装と完全性を目指して",
+      "response": "完全性を上げるなら「worktree で commit できる」だけでは不十分で、「main で init して worktree commit」「worktree で init して main/worktree commit」の両方を落とさない必要があります。なので shim は worktree 固有だけでなく common git dir 側にも置く設計に寄せます。\n実装を入れました。今の test は「main で init → Claude Agent View 的な `.claude/worktrees/...` で hook event と plain commit → git note が作られる」を実際に走らせる形にしています。次は build と該当 test でまず破綻を見ます。\n新規 worktree test は通りましたが、既存の「shell 特殊文字パスで chained hook が走る」test が落ちました。`resolveHookDir()` の変更が hook path の解決に副作用を出している可能性があるので、そこを先に直します。\n落ちた理由が見えました。`String.replace()` の replacement 文字列内で `$`` / `$'` が特殊展開され、パス中の `$` + backtick が壊れていました。worktree 対応で hook path が絶対パスになったことで既存 test が正しく検出してくれた形です。関数 replacement にして安全化します。\nコードだけでなく docs も合わせます。特に「昔の worktree 対応は `.git` file 解決まで」「今回の対応は common git dir shim / hooks まで」という境界を investigations に残します。\ndocs には「worktree 対応済み」の意味を、session buffer は worktree 分離・CLI shim は common dir fallback という形で残しました。次は型チェック / lint / targeted test / できれば full test まで回します。\n追加で「worktree 内で init した場合も common shim と shared hooks ができる」test を入れました。targeted test は通っています。最後に full suite をもう一度回して、追加 test まで含めて全体保証します。\n`fix/worktree-agentnote-hooks` ブランチで worktree 対応を進めました。\n\nやったこと:\n- 既存の `4c08e7f fix: support git worktree by using git rev-parse --git-dir` は「worktree の `.git` file 解決」までの対応だった、と整理。\n- session buffer は worktree ごとに分離したまま維持。\n- `post-commit` / `pre-push` は worktree-local shim がなければ common git dir の shim を使うように変更。\n- `agent-note init` は current worktree git dir と common git dir の両方に shim を作成。\n- hook install path は `git rev-parse --git-path hooks` ベースに修正。\n- worktree 対応で表面化した `String.replace()` の `$` / `$'` 展開バグも修正。\n- `docs/architecture.md`, `docs/knowledge/investigations.md`, `AGENTS.md`, `CLAUDE.md` に判断を記録。\n\n追加した regression:\n- main checkout で `agent-note init` 後、`.claude/worktrees/...` 側の plain `git commit` で note が作られること。\n- worktree 内で `agent-note init` した場合も common shim / shared hooks が作られること。\n\n検証:\n- `npm run build` ✅\n- `npx tsx src/commands/init.test.ts` ✅ 32 tests\n- `npm test` ✅ 461 tests\n- `npm run typecheck` ✅\n- `npm run lint` ✅\n- `git diff --check` ✅\n\n参考に確認したもの:\n- Claude Agent View docs: https://code.claude.com/docs/en/agent-view\n- Claude hooks docs: https://code.claude.com/docs/en/hooks\n- Entire repo の worktree 関連実装・docs: https://github.com/entireio/cli\n\n未コミットです。`docs/blog/` の untracked は触っていません。コミットしてよければ続けます。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/architecture.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "どういうテストをした？",
+      "response": "今回追加・実行した主なテストはこの 2 本です。\n\n1. **main checkout で init → worktree で commit**\n`agent-note init --agent claude --no-action` を main checkout で実行したあと、`.claude/worktrees/agent-view` に `git worktree` を作成。worktree 側で Claude hook event を擬似的に流して `changes.jsonl` / `pre_blobs.jsonl` を作り、plain `git commit` を実行。最後に `git notes --ref=agentnote show HEAD` で note が作られ、prompt / files_touched / by_ai が正しいことを確認しました。これが Claude Agent View 想定の本命 regression です。\n\n2. **worktree 内で init**\nmain ではなく worktree 側で `agent-note init --agent claude --no-action` を実行。worktree-local shim と common git dir shim の両方が作られ、hook が shared hook directory に入ることを確認しました。これで「どこで init しても sibling worktree commit が詰みにくい」ことを固定しています。\n\nあわせて既存回帰も確認しました。\n\n- `post-commit` が `$GIT_DIR/agentnote/bin/agent-note` を優先し、なければ `$COMMON_GIT_DIR/agentnote/bin/agent-note` に fallback すること。\n- `pre-push` も同じ shim fallback を使うこと。\n- shell 特殊文字を含む repository path で chained hook backup が壊れないこと。\n- stale fallback / env fallback / prompt-only skip / Codex fallback など既存の hook 系 regression が壊れていないこと。\n\n実行結果は以下です。\n\n- `npm run build` ✅\n- `npx tsx src/commands/init.test.ts` ✅ 32 tests\n- `npm test` ✅ 461 tests\n- `npm run typecheck` ✅\n- `npm run lint` ✅\n- `git diff --check` ✅"
+    },
+    {
+      "prompt": "例えば  /Users/a12622/git/jump-app.bare は git worktree 使ってるので、この構成でも問題なさそう？",
+      "response": "実在の `jump-app.bare` 構成で確認します。まず読み取りだけで `git worktree list`、各 worktree の `--git-dir` / `--git-common-dir` / hooks path / agentnote shim の見え方を確認して、今回の修正がその形に刺さるか見ます。\n`jump-app.bare` はかなり典型的な bare + worktree 構成です。各 branch worktree の `$GIT_DIR` は `jump-app.bare/worktrees/<name>`、common は `jump-app.bare`、hooks は `jump-app.bare/hooks` でした。つまり今回の common shim fallback がまさに必要になる形です。もう少し hook 設定と現在の Agent Note 状態も読み取りで確認します。\n`/Users/a12622/git/jump-app.bare` の構成でも、今回の修正はかなり効きます。\n\n確認した構成はこうです。\n\n```text\nbare/common:\n  /Users/a12622/git/jump-app.bare\n\nworktrees:\n  /Users/a12622/git/jump-app.bare/branch/main\n  /Users/a12622/git/jump-app.bare/branch/build-agentnote\n  ...\n\nworktree の $GIT_DIR:\n  /Users/a12622/git/jump-app.bare/worktrees/main\n  /Users/a12622/git/jump-app.bare/worktrees/build-agentnote\n\ncommon git dir:\n  /Users/a12622/git/jump-app.bare\n\nhooks:\n  /Users/a12622/git/jump-app.bare/hooks\n```\n\nこれはまさに今回想定した「bare repo + 複数 worktree + shared hooks」構成です。\n\n今回の修正前だと、worktree commit hook はまずここを探します。\n\n```text\n/Users/a12622/git/jump-app.bare/worktrees/main/agentnote/bin/agent-note\n```\n\nでも main checkout 側で `agent-note init` していた場合、shim は common 側にある可能性が高いです。\n\n```text\n/Users/a12622/git/jump-app.bare/agentnote/bin/agent-note\n```\n\n今回の修正後は、worktree-local shim がなければ common shim を見に行くので、この構成でも動く見込みです。\n\n```text\n1. /Users/a12622/git/jump-app.bare/worktrees/main/agentnote/bin/agent-note\n2. /Users/a12622/git/jump-app.bare/agentnote/bin/agent-note\n```\n\nただし、今の `jump-app.bare` ではまだどちらの shim もありませんでした。\n\n```text\nworktree-shim=no\ncommon-shim=no\n```\n\nなので、このリポジトリで実際に使うには、修正版の `agent-note init` をどこかの worktree で一度実行する必要があります。そうすると common shim と shared hooks が整う想定です。\n\n一点だけ注意があります。既存 hooks は `lefthook` 管理でした。Agent Note は既存 hook を backup して chain する設計なので共存できるはずですが、この bare + lefthook 構成は重要なので、今回の test に「既存 hook chain + worktree」のケースも足すとさらに安心です。今の test は shell-special path の chain は見ていますが、worktree + existing hook chain を同時には見ていません。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "git worktree は自分でディレクトリルール決めれるし、bare and non-bare もあるので、それらのテストを網羅してほしい",
+      "response": "その通りです。今の test は Agent View っぽい nested worktree と bare ではない通常 repo が中心なので、完全性を狙うなら「bare / non-bare」「worktree directory が repo 内 / repo 外 / sibling」「既存 hook chain あり」の matrix にします。重複を増やすだけではなく、Git の構成差分が出る軸だけを押さえます。\nworktree は「ディレクトリ名に意味がない」「bare/non-bare で common git dir が変わる」が本質なので、ここを test matrix に足します。既存の nested Agent View 風だけだと、たしかに本番の `/Users/.../*.bare` 構成までは保証できません。\n既に入っている matrix を一度読んだところ、bare/non-bare の軸は押さえ始めています。ここからは「任意ディレクトリ名」をより明確にするため、space を含む worktree path と `.bare/branch/...` 形の説明・test 名を整えてから実行確認します。\ntarget test は通りました。次に、同じ matrix の中身を「custom directory rule が入っている」と読んで分かる形に寄せます。test は増やしすぎず、Git の構成差が出る 4 ケースに絞ったままにします。\ndocs 側も、単なる Claude Agent View 対応ではなく「bare/non-bare と arbitrary layout を契約として守る」表現に寄せました。ここから target test をもう一度回して、space を含む path でも壊れないことを確認します。\nmatrix は target test で通りました。bare repo 側も `.bare/branch/...` と外部 custom path の両方を通過しているので、次は full test / typecheck / lint で周辺影響を見ます。\nfull test も 462 件すべて通りました。最後に build と diff 状態を確認して、生成物のずれがないか見ます。\nついでに、今回触っている `deinit` の common shim cleanup も worktree で固定しておきます。ここは機能自体は小さいですが、将来 refactor で「init は対応したけど cleanup が片側だけ残る」になりやすい場所です。\ncleanup 側の worktree test も追加して通しました。変更範囲が test 追加だけとはいえ、最後にもう一度全体 verification を通します。\nworktree coverage を強化しました。\n\n追加した主な保証は以下です。\n\n- non-bare repo:\n  - `.claude/worktrees/...` の nested Agent View 風 path\n  - repo 外の custom sibling path\n  - space を含む worktree path\n- bare repo:\n  - `repo.bare/branch/feature` 形式\n  - bare repo 外の custom path\n- `post-commit` は worktree-local shim が消えていても common git dir shim で `git note` を作れることを確認\n- `deinit` は worktree-local shim と common shim の両方を削除できることを確認\n- `AGENTS.md` / `CLAUDE.md` / `docs/architecture.md` / `docs/knowledge/investigations.md` に bare/non-bare と arbitrary layout の前提を追記\n\n検証済みです。\n\n- `npx tsx src/commands/init.test.ts` ✅ 33 pass\n- `npx tsx src/commands/deinit.test.ts` ✅ 12 pass\n- `npm run build` ✅\n- `npm run typecheck` ✅\n- `npm run lint` ✅\n- `npm test` ✅ 463 pass\n- `git diff --check` ✅\n\n`docs/blog/` は既存の untracked なので触っていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/investigations.md",
+        "docs/architecture.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "tools": [
+        "apply_patch",
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "git worktree の詳細仕様を確認してほしい。\nworktree でできることを全て網羅できるようにテストを行ってほしい。",
+      "response": "Git worktree は思ったより仕様の枝が多いので、まず公式 docs とローカル Git の挙動を照合します。そのうえで「全部を薄くなぞる」ではなく、Agent Note が壊れうる境界、つまり git dir/common dir/hooks/session/notes/cleanup が変わる軸を test matrix に落とします。\n公式 docs では、linked worktree は `$GIT_DIR` が各 worktree 専用、`$GIT_COMMON_DIR` が共有、path 解決は `git rev-parse --git-path` を使うべき、とされています。ここから Agent Note 的に危険な軸は、`--detach` / `--orphan` / `move` / `worktreeConfig` / `relativeWorktrees` / duplicate basename です。全部を Git 本体の再実装テストにはせず、Agent Note の hook/shim/note が壊れるところに絞って足します。\n追加テストは「Git が提供する command の全部」を一対一にテストするのではなく、Agent Note が依存している仕様境界を網羅します。具体的には `--detach`、`--orphan`、`--lock`、`--relative-paths`、`worktree move`、duplicate basename、worktree-specific `core.hooksPath` まで入れます。\nworktree add modes と hooksPath の test を足しました。`--orphan` や `--relative-paths` は普段の開発だと忘れがちですが、ここが通ると「Git が private git dir をどう置いても git command ベースで追従できる」ことをかなり強く保証できます。\nlint が 1 箇所だけフォーマット指摘を出したので直しました。ここから再度 target + full verification に戻します。\nGit worktree 仕様を公式 docs で確認し、Agent Note が依存する境界を test に追加しました。公式 docs では、linked worktree は `HEAD` / `index` などが worktree ごとに分離され、refs や common dir は共有され、path 解決は `$GIT_DIR` / `$GIT_COMMON_DIR` を決め打ちせず `git rev-parse --git-path` を使うべきとされています。`--detach`、`--orphan`、`--lock`、`--relative-paths`、`move`、worktree-specific config も確認しました。Source: https://git-scm.com/docs/git-worktree\n\n追加した coverage:\n\n- [init.test.ts](/Users/a12622/git/context-history/packages/cli/src/commands/init.test.ts): bare / non-bare、repo 内外、space あり path、`.bare/branch/...`、`--detach`、`--orphan`、`--lock`、`--relative-paths`、duplicate basename、`git worktree move`、worktree-specific `core.hooksPath` を通して、plain commit から note が作られることを確認。\n- [deinit.test.ts](/Users/a12622/git/context-history/packages/cli/src/commands/deinit.test.ts): worktree-local shim と common shim の両方が cleanup されることを確認。\n- [docs/architecture.md](/Users/a12622/git/context-history/docs/architecture.md) / [docs/knowledge/investigations.md](/Users/a12622/git/context-history/docs/knowledge/investigations.md) / [AGENTS.md](/Users/a12622/git/context-history/AGENTS.md) / [CLAUDE.md](/Users/a12622/git/context-history/CLAUDE.md): worktree の設計方針と regression coverage を更新。\n\n検証済みです。\n\n- `npx tsx src/commands/init.test.ts` ✅ 35 pass\n- `npx tsx src/commands/deinit.test.ts` ✅ 12 pass\n- `npm run build` ✅\n- `npm run typecheck` ✅\n- `npm run lint` ✅\n- `npm test` ✅ 465 pass\n- `git diff --check` ✅\n\n`docs/blog/` は既存の untracked なので触っていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  }
+}
