@@ -1,0 +1,35 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-13T02:32:40.081Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "まだまだテスト観点の漏れがあるということが今回でわかりました。\ndocs/knowledge/investigations.md によりテストの強化方針を残してほしい",
+      "response": "今回の deletion-only AI Ratio バグは、既存の “追加行がある変更” に寄ったテストだけでは抜けるタイプでした。`docs/knowledge/investigations.md` に、今後の regression / characterization test 方針として残します。\n`calcAiRatio()` 単体には fallback テストがあったのに、`buildEntry()` が `method=none` で先に止める経路を見ていなかったのが今回の教訓です。なので「helper だけでなく、その helper を使う entry / report の契約まで固定する」という方針を具体化して追記します。\nPR #76 の具体例と、今後のテスト強化方針を同じ場所にまとめました。次は差分を見て、表現が運用メモとして自然か、既存の `engineering.md` と矛盾しないかだけ確認します。\n差分は `docs/knowledge/investigations.md` だけで、`git diff --check` も通りました。PR #76 に含めるため、未追跡の `docs/blog/` は触らず、この調査メモだけ commit / push します。",
+      "files_touched": [
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 20,
+      "total_added": 20,
+      "deleted": 0
+    }
+  }
+}
