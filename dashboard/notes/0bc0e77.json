@@ -1,0 +1,107 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-13T01:52:02.534Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "左上の Preview ラベルだけ取って",
+      "response": "左上の `Preview` badge だけ外します。他の UI やデータ処理には触りません。\n左上の `Preview` ラベルだけ削除しました。",
+      "files_touched": [
+        "packages/dashboard/src/pages/index.astro"
+      ],
+      "tools": [
+        "apply_patch"
+      ]
+    },
+    {
+      "prompt": "docs/blog 以外の関係ないファイルは破棄して PR 作成して",
+      "response": "`docs/blog` だけを PR 対象にして、Dashboard 実験で触ったファイルは破棄します。まず status を確認して、破棄対象を明確にしてから戻します。\nDashboard 関連の差分は破棄できました。ここからは `docs/blog` の内容だけを確認して、PR 用に commit / push します。\n`docs/blog` の 3 ファイルだけが残りました。ブランチ名が Dashboard 実験のままだと PR が分かりにくいので、ブログ記事用の名前に変えてから commit / push / PR 作成します。\n`common:pr-create` スキルを使って、差分確認、commit、push、PR 作成まで進めます。\n差分は `docs/blog` の 3 ファイルだけです。記事本文と投稿戦略の追加なので、`docs: add Agent Note launch articles` で commit します。\nPR 本文はテンプレートに沿って、release note は `skip`、種類は Documentation にします。docs-only なのでテストは未実行として明記します。\n`docs/blog` 以外の Dashboard 関連差分とローカル mock notes は破棄しました。PR 対象は `docs/blog` の 3 ファイルだけです。\n\nPR 作成済みです: https://github.com/wasabeef/AgentNote/pull/75\n\nCommit: `c43c955 docs: add Agent Note launch articles`\n\nDocs-only なのでテストは実行していません。May the Force be with you.",
+      "tools": [
+        "exec_command",
+        "write_stdin"
+      ]
+    },
+    {
+      "prompt": "プロンプトを確認して",
+      "response": "PR #75 に出ている Agent Note の Prompt 表示を確認します。PR body と必要ならコメント・最新 commit の note を見て、妥当かどうかまで判断します。\nPR #75 の Prompt 出力を確認しました。\n\n現在 PR に出ている Prompt はこの 2 件です。\n\n```text\nレビューして\nこれは日本語で\n```\n\n結論として、**この PR の内容を理解するには弱いです**。この 2 件は実際に `docs/blog` を触った Prompt なので完全に無関係ではありませんが、記事作成の本来の意図である「公開用ブログを書く」「なぜ必要かと仕組みにフォーカスする」「日本語・英語を揃える」「投稿戦略を作る」あたりが出ていません。\n\n一方で、今回最後に打った `docs/blog 以外の関係ないファイルは破棄して PR 作成して` が出ていないのは自然です。これは commit 内容を作った Prompt というより、作業整理と PR 作成の指示なので、commit の Agent Note には入らなくても問題ありません。\n\n問題の本質は、`docs/blog` の記事作成が長い会話の中で進み、実際に commit したタイミングでは直近の「レビュー」「日本語化」だけが commit に強く紐づいたことです。つまり Prompt selection としては保守的に正しい寄りですが、**ユーザーが PR で期待する “なぜこの記事を作ったか” という文脈は足りていません**。\n\n今回は PR description の Summary が補っているので致命的ではないですが、Agent Note のウリとしては改善余地ありです。 долгосрочно には「uncommitted file が長い間積まれた後に commit された場合、作成時の Prompt も拾う」方向の調査対象にしてよいと思います。",
+      "tools": [
+        "exec_command"
+      ]
+    },
+    {
+      "prompt": "左上の Preview ラベルだけ取って っていうプロンプトがないのは不自然",
+      "response": "これは **出ていない方が自然** です。\n\n`左上の Preview ラベルだけ取って` は `packages/dashboard/src/pages/index.astro` を変更する Prompt でしたが、その後に `docs/blog 以外の関係ないファイルは破棄して PR 作成して` に従って Dashboard 変更を全部破棄しました。\n\n最終 commit `c43c955 docs: add Agent Note launch articles` に残ったのは `docs/blog/` の 3 ファイルだけです。なので、Dashboard の Preview label に関する Prompt がこの commit の Prompt として出ると、むしろ **commit 内容と関係ない Prompt が混入している** 状態になります。\n\nただし、違和感の原因は分かります。PR 上の見出しが `Prompts & Responses` なので、「この作業中の会話全部」に見える。でも実際は **この commit に残った変更に関係する Prompt** です。\n\n改善するなら、PR Report の見出しや説明を少し変えるのがよさそうです。\n\n```md\nPrompts & Responses\n```\n\nより、\n\n```md\nPrompts linked to committed changes\n```\n\nの方が誤解が少ないです。"
+    },
+    {
+      "prompt": "うーん、でも Preview を取る作業を実際してコミットしたのにその起因であったプロンプトないのはなぜかな",
+      "response": null
+    },
+    {
+      "prompt": "<turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>",
+      "response": null
+    },
+    {
+      "prompt": "あれ、ごかいしていた。\n\n今回のPRはブログのPRになっているけど、このPRは差し戻してコミットしていない状態にして。\n\nやってほしかった作業は左上のPreviewラベルをとったpRを作成してほしかった",
+      "response": "誤解の整理、こちらで戻します。ブログ PR #75 は閉じて、ブログ記事はローカルの未コミット状態に戻し、別ブランチで `Preview` ラベル削除だけの PR を作ります。\nPR #75 は閉じて remote branch も削除しました。次にローカルのブログ commit を外して、`docs/blog` を未コミット状態に戻します。\nブログ記事はローカル未コミットに戻りました。ここから main ベースに切り替えて、Preview badge 削除だけのブランチを作ります。\nmain は最新で、`docs/blog` は未コミットのまま残っています。新しい PR には入れず、`Preview` badge だけを変更します。\n検証は通りました。差分は `Preview` badge の 1 行削除だけで、`docs/blog` は未追跡のまま PR には含めません。",
+      "files_touched": [
+        "packages/dashboard/src/pages/index.astro"
+      ],
+      "tools": [
+        "exec_command",
+        "write_stdin",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/dashboard/src/pages/index.astro",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 0,
+    "method": "none",
+    "lines": {
+      "ai_added": 0,
+      "total_added": 0,
+      "deleted": 1
+    }
+  },
+  "commit": {
+    "sha": "0bc0e77c169de8bab7801a51b8173d85d6baea88",
+    "short_sha": "0bc0e77",
+    "message": "fix(dashboard): remove preview badge",
+    "date": "2026-05-13T10:52:00+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/dashboard/src/pages/index.astro",
+        "lines": [
+          "index bf7466f..cb2b016 100644",
+          "--- a/packages/dashboard/src/pages/index.astro",
+          "+++ b/packages/dashboard/src/pages/index.astro",
+          "@@ -1599,7 +1599,6 @@ const dashboardIndex = buildDashboardIndex();",
+          "       <aside class=\"sidebar\" id=\"sidebar\">",
+          "         <div class=\"sidebar-header\">",
+          "           <a href={homePath} class=\"logo\">Agent Note</a>",
+          "-          <span class=\"badge accent\">Preview</span>",
+          "         </div>",
+          "         <div class=\"tab-row\" id=\"tab-row\">",
+          "           <button data-tab=\"prs\" class=\"active\">PRs</button>"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 76,
+    "title": "fix(dashboard): remove preview badge",
+    "state": "open"
+  }
+}
