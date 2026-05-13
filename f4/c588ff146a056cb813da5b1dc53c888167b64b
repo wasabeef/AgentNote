@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-13T02:07:22.281Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "プロンプトはよさそうだけど AI Ratio が 0% になっている。今回の作業はすべて AI でやったはずだ",
+      "response": "AI Ratio 0% はたしかに今回の実態とズレています。PR #76 の body、commit の git note、対象ファイルが `.agentnoteignore` や attribution 判定で除外されていないかを順に見ます。\n原因が見えました。Note では `index.astro` は `by_ai: true` になっていますが、この commit は「1 行削除のみ」で `total_added: 0` のため、現在の AI Ratio 計算が `0/0 added lines = 0%` に落ちています。つまり Prompt / Files は正しく、Ratio の表現だけが削除-only commit に弱いです。\nAI が触ったファイル判定はできているのに、削除だけの commit なので行数ベースの AI Ratio が `0/0` に落ちている可能性が高いです。まず note と計算ロジックを突き合わせて、削除のみの AI 変更が file-level fallback になるべきかまで確認して直します。\n原因はかなりはっきりしました。note には `index.astro` が `by_ai: true` で残っていて Prompt も紐づいていますが、削除のみの commit なので `total_added: 0` になり、現在の `method=none / ai_ratio=0` に落ちています。これは「AI が削除した作業」を Ratio に反映できていないバグとして扱うのが自然です。\n実装上は `calcAiRatio()` 自体は `totalAddedLines=0` なら file ratio に fallback する設計でした。ところが `buildEntry()` 側の `resolveMethod()` が先に `method=none` と決めてしまい、計算前に `0%` 固定にしていました。つまり設計意図と entry 生成がズレています。ここを直します。\n変更方針は小さくできます。`lineCounts` があっても追加行が 0 の場合は、削除・リネーム・モード変更のように line-level の分母が作れないだけなので、AI が触った eligible file があれば `method=file` に fallback させます。全ファイルが `.agentnoteignore` や generated で Ratio 対象外なら、従来通り `method=none` です。\nまず core の単体テストで、今回の `0 added / 1 deleted / AI file` と同じ形を固定しました。次に build/typecheck/lint/test で、Ratio 集計や PR Report への副作用を見ます。\n`npm test -- entry.test.ts` は npm script の都合で全テストに近い形で回り続けています。typecheck は通過済みです。待っている間に、今回の変更で生成 bundle も更新が必要か確認します。\n全 CLI テスト 459 件は通りました。これで deletion-only の entry 生成バグは再現テスト込みで塞げています。続けて lint と bundle 再生成を走らせます。\n`packages/pr-report` は `packages/cli/src/core/entry.ts` を bundle に取り込んでいます。CLI dist は更新済みなので、Action 側の `packages/pr-report/dist/index.js` も再生成します。\n`pr.test.ts` を repo root から直接叩いたため、テスト内の相対 `dist/cli.js` が root を見て失敗しました。これは実装失敗ではなく実行ディレクトリの問題なので、`packages/cli` を cwd にして再実行します。\n`pr-report` bundle の再生成で ncc 由来の trailing whitespace が混ざりました。Action bundle も同期するならこのまま整える必要があります。生成物ですが、`git diff --check` を通すために該当箇所だけ機械的にきれいにします。\n修正は code 側に入れました。加えて、PR #76 の既存 commit `0bc0e77` は古いロジックで作られた git note なので、コード修正だけでは過去 note は自動では変わりません。今回の PR 表示も正しくするため、その note も `method=file / ai_ratio=100` に補正してから push します。",
+      "files_touched": [
+        "packages/cli/src/core/entry.ts",
+        "packages/cli/src/core/entry.test.ts",
+        "packages/pr-report/dist/index.js"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch",
+        "write_stdin"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.test.ts",
+      "by_ai": true,
+      "generated": true
+    },
+    {
+      "path": "packages/cli/src/core/entry.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": true,
+      "ai_ratio_excluded": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 9,
+      "total_added": 9,
+      "deleted": 5
+    }
+  }
+}
