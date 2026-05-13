@@ -242,16 +242,19 @@ describe("agentnote init", () => {
       tool_input: { file_path: filePath },
     });
 
-    execSync(`git add ${shellSingleQuote(options.fileName)}`, { cwd });
-    execSync(`git commit -m ${shellSingleQuote(options.commitMessage)}`, {
+    execFileSync("git", ["add", "--", options.fileName], { cwd });
+    execFileSync("git", ["commit", "-m", options.commitMessage], {
       cwd,
+      encoding: "utf-8",
       env: withoutCodexThreadEnv(),
+      stdio: "pipe",
     });
 
     return JSON.parse(
-      execSync("git notes --ref=agentnote show HEAD", {
+      execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
         cwd,
         encoding: "utf-8",
+        stdio: "pipe",
       }),
     );
   }
