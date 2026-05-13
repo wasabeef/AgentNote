@@ -418,11 +418,22 @@ Environment fallback is narrower than trailer injection. It does not trust `.git
 `agent-note init` installs git hooks respecting the repository's hook directory:
 
 ```bash
-# Determine hook directory
-HOOK_DIR=$(git config get core.hooksPath || echo ".git/hooks")
+# Determine the effective hook directory. Git resolves this for normal
+# checkouts, bare repositories, custom core.hooksPath, and worktrees.
+HOOK_DIR=$(git rev-parse --git-path hooks)
 ```
 
-If `core.hooksPath` is set (e.g., by husky, lefthook, or custom configuration), hooks are installed there instead of `.git/hooks/`. This ensures compatibility with any hook manager.
+Git owns hook path resolution. Agent Note therefore asks Git for the effective
+hook directory instead of reconstructing it from `.git/` paths or
+`core.hooksPath`. This keeps hook installation correct for hook managers,
+bare repositories, custom worktree layouts, and Claude Agent View-style
+worktrees.
+
+At runtime, hook scripts first try the worktree-local Agent Note shim under the
+Git-reported `$GIT_DIR`. If that shim does not exist, they fall back to the
+common git-dir shim shared by all worktrees. This lets `agent-note init` run
+from either the main checkout or a linked worktree while still supporting
+commits made from any related worktree.
 
 When an existing hook file is found, agent-note chains to it — the original hook runs first, then agent-note's logic runs. This avoids overwriting user or tool-managed hooks.
 
