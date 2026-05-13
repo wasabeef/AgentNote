@@ -269,7 +269,7 @@
   },
   "pull_request": {
     "number": 76,
-    "title": "fix(dashboard): remove preview badge",
+    "title": "fix: preserve deletion-only AI ratio and remove preview badge",
     "state": "open"
   }
 }
