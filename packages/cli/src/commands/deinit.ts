@@ -9,7 +9,7 @@ import {
   TEXT_ENCODING,
 } from "../core/constants.js";
 import { gitSafe } from "../git.js";
-import { agentnoteDir, root } from "../paths.js";
+import { agentnoteDir, commonAgentnoteDir, root } from "../paths.js";
 import {
   DASHBOARD_WORKFLOW_FILENAME,
   PR_REPORT_WORKFLOW_FILENAME,
@@ -106,10 +106,17 @@ export async function deinit(args: string[]): Promise<void> {
     }
 
     // Local CLI shim
-    const binDir = join(await agentnoteDir(), "bin");
-    const shimPath = join(binDir, "agent-note");
-    if (existsSync(shimPath)) {
+    const shimPaths = new Set([
+      join(await agentnoteDir(), "bin", "agent-note"),
+      join(await commonAgentnoteDir(), "bin", "agent-note"),
+    ]);
+    let removedShim = false;
+    for (const shimPath of shimPaths) {
+      if (!existsSync(shimPath)) continue;
       await unlink(shimPath);
+      removedShim = true;
+    }
+    if (removedShim) {
       results.push("  ✓ removed local CLI shim");
     }
 

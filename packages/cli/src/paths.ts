@@ -1,9 +1,10 @@
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { AGENTNOTE_DIR, SESSION_FILE } from "./core/constants.js";
 import { git, repoRoot } from "./git.js";
 
 let _root: string | null = null;
 let _gitDir: string | null = null;
+let _commonGitDir: string | null = null;
 
 /** Resolve and cache the repository root, exiting for non-git directories. */
 async function root(): Promise<string> {
@@ -23,16 +24,32 @@ async function gitDir(): Promise<string> {
   if (!_gitDir) {
     _gitDir = await git(["rev-parse", "--git-dir"]);
     // Make absolute if relative.
-    if (!_gitDir.startsWith("/")) {
+    if (!isAbsolute(_gitDir)) {
       _gitDir = join(await root(), _gitDir);
     }
   }
   return _gitDir;
 }
 
+/** Resolve the shared git directory used by all worktrees in this repository. */
+async function commonGitDir(): Promise<string> {
+  if (!_commonGitDir) {
+    _commonGitDir = await git(["rev-parse", "--git-common-dir"]);
+    if (!isAbsolute(_commonGitDir)) {
+      _commonGitDir = join(await root(), _commonGitDir);
+    }
+  }
+  return _commonGitDir;
+}
+
 /** Path to the agentnote data directory inside the git dir. */
 export async function agentnoteDir(): Promise<string> {
   return join(await gitDir(), AGENTNOTE_DIR);
+}
+
+/** Path to the shared agentnote directory visible from every git worktree. */
+export async function commonAgentnoteDir(): Promise<string> {
+  return join(await commonGitDir(), AGENTNOTE_DIR);
 }
 
 /** Path to the active session ID file. */
