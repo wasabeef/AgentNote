@@ -102,6 +102,6 @@
   "pull_request": {
     "number": 76,
     "title": "fix: preserve deletion-only AI ratio and remove preview badge",
-    "state": "open"
+    "state": "merged"
   }
 }
