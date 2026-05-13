@@ -405,7 +405,7 @@ Git hooks are installed into the hook directory reported by Git, not by assuming
 Agent Note shim and then fall back to the common git dir shim shared by all
 worktrees. This works for both bare and non-bare repositories, including custom
 worktree directory layouts. It lets a main checkout `agent-note init` support
-commits made inside Claude Agent View style worktrees.
+commits made inside Claude Agent View-style worktrees.
 
 Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing heartbeat in `prepare-commit-msg` skips trailer injection. Stale heartbeat writes a one-shot fallback marker for brand-new commits only; `post-commit` consumes that marker and records only if the active session has post-edit blob evidence that matches the committed HEAD blobs. Agent-hosted terminals may also expose the current session through adapter-specific environment variables. Today, Codex exposes `CODEX_THREAD_ID`, which lets `post-commit` recover a fresh Codex transcript even when `.git/agentnote/session` points at a stale or unrelated session.
 
