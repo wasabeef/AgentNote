@@ -67,6 +67,26 @@ PR #72 で `--fallback-env` を導入し、PR #74 で stale trailer retry と bo
 
 ## Resolved Investigations
 
+### PR #76 deletion-only AI Ratio が 0% になる
+
+- 対象 PR: `#76`
+- 対象 commit: `0bc0e77 fix(dashboard): remove preview badge`
+- 観測結果: Prompt selection と file attribution は正しく、`packages/dashboard/src/pages/index.astro` は `by_ai: true` でした。一方、commit は `Preview` badge の 1 行削除のみだったため `attribution.lines` は `{ "ai_added": 0, "total_added": 0, "deleted": 1 }` になり、PR Report では `AI Ratio: 0%` と表示されました。
+- 原因: `calcAiRatio()` には `totalAddedLines === 0` のとき file-level ratio に fallback する unit test がありました。しかし `buildEntry()` の `resolveMethod()` が先に `method: "none"` を選び、`calcAiRatio()` を呼ぶ前に `ai_ratio: 0` を固定していました。helper 単体の test は存在していたが、実際の entry assembly path を固定していなかったことが漏れの本質です。
+- 修正: `lineCounts` があっても `totalAddedLines === 0` の場合は、eligible file が残っていれば `method: "file"` に fallback します。削除のみ、rename のみ、mode change のように added-line denominator がない commit でも、AI が触った file evidence は AI Ratio に反映します。すべての file が generated artifact / `.agentnoteignore` で AI Ratio 対象外なら、従来通り `method: "none"` です。
+- Regression coverage: `packages/cli/src/core/entry.test.ts` で、`buildEntry()` が `0 added / N deleted / AI file` を `method: "file"` として保存することを確認します。同じ test file で、eligible file が 0 件の場合だけ `method: "none"` に落ちることも確認します。これは `calcAiRatio()` helper だけでなく、git note に保存される final entry contract を固定するための regression です。
+
+#### Test strengthening policy from PR #76
+
+今回の漏れは「低レベル helper の test はあるが、上位 caller がその helper を迂回する」形でした。今後 attribution / prompt selection / report rendering を触るときは、以下を regression 方針として扱います。
+
+- Helper test だけで完了扱いにしません。`calcAiRatio()`、prompt scoring、fallback predicate のような helper を変更した場合は、少なくとも 1 つ上の public contract (`buildEntry()`、`recordCommitEntry()`、`renderMarkdown()`、CLI output) でも同じ境界を固定します。
+- Ratio / attribution の test matrix には、`added > 0` だけでなく `added = 0, deleted > 0`、`added = 0, deleted = 0`、AI file あり、AI file なし、eligible file なし、generated / `.agentnoteignore` 除外を含めます。特に denominator が 0 になる path は、`0%` と `—` と file-level fallback のどれが正しいかを明示します。
+- PR Report / Dashboard / CLI 表示は、stored note の `method` と `lines` の組み合わせを fixture で確認します。`method: "line"` だけでなく、`method: "file"` + `lines` あり、`method: "file"` + `lines` なし、`method: "none"` を分けて見る必要があります。
+- Generated bundle を持つ package の shared core を触った場合は、source test と bundle sync を同じ PR で確認します。`packages/pr-report` は `packages/cli/src/core/entry.ts` を bundle に含むため、CLI 側の attribution bug は Action output にも影響します。
+- Regression test 名には、実ユーザーの症状を入れます。例: `falls back to method=file when line counts have no added lines` のように、内部条件だけでなく「何が守られるか」が分かる名前にします。
+- 「100 ケース」などの数を増やすだけでは十分ではありません。今回のような漏れは scenario count ではなく axis の欠落で起きるため、matrix の各 axis が user-visible contract に接続しているかを review checklist に含めます。
+
 ### CLI dist tracking policy
 
 - 決定: `packages/pr-report/dist/index.js` は tracked artifact として維持します。`action.yml` が GitHub Action runtime でこの bundle を直接実行するため、repository に存在しないと published Action が動きません。
