@@ -551,12 +551,21 @@ describe("agentnote init", () => {
           execSync("git commit --allow-empty -m 'init'", { cwd: mainDir });
         }
 
-        const baseCwd = layout.bare ? mainDir : mainDir;
+        const baseCwd = mainDir;
+        const baseRef = layout.bare
+          ? "main"
+          : execSync("git branch --show-current", {
+              cwd: mainDir,
+              encoding: "utf-8",
+            }).trim();
         const worktreeDir = layout.worktreePath(dir);
         mkdirSync(join(worktreeDir, ".."), { recursive: true });
-        execSync(`git worktree add -b feature ${shellSingleQuote(worktreeDir)} main`, {
-          cwd: baseCwd,
-        });
+        execSync(
+          `git worktree add -b feature ${shellSingleQuote(worktreeDir)} ${shellSingleQuote(baseRef)}`,
+          {
+            cwd: baseCwd,
+          },
+        );
         execSync("git config user.email test@test.com", { cwd: worktreeDir });
         execSync("git config user.name Test", { cwd: worktreeDir });
 
