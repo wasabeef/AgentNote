@@ -36471,6 +36471,10 @@ const SESSION_FILE = "session";
 const SESSION_AGENT_FILE = "agent";
 /** Gemini pending commit state file used between BeforeTool and AfterTool. */
 const PENDING_COMMIT_FILE = "pending_commit.json";
+/** One-shot marker allowing post-commit to recover a stale-heartbeat session. */
+const POST_COMMIT_FALLBACK_FILE = "post_commit_fallback";
+/** Marker value indicating that post-commit may try strict HEAD recovery. */
+const POST_COMMIT_FALLBACK_HEAD = "head";
 // ─── Display limits ───
 /** Maximum commits scanned by commands that need bounded history traversal. */
 const MAX_COMMITS = 500;
@@ -36508,6 +36512,8 @@ const PRE_BLOBS_FILE = "pre_blobs.jsonl";
 const COMMITTED_PAIRS_FILE = "committed_pairs.jsonl";
 /** Session files that prove a commit can produce a non-empty git note. */
 const RECORDABLE_SESSION_FILES = [PROMPTS_FILE, CHANGES_FILE, PRE_BLOBS_FILE];
+/** Session files that let plain git hooks safely attach a session trailer. */
+const TRAILER_SESSION_FILES = [CHANGES_FILE, PRE_BLOBS_FILE];
 // ─── Git ───
 /** SHA-1 hash of a git blob with empty content (canonical git empty blob). */
 const EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
@@ -36898,13 +36904,16 @@ function calcAiRatio(files, lineCounts) {
         return 0;
     return Math.round((eligible.ai / eligible.total) * PERCENT_DENOMINATOR);
 }
-/** Determine attribution method from available data. */
-function resolveMethod(lineCounts) {
+/** Determine the strongest safe attribution method for the current commit evidence. */
+function resolveMethod(files, lineCounts) {
     if (!lineCounts)
         return "file";
-    if (lineCounts.totalAddedLines === 0)
-        return "none";
-    return "line";
+    if (lineCounts.totalAddedLines > 0)
+        return "line";
+    // A deletion-only or rename-only commit has no added-line denominator.
+    // Keep AI involvement visible by falling back to file-level attribution.
+    const eligible = countAiRatioEligibleFiles(files);
+    return eligible.total > 0 ? "file" : "none";
 }
 /** Build the final git-note entry from collected session, attribution, and prompt data. */
 function buildEntry(opts) {
@@ -36916,7 +36925,7 @@ function buildEntry(opts) {
         ...(generatedFiles.has(path) ? { generated: true } : {}),
         ...(aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}),
     }));
-    const method = resolveMethod(opts.lineCounts);
+    const method = resolveMethod(files, opts.lineCounts);
     const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);
     const attribution = { ai_ratio: aiRatio, method };
     if (opts.lineCounts) {
@@ -37003,12 +37012,13 @@ async function git(args, options) {
 async function git_gitSafe(args, options) {
     try {
         const stdout = await git(args, options);
-        return { stdout, exitCode: 0 };
+        return { stdout, stderr: "", exitCode: 0 };
     }
     catch (err) {
         const e = err;
         return {
             stdout: typeof e.stdout === "string" ? e.stdout.trim() : "",
+            stderr: typeof e.stderr === "string" ? e.stderr.trim() : "",
             exitCode: typeof e.code === "number" ? e.code : 1,
         };
     }
@@ -37211,7 +37221,10 @@ function injectGitCommitTrailer(command, trailer) {
 /** Write an Agent Note entry as a git note on a commit. */
 async function writeNote(commitSha, data) {
     const body = JSON.stringify(data, null, 2);
-    await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+    const result = await gitSafe(["notes", `--ref=${NOTES_REF}`, "add", "-f", "-m", body, commitSha]);
+    if (result.exitCode !== 0) {
+        throw new Error(result.stderr || "failed to write Agent Note git note");
+    }
 }
 /** Read an Agent Note entry from a git note, returning null when none exists. */
 async function readNote(commitSha) {

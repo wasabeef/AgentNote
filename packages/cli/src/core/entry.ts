@@ -536,11 +536,15 @@ export function calcAiRatio(files: FileEntry[], lineCounts?: LineCounts): number
   return Math.round((eligible.ai / eligible.total) * PERCENT_DENOMINATOR);
 }
 
-/** Determine attribution method from available data. */
-function resolveMethod(lineCounts?: LineCounts): "line" | "file" | "none" {
+/** Determine the strongest safe attribution method for the current commit evidence. */
+function resolveMethod(files: FileEntry[], lineCounts?: LineCounts): "line" | "file" | "none" {
   if (!lineCounts) return "file";
-  if (lineCounts.totalAddedLines === 0) return "none";
-  return "line";
+  if (lineCounts.totalAddedLines > 0) return "line";
+
+  // A deletion-only or rename-only commit has no added-line denominator.
+  // Keep AI involvement visible by falling back to file-level attribution.
+  const eligible = countAiRatioEligibleFiles(files);
+  return eligible.total > 0 ? "file" : "none";
 }
 
 /** Build the final git-note entry from collected session, attribution, and prompt data. */
@@ -566,7 +570,7 @@ export function buildEntry(opts: {
     ...(aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}),
   }));
 
-  const method = resolveMethod(opts.lineCounts);
+  const method = resolveMethod(files, opts.lineCounts);
   const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);
 
   const attribution: Attribution = { ai_ratio: aiRatio, method };
