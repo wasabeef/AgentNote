@@ -517,13 +517,32 @@ describe("buildEntry", () => {
     assert.equal(entry.attribution.lines, undefined);
   });
 
-  it("sets method=none and ai_ratio=0 when totalAddedLines is 0", () => {
+  it("falls back to method=file when line counts have no added lines", () => {
     const lineCounts: LineCounts = { aiAddedLines: 0, totalAddedLines: 0, deletedLines: 5 };
     const entry = buildEntry({
       sessionId,
       interactions: [],
       commitFiles: ["a.ts"],
       aiFiles: ["a.ts"],
+      lineCounts,
+    });
+    assert.equal(entry.attribution.method, "file");
+    assert.equal(entry.attribution.ai_ratio, 100);
+    assert.deepEqual(entry.attribution.lines, {
+      ai_added: 0,
+      total_added: 0,
+      deleted: 5,
+    });
+  });
+
+  it("sets method=none when no added-line or file-level denominator exists", () => {
+    const lineCounts: LineCounts = { aiAddedLines: 0, totalAddedLines: 0, deletedLines: 5 };
+    const entry = buildEntry({
+      sessionId,
+      interactions: [],
+      commitFiles: ["packages/cli/dist/cli.js"],
+      aiFiles: ["packages/cli/dist/cli.js"],
+      aiRatioExcludedFiles: ["packages/cli/dist/cli.js"],
       lineCounts,
     });
     assert.equal(entry.attribution.method, "none");

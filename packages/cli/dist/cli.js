@@ -2447,10 +2447,11 @@ function calcAiRatio(files, lineCounts) {
   if (eligible.total === 0) return 0;
   return Math.round(eligible.ai / eligible.total * PERCENT_DENOMINATOR);
 }
-function resolveMethod(lineCounts) {
+function resolveMethod(files, lineCounts) {
   if (!lineCounts) return "file";
-  if (lineCounts.totalAddedLines === 0) return "none";
-  return "line";
+  if (lineCounts.totalAddedLines > 0) return "line";
+  const eligible = countAiRatioEligibleFiles(files);
+  return eligible.total > 0 ? "file" : "none";
 }
 function buildEntry(opts) {
   const generatedFiles = new Set(opts.generatedFiles ?? []);
@@ -2461,7 +2462,7 @@ function buildEntry(opts) {
     ...generatedFiles.has(path) ? { generated: true } : {},
     ...aiRatioExcludedFiles.has(path) ? { ai_ratio_excluded: true } : {}
   }));
-  const method = resolveMethod(opts.lineCounts);
+  const method = resolveMethod(files, opts.lineCounts);
   const aiRatio = method === "none" ? 0 : calcAiRatio(files, opts.lineCounts);
   const attribution = { ai_ratio: aiRatio, method };
   if (opts.lineCounts) {
