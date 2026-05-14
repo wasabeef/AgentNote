@@ -1,0 +1,157 @@
+{
+  "v": 1,
+  "agent": "codex",
+  "session_id": "019da962-23cc-7aa0-bbe3-a10f60fddada",
+  "timestamp": "2026-05-14T04:55:43.017Z",
+  "model": "gpt-5.4",
+  "interactions": [
+    {
+      "prompt": "docs 更新して",
+      "response": "ドキュメント側の表現を、実装に合わせて「Claude 専用」ではなく `agent-managed worktrees` として整理します。コード変更は入れず、誤解を生みそうな `Claude Agent View` 中心の書き方だけ直します。\n対象は `AGENTS.md` / `CLAUDE.md` / `docs/architecture.md` / `docs/knowledge/investigations.md` に絞ります。`Claude Agent View` は具体例として残しつつ、保証対象が Codex / Cursor / Gemini も含む任意の git worktree であることが読める形にします。\n更新は入りました。最後に `rg` で Claude 専用に読める表現が残っていないか確認し、差分もざっと見ます。\ndocs 更新しました。`Claude Agent View` を「一例」として扱い、実際の保証対象は Codex / Cursor / Gemini を含む agent-agnostic な git worktree 対応だと明記しています。\n\n更新箇所:\n- `AGENTS.md`\n- `CLAUDE.md`\n- `docs/architecture.md`\n- `docs/knowledge/investigations.md`\n\n確認:\n- `Claude Agent View-style` / `Agent View-style` などの誤解を招く表現は残っていません。\n- docs のみなのでテストは未実行です。\n- 未追跡の `docs/blog/` は触っていません。\n\nMay the Force be with you.",
+      "files_touched": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/architecture.md",
+        "docs/knowledge/investigations.md"
+      ],
+      "tools": [
+        "exec_command",
+        "apply_patch"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "by_ai": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "by_ai": true
+    },
+    {
+      "path": "docs/knowledge/investigations.md",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "file"
+  },
+  "commit": {
+    "sha": "d28ca91e0fab6dc2fa57db991a2403b798440b03",
+    "short_sha": "d28ca91",
+    "message": "docs: clarify agent-agnostic worktree support",
+    "date": "2026-05-14T13:55:41+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "AGENTS.md",
+        "lines": [
+          "index f17e0f2..d06e2fe 100644",
+          "--- a/AGENTS.md",
+          "+++ b/AGENTS.md",
+          "@@ -98,7 +98,7 @@ Gemini-specific event handling:",
+          " - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.",
+          " ",
+          " Existing hooks are backed up and chained. Compatible with husky/lefthook.",
+          "-Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and Agent View-style worktree commits after init from the main checkout.",
+          "+Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and agent-managed worktree commits after init from either the main checkout or a linked worktree. Claude Agent View is one example, but the worktree behavior must stay agent-agnostic for Codex, Cursor, Gemini, and future adapters.",
+          " ",
+          " ### Core modules",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "CLAUDE.md",
+        "lines": [
+          "index 682ac91..c95d6a0 100644",
+          "--- a/CLAUDE.md",
+          "+++ b/CLAUDE.md",
+          "@@ -98,7 +98,7 @@ Gemini-specific event handling:",
+          " - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.",
+          " ",
+          " Existing hooks are backed up and chained. Compatible with husky/lefthook.",
+          "-Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and Agent View-style worktree commits after init from the main checkout.",
+          "+Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and agent-managed worktree commits after init from either the main checkout or a linked worktree. Claude Agent View is one example, but the worktree behavior must stay agent-agnostic for Codex, Cursor, Gemini, and future adapters.",
+          " ",
+          " ### Core modules",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "lines": [
+          "index 380b6c2..3e5c806 100644",
+          "--- a/docs/architecture.md",
+          "+++ b/docs/architecture.md",
+          "@@ -404,8 +404,10 @@ Git hooks are installed into the hook directory reported by Git, not by assuming",
+          " `$GIT_DIR`, so `post-commit` and `pre-push` first try that worktree's local",
+          " Agent Note shim and then fall back to the common git dir shim shared by all",
+          " worktrees. This works for both bare and non-bare repositories, including custom",
+          "-worktree directory layouts. It lets a main checkout `agent-note init` support",
+          "-commits made inside Claude Agent View-style worktrees.",
+          "+worktree directory layouts. It lets `agent-note init` run from either the main",
+          "+checkout or a linked worktree while supporting commits made from agent-managed",
+          "+worktrees such as Claude Agent View, Codex terminals, Cursor workspaces, Gemini",
+          "+sessions, and future adapters.",
+          " ",
+          " Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing heartbeat in `prepare-commit-msg` skips trailer injection. Stale heartbeat writes a one-shot fallback marker for brand-new commits only; `post-commit` consumes that marker and records only if the active session has post-edit blob evidence that matches the committed HEAD blobs. Agent-hosted terminals may also expose the current session through adapter-specific environment variables. Today, Codex exposes `CODEX_THREAD_ID`, which lets `post-commit` recover a fresh Codex transcript even when `.git/agentnote/session` points at a stale or unrelated session.",
+          " ",
+          "@@ -426,8 +428,7 @@ HOOK_DIR=$(git rev-parse --git-path hooks)",
+          " Git owns hook path resolution. Agent Note therefore asks Git for the effective",
+          " hook directory instead of reconstructing it from `.git/` paths or",
+          " `core.hooksPath`. This keeps hook installation correct for hook managers,",
+          "-bare repositories, custom worktree layouts, and Claude Agent View-style",
+          "-worktrees.",
+          "+bare repositories, custom worktree layouts, and agent-managed worktrees.",
+          " ",
+          " At runtime, hook scripts first try the worktree-local Agent Note shim under the",
+          " Git-reported `$GIT_DIR`. If that shim does not exist, they fall back to the"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "docs/knowledge/investigations.md",
+        "lines": [
+          "index 4ddc657..b5d5460 100644",
+          "--- a/docs/knowledge/investigations.md",
+          "+++ b/docs/knowledge/investigations.md",
+          "@@ -67,16 +67,17 @@ PR #72 で `--fallback-env` を導入し、PR #74 で stale trailer retry と bo",
+          " ",
+          " ## Resolved Investigations",
+          " ",
+          "-### Claude Agent View / git worktree commit で note が落ちる可能性",
+          "+### Agent-managed git worktree commit で note が落ちる可能性",
+          " ",
+          " - 対象: `agent-note init` が生成する `post-commit` / `pre-push` hook、repo-local CLI shim、worktree 上の plain git commit。",
+          "-- 背景: Claude Agent View は background Agent の編集前に `.claude/worktrees/...` 配下の git worktree へ移動する。`git worktree` では `git rev-parse --git-dir` が main repository の `.git` ではなく `.git/worktrees/<name>` を返す。一方、hooks は common git dir 側の hooks を使う。",
+          "+- 背景: Claude Agent View は `.claude/worktrees/...` 配下の git worktree を使うが、これは問題を発見した具体例にすぎない。Codex / Cursor / Gemini でも、agent host や terminal multiplexer が任意の git worktree で commit する場合は同じ構造になる。`git worktree` では `git rev-parse --git-dir` が main repository の `.git` ではなく `.git/worktrees/<name>` のような private git dir を返す。一方、hooks は common git dir 側の hooks、または worktree-specific `core.hooksPath` を使う。",
+          " - 過去対応: `4c08e7f fix: support git worktree by using git rev-parse --git-dir` により、`.git` が file になる worktree でも実 git dir を解決できるようになっていた。これは session buffer を worktree ごとに分けるためには正しい対応だった。",
+          " - 残っていた問題: main checkout で `agent-note init` した場合、repo-local shim は main 側の `.git/agentnote/bin/agent-note` に作られる。しかし worktree commit の hook 実行時の `$GIT_DIR` は `.git/worktrees/<name>` なので、`$GIT_DIR/agentnote/bin/agent-note` だけを見ると shim が見つからない。結果として trailer があっても `post-commit` が `record` を実行できず、git note が作られない可能性があった。",
+          " - Entire から得た判断: Entire は git worktree を session 分離境界として扱う設計を採っている。Agent Note でも session buffer / active pointer / heartbeat は worktree ごとに分離する方が正しい。ただし CLI shim と hooks は common git dir を共有できるため、session data と executable discovery は分けて考える必要がある。",
+          " - 修正: `agentnoteDir()` は従来通り worktree-specific git dir を使い、session buffer を worktree ごとに分ける。一方で `commonAgentnoteDir()` を追加し、`agent-note init` は current worktree git dir と common git dir の両方に deterministic CLI shim を作る。生成 hook は `$GIT_DIR/agentnote/bin/agent-note` を優先し、見つからなければ `git rev-parse --git-common-dir` の shim を使う。`resolveHookDir()` は fallback 時に `git rev-parse --git-path hooks` を使い、Git が実際に使う hook path に揃える。",
+          " - 追加修正: worktree 対応で hook path が絶対パスになるケースが増えたことで、既存 hook chaining の `String.replace()` replacement 文字列に含まれる `$` / `$'` が JavaScript の replacement token として展開されるバグが表面化した。function replacement に変更し、shell-special path でも backup hook path を壊さないようにした。",
+          "-- Regression coverage: `packages/cli/src/commands/init.test.ts` で、main checkout で `agent-note init` した後に `.claude/worktrees/agent-view` worktree を作り、Claude hook event で file evidence を作成し、worktree 内の plain `git commit` から git note が作られることを確認する。この test は worktree-local shim が存在しないことも確認し、common shim fallback を必ず通す。追加 matrix では bare repository (`repo.bare/branch/...`) と non-bare repository の両方、repo 内 nested path、repo 外 custom sibling path、space を含む arbitrary worktree path を通し、Git worktree のディレクトリ命名ルールに依存しないことを固定する。さらに `git worktree add` の主要 mode (`--detach`, `--orphan`, `--lock`, `--relative-paths`)、duplicate basename worktree、`git worktree move` 後の path、worktree-specific `core.hooksPath` を通し、Git worktree の private git dir / common git dir / hook path が変わる仕様境界を regression test に含める。",
+          "+- Regression coverage: `packages/cli/src/commands/init.test.ts` で、main checkout で `agent-note init` した後に `.claude/worktrees/agent-view` worktree を作り、hook event で file evidence を作成し、worktree 内の plain `git commit` から git note が作られることを確認する。この test は worktree-local shim が存在しないことも確認し、common shim fallback を必ず通す。追加 matrix では bare repository (`repo.bare/branch/...`) と non-bare repository の両方、repo 内 nested path、repo 外 custom sibling path、space を含む arbitrary worktree path を通し、Git worktree のディレクトリ命名ルールに依存しないことを固定する。さらに `git worktree add` の主要 mode (`--detach`, `--orphan`, `--lock`, `--relative-paths`)、duplicate basename worktree、`git worktree move` 後の path、worktree-specific `core.hooksPath` を通し、Git worktree の private git dir / common git dir / hook path が変わる仕様境界を regression test に含める。",
+          "+- Agent coverage: PR #77 の regression test は worktree plumbing を Claude fixture で代表させているが、実装は agent adapter に依存しない git hook / shim layer にある。v1.0.4 時点で追加確認として、Claude / Codex / Cursor / Gemini それぞれについて、main checkout から init した任意 layout worktree、worktree 内 init、worktree-specific `core.hooksPath` の commit 記録を手動 e2e で確認した。Codex は `CODEX_THREAD_ID` / transcript fallback、Cursor は edit event、Gemini は BeforeTool / AfterTool、Claude は Edit / Write event の各経路で git note が作られることを確認済み。",
+          " ",
+          " ### PR #76 deletion-only AI Ratio が 0% になる"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  }
+}
