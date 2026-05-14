@@ -631,61 +631,85 @@ describe("agentnote init", () => {
       try {
         const mainDir = layout.bare ? join(dir, "repo.bare") : join(dir, "repo");
         if (layout.bare) {
-          execSync(`git init --bare ${shellSingleQuote(mainDir)}`);
+          execFileSync("git", ["init", "--bare", mainDir], {
+            encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
+          });
           const seedDir = join(dir, "seed");
-          execSync(`git clone ${shellSingleQuote(mainDir)} ${shellSingleQuote(seedDir)}`);
-          execSync("git config user.email test@test.com", { cwd: seedDir });
-          execSync("git config user.name Test", { cwd: seedDir });
-          execSync("git commit --allow-empty -m 'init'", { cwd: seedDir });
-          execSync("git push origin HEAD:main", { cwd: seedDir });
+          execFileSync("git", ["clone", mainDir, seedDir], {
+            encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
+          });
+          execFileSync("git", ["config", "user.email", "test@test.com"], { cwd: seedDir });
+          execFileSync("git", ["config", "user.name", "Test"], { cwd: seedDir });
+          execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: seedDir });
+          execFileSync("git", ["push", "origin", "HEAD:main"], { cwd: seedDir });
           rmSync(seedDir, { recursive: true, force: true });
         } else {
-          execSync(`git init ${shellSingleQuote(mainDir)}`);
-          execSync("git config user.email test@test.com", { cwd: mainDir });
-          execSync("git config user.name Test", { cwd: mainDir });
-          execSync("git commit --allow-empty -m 'init'", { cwd: mainDir });
+          execFileSync("git", ["init", mainDir], {
+            encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
+          });
+          execFileSync("git", ["config", "user.email", "test@test.com"], { cwd: mainDir });
+          execFileSync("git", ["config", "user.name", "Test"], { cwd: mainDir });
+          execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: mainDir });
         }
 
         const baseCwd = mainDir;
         const baseRef = layout.bare
           ? "main"
-          : execSync("git branch --show-current", {
+          : execFileSync("git", ["branch", "--show-current"], {
               cwd: mainDir,
               encoding: "utf-8",
+              env: withoutCodexThreadEnv(),
+              stdio: "pipe",
             }).trim();
         const worktreeDir = layout.worktreePath(dir);
         mkdirSync(join(worktreeDir, ".."), { recursive: true });
-        execSync(
-          `git worktree add -b feature ${shellSingleQuote(worktreeDir)} ${shellSingleQuote(baseRef)}`,
-          {
-            cwd: baseCwd,
-          },
-        );
-        execSync("git config user.email test@test.com", { cwd: worktreeDir });
-        execSync("git config user.name Test", { cwd: worktreeDir });
+        execFileSync("git", ["worktree", "add", "-b", "feature", worktreeDir, baseRef], {
+          cwd: baseCwd,
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+          stdio: "pipe",
+        });
+        execFileSync("git", ["config", "user.email", "test@test.com"], { cwd: worktreeDir });
+        execFileSync("git", ["config", "user.name", "Test"], { cwd: worktreeDir });
 
-        execSync(`node ${cliPath} init --agent claude --no-action`, {
+        execFileSync(process.execPath, [cliPath, "init", "--agent", "claude", "--no-action"], {
           cwd: worktreeDir,
           encoding: "utf-8",
           env: withoutCodexThreadEnv(),
+          stdio: "pipe",
         });
 
         const worktreeGitDir = resolveGitPath(
           worktreeDir,
-          execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+          execFileSync("git", ["rev-parse", "--git-dir"], {
+            cwd: worktreeDir,
+            encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
+          }).trim(),
         );
         const commonGitDir = resolveGitPath(
           worktreeDir,
-          execSync("git rev-parse --git-common-dir", {
+          execFileSync("git", ["rev-parse", "--git-common-dir"], {
             cwd: worktreeDir,
             encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
           }).trim(),
         );
         const hookPath = resolveGitPath(
           worktreeDir,
-          execSync("git rev-parse --git-path hooks/post-commit", {
+          execFileSync("git", ["rev-parse", "--git-path", "hooks/post-commit"], {
             cwd: worktreeDir,
             encoding: "utf-8",
+            env: withoutCodexThreadEnv(),
+            stdio: "pipe",
           }).trim(),
         );
 
@@ -744,16 +768,19 @@ describe("agentnote init", () => {
           tool_input: { file_path: filePath },
         });
 
-        execSync(`git add ${shellSingleQuote(fileName)}`, { cwd: worktreeDir });
-        execSync(`git commit -m ${shellSingleQuote(`feat: ${layout.name}`)}`, {
+        execFileSync("git", ["add", "--", fileName], { cwd: worktreeDir });
+        execFileSync("git", ["commit", "-m", `feat: ${layout.name}`], {
           cwd: worktreeDir,
+          encoding: "utf-8",
           env: withoutCodexThreadEnv(),
+          stdio: "pipe",
         });
 
         const note = JSON.parse(
-          execSync("git notes --ref=agentnote show HEAD", {
+          execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
             cwd: worktreeDir,
             encoding: "utf-8",
+            stdio: "pipe",
           }),
         );
         assert.equal(note.session_id, sessionId, `${layout.name}: note should use hook session`);
