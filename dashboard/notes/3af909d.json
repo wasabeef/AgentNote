@@ -95,6 +95,6 @@
   "pull_request": {
     "number": 77,
     "title": "fix(init): support git worktree hook shims",
-    "state": "open"
+    "state": "merged"
   }
 }
