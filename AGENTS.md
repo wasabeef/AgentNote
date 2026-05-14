@@ -98,7 +98,7 @@ Gemini-specific event handling:
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.
-Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and Agent View-style worktree commits after init from the main checkout.
+Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and agent-managed worktree commits after init from either the main checkout or a linked worktree. Claude Agent View is one example, but the worktree behavior must stay agent-agnostic for Codex, Cursor, Gemini, and future adapters.
 
 ### Core modules
 
