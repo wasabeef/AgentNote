@@ -436,7 +436,7 @@ export async function resolveHookDir(repoRoot: string): Promise<string> {
     // No custom hooksPath set.
   }
   const hookPath = await git(["rev-parse", "--git-path", "hooks"]);
-  return isAbsolute(hookPath) ? hookPath : join(repoRoot, hookPath);
+  return isAbsolute(hookPath) ? hookPath : resolve(process.cwd(), hookPath);
 }
 
 function shellSingleQuote(value: string): string {

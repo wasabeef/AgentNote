@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { isAgentNoteHookCommand } from "../agents/hook-command.js";
 import { getAgent, listAgents } from "../agents/index.js";
 import { AGENT_NAMES, type AgentName } from "../agents/types.js";
@@ -19,6 +19,7 @@ import { readSessionAgent } from "../core/session.js";
 import { readNote } from "../core/storage.js";
 import { gitSafe } from "../git.js";
 import { agentnoteDir, root, sessionFile } from "../paths.js";
+import { resolveHookDir } from "./init.js";
 import { normalizeEntry } from "./normalize.js";
 
 declare const __VERSION__: string;
@@ -339,15 +340,4 @@ async function readManagedGitHooks(repoRoot: string): Promise<string[]> {
   }
 
   return active;
-}
-
-async function resolveHookDir(repoRoot: string): Promise<string> {
-  const hooksPathConfig = (await gitSafe(["config", "--get", "core.hooksPath"])).stdout.trim();
-  if (hooksPathConfig) {
-    return isAbsolute(hooksPathConfig) ? hooksPathConfig : join(repoRoot, hooksPathConfig);
-  }
-
-  const gitDir = (await gitSafe(["rev-parse", "--git-dir"])).stdout.trim();
-  const resolvedGitDir = isAbsolute(gitDir) ? gitDir : join(repoRoot, gitDir);
-  return join(resolvedGitDir, "hooks");
 }

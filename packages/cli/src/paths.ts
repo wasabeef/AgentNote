@@ -1,10 +1,15 @@
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { AGENTNOTE_DIR, SESSION_FILE } from "./core/constants.js";
 import { git, repoRoot } from "./git.js";
 
 let _root: string | null = null;
 let _gitDir: string | null = null;
 let _commonGitDir: string | null = null;
+
+/** Resolve git paths that are reported relative to the current process cwd. */
+function resolveGitPath(value: string): string {
+  return isAbsolute(value) ? value : resolve(process.cwd(), value);
+}
 
 /** Resolve and cache the repository root, exiting for non-git directories. */
 async function root(): Promise<string> {
@@ -23,10 +28,7 @@ async function root(): Promise<string> {
 async function gitDir(): Promise<string> {
   if (!_gitDir) {
     _gitDir = await git(["rev-parse", "--git-dir"]);
-    // Make absolute if relative.
-    if (!isAbsolute(_gitDir)) {
-      _gitDir = join(await root(), _gitDir);
-    }
+    _gitDir = resolveGitPath(_gitDir);
   }
   return _gitDir;
 }
@@ -35,9 +37,7 @@ async function gitDir(): Promise<string> {
 async function commonGitDir(): Promise<string> {
   if (!_commonGitDir) {
     _commonGitDir = await git(["rev-parse", "--git-common-dir"]);
-    if (!isAbsolute(_commonGitDir)) {
-      _commonGitDir = join(await root(), _commonGitDir);
-    }
+    _commonGitDir = resolveGitPath(_commonGitDir);
   }
   return _commonGitDir;
 }

@@ -510,6 +510,98 @@ describe("agentnote init", () => {
     }
   });
 
+  it("resolves normal repository hook paths when init and status run from a subdirectory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-subdir-init-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+      const nestedDir = join(dir, "src", "nested");
+      mkdirSync(nestedDir, { recursive: true });
+      execFileSync(process.execPath, [cliPath, "init", "--agent", "claude", "--no-action"], {
+        cwd: nestedDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+
+      assert.ok(
+        existsSync(join(dir, ".git", "hooks", "post-commit")),
+        "subdirectory init should install hooks in the repository git dir",
+      );
+
+      const statusOutput = execFileSync(process.execPath, [cliPath, "status"], {
+        cwd: nestedDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+      assert.ok(
+        statusOutput.includes("git:     active (prepare-commit-msg, post-commit, pre-push)"),
+        "status from a repository subdirectory should read Git's effective hook directory",
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves worktree common git paths when init and status run from a subdirectory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-worktree-subdir-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+      const worktreeDir = join(dir, ".claude", "worktrees", "subdir-agent");
+      mkdirSync(join(dir, ".claude", "worktrees"), { recursive: true });
+      execFileSync("git", ["worktree", "add", "-b", "subdir-agent-test", worktreeDir], {
+        cwd: dir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+
+      const nestedDir = join(worktreeDir, "src", "nested");
+      mkdirSync(nestedDir, { recursive: true });
+      execFileSync(process.execPath, [cliPath, "init", "--agent", "claude", "--no-action"], {
+        cwd: nestedDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+
+      const commonGitDir = resolveGitPath(
+        nestedDir,
+        execFileSync("git", ["rev-parse", "--git-common-dir"], {
+          cwd: nestedDir,
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+          stdio: "pipe",
+        }).trim(),
+      );
+      assert.ok(
+        existsSync(join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note")),
+        "subdirectory init should create the common shim at Git's cwd-relative common dir",
+      );
+
+      const statusOutput = execFileSync(process.execPath, [cliPath, "status"], {
+        cwd: nestedDir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+        stdio: "pipe",
+      });
+      assert.ok(
+        statusOutput.includes("git:     active (prepare-commit-msg, post-commit, pre-push)"),
+        "status from a worktree subdirectory should read Git's effective hook directory",
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("supports common-shim worktree commits across bare and non-bare layouts", () => {
     const layouts: WorktreeLayout[] = [
       {

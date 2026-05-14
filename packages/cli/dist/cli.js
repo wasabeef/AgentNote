@@ -1382,7 +1382,7 @@ async function waitForTranscriptReady(transcriptPath) {
       }
     } catch {
     }
-    await new Promise((resolve6) => setTimeout(resolve6, TRANSCRIPT_POLL_MS));
+    await new Promise((resolve7) => setTimeout(resolve7, TRANSCRIPT_POLL_MS));
   }
   return false;
 }
@@ -4459,13 +4459,13 @@ function escapeRegExp3(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
-  return new Promise((resolve6) => {
+  return new Promise((resolve7) => {
     const child = spawn("git", ["show", `${commitSha}:${file}`], {
       stdio: ["ignore", "pipe", "ignore"]
     });
     const stdout = child.stdout;
     if (!stdout) {
-      resolve6(null);
+      resolve7(null);
       return;
     }
     const chunks = [];
@@ -4476,7 +4476,7 @@ async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
     const finish = (value) => {
       if (settled) return;
       settled = true;
-      resolve6(value);
+      resolve7(value);
     };
     child.on("error", () => finish(null));
     stdout.on("data", (chunk) => {
@@ -4912,10 +4912,13 @@ async function ensureEmptyBlobInStore() {
 }
 
 // src/paths.ts
-import { isAbsolute as isAbsolute2, join as join7 } from "node:path";
+import { isAbsolute as isAbsolute2, join as join7, resolve as resolve5 } from "node:path";
 var _root = null;
 var _gitDir = null;
 var _commonGitDir = null;
+function resolveGitPath(value) {
+  return isAbsolute2(value) ? value : resolve5(process.cwd(), value);
+}
 async function root() {
   if (!_root) {
     try {
@@ -4930,18 +4933,14 @@ async function root() {
 async function gitDir() {
   if (!_gitDir) {
     _gitDir = await git(["rev-parse", "--git-dir"]);
-    if (!isAbsolute2(_gitDir)) {
-      _gitDir = join7(await root(), _gitDir);
-    }
+    _gitDir = resolveGitPath(_gitDir);
   }
   return _gitDir;
 }
 async function commonGitDir() {
   if (!_commonGitDir) {
     _commonGitDir = await git(["rev-parse", "--git-common-dir"]);
-    if (!isAbsolute2(_commonGitDir)) {
-      _commonGitDir = join7(await root(), _commonGitDir);
-    }
+    _commonGitDir = resolveGitPath(_commonGitDir);
   }
   return _commonGitDir;
 }
@@ -5152,8 +5151,8 @@ async function commit(args2) {
     stdio: "inherit",
     cwd: process.cwd()
   });
-  const exitCode = await new Promise((resolve6) => {
-    child.on("close", (code) => resolve6(code ?? 1));
+  const exitCode = await new Promise((resolve7) => {
+    child.on("close", (code) => resolve7(code ?? 1));
   });
   if (exitCode !== 0) {
     process.exit(exitCode);
@@ -5184,7 +5183,7 @@ import { join as join11 } from "node:path";
 // src/commands/init.ts
 import { existsSync as existsSync10 } from "node:fs";
 import { chmod, mkdir as mkdir6, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join10, resolve as resolve5 } from "node:path";
+import { isAbsolute as isAbsolute3, join as join10, resolve as resolve6 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
@@ -5548,7 +5547,7 @@ async function resolveHookDir(repoRoot3) {
   } catch {
   }
   const hookPath = await git(["rev-parse", "--git-path", "hooks"]);
-  return isAbsolute3(hookPath) ? hookPath : join10(repoRoot3, hookPath);
+  return isAbsolute3(hookPath) ? hookPath : resolve6(process.cwd(), hookPath);
 }
 function shellSingleQuote(value) {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -5557,7 +5556,7 @@ async function installLocalCliShim(agentnoteDirPath) {
   if (!process.argv[1]) return;
   const shimDir = join10(agentnoteDirPath, "bin");
   const shimPath = join10(shimDir, "agent-note");
-  const cliPath = resolve5(process.argv[1]);
+  const cliPath = resolve6(process.argv[1]);
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;
@@ -7066,7 +7065,7 @@ function truncateLines(text, maxLen) {
 // src/commands/status.ts
 import { existsSync as existsSync15 } from "node:fs";
 import { readFile as readFile13 } from "node:fs/promises";
-import { isAbsolute as isAbsolute5, join as join16 } from "node:path";
+import { join as join16 } from "node:path";
 var VERSION = "1.0.3";
 var CAPABILITY_LABELS = {
   edits: "edits",
@@ -7284,7 +7283,7 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
   }
 }
 async function readManagedGitHooks(repoRoot3) {
-  const hookDir = await resolveHookDir2(repoRoot3);
+  const hookDir = await resolveHookDir(repoRoot3);
   const active = [];
   for (const name of GIT_HOOK_NAMES) {
     const hookPath = join16(hookDir, name);
@@ -7299,19 +7298,10 @@ async function readManagedGitHooks(repoRoot3) {
   }
   return active;
 }
-async function resolveHookDir2(repoRoot3) {
-  const hooksPathConfig = (await gitSafe(["config", "--get", "core.hooksPath"])).stdout.trim();
-  if (hooksPathConfig) {
-    return isAbsolute5(hooksPathConfig) ? hooksPathConfig : join16(repoRoot3, hooksPathConfig);
-  }
-  const gitDir2 = (await gitSafe(["rev-parse", "--git-dir"])).stdout.trim();
-  const resolvedGitDir = isAbsolute5(gitDir2) ? gitDir2 : join16(repoRoot3, gitDir2);
-  return join16(resolvedGitDir, "hooks");
-}
 
 // src/commands/why.ts
 import { existsSync as existsSync16, realpathSync } from "node:fs";
-import { isAbsolute as isAbsolute6, posix, relative as relative3, resolve as resolvePath } from "node:path";
+import { isAbsolute as isAbsolute5, posix, relative as relative3, resolve as resolvePath } from "node:path";
 var ALL_ZERO_COMMIT_RE = /^0{40}$/;
 var BLAME_HEADER_RE = /^([0-9a-f]{40})\s+\d+\s+\d+(?:\s+\d+)?$/i;
 var COLON_COLUMN_TARGET_RE = /^(.+):(\d+):\d+$/;
@@ -7430,7 +7420,7 @@ async function normalizeTargetPath(path) {
     PATH_PREFIX_RE,
     ""
   );
-  if (!isAbsolute6(normalized)) return normalized;
+  if (!isAbsolute5(normalized)) return normalized;
   const root2 = await repoRoot();
   return relative3(realpathIfExists(root2), realpathIfExists(normalized)).replaceAll("\\", "/");
 }
