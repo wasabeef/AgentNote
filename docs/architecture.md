@@ -184,6 +184,14 @@ Append-only JSONL files, accumulated during a session, rotated after each commit
     └── pre_blobs-<id>.jsonl         # archived at next turn boundary
 ```
 
+In git worktrees, this local temp layer intentionally lives under that
+worktree's own git dir (`.git/worktrees/<name>/agentnote` for a non-bare
+repository, or the equivalent worktree git dir for a bare repository). This
+keeps active session pointers, heartbeats, and uncommitted JSONL buffers
+isolated per worktree regardless of where the user chooses to place the
+worktree directory, while git notes remain shared through the repository's
+common git database.
+
 **Layer 2 — Git notes (`refs/notes/agentnote`)**
 
 The permanent record. One JSON note per commit, written at commit time. Pushable, fetchable, shareable with the team.
@@ -391,6 +399,14 @@ Three git hooks handle commit integration and notes sharing:
 | `post-commit` | After commit succeeds | Reads session ID from the finalized trailer on HEAD, calls `agent-note record <session-id>` to write git note. If `prepare-commit-msg` explicitly marked a stale-heartbeat fallback, calls `agent-note record --fallback-head`, which only records when a session post-edit blob matches a committed HEAD blob. If the current process exposes an adapter-supported session environment such as `CODEX_THREAD_ID`, it may also call `agent-note record --fallback-env` when HEAD still has no Agent Note after the trailer/head attempt; fresh mutating transcript work can become commit-level attribution even when exact `files_touched` is unavailable. Direct file-matched env fallback rows may pull in bounded preceding decision-context prompts for display, but only the matched rows affect attribution. Idempotent — skips if note already exists. |
 | `pre-push` | Before push to remote | Pushes `refs/notes/agentnote` to the actual remote (`$1`) and waits for `push-notes` to finish. Recursion-guarded via `AGENTNOTE_PUSHING` env var. |
 
+Git hooks are installed into the hook directory reported by Git, not by assuming
+`.git/hooks`. For worktrees, the hook script may run with a worktree-specific
+`$GIT_DIR`, so `post-commit` and `pre-push` first try that worktree's local
+Agent Note shim and then fall back to the common git dir shim shared by all
+worktrees. This works for both bare and non-bare repositories, including custom
+worktree directory layouts. It lets a main checkout `agent-note init` support
+commits made inside Claude Agent View-style worktrees.
+
 Session freshness is verified via per-session heartbeat file (`sessions/<id>/heartbeat`). Heartbeat is refreshed by normalized hook events during long turns. `Stop` does NOT invalidate the heartbeat — it fires when the AI finishes responding, not when the session ends. Gemini `SessionEnd` is a real session termination and removes the heartbeat. Missing heartbeat in `prepare-commit-msg` skips trailer injection. Stale heartbeat writes a one-shot fallback marker for brand-new commits only; `post-commit` consumes that marker and records only if the active session has post-edit blob evidence that matches the committed HEAD blobs. Agent-hosted terminals may also expose the current session through adapter-specific environment variables. Today, Codex exposes `CODEX_THREAD_ID`, which lets `post-commit` recover a fresh Codex transcript even when `.git/agentnote/session` points at a stale or unrelated session.
 
 Plain git hook trailer injection also requires file evidence. File-change records or pre-edit blobs count as safe evidence because they can be matched back to committed files. Prompts alone are not enough for plain git hooks: a fresh prompt-only active session might belong to another agent or terminal workflow. Agent hook trailer injection can still preserve prompt-only work because the commit command itself was observed inside the agent. Transcript paths are supporting metadata, not recordable data by themselves. Heartbeat, `SessionStart`, and `transcript_path` metadata alone do not receive dangling `Agentnote-Session` trailers.
@@ -402,11 +418,22 @@ Environment fallback is narrower than trailer injection. It does not trust `.git
 `agent-note init` installs git hooks respecting the repository's hook directory:
 
 ```bash
-# Determine hook directory
-HOOK_DIR=$(git config get core.hooksPath || echo ".git/hooks")
+# Determine the effective hook directory. Git resolves this for normal
+# checkouts, bare repositories, custom core.hooksPath, and worktrees.
+HOOK_DIR=$(git rev-parse --git-path hooks)
 ```
 
-If `core.hooksPath` is set (e.g., by husky, lefthook, or custom configuration), hooks are installed there instead of `.git/hooks/`. This ensures compatibility with any hook manager.
+Git owns hook path resolution. Agent Note therefore asks Git for the effective
+hook directory instead of reconstructing it from `.git/` paths or
+`core.hooksPath`. This keeps hook installation correct for hook managers,
+bare repositories, custom worktree layouts, and Claude Agent View-style
+worktrees.
+
+At runtime, hook scripts first try the worktree-local Agent Note shim under the
+Git-reported `$GIT_DIR`. If that shim does not exist, they fall back to the
+common git-dir shim shared by all worktrees. This lets `agent-note init` run
+from either the main checkout or a linked worktree while still supporting
+commits made from any related worktree.
 
 When an existing hook file is found, agent-note chains to it — the original hook runs first, then agent-note's logic runs. This avoids overwriting user or tool-managed hooks.
 

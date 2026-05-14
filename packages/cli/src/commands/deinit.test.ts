@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+
+function resolveGitPath(cwd: string, value: string): string {
+  return isAbsolute(value) ? value : join(cwd, value);
+}
 
 describe("agentnote deinit", () => {
   let testDir: string;
@@ -26,7 +30,11 @@ describe("agentnote deinit", () => {
   it("requires --agent flag", () => {
     let threw = false;
     try {
-      execSync(`node ${cliPath} deinit`, { cwd: testDir, encoding: "utf-8", stdio: "pipe" });
+      execFileSync("node", [cliPath, "deinit"], {
+        cwd: testDir,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
     } catch (err: unknown) {
       threw = true;
       const e = err as { stderr: string };
@@ -38,7 +46,7 @@ describe("agentnote deinit", () => {
   it("rejects unknown agent", () => {
     let threw = false;
     try {
-      execSync(`node ${cliPath} deinit --agent unknownagent`, {
+      execFileSync("node", [cliPath, "deinit", "--agent", "unknownagent"], {
         cwd: testDir,
         encoding: "utf-8",
         stdio: "pipe",
@@ -54,7 +62,7 @@ describe("agentnote deinit", () => {
   it("rejects repeated --agent flags", () => {
     let threw = false;
     try {
-      execSync(`node ${cliPath} deinit --agent claude --agent cursor`, {
+      execFileSync("node", [cliPath, "deinit", "--agent", "claude", "--agent", "cursor"], {
         cwd: testDir,
         encoding: "utf-8",
         stdio: "pipe",
@@ -72,7 +80,7 @@ describe("agentnote deinit", () => {
 
   it("removes agent hooks, git hooks, workflow, and notes config after init", () => {
     // First, init
-    execSync(`node ${cliPath} init --agent claude`, { cwd: testDir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: testDir });
 
     const settingsPath = join(testDir, ".claude", "settings.json");
     assert.ok(existsSync(settingsPath), "settings.json should exist after init");
@@ -88,10 +96,14 @@ describe("agentnote deinit", () => {
     assert.ok(fetchBefore.includes(NOTES_REF_FULL), "notes fetch should be configured after init");
 
     // Now deinit (with --remove-workflow to opt into workflow deletion)
-    const output = execSync(`node ${cliPath} deinit --agent claude --remove-workflow`, {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const output = execFileSync(
+      "node",
+      [cliPath, "deinit", "--agent", "claude", "--remove-workflow"],
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
 
     assert.ok(output.includes("✓"), "should show success markers");
 
@@ -141,13 +153,13 @@ describe("agentnote deinit", () => {
     writeFileSync(join(hookDir, "post-commit"), originalHookContent, { mode: 0o755 });
 
     // init should chain: backup original and install agent-note hook
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
 
     const backupPath = join(hookDir, "post-commit.agentnote-backup");
     assert.ok(existsSync(backupPath), "backup should exist after init");
 
     // deinit should restore the original hook
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
 
     assert.ok(existsSync(join(hookDir, "post-commit")), "post-commit should be restored");
     const restoredContent = readFileSync(join(hookDir, "post-commit"), "utf-8");
@@ -165,16 +177,61 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude", "--no-action"], { cwd: dir });
 
     const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
     assert.ok(existsSync(shimPath), "shim should exist after init");
 
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
 
     assert.ok(!existsSync(shimPath), "shim should be removed after deinit");
 
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("removes worktree-local and common CLI shims when run inside a worktree", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-worktree-shim-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+
+      const worktreeDir = join(dir, "custom worktrees", "cleanup target");
+      mkdirSync(join(worktreeDir, ".."), { recursive: true });
+      execFileSync("git", ["worktree", "add", "-b", "cleanup-target", worktreeDir], {
+        cwd: dir,
+      });
+
+      execFileSync("node", [cliPath, "init", "--agent", "claude", "--no-action"], {
+        cwd: worktreeDir,
+      });
+
+      const worktreeGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-dir", { cwd: worktreeDir, encoding: "utf-8" }).trim(),
+      );
+      const commonGitDir = resolveGitPath(
+        worktreeDir,
+        execSync("git rev-parse --git-common-dir", {
+          cwd: worktreeDir,
+          encoding: "utf-8",
+        }).trim(),
+      );
+      const worktreeShimPath = join(worktreeGitDir, AGENTNOTE_DIR, "bin", "agent-note");
+      const commonShimPath = join(commonGitDir, AGENTNOTE_DIR, "bin", "agent-note");
+
+      assert.ok(existsSync(worktreeShimPath), "worktree-local shim should exist after init");
+      assert.ok(existsSync(commonShimPath), "common shim should exist after init");
+
+      execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: worktreeDir });
+
+      assert.ok(!existsSync(worktreeShimPath), "worktree-local shim should be removed");
+      assert.ok(!existsSync(commonShimPath), "common shim should be removed");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("preserves workflow by default (requires --remove-workflow to delete)", () => {
@@ -185,11 +242,11 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
     const workflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
     assert.ok(existsSync(workflowPath), "workflow should exist after init");
 
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
 
     assert.ok(existsSync(workflowPath), "workflow should be preserved without --remove-workflow");
 
@@ -204,9 +261,11 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
 
-    execSync(`node ${cliPath} deinit --agent claude --keep-notes`, { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude", "--keep-notes"], {
+      cwd: dir,
+    });
 
     const fetchResult = execSync("git config --get-all remote.origin.fetch", {
       cwd: dir,
@@ -228,10 +287,10 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
     // Second deinit should not throw
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
 
     rmSync(dir, { recursive: true, force: true });
   });
@@ -244,11 +303,11 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
-    execSync(`node ${cliPath} deinit --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
 
     // Re-init should succeed and install hooks again
-    execSync(`node ${cliPath} init --agent claude`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
 
     const settingsPath = join(dir, ".claude", "settings.json");
     assert.ok(existsSync(settingsPath), "settings.json should exist after re-init");
@@ -269,14 +328,14 @@ describe("agentnote deinit", () => {
     execSync("git remote add origin https://example.com/repo.git", { cwd: dir });
     execSync("git commit --allow-empty -m 'init'", { cwd: dir });
 
-    execSync(`node ${cliPath} init --agent claude --dashboard`, { cwd: dir });
+    execFileSync("node", [cliPath, "init", "--agent", "claude", "--dashboard"], { cwd: dir });
 
     const prWorkflowPath = join(dir, ".github", "workflows", "agentnote-pr-report.yml");
     const dashboardWorkflowPath = join(dir, ".github", "workflows", "agentnote-dashboard.yml");
     assert.ok(existsSync(prWorkflowPath), "PR workflow should exist after init");
     assert.ok(existsSync(dashboardWorkflowPath), "dashboard workflow should exist after init");
 
-    execSync(`node ${cliPath} deinit --agent claude --remove-workflow`, {
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude", "--remove-workflow"], {
       cwd: dir,
       encoding: "utf-8",
     });

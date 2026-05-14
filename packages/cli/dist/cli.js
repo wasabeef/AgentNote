@@ -1382,7 +1382,7 @@ async function waitForTranscriptReady(transcriptPath) {
       }
     } catch {
     }
-    await new Promise((resolve6) => setTimeout(resolve6, TRANSCRIPT_POLL_MS));
+    await new Promise((resolve7) => setTimeout(resolve7, TRANSCRIPT_POLL_MS));
   }
   return false;
 }
@@ -4459,13 +4459,13 @@ function escapeRegExp3(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
-  return new Promise((resolve6) => {
+  return new Promise((resolve7) => {
     const child = spawn("git", ["show", `${commitSha}:${file}`], {
       stdio: ["ignore", "pipe", "ignore"]
     });
     const stdout = child.stdout;
     if (!stdout) {
-      resolve6(null);
+      resolve7(null);
       return;
     }
     const chunks = [];
@@ -4476,7 +4476,7 @@ async function readCommittedFilePrefix(commitSha, file, maxBytes = 2048) {
     const finish = (value) => {
       if (settled) return;
       settled = true;
-      resolve6(value);
+      resolve7(value);
     };
     child.on("error", () => finish(null));
     stdout.on("data", (chunk) => {
@@ -4912,9 +4912,13 @@ async function ensureEmptyBlobInStore() {
 }
 
 // src/paths.ts
-import { join as join7 } from "node:path";
+import { isAbsolute as isAbsolute2, join as join7, resolve as resolve5 } from "node:path";
 var _root = null;
 var _gitDir = null;
+var _commonGitDir = null;
+function resolveGitPath(value) {
+  return isAbsolute2(value) ? value : resolve5(process.cwd(), value);
+}
 async function root() {
   if (!_root) {
     try {
@@ -4929,14 +4933,22 @@ async function root() {
 async function gitDir() {
   if (!_gitDir) {
     _gitDir = await git(["rev-parse", "--git-dir"]);
-    if (!_gitDir.startsWith("/")) {
-      _gitDir = join7(await root(), _gitDir);
-    }
+    _gitDir = resolveGitPath(_gitDir);
   }
   return _gitDir;
 }
+async function commonGitDir() {
+  if (!_commonGitDir) {
+    _commonGitDir = await git(["rev-parse", "--git-common-dir"]);
+    _commonGitDir = resolveGitPath(_commonGitDir);
+  }
+  return _commonGitDir;
+}
 async function agentnoteDir() {
   return join7(await gitDir(), AGENTNOTE_DIR);
+}
+async function commonAgentnoteDir() {
+  return join7(await commonGitDir(), AGENTNOTE_DIR);
 }
 async function sessionFile() {
   return join7(await agentnoteDir(), SESSION_FILE);
@@ -5139,8 +5151,8 @@ async function commit(args2) {
     stdio: "inherit",
     cwd: process.cwd()
   });
-  const exitCode = await new Promise((resolve6) => {
-    child.on("close", (code) => resolve6(code ?? 1));
+  const exitCode = await new Promise((resolve7) => {
+    child.on("close", (code) => resolve7(code ?? 1));
   });
   if (exitCode !== 0) {
     process.exit(exitCode);
@@ -5171,7 +5183,7 @@ import { join as join11 } from "node:path";
 // src/commands/init.ts
 import { existsSync as existsSync10 } from "node:fs";
 import { chmod, mkdir as mkdir6, readFile as readFile10, writeFile as writeFile7 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join10, resolve as resolve5 } from "node:path";
+import { isAbsolute as isAbsolute3, join as join10, resolve as resolve6 } from "node:path";
 var PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
 var DASHBOARD_WORKFLOW_FILENAME = "agentnote-dashboard.yml";
 var [PREPARE_COMMIT_MSG_HOOK, POST_COMMIT_HOOK, PRE_PUSH_HOOK] = GIT_HOOK_NAMES;
@@ -5308,6 +5320,7 @@ ${AGENTNOTE_HOOK_MARKER}
 # injected because the session heartbeat was stale, the CLI may use a strict
 # HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+COMMON_GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
@@ -5327,6 +5340,12 @@ record_agentnote() {
   # exact CLI version that generated these hooks.
   if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
     "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+    return
+  fi
+  # Git worktrees use their own $GIT_DIR but share hooks through the common git
+  # dir. Fall back to the common shim when init ran from another worktree.
+  if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
+    "$COMMON_GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
     return
   fi
   # Fall back to stable local/global binaries only.
@@ -5350,8 +5369,13 @@ ${AGENTNOTE_HOOK_MARKER}
 # PR workflows can fetch the latest notes ref, but never block the main push on failure.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+COMMON_GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
   "$GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
+  exit 0
+fi
+if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
+  "$COMMON_GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
   exit 0
 fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -5404,7 +5428,10 @@ async function init(args2) {
     }
   }
   if (!skipGitHooks && !actionOnly) {
-    await installLocalCliShim(await agentnoteDir());
+    const shimDirs = /* @__PURE__ */ new Set([await agentnoteDir(), await commonAgentnoteDir()]);
+    for (const shimDir of shimDirs) {
+      await installLocalCliShim(shimDir);
+    }
     const hookDir = await resolveHookDir(repoRoot3);
     await mkdir6(hookDir, { recursive: true });
     const installed = await installGitHook(
@@ -5516,11 +5543,11 @@ async function init(args2) {
 async function resolveHookDir(repoRoot3) {
   try {
     const hooksPath = await git(["config", "--get", "core.hooksPath"]);
-    if (hooksPath) return isAbsolute2(hooksPath) ? hooksPath : join10(repoRoot3, hooksPath);
+    if (hooksPath) return isAbsolute3(hooksPath) ? hooksPath : join10(repoRoot3, hooksPath);
   } catch {
   }
-  const gitDir2 = await git(["rev-parse", "--git-dir"]);
-  return join10(gitDir2, "hooks");
+  const hookPath = await git(["rev-parse", "--git-path", "hooks"]);
+  return isAbsolute3(hookPath) ? hookPath : resolve6(process.cwd(), hookPath);
 }
 function shellSingleQuote(value) {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -5529,7 +5556,7 @@ async function installLocalCliShim(agentnoteDirPath) {
   if (!process.argv[1]) return;
   const shimDir = join10(agentnoteDirPath, "bin");
   const shimPath = join10(shimDir, "agent-note");
-  const cliPath = resolve5(process.argv[1]);
+  const cliPath = resolve6(process.argv[1]);
   const shim = `#!/bin/sh
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;
@@ -5543,12 +5570,11 @@ async function installGitHook(hookDir, name, script) {
     const existing = await readFile10(hookPath, TEXT_ENCODING);
     if (existing.includes(AGENTNOTE_HOOK_MARKER)) {
       const backupPath2 = `${hookPath}.agentnote-backup`;
-      const target = existsSync10(backupPath2) ? script.replace(
-        "#!/bin/sh",
-        `#!/bin/sh
+      const target = existsSync10(backupPath2) ? script.replace("#!/bin/sh", () => {
+        return `#!/bin/sh
 # Chain to original hook \u2014 preserve exit status.
-if [ -f ${shellSingleQuote(backupPath2)} ]; then ${shellSingleQuote(backupPath2)} "$@" || exit $?; fi`
-      ) : script;
+if [ -f ${shellSingleQuote(backupPath2)} ]; then ${shellSingleQuote(backupPath2)} "$@" || exit $?; fi`;
+      }) : script;
       if (existing.trim() === target.trim()) return false;
       await writeFile7(hookPath, target);
       await chmod(hookPath, 493);
@@ -5559,12 +5585,11 @@ if [ -f ${shellSingleQuote(backupPath2)} ]; then ${shellSingleQuote(backupPath2)
       await writeFile7(backupPath, existing);
       await chmod(backupPath, 493);
     }
-    const chainedScript = script.replace(
-      "#!/bin/sh",
-      `#!/bin/sh
+    const chainedScript = script.replace("#!/bin/sh", () => {
+      return `#!/bin/sh
 # Chain to original hook \u2014 preserve exit status.
-if [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`
-    );
+if [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`;
+    });
     await writeFile7(hookPath, chainedScript);
     await chmod(hookPath, 493);
     return true;
@@ -5634,10 +5659,17 @@ async function deinit(args2) {
         results.push(`  \xB7 git hook: ${name} (not found or not managed by agentnote)`);
       }
     }
-    const binDir = join11(await agentnoteDir(), "bin");
-    const shimPath = join11(binDir, "agent-note");
-    if (existsSync11(shimPath)) {
+    const shimPaths = /* @__PURE__ */ new Set([
+      join11(await agentnoteDir(), "bin", "agent-note"),
+      join11(await commonAgentnoteDir(), "bin", "agent-note")
+    ]);
+    let removedShim = false;
+    for (const shimPath of shimPaths) {
+      if (!existsSync11(shimPath)) continue;
       await unlink2(shimPath);
+      removedShim = true;
+    }
+    if (removedShim) {
       results.push("  \u2713 removed local CLI shim");
     }
     if (removeWorkflow) {
@@ -5677,7 +5709,7 @@ async function deinit(args2) {
 import { randomUUID } from "node:crypto";
 import { existsSync as existsSync13 } from "node:fs";
 import { mkdir as mkdir7, readFile as readFile12, realpath, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join13, relative as relative2 } from "node:path";
+import { isAbsolute as isAbsolute4, join as join13, relative as relative2 } from "node:path";
 
 // src/core/rotate.ts
 import { existsSync as existsSync12 } from "node:fs";
@@ -5715,7 +5747,7 @@ function isSynchronousHookEvent(value) {
   return SYNCHRONOUS_HOOK_EVENTS.has(value.hook_event_name);
 }
 async function normalizeToRepoRelative(filePath) {
-  if (!isAbsolute3(filePath)) return filePath;
+  if (!isAbsolute4(filePath)) return filePath;
   try {
     const rawRoot = (await git(["rev-parse", "--show-toplevel"])).trim();
     const repoRoot3 = await realpath(rawRoot);
@@ -5904,7 +5936,7 @@ async function hook(args2 = []) {
       const filePath = await normalizeToRepoRelative(absPath);
       const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
-      const preBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
+      const preBlob = isAbsolute4(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       await appendJsonl(join13(sessionDir, PRE_BLOBS_FILE), {
         event: PRE_BLOB_EVENT,
         turn,
@@ -5925,7 +5957,7 @@ async function hook(args2 = []) {
       const filePath = await normalizeToRepoRelative(absPath);
       const turn = await readCurrentTurn2(sessionDir);
       const promptId = await readCurrentPromptId(sessionDir);
-      const postBlob = isAbsolute3(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
+      const postBlob = isAbsolute4(absPath) ? await blobHash(absPath) : EMPTY_BLOB;
       const changeId = adapter.name === AGENT_NAMES.cursor ? `${event.timestamp}:${event.tool ?? NORMALIZED_EVENT_KINDS.fileChange}:${filePath}:${postBlob}` : null;
       await appendJsonl(join13(sessionDir, CHANGES_FILE), {
         event: NORMALIZED_EVENT_KINDS.fileChange,
@@ -7033,7 +7065,7 @@ function truncateLines(text, maxLen) {
 // src/commands/status.ts
 import { existsSync as existsSync15 } from "node:fs";
 import { readFile as readFile13 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join16 } from "node:path";
+import { join as join16 } from "node:path";
 var VERSION = "1.0.3";
 var CAPABILITY_LABELS = {
   edits: "edits",
@@ -7251,7 +7283,7 @@ async function readGeminiCaptureCapabilities(repoRoot3) {
   }
 }
 async function readManagedGitHooks(repoRoot3) {
-  const hookDir = await resolveHookDir2(repoRoot3);
+  const hookDir = await resolveHookDir(repoRoot3);
   const active = [];
   for (const name of GIT_HOOK_NAMES) {
     const hookPath = join16(hookDir, name);
@@ -7265,15 +7297,6 @@ async function readManagedGitHooks(repoRoot3) {
     }
   }
   return active;
-}
-async function resolveHookDir2(repoRoot3) {
-  const hooksPathConfig = (await gitSafe(["config", "--get", "core.hooksPath"])).stdout.trim();
-  if (hooksPathConfig) {
-    return isAbsolute4(hooksPathConfig) ? hooksPathConfig : join16(repoRoot3, hooksPathConfig);
-  }
-  const gitDir2 = (await gitSafe(["rev-parse", "--git-dir"])).stdout.trim();
-  const resolvedGitDir = isAbsolute4(gitDir2) ? gitDir2 : join16(repoRoot3, gitDir2);
-  return join16(resolvedGitDir, "hooks");
 }
 
 // src/commands/why.ts

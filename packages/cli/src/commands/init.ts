@@ -17,7 +17,7 @@ import {
   TRAILER_SESSION_FILES,
 } from "../core/constants.js";
 import { git, gitSafe } from "../git.js";
-import { agentnoteDir, root } from "../paths.js";
+import { agentnoteDir, commonAgentnoteDir, root } from "../paths.js";
 
 /** Default workflow filename generated for PR Report mode. */
 export const PR_REPORT_WORKFLOW_FILENAME = "agentnote-pr-report.yml";
@@ -169,6 +169,7 @@ ${AGENTNOTE_HOOK_MARKER}
 # injected because the session heartbeat was stale, the CLI may use a strict
 # HEAD fallback that only records when session file evidence matches HEAD.
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+COMMON_GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
 SESSION_ID=$(git log -1 --format='%(trailers:key=${TRAILER_KEY},valueonly)' HEAD 2>/dev/null | tr -d '\\n')
 if [ -z "$SESSION_ID" ]; then
   FALLBACK_FILE="$GIT_DIR/agentnote/${POST_COMMIT_FALLBACK_FILE}"
@@ -188,6 +189,12 @@ record_agentnote() {
   # exact CLI version that generated these hooks.
   if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
     "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+    return
+  fi
+  # Git worktrees use their own $GIT_DIR but share hooks through the common git
+  # dir. Fall back to the common shim when init ran from another worktree.
+  if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
+    "$COMMON_GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
     return
   fi
   # Fall back to stable local/global binaries only.
@@ -212,8 +219,13 @@ ${AGENTNOTE_HOOK_MARKER}
 # PR workflows can fetch the latest notes ref, but never block the main push on failure.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+COMMON_GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
 if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
   "$GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
+  exit 0
+fi
+if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
+  "$COMMON_GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
   exit 0
 fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -278,7 +290,10 @@ export async function init(args: string[]): Promise<void> {
 
   // Git hooks (prepare-commit-msg, post-commit, pre-push)
   if (!skipGitHooks && !actionOnly) {
-    await installLocalCliShim(await agentnoteDir());
+    const shimDirs = new Set([await agentnoteDir(), await commonAgentnoteDir()]);
+    for (const shimDir of shimDirs) {
+      await installLocalCliShim(shimDir);
+    }
     const hookDir = await resolveHookDir(repoRoot);
     await mkdir(hookDir, { recursive: true });
 
@@ -412,7 +427,6 @@ export async function init(args: string[]): Promise<void> {
 
 // ─── Git hook helpers ───
 
-/** Resolve the git hooks directory (respects core.hooksPath). */
 /** Resolve the effective git hooks directory, respecting `core.hooksPath`. */
 export async function resolveHookDir(repoRoot: string): Promise<string> {
   try {
@@ -421,8 +435,8 @@ export async function resolveHookDir(repoRoot: string): Promise<string> {
   } catch {
     // No custom hooksPath set.
   }
-  const gitDir = await git(["rev-parse", "--git-dir"]);
-  return join(gitDir, "hooks");
+  const hookPath = await git(["rev-parse", "--git-path", "hooks"]);
+  return isAbsolute(hookPath) ? hookPath : resolve(process.cwd(), hookPath);
 }
 
 function shellSingleQuote(value: string): string {
@@ -459,10 +473,10 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
       const backupPath = `${hookPath}.agentnote-backup`;
       // Regenerate chained variant if a backup exists, otherwise bare script.
       const target = existsSync(backupPath)
-        ? script.replace(
-            "#!/bin/sh",
-            `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`,
-          )
+        ? script.replace("#!/bin/sh", () => {
+            // Function replacement avoids `$` expansion for shell-special paths.
+            return `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`;
+          })
         : script;
       if (existing.trim() === target.trim()) return false; // already up-to-date
       await writeFile(hookPath, target);
@@ -478,10 +492,10 @@ async function installGitHook(hookDir: string, name: string, script: string): Pr
     }
     // Chain: run original hook first, preserve its exit status.
     // If the original hook fails, abort — don't override repo protections.
-    const chainedScript = script.replace(
-      "#!/bin/sh",
-      `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`,
-    );
+    const chainedScript = script.replace("#!/bin/sh", () => {
+      // Function replacement avoids `$` expansion for shell-special paths.
+      return `#!/bin/sh\n# Chain to original hook — preserve exit status.\nif [ -f ${shellSingleQuote(backupPath)} ]; then ${shellSingleQuote(backupPath)} "$@" || exit $?; fi`;
+    });
     await writeFile(hookPath, chainedScript);
     await chmod(hookPath, 0o755);
     return true;
