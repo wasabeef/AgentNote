@@ -138,6 +138,6 @@
   "pull_request": {
     "number": 78,
     "title": "fix(report): clean prompt rendering",
-    "state": "open"
+    "state": "merged"
   }
 }
