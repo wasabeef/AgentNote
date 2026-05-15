@@ -631,7 +631,8 @@ tag.
 Release steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
-2. Keep the workspace lockfile in sync. At minimum, update the `packages/cli` entry in `package-lock.json` so the committed workspace metadata matches the published package version.
+2. Run `npm install` from the repository root so npm updates `package-lock.json`
+   and synchronizes the `packages/cli` entry with the new package version.
 3. Run the release checks locally:
    - `npm -w packages/cli run build`
    - `npm -w packages/cli run typecheck`

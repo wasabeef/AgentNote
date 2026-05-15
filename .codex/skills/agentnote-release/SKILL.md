@@ -19,7 +19,7 @@ Use this skill when the task asks to release Agent Note, bump a version, cut a t
 Follow these steps instead of relying on a release script:
 
 1. Update `packages/cli/package.json` to `x.y.z`.
-2. Update `package-lock.json` so `packages["packages/cli"].version` is also `x.y.z`.
+2. Run `npm install` from the repository root so npm updates `package-lock.json` and synchronizes `packages["packages/cli"].version` to `x.y.z`.
 3. Run `npm -w packages/cli run build`.
 4. Run `npm -w packages/cli run typecheck`.
 5. Run `npm -w packages/cli run lint`.
