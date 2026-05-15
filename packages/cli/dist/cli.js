@@ -6762,7 +6762,7 @@ function cleanPrompt(prompt, maxLen) {
   return `${body.slice(0, maxLen)}\u2026`;
 }
 function pushBlockquoteSection(lines, label, body) {
-  lines.push(`> **${label}**`);
+  lines.push(`**${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 function renderInteractionContext(interaction) {

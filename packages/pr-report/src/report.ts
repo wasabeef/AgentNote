@@ -869,9 +869,9 @@ function cleanPrompt(prompt: string, maxLen: number): string {
   return `${body.slice(0, maxLen)}…`;
 }
 
-/** Append a labeled blockquote section while preserving line breaks. */
+/** Append a visible section label followed by a blockquoted body. */
 function pushBlockquoteSection(lines: string[], label: string, body: string): void {
-  lines.push(`> **${label}**`);
+  lines.push(`**${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 

@@ -28958,7 +28958,7 @@ __webpack_unused_export__ = defaultContentType
 /************************************************************************/
 /******/ // The module cache
 /******/ var __webpack_module_cache__ = {};
-/******/
+/******/ 
 /******/ // The require function
 /******/ function __nccwpck_require__(moduleId) {
 /******/ 	// Check if module is in cache
@@ -28972,7 +28972,7 @@ __webpack_unused_export__ = defaultContentType
 /******/ 		// no module.loaded needed
 /******/ 		exports: {}
 /******/ 	};
-/******/
+/******/ 
 /******/ 	// Execute the module function
 /******/ 	var threw = true;
 /******/ 	try {
@@ -28981,16 +28981,16 @@ __webpack_unused_export__ = defaultContentType
 /******/ 	} finally {
 /******/ 		if(threw) delete __webpack_module_cache__[moduleId];
 /******/ 	}
-/******/
+/******/ 
 /******/ 	// Return the exports of the module
 /******/ 	return module.exports;
 /******/ }
-/******/
+/******/ 
 /************************************************************************/
 /******/ /* webpack/runtime/compat */
-/******/
+/******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
-/******/
+/******/ 
 /************************************************************************/
 var __webpack_exports__ = {};
 
@@ -30079,8 +30079,8 @@ class oidc_utils_OidcClient {
             const res = yield httpclient
                 .getJson(id_token_url)
                 .catch(error => {
-                throw new Error(`Failed to get ID Token. \n
-        Error Code : ${error.statusCode}\n
+                throw new Error(`Failed to get ID Token. \n 
+        Error Code : ${error.statusCode}\n 
         Error Message: ${error.message}`);
             });
             const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
@@ -37906,9 +37906,9 @@ function cleanPrompt(prompt, maxLen) {
         return body;
     return `${body.slice(0, maxLen)}…`;
 }
-/** Append a labeled blockquote section while preserving line breaks. */
+/** Append a visible section label followed by a blockquoted body. */
 function pushBlockquoteSection(lines, label, body) {
-    lines.push(`> **${label}**`);
+    lines.push(`**${label}**`);
     lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 /** Render all structured interaction contexts in their stable display order. */
@@ -38122,3 +38122,4 @@ async function run() {
     }
 }
 run();
+

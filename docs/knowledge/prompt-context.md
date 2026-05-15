@@ -317,13 +317,13 @@ sentence boundary:
 `contexts[]` がある場合は、prompt の前に 1 つの `📝 Context` block として表示します。
 
 ```md
-> **📝 Context**
+**📝 Context**
 > ...
 >
-> **🧑 Prompt**
+**🧑 Prompt**
 > ...
 >
-> **🤖 Response**
+**🤖 Response**
 > ...
 ```
 

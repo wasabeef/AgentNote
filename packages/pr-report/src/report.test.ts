@@ -416,6 +416,9 @@ describe("renderMarkdown", () => {
     assert.ok(promptIndex > contextIndex, "prompt should appear after context");
     assert.ok(responseIndex > promptIndex, "response should appear after prompt");
     assert.ok(markdown.includes("The previous response explains why src/record.ts needs this fix."));
+    assert.ok(!markdown.includes("> **📝 Context**"), "context label should not be quoted");
+    assert.ok(!markdown.includes("> **🧑 Prompt**"), "prompt label should not be quoted");
+    assert.ok(!markdown.includes("> **🤖 Response**"), "response label should not be quoted");
   });
 
   it("renders contexts array in a single context block", () => {
