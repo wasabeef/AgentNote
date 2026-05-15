@@ -359,19 +359,11 @@ function isAgentNoteHookCommand(command2, agentName, options = {}) {
 }
 
 // src/agents/prompt-text.ts
-var SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
+var SYSTEM_PROMPT_TAG_RE = /^\s*<(?:task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*\/?>/i;
 var LEADING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?>[\s\S]*?<\/environment_context>\s*/i;
 var LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?\/>\s*/i;
 function isSystemInjectedPrompt(prompt) {
-  for (const prefix of SYSTEM_PROMPT_PREFIXES) {
-    if (prompt.startsWith(prefix)) {
-      const next = prompt[prefix.length];
-      if (next === ">" || next === " " || next === "\n" || next === void 0) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return SYSTEM_PROMPT_TAG_RE.test(prompt);
 }
 function stripLeadingEnvironmentContext(prompt) {
   let next = prompt;

@@ -39,6 +39,11 @@ describe("normalizeUserPromptText", () => {
     assert.equal(prompt, null);
   });
 
+  it("drops self-closing and mixed-case system-injected prompts", () => {
+    assert.equal(normalizeUserPromptText("<system-reminder/>"), null);
+    assert.equal(normalizeUserPromptText('<Task-Notification reason="sync" />'), null);
+  });
+
   it("does not strip environment_context text in the middle of a real prompt", () => {
     const prompt = normalizeUserPromptText(
       "Explain why <environment_context> appears in the PR report.",

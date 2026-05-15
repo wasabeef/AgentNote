@@ -1,19 +1,12 @@
-const SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
+const SYSTEM_PROMPT_TAG_RE =
+  /^\s*<(?:task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*\/?>/i;
 const LEADING_ENVIRONMENT_CONTEXT_RE =
   /^\s*<environment_context(?:\s[^>]*)?>[\s\S]*?<\/environment_context>\s*/i;
 const LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?\/>\s*/i;
 
 /** True when the prompt is a standalone system-injected message, not user intent. */
 function isSystemInjectedPrompt(prompt: string): boolean {
-  for (const prefix of SYSTEM_PROMPT_PREFIXES) {
-    if (prompt.startsWith(prefix)) {
-      const next = prompt[prefix.length];
-      if (next === ">" || next === " " || next === "\n" || next === undefined) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return SYSTEM_PROMPT_TAG_RE.test(prompt);
 }
 
 /** Strip leading runtime metadata blocks while preserving the user's actual prompt. */
