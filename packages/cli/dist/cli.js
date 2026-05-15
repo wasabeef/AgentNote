@@ -359,7 +359,7 @@ function isAgentNoteHookCommand(command2, agentName, options = {}) {
 }
 
 // src/agents/prompt-text.ts
-var SYSTEM_PROMPT_TAG_RE = /^\s*<(?:task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*\/?>/i;
+var SYSTEM_PROMPT_TAG_RE = /^\s*<(task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*(?:\/>|>[\s\S]*?<\/\1\s*>)\s*$/i;
 var LEADING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?>[\s\S]*?<\/environment_context>\s*/i;
 var LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?\/>\s*/i;
 function isSystemInjectedPrompt(prompt) {

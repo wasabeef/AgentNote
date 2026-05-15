@@ -1,5 +1,5 @@
 const SYSTEM_PROMPT_TAG_RE =
-  /^\s*<(?:task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*\/?>/i;
+  /^\s*<(task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*(?:\/>|>[\s\S]*?<\/\1\s*>)\s*$/i;
 const LEADING_ENVIRONMENT_CONTEXT_RE =
   /^\s*<environment_context(?:\s[^>]*)?>[\s\S]*?<\/environment_context>\s*/i;
 const LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?\/>\s*/i;

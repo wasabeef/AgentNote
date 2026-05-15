@@ -44,6 +44,17 @@ describe("normalizeUserPromptText", () => {
     assert.equal(normalizeUserPromptText('<Task-Notification reason="sync" />'), null);
   });
 
+  it("does not drop user text that follows a system-looking tag", () => {
+    const prompt = normalizeUserPromptText(
+      "<system-reminder>Internal context.</system-reminder>\nPlease fix the report.",
+    );
+
+    assert.equal(
+      prompt,
+      "<system-reminder>Internal context.</system-reminder>\nPlease fix the report.",
+    );
+  });
+
   it("does not strip environment_context text in the middle of a real prompt", () => {
     const prompt = normalizeUserPromptText(
       "Explain why <environment_context> appears in the PR report.",
