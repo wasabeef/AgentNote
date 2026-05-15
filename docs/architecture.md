@@ -617,25 +617,18 @@ should still be written as a clear sentence in the commit body.
 
 The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
 
-Preferred release command:
+Preferred release workflow:
 
-```bash
-npm run release -- X.Y.Z          # prepare local version-bump commit and tag
-npm run release -- X.Y.Z --push   # also push main and vX.Y.Z
-```
+Use the repo-local `agentnote-release` skill or `/release` command when asking
+Codex, Claude, Cursor, or Gemini to prepare or publish a release. The skill is a
+Markdown workflow on purpose: it keeps release policy near the agent
+instructions without adding another release script to maintain.
 
-The command updates `packages/cli/package.json`, syncs the `packages/cli` entry
-in `package-lock.json`, rebuilds `packages/cli/dist/cli.js`, runs the release
-checks, prints the `git-cliff` release note preview, commits
-`chore: bump version to X.Y.Z`, and creates the annotated `vX.Y.Z` tag. Without
-`--push`, the release stays local so the generated notes can be inspected before
-triggering `release.yml`.
+The requested version may be written as either `X.Y.Z` or `vX.Y.Z`. The package
+version is always `X.Y.Z`, and the git tag is always the annotated `vX.Y.Z`
+tag.
 
-Repo-local Agent skills and commands mirror this workflow for Codex, Claude,
-Cursor, and Gemini. Use the `agentnote-release` skill or `/release` command
-when asking an agent to prepare or publish a release.
-
-Manual fallback steps:
+Release steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
 2. Keep the workspace lockfile in sync. At minimum, update the `packages/cli` entry in `package-lock.json` so the committed workspace metadata matches the published package version.
@@ -649,8 +642,11 @@ Manual fallback steps:
 5. If the generated note reads like an implementation log, rewrite the relevant
    commit subjects or add `Release note:` / `Release note: skip` lines before
    tagging.
-6. Commit the version bump to `main`.
-7. Create and push the matching git tag, for example `vX.Y.Z`.
+6. Stage `packages/cli/package.json`, `package-lock.json`, and the rebuilt
+   `packages/cli/dist/cli.js`.
+7. Commit the version bump to `main` as `chore: bump version to X.Y.Z` with
+   `Release note: skip`.
+8. Create and push the matching git tag, for example `vX.Y.Z`.
 
 Important:
 

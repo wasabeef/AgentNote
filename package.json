@@ -12,8 +12,7 @@
     "dashboard:restore-notes": "npm run workflow:restore-notes --prefix packages/dashboard",
     "dashboard:sync-notes": "npm run workflow:sync-notes --prefix packages/dashboard",
     "dashboard:build-pages": "npm run workflow:build-pages --prefix packages/dashboard",
-    "dashboard:persist-notes": "npm run workflow:persist-notes --prefix packages/dashboard",
-    "release": "node scripts/release.mjs"
+    "dashboard:persist-notes": "npm run workflow:persist-notes --prefix packages/dashboard"
   },
   "workspaces": [
     "packages/cli",
