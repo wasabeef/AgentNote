@@ -6,6 +6,7 @@ import { join, resolve, sep } from "node:path";
 import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import { isAgentNoteHookCommand } from "./hook-command.js";
+import { normalizeUserPromptText } from "./prompt-text.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -224,9 +225,10 @@ function extractPlainTextInteractions(content: string): TranscriptInteraction[] 
   let activeRole: "user" | "assistant" | null = null;
 
   const flush = () => {
-    if (!currentPrompt?.trim()) return;
+    const prompt = normalizeUserPromptText(currentPrompt);
+    if (!prompt) return;
     interactions.push({
-      prompt: currentPrompt.trim(),
+      prompt,
       response: currentResponse.length > 0 ? currentResponse.join("\n").trim() : null,
     });
   };
@@ -285,9 +287,10 @@ function extractJsonlInteractions(content: string): TranscriptInteraction[] {
   let pendingResponse: string[] = [];
 
   const flush = () => {
-    if (!pendingPrompt?.trim()) return;
+    const prompt = normalizeUserPromptText(pendingPrompt);
+    if (!prompt) return;
     const interaction: TranscriptInteraction = {
-      prompt: pendingPrompt.trim(),
+      prompt,
       response: pendingResponse.length > 0 ? pendingResponse.join("\n").trim() : null,
     };
     if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
@@ -460,16 +463,18 @@ export const cursor: AgentAdapter = {
     const timestamp = new Date().toISOString();
 
     switch (payload.hook_event_name) {
-      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
-        return payload.prompt
+      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt: {
+        const prompt = normalizeUserPromptText(payload.prompt);
+        return prompt
           ? {
               kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
-              prompt: payload.prompt,
+              prompt,
               model: payload.model,
             }
           : null;
+      }
 
       case CURSOR_HOOK_EVENTS.afterAgentResponse: {
         const response = collectMessageText(

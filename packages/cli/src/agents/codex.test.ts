@@ -115,6 +115,22 @@ describe("codex adapter", () => {
       assert.ok(event !== null);
       assert.equal(event.transcriptPath, undefined, "escaped path must be rejected");
     });
+
+    it("strips leading environment metadata from UserPromptSubmit", () => {
+      const event = codex.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt:
+            "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>\n\nUpdate the PR report",
+        }),
+        sync: false,
+      });
+
+      assert.ok(event !== null);
+      assert.equal(event.kind, "prompt");
+      assert.equal(event.prompt, "Update the PR report");
+    });
   });
 
   it("extracts interactions from nested message content and function_call apply_patch payloads", async () => {
@@ -135,6 +151,22 @@ describe("codex adapter", () => {
     assert.equal(interactions[0].response, "I will refactor it.\nAdding details now.");
     assert.deepEqual(interactions[0].files_touched, ["src/greet.ts"]);
     assert.deepEqual(interactions[0].line_stats, { "src/greet.ts": { added: 1, deleted: 1 } });
+  });
+
+  it("strips leading environment metadata from transcript prompts", async () => {
+    const transcriptDir = join(codexHome, "sessions", "environment");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+
+    writeFileSync(
+      transcriptPath,
+      '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\\n<timezone>Asia/Tokyo</timezone>\\n</environment_context>\\n\\nUpdate the PR report"}]}}\n' +
+        '{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I will update it."}]}}\n',
+    );
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+    assert.equal(interactions.length, 1);
+    assert.equal(interactions[0].prompt, "Update the PR report");
   });
 
   it("extracts tools and patch metadata from a real-session-derived fixture", async () => {

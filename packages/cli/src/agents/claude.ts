@@ -5,6 +5,7 @@ import { join, resolve, sep } from "node:path";
 import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import { isAgentNoteHookCommand } from "./hook-command.js";
+import { normalizeUserPromptText } from "./prompt-text.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -98,22 +99,6 @@ interface ClaudeEvent {
   tool_use_id?: string;
   model?: string;
   transcript_path?: string;
-}
-
-/** Known system-injected message prefixes. Match `<tag>` or `<tag ` (with attributes). */
-const SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
-
-function isSystemInjectedPrompt(prompt: string): boolean {
-  for (const prefix of SYSTEM_PROMPT_PREFIXES) {
-    if (prompt.startsWith(prefix)) {
-      const next = prompt[prefix.length];
-      // Must be followed by '>' or ' ' (attributes) to be a real tag.
-      if (next === ">" || next === " " || next === "\n" || next === undefined) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 function isGitCommit(cmd: string): boolean {
@@ -255,20 +240,22 @@ export const claude: AgentAdapter = {
           timestamp: ts,
           transcriptPath: tp,
         };
-      case CLAUDE_HOOK_EVENTS.userPromptSubmit:
+      case CLAUDE_HOOK_EVENTS.userPromptSubmit: {
         // Claude Code fires UserPromptSubmit for system-injected messages
         // (task notifications, reminders, teammate messages) that are not
         // real user prompts. Skip them to keep turn attribution correct.
         // Heartbeat is still refreshed by hook.ts's null-event path.
-        if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
+        const prompt = normalizeUserPromptText(e.prompt);
+        if (!prompt) {
           return null;
         }
         return {
           kind: NORMALIZED_EVENT_KINDS.prompt,
           sessionId: sid,
           timestamp: ts,
-          prompt: e.prompt,
+          prompt,
         };
+      }
       case CLAUDE_HOOK_EVENTS.preToolUse: {
         const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";
@@ -353,8 +340,15 @@ export const claude: AgentAdapter = {
 
       const flush = () => {
         if (pendingPrompt === null) return;
+        const prompt = normalizeUserPromptText(pendingPrompt);
+        if (!prompt) {
+          pendingPrompt = null;
+          pendingPromptTimestamp = undefined;
+          pendingResponseTexts = [];
+          return;
+        }
         const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
-        const interaction: TranscriptInteraction = { prompt: pendingPrompt, response };
+        const interaction: TranscriptInteraction = { prompt, response };
         if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
         interactions.push(interaction);
         pendingPrompt = null;

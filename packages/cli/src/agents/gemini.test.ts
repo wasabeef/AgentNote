@@ -83,6 +83,21 @@ describe("gemini adapter", () => {
       assert.equal(event.model, "gemini-2.0-flash");
     });
 
+    it("strips leading environment metadata from BeforeAgent prompts", () => {
+      const event = gemini.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "BeforeAgent",
+          session_id: VALID_SESSION_ID,
+          prompt:
+            "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>\n\nRefactor the auth module",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null);
+      assert.equal(event.kind, "prompt");
+      assert.equal(event.prompt, "Refactor the auth module");
+    });
+
     it("returns null for BeforeAgent without prompt", () => {
       const event = gemini.parseEvent({
         raw: JSON.stringify({
@@ -703,6 +718,30 @@ describe("gemini adapter", () => {
       assert.deepEqual(interactions[0].files_touched, ["src/auth.ts"]);
       assert.equal(interactions[1].prompt, "Add tests");
       assert.equal(interactions[1].response, "Done.");
+    });
+
+    it("strips leading environment metadata from transcript prompts", async () => {
+      const transcriptPath = join(geminiHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({ sessionId: VALID_SESSION_ID }),
+        JSON.stringify({
+          type: "user",
+          content: [
+            {
+              text: "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>\n\nUpdate the PR report",
+            },
+          ],
+        }),
+        JSON.stringify({
+          type: "gemini",
+          content: [{ text: "I will update it." }],
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await gemini.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Update the PR report");
     });
 
     it("extracts files_touched from replace tool calls", async () => {
