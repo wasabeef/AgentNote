@@ -631,6 +631,10 @@ checks, prints the `git-cliff` release note preview, commits
 `--push`, the release stays local so the generated notes can be inspected before
 triggering `release.yml`.
 
+Repo-local Agent skills and commands mirror this workflow for Codex, Claude,
+Cursor, and Gemini. Use the `agentnote-release` skill or `/release` command
+when asking an agent to prepare or publish a release.
+
 Manual fallback steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
