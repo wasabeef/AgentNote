@@ -162,6 +162,8 @@ session       .jsonl     .jsonl
 
 AI agent hooks handle data **collection** (prompts, file changes, session lifecycle, transcript references). Git hooks handle commit **integration** (trailer injection, note recording). For Claude Code, Codex, Cursor, and Gemini CLI, this means plain `git commit` works when the repository-local git hooks are installed. Cursor preview also recovers prompt / response pairs from Cursor response hooks or local transcripts, and its shell hooks provide a fallback path when git hooks are unavailable.
 
+Before prompt text becomes durable note data, adapters normalize it with a shared sanitizer. Leading runtime metadata blocks such as `<environment_context>` are stripped while the actual user request is preserved, and standalone system-injected messages such as `<task-notification>`, `<system-reminder>`, and `<teammate-message>` are dropped. The same sanitizer is applied to hook prompt events and transcript recovery so PR Report, Dashboard, `show`, and `why` see consistent prompt text.
+
 ### Storage: two layers
 
 **Layer 1 — Local temp (`.git/agentnote/sessions/`)**

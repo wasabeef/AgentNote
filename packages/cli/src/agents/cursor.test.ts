@@ -221,6 +221,22 @@ describe("cursor adapter", () => {
     });
   });
 
+  it("strips leading environment metadata from prompt events", () => {
+    const event = cursor.parseEvent({
+      raw: JSON.stringify({
+        hook_event_name: "beforeSubmitPrompt",
+        conversation_id: "conv-123",
+        prompt:
+          "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>\n\nRefactor src/main.ts",
+      }),
+      sync: true,
+    });
+
+    assert.ok(event !== null);
+    assert.equal(event.kind, "prompt");
+    assert.equal(event.prompt, "Refactor src/main.ts");
+  });
+
   it("returns null when shell hooks only mention git commit in a quoted string or comment", () => {
     for (const command of ['echo "git commit -m test"', "git status # git commit -m test"]) {
       const before = cursor.parseEvent({
@@ -277,6 +293,20 @@ describe("cursor adapter", () => {
     assert.deepEqual(interactions, [
       { prompt: "Refactor the greeting helper", response: "I will update the helper." },
       { prompt: "Add tests too", response: "Adding tests now." },
+    ]);
+  });
+
+  it("strips leading environment metadata from Cursor transcript prompts", async () => {
+    const transcriptPath = join(transcriptDir, "cursor-environment.jsonl");
+    writeFileSync(
+      transcriptPath,
+      '{"role":"user","parts":[{"type":"text","text":"<environment_context>\\n<timezone>Asia/Tokyo</timezone>\\n</environment_context>\\n\\nUpdate the PR report"}]}\n' +
+        '{"role":"assistant","parts":[{"type":"text","text":"I will update it."}]}\n',
+    );
+
+    const interactions = await cursor.extractInteractions(transcriptPath);
+    assert.deepEqual(interactions, [
+      { prompt: "Update the PR report", response: "I will update it." },
     ]);
   });
 });

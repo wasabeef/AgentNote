@@ -5,6 +5,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { TEXT_ENCODING } from "../core/constants.js";
 import { findGitCommitCommand } from "../git.js";
 import { isAgentNoteHookCommand } from "./hook-command.js";
+import { normalizeUserPromptText } from "./prompt-text.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -404,16 +405,18 @@ export const gemini: AgentAdapter = {
           transcriptPath: tp,
         };
 
-      case GEMINI_HOOK_EVENTS.beforeAgent:
-        return e.prompt
+      case GEMINI_HOOK_EVENTS.beforeAgent: {
+        const prompt = normalizeUserPromptText(e.prompt);
+        return prompt
           ? {
               kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId: sid,
               timestamp: ts,
-              prompt: e.prompt,
+              prompt,
               model: e.model,
             }
           : null;
+      }
 
       case GEMINI_HOOK_EVENTS.afterAgent:
         return e.prompt_response
@@ -518,7 +521,7 @@ export const gemini: AgentAdapter = {
       if (!type) continue; // skip metadata lines (ConversationRecord, $rewindTo, $set)
 
       if (type === "user") {
-        const prompt = extractPartText(record.content);
+        const prompt = normalizeUserPromptText(extractPartText(record.content));
         if (!prompt) continue;
         if (current) interactions.push(current);
         current = { prompt, response: null };

@@ -5,6 +5,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createInterface } from "node:readline";
 import { TEXT_ENCODING } from "../core/constants.js";
 import { isAgentNoteHookCommand } from "./hook-command.js";
+import { normalizeUserPromptText } from "./prompt-text.js";
 import {
   AGENT_NAMES,
   type AgentAdapter,
@@ -497,17 +498,19 @@ export const codex: AgentAdapter = {
           model: payload.model,
           transcriptPath,
         };
-      case CODEX_HOOK_EVENTS.userPromptSubmit:
-        return payload.prompt
+      case CODEX_HOOK_EVENTS.userPromptSubmit: {
+        const prompt = normalizeUserPromptText(payload.prompt);
+        return prompt
           ? {
               kind: NORMALIZED_EVENT_KINDS.prompt,
               sessionId,
               timestamp,
-              prompt: payload.prompt,
+              prompt,
               transcriptPath,
               model: payload.model,
             }
           : null;
+      }
       case CODEX_HOOK_EVENTS.stop:
         return {
           kind: NORMALIZED_EVENT_KINDS.stop,
@@ -573,7 +576,7 @@ export const codex: AgentAdapter = {
         const payloadRole = typeof payload.role === "string" ? payload.role : undefined;
 
         if (payloadType === "message" && payloadRole === "user") {
-          const prompt = collectMessageText(payload.content).join("\n");
+          const prompt = normalizeUserPromptText(collectMessageText(payload.content).join("\n"));
           if (!prompt) continue;
           if (current) interactions.push(current);
           current = { prompt, response: null };

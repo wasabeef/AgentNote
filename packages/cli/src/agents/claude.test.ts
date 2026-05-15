@@ -81,6 +81,21 @@ describe("claude adapter", () => {
       assert.equal(event.prompt, "Refactor the auth module");
     });
 
+    it("strips leading environment metadata from UserPromptSubmit", () => {
+      const event = claude.parseEvent({
+        raw: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          session_id: VALID_SESSION_ID,
+          prompt:
+            "<environment_context>\n<current_date>2026-05-15</current_date>\n</environment_context>\n\nRefactor the auth module",
+        }),
+        sync: false,
+      });
+      assert.ok(event !== null);
+      assert.equal(event.kind, "prompt");
+      assert.equal(event.prompt, "Refactor the auth module");
+    });
+
     it("returns null for UserPromptSubmit without prompt", () => {
       const event = claude.parseEvent({
         raw: JSON.stringify({
@@ -757,6 +772,32 @@ describe("claude adapter", () => {
       assert.equal(interactions[0].response, "I'll create the auth middleware.");
       assert.equal(interactions[1].prompt, "Add tests");
       assert.equal(interactions[1].response, "Done.");
+    });
+
+    it("strips leading environment metadata from transcript prompts", async () => {
+      const transcriptPath = join(claudeHome, "session.jsonl");
+      const lines = [
+        JSON.stringify({
+          type: "user",
+          message: {
+            content: [
+              {
+                type: "text",
+                text: "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>\n\nUpdate the PR report",
+              },
+            ],
+          },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "text", text: "I will update it." }] },
+        }),
+      ];
+      writeFileSync(transcriptPath, lines.join("\n"));
+
+      const interactions = await claude.extractInteractions(transcriptPath);
+      assert.equal(interactions.length, 1);
+      assert.equal(interactions[0].prompt, "Update the PR report");
     });
 
     it("handles user prompt without response", async () => {

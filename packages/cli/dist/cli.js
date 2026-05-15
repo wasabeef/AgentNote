@@ -358,6 +358,29 @@ function isAgentNoteHookCommand(command2, agentName, options = {}) {
   return options.allowMissingAgent === true && agentFlag === null;
 }
 
+// src/agents/prompt-text.ts
+var SYSTEM_PROMPT_TAG_RE = /^\s*<(task-notification|system-reminder|teammate-message)(?:\s[^>]*)?\s*(?:\/>|>[\s\S]*?<\/\1\s*>)\s*$/i;
+var LEADING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?>[\s\S]*?<\/environment_context>\s*/i;
+var LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE = /^\s*<environment_context(?:\s[^>]*)?\/>\s*/i;
+function isSystemInjectedPrompt(prompt) {
+  return SYSTEM_PROMPT_TAG_RE.test(prompt);
+}
+function stripLeadingEnvironmentContext(prompt) {
+  let next = prompt;
+  while (true) {
+    const stripped = next.replace(LEADING_SELF_CLOSING_ENVIRONMENT_CONTEXT_RE, "").replace(LEADING_ENVIRONMENT_CONTEXT_RE, "");
+    if (stripped === next) return next;
+    next = stripped;
+  }
+}
+function normalizeUserPromptText(prompt) {
+  const trimmed = prompt?.trim();
+  if (!trimmed) return null;
+  const withoutRuntimeMetadata = stripLeadingEnvironmentContext(trimmed).trim();
+  if (!withoutRuntimeMetadata || isSystemInjectedPrompt(withoutRuntimeMetadata)) return null;
+  return withoutRuntimeMetadata;
+}
+
 // src/agents/types.ts
 var AGENT_NAMES = {
   claude: "claude",
@@ -441,18 +464,6 @@ function isValidTranscriptPath(p) {
   const base = resolve(claudeHome());
   const normalized = resolve(p);
   return normalized === base || normalized.startsWith(`${base}${sep}`);
-}
-var SYSTEM_PROMPT_PREFIXES = ["<task-notification", "<system-reminder", "<teammate-message"];
-function isSystemInjectedPrompt(prompt) {
-  for (const prefix of SYSTEM_PROMPT_PREFIXES) {
-    if (prompt.startsWith(prefix)) {
-      const next = prompt[prefix.length];
-      if (next === ">" || next === " " || next === "\n" || next === void 0) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 function isGitCommit(cmd) {
   return findGitCommitCommand(cmd) !== null;
@@ -566,16 +577,18 @@ var claude = {
           timestamp: ts,
           transcriptPath: tp
         };
-      case CLAUDE_HOOK_EVENTS.userPromptSubmit:
-        if (!e.prompt || isSystemInjectedPrompt(e.prompt)) {
+      case CLAUDE_HOOK_EVENTS.userPromptSubmit: {
+        const prompt = normalizeUserPromptText(e.prompt);
+        if (!prompt) {
           return null;
         }
         return {
           kind: NORMALIZED_EVENT_KINDS.prompt,
           sessionId: sid,
           timestamp: ts,
-          prompt: e.prompt
+          prompt
         };
+      }
       case CLAUDE_HOOK_EVENTS.preToolUse: {
         const tool = e.tool_name;
         const cmd = e.tool_input?.command ?? "";
@@ -653,8 +666,15 @@ var claude = {
       let pendingResponseTexts = [];
       const flush = () => {
         if (pendingPrompt === null) return;
+        const prompt = normalizeUserPromptText(pendingPrompt);
+        if (!prompt) {
+          pendingPrompt = null;
+          pendingPromptTimestamp = void 0;
+          pendingResponseTexts = [];
+          return;
+        }
         const response = pendingResponseTexts.length > 0 ? pendingResponseTexts.join("\n") : null;
-        const interaction = { prompt: pendingPrompt, response };
+        const interaction = { prompt, response };
         if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
         interactions.push(interaction);
         pendingPrompt = null;
@@ -1072,15 +1092,17 @@ var codex = {
           model: payload.model,
           transcriptPath
         };
-      case CODEX_HOOK_EVENTS.userPromptSubmit:
-        return payload.prompt ? {
+      case CODEX_HOOK_EVENTS.userPromptSubmit: {
+        const prompt = normalizeUserPromptText(payload.prompt);
+        return prompt ? {
           kind: NORMALIZED_EVENT_KINDS.prompt,
           sessionId,
           timestamp,
-          prompt: payload.prompt,
+          prompt,
           transcriptPath,
           model: payload.model
         } : null;
+      }
       case CODEX_HOOK_EVENTS.stop:
         return {
           kind: NORMALIZED_EVENT_KINDS.stop,
@@ -1135,7 +1157,7 @@ var codex = {
         const payloadType = typeof payload.type === "string" ? payload.type : void 0;
         const payloadRole = typeof payload.role === "string" ? payload.role : void 0;
         if (payloadType === "message" && payloadRole === "user") {
-          const prompt = collectMessageText(payload.content).join("\n");
+          const prompt = normalizeUserPromptText(collectMessageText(payload.content).join("\n"));
           if (!prompt) continue;
           if (current) interactions.push(current);
           current = { prompt, response: null };
@@ -1341,9 +1363,10 @@ function extractPlainTextInteractions(content) {
   let currentResponse = [];
   let activeRole = null;
   const flush = () => {
-    if (!currentPrompt?.trim()) return;
+    const prompt = normalizeUserPromptText(currentPrompt);
+    if (!prompt) return;
     interactions.push({
-      prompt: currentPrompt.trim(),
+      prompt,
       response: currentResponse.length > 0 ? currentResponse.join("\n").trim() : null
     });
   };
@@ -1392,9 +1415,10 @@ function extractJsonlInteractions(content) {
   let pendingPromptTimestamp;
   let pendingResponse = [];
   const flush = () => {
-    if (!pendingPrompt?.trim()) return;
+    const prompt = normalizeUserPromptText(pendingPrompt);
+    if (!prompt) return;
     const interaction = {
-      prompt: pendingPrompt.trim(),
+      prompt,
       response: pendingResponse.length > 0 ? pendingResponse.join("\n").trim() : null
     };
     if (pendingPromptTimestamp) interaction.timestamp = pendingPromptTimestamp;
@@ -1530,14 +1554,16 @@ var cursor = {
     if (!sessionId) return null;
     const timestamp = (/* @__PURE__ */ new Date()).toISOString();
     switch (payload.hook_event_name) {
-      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt:
-        return payload.prompt ? {
+      case CURSOR_HOOK_EVENTS.beforeSubmitPrompt: {
+        const prompt = normalizeUserPromptText(payload.prompt);
+        return prompt ? {
           kind: NORMALIZED_EVENT_KINDS.prompt,
           sessionId,
           timestamp,
-          prompt: payload.prompt,
+          prompt,
           model: payload.model
         } : null;
+      }
       case CURSOR_HOOK_EVENTS.afterAgentResponse: {
         const response = collectMessageText2(
           payload.response ?? payload.text ?? payload.content ?? payload.message ?? payload.output
@@ -1906,14 +1932,16 @@ var gemini = {
           timestamp: ts,
           transcriptPath: tp
         };
-      case GEMINI_HOOK_EVENTS.beforeAgent:
-        return e.prompt ? {
+      case GEMINI_HOOK_EVENTS.beforeAgent: {
+        const prompt = normalizeUserPromptText(e.prompt);
+        return prompt ? {
           kind: NORMALIZED_EVENT_KINDS.prompt,
           sessionId: sid,
           timestamp: ts,
-          prompt: e.prompt,
+          prompt,
           model: e.model
         } : null;
+      }
       case GEMINI_HOOK_EVENTS.afterAgent:
         return e.prompt_response ? {
           kind: NORMALIZED_EVENT_KINDS.response,
@@ -1999,7 +2027,7 @@ var gemini = {
       const type = typeof record2.type === "string" ? record2.type : void 0;
       if (!type) continue;
       if (type === "user") {
-        const prompt = extractPartText(record2.content);
+        const prompt = normalizeUserPromptText(extractPartText(record2.content));
         if (!prompt) continue;
         if (current) interactions.push(current);
         current = { prompt, response: null };
@@ -6762,7 +6790,7 @@ function cleanPrompt(prompt, maxLen) {
   return `${body.slice(0, maxLen)}\u2026`;
 }
 function pushBlockquoteSection(lines, label, body) {
-  lines.push(`> **${label}**`);
+  lines.push(`**${label}**`);
   lines.push(`> ${body.split("\n").join("\n> ")}`);
 }
 function renderInteractionContext(interaction) {
