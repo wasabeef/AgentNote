@@ -26,6 +26,14 @@ describe("normalizeUserPromptText", () => {
     assert.equal(prompt, null);
   });
 
+  it("strips leading self-closing environment metadata and keeps the user prompt", () => {
+    const prompt = normalizeUserPromptText(
+      '<environment_context timezone="Asia/Tokyo" />\nFix the PR report output.',
+    );
+
+    assert.equal(prompt, "Fix the PR report output.");
+  });
+
   it("drops system-injected prompts after leading environment metadata", () => {
     const prompt = normalizeUserPromptText(
       [
