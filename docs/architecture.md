@@ -617,20 +617,37 @@ should still be written as a clear sentence in the commit body.
 
 The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
 
+Preferred release workflow:
+
+Use the repo-local `agentnote-release` skill or `/release` command when asking
+Codex, Claude, Cursor, or Gemini to prepare or publish a release. The skill is a
+Markdown workflow on purpose: it keeps release policy near the agent
+instructions without adding another release script to maintain.
+
+The requested version may be written as either `X.Y.Z` or `vX.Y.Z`. The package
+version is always `X.Y.Z`, and the git tag is always the annotated `vX.Y.Z`
+tag.
+
 Release steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
-2. Keep the workspace lockfile in sync. At minimum, update the `packages/cli` entry in `package-lock.json` so the committed workspace metadata matches the published package version.
+2. Run `npm install` from the repository root so npm updates `package-lock.json`
+   and synchronizes the `packages/cli` entry with the new package version.
 3. Run the release checks locally:
    - `npm -w packages/cli run build`
+   - `npm -w packages/cli run typecheck`
+   - `npm -w packages/cli run lint`
    - `npm -w packages/cli test`
 4. Review the generated release note locally before tagging:
-   - `git-cliff --config .github/cliff.toml --latest --strip header`
+   - `git-cliff --config .github/cliff.toml --unreleased --tag vX.Y.Z --strip header`
 5. If the generated note reads like an implementation log, rewrite the relevant
    commit subjects or add `Release note:` / `Release note: skip` lines before
    tagging.
-6. Commit the version bump to `main`.
-7. Create and push the matching git tag, for example `vX.Y.Z`.
+6. Stage `packages/cli/package.json`, `package-lock.json`, and the rebuilt
+   `packages/cli/dist/cli.js`.
+7. Commit the version bump to `main` as `chore: bump version to X.Y.Z` with
+   `Release note: skip`.
+8. Create and push the matching git tag, for example `vX.Y.Z`.
 
 Important:
 
