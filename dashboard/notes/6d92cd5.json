@@ -990,7 +990,7 @@
   },
   "pull_request": {
     "number": 78,
-    "title": "fix(report): render prompt labels outside blockquotes",
+    "title": "fix(report): clean prompt rendering",
     "state": "open"
   }
 }
