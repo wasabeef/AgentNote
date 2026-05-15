@@ -258,6 +258,6 @@
   "pull_request": {
     "number": 79,
     "title": "chore(release): add agent release workflow",
-    "state": "open"
+    "state": "merged"
   }
 }
