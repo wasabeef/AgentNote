@@ -145,7 +145,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
 - **Keep release notes human-sized.** A multi-commit PR should normally produce one clear release bullet per user-visible change, not one bullet per review fix. Put the public wording on the primary implementation commit with `Release note: <sentence>`, and add `Release note: skip` to follow-up commits such as `address review findings`, `tighten fallback`, `bound window`, or generated bundle syncs unless they describe a distinct user-visible outcome.
 - **Write release notes as natural English sentences.** The generator capitalizes the first character as a safety net, but do not rely on that to fix awkward wording. Prefer `Release note: Codex commits made from cmux sessions are now recorded reliably.` over `Release note: recover codex env sessions`.
 - **PR titles should be release-summary quality.** Write PR titles as a user-facing outcome, not an implementation step. Even though GitHub Releases are generated from commits, a good PR title is the easiest review-time signal that the eventual release note will be understandable.
-- **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge or tag. Do not leave low-level cleanup commits visible just because tests pass.
+- **Preview release notes before merging release-sensitive PRs.** If `git-cliff --config .github/cliff.toml --latest --strip header` reads like an implementation log, rewrite commit subjects/bodies before merge. Before tagging, use the release command below so the preview targets the next version.
 - **Do not rely on merge commits for release copy.** Release notes include merged PR links from `Merge pull request...` commits, but the user-facing bullets still come from implementation commits and `Release note:` lines. Version bumps and generated bundle sync commits stay hidden.
 - **Structural vs behavioral changes** must not be mixed in a single commit. Renames/reformats separate from feature/fix commits.
 - **Before committing**, all four checks must pass (run from `packages/cli/`):
@@ -153,7 +153,7 @@ Each `UserPromptSubmit` increments a turn counter. File changes inherit the curr
   2. `npm run typecheck` — tsc --noEmit
   3. `npm run lint` — biome check
   4. `npm test` — node:test (requires build first)
-- **Version bumps** go in a dedicated `chore: bump version to x.y.z` commit. Tag `vx.y.z` triggers the release workflow (test → GitHub Release → npm publish).
+- **Version bumps** go in a dedicated `chore: bump version to x.y.z` commit. Prefer `npm run release -- x.y.z` to prepare the bump commit and tag; add `--push` only when ready to trigger the release workflow (test → GitHub Release → npm publish).
 
 ## Constraints
 

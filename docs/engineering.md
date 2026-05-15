@@ -112,7 +112,7 @@ subject as public copy unless the commit type is intentionally internal.
 - Keep multi-commit PRs readable in the generated release note. Review-fix follow-up commits in a multi-commit PR should usually use `Release note: skip` unless they describe a distinct user-visible change.
 - The release generator capitalizes the first character of each bullet as a safety net. Still write natural English yourself; this only fixes mechanical lower-case commit subjects.
 - A PR title is not the release-note source, but it should still read like the top-level release summary for the PR. If the title would be a bad release bullet, improve it before opening or merging the PR.
-- Before tagging, run `git-cliff --config .github/cliff.toml --latest --strip header`. If the output reads like an implementation log, rewrite commit subjects/bodies before cutting the release.
+- Before tagging, prefer `npm run release -- x.y.z` so the version bump, build, tests, release note preview, commit, and tag are produced by one repeatable command. If running the steps manually, run `git-cliff --config .github/cliff.toml --unreleased --tag vx.y.z --strip header` and rewrite commit subjects/bodies before cutting the release if the output reads like an implementation log.
 
 Good commit body shape:
 

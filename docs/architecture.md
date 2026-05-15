@@ -617,15 +617,31 @@ should still be written as a clear sentence in the commit body.
 
 The canonical npm package is `agent-note`. The workflow also publishes `@wasabeef/agentnote` from the same built `dist/` as a reserved alias package, but end-user documentation should continue to point to `agent-note`.
 
-Release steps:
+Preferred release command:
+
+```bash
+npm run release -- X.Y.Z          # prepare local version-bump commit and tag
+npm run release -- X.Y.Z --push   # also push main and vX.Y.Z
+```
+
+The command updates `packages/cli/package.json`, syncs the `packages/cli` entry
+in `package-lock.json`, rebuilds `packages/cli/dist/cli.js`, runs the release
+checks, prints the `git-cliff` release note preview, commits
+`chore: bump version to X.Y.Z`, and creates the annotated `vX.Y.Z` tag. Without
+`--push`, the release stays local so the generated notes can be inspected before
+triggering `release.yml`.
+
+Manual fallback steps:
 
 1. Update the CLI package version in `packages/cli/package.json`.
 2. Keep the workspace lockfile in sync. At minimum, update the `packages/cli` entry in `package-lock.json` so the committed workspace metadata matches the published package version.
 3. Run the release checks locally:
    - `npm -w packages/cli run build`
+   - `npm -w packages/cli run typecheck`
+   - `npm -w packages/cli run lint`
    - `npm -w packages/cli test`
 4. Review the generated release note locally before tagging:
-   - `git-cliff --config .github/cliff.toml --latest --strip header`
+   - `git-cliff --config .github/cliff.toml --unreleased --tag vX.Y.Z --strip header`
 5. If the generated note reads like an implementation log, rewrite the relevant
    commit subjects or add `Release note:` / `Release note: skip` lines before
    tagging.
