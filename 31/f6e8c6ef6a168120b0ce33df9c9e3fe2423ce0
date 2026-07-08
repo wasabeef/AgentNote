@@ -1,0 +1,213 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T15:41:16.673Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "手動で npm publish する方法おしえて",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "npm login した",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "npm -w packages/cli publish --access public 打つだけで\n\n@wasabeef/agentnote\nagent-note\n\n両方 publish されるっけ",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "両方コマンド教えて",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "npm -w packages/cli publish --access public 実行した",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "private/tmp になってるコマンド見直して",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "tmp 必要なの？",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "@.github/workflows/release.yml 確認して。同じやり方？",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "npm publish /tmp/agentnote-alias-1.0.6 --access public --ignore-scripts\n\n実行した",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/issues/86\n\n確認して",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "新しいブランチ切って作業開始",
+      "response": null,
+      "files_touched": [
+        "packages/dashboard/workflow/resolve-pages-target.mjs",
+        "packages/dashboard/workflow/build-pages.mjs",
+        "action.yml",
+        "packages/pr-report/src/github.ts",
+        "packages/pr-report/src/report.ts",
+        "packages/pr-report/src/index.ts",
+        "packages/pr-report/src/index.test.ts",
+        "packages/dashboard/workflow/resolve-pages-target.test.mjs"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "action.yml",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/dashboard/workflow/build-pages.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/github.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/report.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 317,
+      "total_added": 317,
+      "deleted": 13
+    }
+  }
+}
