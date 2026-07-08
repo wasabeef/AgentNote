@@ -29,6 +29,50 @@ function buildRealSessionPatchTranscript(opts: {
   );
 }
 
+function buildNestedExecPatchTranscript(opts: {
+  sessionId: string;
+  workdir: string;
+  prompt: string;
+  response: string;
+  patchPath: string;
+}): string {
+  const patch = `*** Begin Patch\n*** Add File: ${opts.patchPath}\n+nested status\n*** End Patch`;
+  const source =
+    `const patch = ${JSON.stringify(patch)};\n` +
+    "const result = await tools.apply_patch(patch);\n" +
+    "text(result);";
+  return (
+    `${JSON.stringify({
+      timestamp: "2026-04-15T09:31:23.296Z",
+      type: "session_meta",
+      payload: { id: opts.sessionId, cwd: opts.workdir, cli_version: "0.142.5" },
+    })}\n` +
+    `${JSON.stringify({
+      timestamp: "2026-04-15T09:31:24.296Z",
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: opts.prompt }],
+      },
+    })}\n` +
+    `${JSON.stringify({
+      timestamp: "2026-04-15T09:31:25.296Z",
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: opts.response }],
+      },
+    })}\n` +
+    `${JSON.stringify({
+      timestamp: "2026-04-15T09:31:26.296Z",
+      type: "response_item",
+      payload: { type: "custom_tool_call", name: "exec", input: source },
+    })}\n`
+  );
+}
+
 describe("agentnote codex", () => {
   let testDir: string;
   let testHome: string;
@@ -155,6 +199,57 @@ describe("agentnote codex", () => {
       showOutput.includes("(1/1 lines)"),
       "show should include line-level attribution details",
     );
+  });
+
+  it("records notes and AI ratio from nested exec patch transcripts", () => {
+    const sessionId = "codex-session-nested-exec";
+    const transcriptDir = join(testHome, ".codex", "sessions");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout-nested-exec.jsonl");
+    writeFileSync(
+      transcriptPath,
+      buildNestedExecPatchTranscript({
+        sessionId,
+        workdir: testDir,
+        patchPath: "nested-exec.txt",
+        prompt: "Create nested-exec.txt",
+        response: "Creating the file through the unified executor.",
+      }),
+    );
+
+    runCodexHook({
+      hook_event_name: "SessionStart",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      model: "gpt-5-codex",
+    });
+    runCodexHook({
+      hook_event_name: "UserPromptSubmit",
+      session_id: sessionId,
+      transcript_path: transcriptPath,
+      prompt: "Create nested-exec.txt",
+      model: "gpt-5-codex",
+    });
+
+    writeFileSync(join(testDir, "nested-exec.txt"), "nested status\n");
+    execSync("git add nested-exec.txt", { cwd: testDir });
+    const output = execSync(`node ${cliPath} commit -m "feat: codex nested exec" 2>&1`, {
+      cwd: testDir,
+      env: { ...process.env, HOME: testHome },
+      encoding: "utf-8",
+    });
+    assert.match(output, /agent-note: 1 prompts, AI ratio 100%/, output);
+
+    const note = JSON.parse(
+      execSync("git notes --ref=agentnote show HEAD", {
+        cwd: testDir,
+        encoding: "utf-8",
+      }),
+    );
+    assert.equal(note.attribution.method, "line");
+    assert.equal(note.attribution.ai_ratio, 100);
+    assert.deepEqual(note.interactions[0].files_touched, ["nested-exec.txt"]);
+    assert.deepEqual(note.interactions[0].tools, ["exec", "apply_patch"]);
   });
 
   it("falls back to file attribution when transcript patch counts do not match the commit", () => {

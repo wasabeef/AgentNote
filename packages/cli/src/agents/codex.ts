@@ -158,6 +158,105 @@ function collectCommandStrings(value: unknown, seen = new Set<unknown>()): strin
   ];
 }
 
+type NestedExecEvidence = {
+  toolNames: string[];
+  patchInputs: string[];
+  commandInputs: string[];
+};
+
+function readJavaScriptString(
+  source: string,
+  start: number,
+): { value: string; end: number } | null {
+  const quote = source[start];
+  if (quote !== '"' && quote !== "'" && quote !== "`") return null;
+
+  let value = "";
+  for (let index = start + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === quote) return { value, end: index + 1 };
+    if (char !== "\\") {
+      value += char;
+      continue;
+    }
+
+    const escaped = source[index + 1];
+    if (escaped === undefined) return null;
+    index += 1;
+    if (escaped === "\n") continue;
+    if (escaped === "n") value += "\n";
+    else if (escaped === "r") value += "\r";
+    else if (escaped === "t") value += "\t";
+    else if (escaped === "b") value += "\b";
+    else if (escaped === "f") value += "\f";
+    else if (escaped === "v") value += "\v";
+    else if (escaped === "0") value += "\0";
+    else value += escaped;
+  }
+
+  return null;
+}
+
+function collectNestedExecEvidence(source: string): NestedExecEvidence {
+  const toolNames: string[] = [];
+  const toolSeen = new Set<string>();
+  const stringLiterals: Array<{ value: string; start: number }> = [];
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+    if (char === "/" && next === "/") {
+      const lineEnd = source.indexOf("\n", index + 2);
+      if (lineEnd === -1) break;
+      index = lineEnd;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      const commentEnd = source.indexOf("*/", index + 2);
+      if (commentEnd === -1) break;
+      index = commentEnd + 1;
+      continue;
+    }
+
+    const literal = readJavaScriptString(source, index);
+    if (literal) {
+      stringLiterals.push({ value: literal.value, start: index });
+      index = literal.end - 1;
+      continue;
+    }
+
+    for (const toolName of ["apply_patch", "exec_command"]) {
+      const callee = `tools.${toolName}`;
+      if (!source.startsWith(callee, index)) continue;
+      const previous = source[index - 1];
+      if (previous && /[\w$.]/.test(previous)) continue;
+      let cursor = index + callee.length;
+      while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+      if (source[cursor] !== "(") continue;
+      appendUnique(toolNames, toolSeen, toolName);
+      index += callee.length - 1;
+      break;
+    }
+  }
+
+  return {
+    toolNames,
+    patchInputs: toolSeen.has("apply_patch")
+      ? stringLiterals
+          .map(({ value }) => value)
+          .filter((value) => value.includes("*** Begin Patch"))
+      : [],
+    commandInputs: toolSeen.has("exec_command")
+      ? stringLiterals
+          .filter(({ start }) => {
+            const prefix = source.slice(Math.max(0, start - 80), start);
+            return /(?:^|[,{]\s*)(?:cmd|["']cmd["'])\s*:\s*$/.test(prefix);
+          })
+          .map(({ value }) => value)
+      : [],
+  };
+}
+
 /**
  * Identify the Agent Note session inside a Codex transcript candidate.
  *
@@ -600,6 +699,10 @@ export const codex: AgentAdapter = {
             : typeof payload.call_name === "string"
               ? payload.call_name
               : undefined;
+        const nestedExec =
+          toolName === "exec" && typeof payload.input === "string"
+            ? collectNestedExecEvidence(payload.input)
+            : null;
 
         if (
           (payloadType === "custom_tool_call" ||
@@ -619,14 +722,27 @@ export const codex: AgentAdapter = {
           }
         }
 
-        if (
+        if (nestedExec) {
+          for (const nestedToolName of nestedExec.toolNames) {
+            appendInteractionTool(current, nestedToolName);
+          }
+          // A nested apply_patch call is always mutating, even when the patch
+          // text is built dynamically and cannot be recovered from the source.
+          if (nestedExec.toolNames.includes("apply_patch")) {
+            appendInteractionMutationTool(current, "apply_patch");
+          }
+          if (nestedExec.commandInputs.some(isMutatingShellCommand)) {
+            appendInteractionMutationTool(current, "exec_command");
+          }
+        }
+
+        const isDirectApplyPatch =
           (payloadType === "custom_tool_call" || payloadType === "function_call") &&
-          toolName === "apply_patch"
-        ) {
-          const patchInputs = [
-            ...collectPatchStrings(payload.input),
-            ...collectPatchStrings(payload.arguments),
-          ];
+          toolName === "apply_patch";
+        const patchInputs = isDirectApplyPatch
+          ? [...collectPatchStrings(payload.input), ...collectPatchStrings(payload.arguments)]
+          : (nestedExec?.patchInputs ?? []);
+        if (isDirectApplyPatch || patchInputs.length > 0) {
           const files: string[] = [];
           const fileSeen = new Set<string>();
           current.line_stats = current.line_stats ?? {};
@@ -653,7 +769,7 @@ export const codex: AgentAdapter = {
           if (files.length > 0) {
             current.files_touched = [...new Set([...(current.files_touched ?? []), ...files])];
           }
-          appendInteractionMutationTool(current, toolName);
+          appendInteractionMutationTool(current, "apply_patch");
 
           if (Object.keys(current.line_stats).length === 0) {
             delete current.line_stats;
