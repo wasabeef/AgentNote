@@ -38,6 +38,21 @@ function buildShellCommandTranscript(command: string): string {
   );
 }
 
+function buildNestedExecTranscript(source: string): string {
+  return (
+    '{"type":"session_meta","payload":{"id":"nested-exec","cwd":"/repo"}}\n' +
+    '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Update nested execution"}]}}\n' +
+    `${JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        name: "exec",
+        input: source,
+      },
+    })}\n`
+  );
+}
+
 describe("codex adapter", () => {
   let codexHome: string;
   let previousCodexHome: string | undefined;
@@ -198,6 +213,82 @@ describe("codex adapter", () => {
     assert.deepEqual(interactions[0].line_stats, {
       "src/status.ts": { added: 1, deleted: 0 },
     });
+  });
+
+  it("extracts patch evidence from nested exec tool calls", async () => {
+    const transcriptDir = join(codexHome, "sessions", "nested-exec-patch");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+    const patch = "*** Begin Patch\n*** Update File: src/nested.ts\n@@\n-old\n+new\n*** End Patch";
+    const source =
+      `const patch = ${JSON.stringify(patch)};\n` +
+      'const status = await tools.exec_command({cmd: "git status --short", workdir: "/repo"});\n' +
+      "text(status.output);\n" +
+      "const result = await tools.apply_patch(patch);\n" +
+      "text(result);";
+    writeFileSync(transcriptPath, buildNestedExecTranscript(source));
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+
+    assert.deepEqual(interactions[0].tools, ["exec", "exec_command", "apply_patch"]);
+    assert.deepEqual(interactions[0].mutation_tools, ["apply_patch"]);
+    assert.deepEqual(interactions[0].files_touched, ["src/nested.ts"]);
+    assert.deepEqual(interactions[0].line_stats, {
+      "src/nested.ts": { added: 1, deleted: 1 },
+    });
+  });
+
+  it("marks nested apply_patch as mutating when the patch text is built dynamically", async () => {
+    const transcriptDir = join(codexHome, "sessions", "nested-exec-dynamic-patch");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+    const source =
+      "const patch = buildPatch(files);\n" +
+      "const result = await tools.apply_patch(patch);\n" +
+      "text(result);";
+    writeFileSync(transcriptPath, buildNestedExecTranscript(source));
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+
+    assert.deepEqual(interactions[0].tools, ["exec", "apply_patch"]);
+    assert.deepEqual(interactions[0].mutation_tools, ["apply_patch"]);
+    assert.equal(interactions[0].files_touched, undefined);
+    assert.equal(interactions[0].line_stats, undefined);
+  });
+
+  it("marks nested mutating exec commands without inferring files", async () => {
+    const transcriptDir = join(codexHome, "sessions", "nested-exec-command");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+    const source =
+      'const result = await tools.exec_command({cmd: "touch generated.txt", workdir: "/repo"});\n' +
+      "text(result.output);";
+    writeFileSync(transcriptPath, buildNestedExecTranscript(source));
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+
+    assert.deepEqual(interactions[0].tools, ["exec", "exec_command"]);
+    assert.deepEqual(interactions[0].mutation_tools, ["exec_command"]);
+    assert.equal(interactions[0].files_touched, undefined);
+  });
+
+  it("does not attribute read-only or quoted nested tool references", async () => {
+    const transcriptDir = join(codexHome, "sessions", "nested-exec-readonly");
+    mkdirSync(transcriptDir, { recursive: true });
+    const transcriptPath = join(transcriptDir, "rollout.jsonl");
+    const source =
+      'const example = "tools.apply_patch(fakePatch)";\n' +
+      "// tools.apply_patch(commentedPatch);\n" +
+      'const result = await tools.exec_command({cmd: "git status --short", justification: "rm is not run"});\n' +
+      "text(example);\n" +
+      "text(result.output);";
+    writeFileSync(transcriptPath, buildNestedExecTranscript(source));
+
+    const interactions = await codex.extractInteractions(transcriptPath);
+
+    assert.deepEqual(interactions[0].tools, ["exec", "exec_command"]);
+    assert.equal(interactions[0].mutation_tools, undefined);
+    assert.equal(interactions[0].files_touched, undefined);
   });
 
   it("marks mutating shell commands as mutation tools", async () => {
