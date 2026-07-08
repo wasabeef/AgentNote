@@ -1,0 +1,120 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T15:53:52.113Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/87#discussion_r3545409845",
+      "response": null,
+      "files_touched": [
+        "packages/pr-report/src/index.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 4,
+      "total_added": 4,
+      "deleted": 0
+    }
+  },
+  "commit": {
+    "sha": "8c70e3b34e7defd29d5a51b98cb735743e405391",
+    "short_sha": "8c70e3b",
+    "message": "fix(action): bound the PR report Pages API lookup to 10 seconds",
+    "date": "2026-07-09T00:53:51+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/pr-report/dist/index.js",
+        "lines": [
+          "index 6310f8f..f59f38e 100644",
+          "--- a/packages/pr-report/dist/index.js",
+          "+++ b/packages/pr-report/dist/index.js",
+          "@@ -37969,6 +37969,7 @@ const DEFAULT_BASE_BRANCH = \"main\";",
+          " const EVENT_PULL_REQUEST = \"pull_request\";",
+          " const GITHUB_PAGES_ENVIRONMENT = \"github-pages\";",
+          " const GITHUB_TOKEN_ENV = \"GITHUB_TOKEN\";",
+          "+const PAGES_API_TIMEOUT_MS = 10_000;",
+          " const PAGES_BASE_URL_INPUT = \"pages_base_url\";",
+          " const JSON_INDENT_SPACES = 2;",
+          " const MAX_NOTES_FETCH_ATTEMPTS = 3;",
+          "@@ -38080,6 +38081,9 @@ async function resolvePagesBaseUrl(token) {",
+          "         const { data } = await octokit.request(\"GET /repos/{owner}/{repo}/pages\", {",
+          "             owner,",
+          "             repo,",
+          "+            request: {",
+          "+                signal: AbortSignal.timeout(PAGES_API_TIMEOUT_MS),",
+          "+            },",
+          "         });",
+          "         const htmlUrl = data.html_url;",
+          "         if (typeof htmlUrl === \"string\" && htmlUrl) {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.ts",
+        "lines": [
+          "index bcbc73d..6b287f9 100644",
+          "--- a/packages/pr-report/src/index.ts",
+          "+++ b/packages/pr-report/src/index.ts",
+          "@@ -30,6 +30,7 @@ const DEFAULT_BASE_BRANCH = \"main\";",
+          " const EVENT_PULL_REQUEST = \"pull_request\";",
+          " const GITHUB_PAGES_ENVIRONMENT = \"github-pages\";",
+          " const GITHUB_TOKEN_ENV = \"GITHUB_TOKEN\";",
+          "+const PAGES_API_TIMEOUT_MS = 10_000;",
+          " const PAGES_BASE_URL_INPUT = \"pages_base_url\";",
+          " const JSON_INDENT_SPACES = 2;",
+          " const MAX_NOTES_FETCH_ATTEMPTS = 3;",
+          "@@ -153,6 +154,9 @@ async function resolvePagesBaseUrl(token: string): Promise<string | null> {",
+          " \t\tconst { data } = await octokit.request(\"GET /repos/{owner}/{repo}/pages\", {",
+          " \t\t\towner,",
+          " \t\t\trepo,",
+          "+\t\t\trequest: {",
+          "+\t\t\t\tsignal: AbortSignal.timeout(PAGES_API_TIMEOUT_MS),",
+          "+\t\t\t},",
+          " \t\t});",
+          " \t\tconst htmlUrl = (data as { html_url?: string | null }).html_url;",
+          " \t\tif (typeof htmlUrl === \"string\" && htmlUrl) {"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 87,
+    "title": "fix: load Dashboard correctly on private and Enterprise GitHub Pages",
+    "state": "open"
+  }
+}
