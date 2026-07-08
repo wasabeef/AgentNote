@@ -733,6 +733,7 @@ var ENV_CODEX_THREAD_ID = "CODEX_THREAD_ID";
 var HOOKS_REL_PATH = ".codex/hooks.json";
 var HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;
 var TRANSCRIPT_PREVIEW_CHARS = 4096;
+var NESTED_CMD_KEY_RE = /(?:^|[,{]\s*)(?:cmd|["']cmd["'])\s*:\s*$/;
 var SHELL_MUTATION_COMMAND_RE = /(^|[;&|]\s*)(apply_patch|cat\s+>|cp\b|install\b|mkdir\b|mv\b|npm\s+(audit\s+fix|dedupe|install|update|version)\b|perl\s+-[^\n;&|]*i|pnpm\s+(add|install|update)\b|rm\b|sed\s+-[^\n;&|]*i|tee\b|touch\b|yarn\s+(add|install|upgrade)\b)|(\s|^)(>|>>)\s*\S+/;
 var CODEX_HOOK_EVENTS = {
   sessionStart: "SessionStart",
@@ -895,7 +896,7 @@ function collectNestedExecEvidence(source) {
     patchInputs: toolSeen.has("apply_patch") ? stringLiterals.map(({ value }) => value).filter((value) => value.includes("*** Begin Patch")) : [],
     commandInputs: toolSeen.has("exec_command") ? stringLiterals.filter(({ start }) => {
       const prefix = source.slice(Math.max(0, start - 80), start);
-      return /(?:^|[,{]\s*)(?:cmd|["']cmd["'])\s*:\s*$/.test(prefix);
+      return NESTED_CMD_KEY_RE.test(prefix);
     }).map(({ value }) => value) : []
   };
 }
