@@ -7,9 +7,9 @@ import {
   AGENTNOTE_HOOK_MARKER,
   GIT_HOOK_NAMES,
   HEARTBEAT_TTL_SECONDS,
+  LEGACY_NOTES_FETCH_REFSPEC,
   NOTES_FETCH_REFSPEC,
   NOTES_REF,
-  NOTES_REF_FULL,
   POST_COMMIT_FALLBACK_FILE,
   POST_COMMIT_FALLBACK_HEAD,
   TEXT_ENCODING,
@@ -355,12 +355,29 @@ export async function init(args: string[]): Promise<void> {
   // Auto-fetch notes on git pull
   if (!skipNotes && !hooksOnly && !actionOnly) {
     const { stdout } = await gitSafe(["config", "--get-all", "remote.origin.fetch"]);
+    const fetchRefspecs = stdout.split(/\r?\n/);
+    const hasCurrentRefspec = fetchRefspecs.includes(NOTES_FETCH_REFSPEC);
+    const hasLegacyRefspec = fetchRefspecs.includes(LEGACY_NOTES_FETCH_REFSPEC);
 
-    if (stdout.includes(NOTES_REF_FULL)) {
+    if (hasLegacyRefspec) {
+      await gitSafe([
+        "config",
+        "--unset-all",
+        "--fixed-value",
+        "remote.origin.fetch",
+        LEGACY_NOTES_FETCH_REFSPEC,
+      ]);
+    }
+
+    if (hasCurrentRefspec) {
       results.push("  · git already configured to fetch notes");
     } else {
       await gitSafe(["config", "--add", "remote.origin.fetch", NOTES_FETCH_REFSPEC]);
-      results.push("  ✓ git configured to auto-fetch notes on pull");
+      results.push(
+        hasLegacyRefspec
+          ? "  ✓ git notes fetch config upgraded"
+          : "  ✓ git configured to auto-fetch notes on pull",
+      );
     }
   }
 

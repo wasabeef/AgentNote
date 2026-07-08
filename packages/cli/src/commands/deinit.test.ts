@@ -4,7 +4,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AGENTNOTE_DIR, NOTES_REF_FULL } from "../core/constants.js";
+import {
+  AGENTNOTE_DIR,
+  LEGACY_NOTES_FETCH_REFSPEC,
+  NOTES_FETCH_REFSPEC,
+  NOTES_REF_FULL,
+} from "../core/constants.js";
 
 function resolveGitPath(cwd: string, value: string): string {
   return isAbsolute(value) ? value : join(cwd, value);
@@ -136,6 +141,35 @@ describe("agentnote deinit", () => {
       !fetchResult.includes(NOTES_REF_FULL),
       "notes fetch config should be removed after deinit",
     );
+  });
+
+  it("removes both current and legacy notes fetch refspecs", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-deinit-refspecs-"));
+    execFileSync("git", ["init"], { cwd: dir });
+    execFileSync("git", ["config", "user.email", "test@test.com"], { cwd: dir });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: dir });
+    execFileSync("git", ["remote", "add", "origin", "https://example.com/repo.git"], {
+      cwd: dir,
+    });
+    execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: dir });
+
+    execFileSync("node", [cliPath, "init", "--agent", "claude"], { cwd: dir });
+    execFileSync("git", ["config", "--add", "remote.origin.fetch", LEGACY_NOTES_FETCH_REFSPEC], {
+      cwd: dir,
+    });
+
+    execFileSync("node", [cliPath, "deinit", "--agent", "claude"], { cwd: dir });
+
+    const fetchRefspecs = execSync("git config --get-all remote.origin.fetch || true", {
+      cwd: dir,
+      encoding: "utf-8",
+    })
+      .trim()
+      .split("\n");
+    assert.ok(!fetchRefspecs.includes(NOTES_FETCH_REFSPEC));
+    assert.ok(!fetchRefspecs.includes(LEGACY_NOTES_FETCH_REFSPEC));
+
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("restores backup git hooks when they exist", () => {

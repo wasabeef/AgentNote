@@ -5,6 +5,7 @@ import { getAgent, hasAgent, listAgents } from "../agents/index.js";
 import {
   AGENTNOTE_HOOK_MARKER,
   GIT_HOOK_NAMES,
+  LEGACY_NOTES_FETCH_REFSPEC,
   NOTES_FETCH_REFSPEC,
   TEXT_ENCODING,
 } from "../core/constants.js";
@@ -138,13 +139,9 @@ export async function deinit(args: string[]): Promise<void> {
 
     // Auto-fetch notes config
     if (!keepNotes) {
-      await gitSafe([
-        "config",
-        "--unset",
-        "--fixed-value",
-        "remote.origin.fetch",
-        NOTES_FETCH_REFSPEC,
-      ]);
+      for (const refspec of [NOTES_FETCH_REFSPEC, LEGACY_NOTES_FETCH_REFSPEC]) {
+        await gitSafe(["config", "--unset-all", "--fixed-value", "remote.origin.fetch", refspec]);
+      }
       results.push("  ✓ removed notes auto-fetch config");
     }
   } else {

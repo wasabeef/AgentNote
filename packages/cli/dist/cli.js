@@ -14,7 +14,8 @@ var AGENTNOTE_HOOK_COMMAND = "agent-note hook";
 var CLI_JS_HOOK_COMMAND = "cli.js hook";
 var NOTES_REF = "agentnote";
 var NOTES_REF_FULL = `refs/notes/${NOTES_REF}`;
-var NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
+var LEGACY_NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
+var NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}*:${NOTES_REF_FULL}*`;
 var AGENTNOTE_DIR = "agentnote";
 var SESSIONS_DIR = "sessions";
 var GIT_HOOK_NAMES = ["prepare-commit-msg", "post-commit", "pre-push"];
@@ -5505,11 +5506,25 @@ async function init(args2) {
   }
   if (!skipNotes && !hooksOnly && !actionOnly) {
     const { stdout } = await gitSafe(["config", "--get-all", "remote.origin.fetch"]);
-    if (stdout.includes(NOTES_REF_FULL)) {
+    const fetchRefspecs = stdout.split(/\r?\n/);
+    const hasCurrentRefspec = fetchRefspecs.includes(NOTES_FETCH_REFSPEC);
+    const hasLegacyRefspec = fetchRefspecs.includes(LEGACY_NOTES_FETCH_REFSPEC);
+    if (hasLegacyRefspec) {
+      await gitSafe([
+        "config",
+        "--unset-all",
+        "--fixed-value",
+        "remote.origin.fetch",
+        LEGACY_NOTES_FETCH_REFSPEC
+      ]);
+    }
+    if (hasCurrentRefspec) {
       results.push("  \xB7 git already configured to fetch notes");
     } else {
       await gitSafe(["config", "--add", "remote.origin.fetch", NOTES_FETCH_REFSPEC]);
-      results.push("  \u2713 git configured to auto-fetch notes on pull");
+      results.push(
+        hasLegacyRefspec ? "  \u2713 git notes fetch config upgraded" : "  \u2713 git configured to auto-fetch notes on pull"
+      );
     }
   }
   console.log("");
@@ -5712,13 +5727,9 @@ async function deinit(args2) {
       }
     }
     if (!keepNotes) {
-      await gitSafe([
-        "config",
-        "--unset",
-        "--fixed-value",
-        "remote.origin.fetch",
-        NOTES_FETCH_REFSPEC
-      ]);
+      for (const refspec of [NOTES_FETCH_REFSPEC, LEGACY_NOTES_FETCH_REFSPEC]) {
+        await gitSafe(["config", "--unset-all", "--fixed-value", "remote.origin.fetch", refspec]);
+      }
       results.push("  \u2713 removed notes auto-fetch config");
     }
   } else {
