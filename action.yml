@@ -19,6 +19,10 @@ inputs:
     description: "PR Report prompt detail: compact or full (default: compact)"
     required: false
     default: "compact"
+  pages_base_url:
+    description: "Override the GitHub Pages base URL used for Dashboard links and asset paths (default: resolved from the Pages API, falling back to https://<owner>.github.io/<repo>/)"
+    required: false
+    default: ""
 outputs:
   overall_ai_ratio:
     description: "PR-wide AI ratio (0-100)"
@@ -62,6 +66,7 @@ runs:
         INPUT_BASE: ${{ inputs.base }}
         INPUT_PR_OUTPUT: ${{ inputs.pr_output }}
         INPUT_PROMPT_DETAIL: ${{ inputs.prompt_detail }}
+        INPUT_PAGES_BASE_URL: ${{ inputs.pages_base_url }}
       run: node "$AGENT_NOTE_ACTION_PATH/packages/pr-report/dist/index.js"
 
     - name: Detect Dashboard checkout
@@ -103,6 +108,8 @@ runs:
       shell: bash
       env:
         DASHBOARD_ACTION_PATH: ${{ github.action_path }}/packages/dashboard
+        GH_TOKEN: ${{ github.token }}
+        PAGES_BASE_URL: ${{ inputs.pages_base_url }}
       run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:resolve-pages-target
 
     - name: Restore Dashboard notes from gh-pages
@@ -140,6 +147,7 @@ runs:
         NOTES_DIR: ${{ steps.dashboard_paths.outputs.notes_dir }}
         PAGES_DIR: ${{ steps.dashboard_paths.outputs.pages_dir }}
         DASHBOARD_PAGES_MODE: ${{ steps.dashboard_paths.outputs.publish_mode }}
+        PAGES_BASE_URL: ${{ steps.dashboard_paths.outputs.pages_base_url }}
         PUBLIC_REPO: ${{ github.repository }}
       run: npm --prefix "$DASHBOARD_ACTION_PATH" run workflow:build-pages
 

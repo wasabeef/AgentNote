@@ -6277,7 +6277,19 @@ ${section}${after}`;
 
 ${section}`;
 }
-function inferDashboardUrl(repoUrl, prNumber) {
+function parseUrlOrNull(value) {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+function inferDashboardUrl(repoUrl, prNumber, pagesBaseUrl) {
+  const parsedBase = pagesBaseUrl ? parseUrlOrNull(pagesBaseUrl) : null;
+  if (parsedBase) {
+    const basePath = parsedBase.pathname.replace(/\/+$/, "");
+    return appendPrNumber(`${parsedBase.origin}${basePath}/dashboard/`, prNumber);
+  }
   if (!repoUrl) return null;
   const normalized = repoUrl.replace(/\.git$/, "");
   const match = normalized.match(GITHUB_REPOSITORY_URL_PATTERN);
@@ -6549,7 +6561,7 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
   const hasDashboardWorkflow = existsSync14(
     join14(repoRoot3, ".github", "workflows", "agentnote-dashboard.yml")
   );
-  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber) : null;
+  const dashboardUrl = hasDashboardWorkflow ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber, opts.pagesBaseUrl) : null;
   return {
     base,
     head,

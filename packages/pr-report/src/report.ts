@@ -266,6 +266,7 @@ export interface RenderMarkdownOptions {
 /** Collection options supplied by the GitHub Action wrapper. */
 export interface CollectReportOptions {
   dashboardPrNumber?: number | string | null;
+  pagesBaseUrl?: string | null;
 }
 
 /** Collect commits, git notes, AI ratio, and dashboard links for one PR range. */
@@ -398,7 +399,7 @@ export async function collectReport(
     join(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"),
   );
   const dashboardUrl = hasDashboardWorkflow
-    ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)
+    ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber, opts.pagesBaseUrl)
     : null;
 
   return {

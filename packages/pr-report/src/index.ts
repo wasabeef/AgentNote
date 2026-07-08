@@ -30,6 +30,7 @@ const DEFAULT_BASE_BRANCH = "main";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const PAGES_BASE_URL_INPUT = "pages_base_url";
 const JSON_INDENT_SPACES = 2;
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 1000;
@@ -127,6 +128,46 @@ async function postPrReport(
 }
 
 /**
+ * Resolve the real GitHub Pages base URL for Dashboard links.
+ *
+ * Private and Enterprise Pages sites are served from obfuscated domains at the
+ * root path. The explicit input wins, then the Pages API, and callers fall
+ * back to the repository-name heuristic when neither is available.
+ */
+async function resolvePagesBaseUrl(token: string): Promise<string | null> {
+	const override = core.getInput(PAGES_BASE_URL_INPUT);
+	if (override) {
+		try {
+			new URL(override);
+			return override;
+		} catch {
+			core.warning(`Ignoring invalid pages_base_url input: ${override}`);
+		}
+	}
+
+	if (!token) return null;
+
+	try {
+		const octokit = github.getOctokit(token);
+		const { owner, repo } = github.context.repo;
+		const { data } = await octokit.request("GET /repos/{owner}/{repo}/pages", {
+			owner,
+			repo,
+		});
+		const htmlUrl = (data as { html_url?: string | null }).html_url;
+		if (typeof htmlUrl === "string" && htmlUrl) {
+			new URL(htmlUrl);
+			return htmlUrl;
+		}
+	} catch {
+		// Reading Pages metadata needs pages:read; without it the report keeps
+		// the repository-name heuristic instead of failing.
+	}
+
+	return null;
+}
+
+/**
  * Explain delayed Dashboard previews caused by Pages environment protection.
  *
  * The PR report only shows this explanation when the Dashboard URL exists and
@@ -182,6 +223,7 @@ async function run(): Promise<void> {
 		const prOutputMode = resolvePrOutputMode(core.getInput("pr_output"));
 		const promptDetail = parsePromptDetail(core.getInput("prompt_detail"));
 		const token = process.env[GITHUB_TOKEN_ENV] || "";
+		const pagesBaseUrl = await resolvePagesBaseUrl(token);
 
 		let report: Awaited<ReturnType<typeof collectReport>> = null;
 
@@ -191,6 +233,7 @@ async function run(): Promise<void> {
 
 			report = await collectReport(base, headSha, {
 				dashboardPrNumber: prNumber,
+				pagesBaseUrl,
 			});
 			if (!report) {
 				core.info("No agent-note data found for this PR.");
