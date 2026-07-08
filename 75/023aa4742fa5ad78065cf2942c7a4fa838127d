@@ -1,0 +1,74 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T07:25:27.105Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "M packages/cli/dist/cli.js\nM packages/cli/src/agents/codex.test.ts\nM packages/cli/src/agents/codex.ts\nM packages/cli/src/commands/codex.test.ts\n\nの変更を確認してほしい。\n\nhttps://github.com/wasabeef/AgentNote/issues/83\n\nの修正した",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "exact_commit_path",
+          "commit_file_basename",
+          "commit_subject_overlap",
+          "multi_line_instruction",
+          "inline_code_or_path_shape",
+          "substantive_prompt_shape"
+        ]
+      }
+    },
+    {
+      "prompt": "修正が必要なものは修正作業を行ってから PR 作成してほしい",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/agents/codex.ts",
+        "packages/cli/src/agents/codex.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/agents/codex.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/agents/codex.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/codex.test.ts",
+      "by_ai": false
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 7,
+    "method": "line",
+    "lines": {
+      "ai_added": 23,
+      "total_added": 310,
+      "deleted": 8
+    }
+  }
+}
