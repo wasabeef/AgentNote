@@ -15,8 +15,10 @@ export const CLI_JS_HOOK_COMMAND = "cli.js hook";
 export const NOTES_REF = "agentnote";
 /** Fully qualified git-notes ref name used for push/fetch operations. */
 export const NOTES_REF_FULL = `refs/notes/${NOTES_REF}`;
-/** Fetch refspec that syncs Agent Note notes into the local notes ref. */
-export const NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
+/** Legacy exact refspec that fails while the remote notes ref does not exist. */
+export const LEGACY_NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}:${NOTES_REF_FULL}`;
+/** Pattern refspec that tolerates a missing remote notes ref. */
+export const NOTES_FETCH_REFSPEC = `+${NOTES_REF_FULL}*:${NOTES_REF_FULL}*`;
 
 // ─── Directory names ───
 /** Directory under `.git/` where local Agent Note session state is stored. */

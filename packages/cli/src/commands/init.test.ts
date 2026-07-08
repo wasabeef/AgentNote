@@ -16,6 +16,8 @@ import {
   AGENTNOTE_DIR,
   CHANGES_FILE,
   HEARTBEAT_FILE,
+  LEGACY_NOTES_FETCH_REFSPEC,
+  NOTES_FETCH_REFSPEC,
   NOTES_REF_FULL,
   PROMPTS_FILE,
   SESSION_AGENT_FILE,
@@ -325,6 +327,65 @@ describe("agentnote init", () => {
     // Output messages
     assert.ok(output.includes("✓"), "should show success markers");
     assert.ok(output.includes("Next:"), "should show next steps");
+  });
+
+  it("keeps fetch working before the remote notes ref exists", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-fetch-missing-notes-"));
+    const remoteDir = mkdtempSync(join(tmpdir(), "agentnote-fetch-missing-notes-remote-"));
+
+    execFileSync("git", ["init", "--bare", remoteDir]);
+    execFileSync("git", ["init"], { cwd: dir });
+    configureUser(dir);
+    execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: dir });
+    execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: dir });
+
+    execFileSync("node", [cliPath, "init", "--agent", "claude", "--no-action"], { cwd: dir });
+
+    const fetchRefspecs = execFileSync("git", ["config", "--get-all", "remote.origin.fetch"], {
+      cwd: dir,
+      encoding: "utf-8",
+    })
+      .trim()
+      .split("\n");
+    assert.ok(fetchRefspecs.includes(NOTES_FETCH_REFSPEC));
+    assert.ok(!fetchRefspecs.includes(LEGACY_NOTES_FETCH_REFSPEC));
+    assert.doesNotThrow(() => {
+      execFileSync("git", ["fetch", "origin"], { cwd: dir, stdio: "pipe" });
+    });
+
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(remoteDir, { recursive: true, force: true });
+  });
+
+  it("upgrades the legacy exact notes fetch refspec", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-fetch-refspec-upgrade-"));
+
+    execFileSync("git", ["init"], { cwd: dir });
+    configureUser(dir);
+    execFileSync("git", ["remote", "add", "origin", "https://example.com/repo.git"], {
+      cwd: dir,
+    });
+    execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: dir });
+    execFileSync("git", ["config", "--add", "remote.origin.fetch", LEGACY_NOTES_FETCH_REFSPEC], {
+      cwd: dir,
+    });
+
+    const output = execFileSync("node", [cliPath, "init", "--agent", "claude", "--no-action"], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    const fetchRefspecs = execFileSync("git", ["config", "--get-all", "remote.origin.fetch"], {
+      cwd: dir,
+      encoding: "utf-8",
+    })
+      .trim()
+      .split("\n");
+
+    assert.ok(fetchRefspecs.includes(NOTES_FETCH_REFSPEC));
+    assert.ok(!fetchRefspecs.includes(LEGACY_NOTES_FETCH_REFSPEC));
+    assert.ok(output.includes("git notes fetch config upgraded"));
+
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("creates a deterministic repo-local shim for git hooks", () => {
