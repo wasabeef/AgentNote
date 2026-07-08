@@ -1,0 +1,48 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T15:53:52.113Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/87#discussion_r3545409845",
+      "response": null,
+      "files_touched": [
+        "packages/pr-report/src/index.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 4,
+      "total_added": 4,
+      "deleted": 0
+    }
+  }
+}
