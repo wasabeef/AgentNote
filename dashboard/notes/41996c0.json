@@ -1,0 +1,120 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T07:33:40.102Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/85#discussion_r3542058058",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/agents/codex.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/agents/codex.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 4,
+      "total_added": 4,
+      "deleted": 1
+    }
+  },
+  "commit": {
+    "sha": "41996c03a9c0c4bde3ee274ebe7dafcc777ef6dc",
+    "short_sha": "41996c0",
+    "message": "refactor(codex): name the nested cmd key regex",
+    "date": "2026-07-08T16:33:39+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 54e79af..ce5efd9 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -733,6 +733,7 @@ var ENV_CODEX_THREAD_ID = \"CODEX_THREAD_ID\";",
+          " var HOOKS_REL_PATH = \".codex/hooks.json\";",
+          " var HOOK_COMMAND2 = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;",
+          " var TRANSCRIPT_PREVIEW_CHARS = 4096;",
+          "+var NESTED_CMD_KEY_RE = /(?:^|[,{]\\s*)(?:cmd|[\"']cmd[\"'])\\s*:\\s*$/;",
+          " var SHELL_MUTATION_COMMAND_RE = /(^|[;&|]\\s*)(apply_patch|cat\\s+>|cp\\b|install\\b|mkdir\\b|mv\\b|npm\\s+(audit\\s+fix|dedupe|install|update|version)\\b|perl\\s+-[^\\n;&|]*i|pnpm\\s+(add|install|update)\\b|rm\\b|sed\\s+-[^\\n;&|]*i|tee\\b|touch\\b|yarn\\s+(add|install|upgrade)\\b)|(\\s|^)(>|>>)\\s*\\S+/;",
+          " var CODEX_HOOK_EVENTS = {",
+          "   sessionStart: \"SessionStart\",",
+          "@@ -895,7 +896,7 @@ function collectNestedExecEvidence(source) {",
+          "     patchInputs: toolSeen.has(\"apply_patch\") ? stringLiterals.map(({ value }) => value).filter((value) => value.includes(\"*** Begin Patch\")) : [],",
+          "     commandInputs: toolSeen.has(\"exec_command\") ? stringLiterals.filter(({ start }) => {",
+          "       const prefix = source.slice(Math.max(0, start - 80), start);",
+          "-      return /(?:^|[,{]\\s*)(?:cmd|[\"']cmd[\"'])\\s*:\\s*$/.test(prefix);",
+          "+      return NESTED_CMD_KEY_RE.test(prefix);",
+          "     }).map(({ value }) => value) : []",
+          "   };",
+          " }"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/agents/codex.ts",
+        "lines": [
+          "index db71a76..854017d 100644",
+          "--- a/packages/cli/src/agents/codex.ts",
+          "+++ b/packages/cli/src/agents/codex.ts",
+          "@@ -21,6 +21,9 @@ const ENV_CODEX_THREAD_ID = \"CODEX_THREAD_ID\";",
+          " const HOOKS_REL_PATH = \".codex/hooks.json\";",
+          " const HOOK_COMMAND = `npx --yes agent-note hook --agent ${AGENT_NAMES.codex}`;",
+          " const TRANSCRIPT_PREVIEW_CHARS = 4096;",
+          "+// Matches a `cmd:` (or quoted \"cmd\":) property key immediately preceding a",
+          "+// string literal, so only shell-command argument values feed mutation detection.",
+          "+const NESTED_CMD_KEY_RE = /(?:^|[,{]\\s*)(?:cmd|[\"']cmd[\"'])\\s*:\\s*$/;",
+          " const SHELL_MUTATION_COMMAND_RE =",
+          "   /(^|[;&|]\\s*)(apply_patch|cat\\s+>|cp\\b|install\\b|mkdir\\b|mv\\b|npm\\s+(audit\\s+fix|dedupe|install|update|version)\\b|perl\\s+-[^\\n;&|]*i|pnpm\\s+(add|install|update)\\b|rm\\b|sed\\s+-[^\\n;&|]*i|tee\\b|touch\\b|yarn\\s+(add|install|upgrade)\\b)|(\\s|^)(>|>>)\\s*\\S+/;",
+          " const CODEX_HOOK_EVENTS = {",
+          "@@ -250,7 +253,7 @@ function collectNestedExecEvidence(source: string): NestedExecEvidence {",
+          "       ? stringLiterals",
+          "           .filter(({ start }) => {",
+          "             const prefix = source.slice(Math.max(0, start - 80), start);",
+          "-            return /(?:^|[,{]\\s*)(?:cmd|[\"']cmd[\"'])\\s*:\\s*$/.test(prefix);",
+          "+            return NESTED_CMD_KEY_RE.test(prefix);",
+          "           })",
+          "           .map(({ value }) => value)",
+          "       : [],"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 85,
+    "title": "fix: record Codex edits made through the unified exec tool",
+    "state": "open"
+  }
+}
