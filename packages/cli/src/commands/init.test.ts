@@ -353,6 +353,19 @@ describe("agentnote init", () => {
       execFileSync("git", ["fetch", "origin"], { cwd: dir, stdio: "pipe" });
     });
 
+    execFileSync("git", ["notes", "--ref=agentnote", "add", "-m", '{"v":1}', "HEAD"], {
+      cwd: dir,
+    });
+    execFileSync("git", ["push", "--no-verify", "origin", NOTES_REF_FULL], { cwd: dir });
+    execFileSync("git", ["update-ref", "-d", NOTES_REF_FULL], { cwd: dir });
+
+    execFileSync("git", ["fetch", "origin"], { cwd: dir, stdio: "pipe" });
+    const fetchedNote = execFileSync("git", ["notes", "--ref=agentnote", "show", "HEAD"], {
+      cwd: dir,
+      encoding: "utf-8",
+    }).trim();
+    assert.equal(fetchedNote, '{"v":1}');
+
     rmSync(dir, { recursive: true, force: true });
     rmSync(remoteDir, { recursive: true, force: true });
   });
