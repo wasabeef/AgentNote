@@ -30,6 +30,7 @@ const DEFAULT_BASE_BRANCH = "main";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const PAGES_API_TIMEOUT_MS = 10_000;
 const PAGES_BASE_URL_INPUT = "pages_base_url";
 const JSON_INDENT_SPACES = 2;
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
@@ -153,6 +154,9 @@ async function resolvePagesBaseUrl(token: string): Promise<string | null> {
 		const { data } = await octokit.request("GET /repos/{owner}/{repo}/pages", {
 			owner,
 			repo,
+			request: {
+				signal: AbortSignal.timeout(PAGES_API_TIMEOUT_MS),
+			},
 		});
 		const htmlUrl = (data as { html_url?: string | null }).html_url;
 		if (typeof htmlUrl === "string" && htmlUrl) {
