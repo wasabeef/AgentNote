@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
 const DASHBOARD_DIR_NAME = "dashboard";
 const ENV_EVENT_NAME = "EVENT_NAME";
+const ENV_GITHUB_WORKSPACE = "GITHUB_WORKSPACE";
 const ENV_NOTES_DIR = "NOTES_DIR";
 const ENV_PR_NUMBER = "PR_NUMBER";
 const EVENT_PULL_REQUEST = "pull_request";
@@ -19,6 +20,7 @@ const NOTES_DIR_NAME = "notes";
 const PERSIST_COMMIT_MESSAGE = "chore: update Dashboard notes";
 const PERSIST_TEMP_DIR_PREFIX = "agentnote-dashboard-persist-";
 const TEXT_ENCODING = "utf-8";
+const workspace = process.env[ENV_GITHUB_WORKSPACE] || process.cwd();
 const notesDir = process.env[ENV_NOTES_DIR] || DEFAULT_DASHBOARD_NOTES_DIR;
 const eventName = process.env[ENV_EVENT_NAME] || "";
 const prNumber = Number(process.env[ENV_PR_NUMBER] || "");
@@ -152,7 +154,7 @@ export function mergeDashboardNotes(snapshotDir, dashboardNotesDir, options = {}
 
 function git(args, options = {}) {
   return execFileSync("git", args, {
-    cwd: options.cwd,
+    cwd: options.cwd ?? workspace,
     stdio: options.stdio || "pipe",
     encoding: TEXT_ENCODING,
   });

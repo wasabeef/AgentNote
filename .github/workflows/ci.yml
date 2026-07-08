@@ -62,6 +62,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --prefix packages/dashboard
+      - run: npm test --prefix packages/dashboard
       - run: npm run dashboard:build
       - name: Smoke test dashboard workflow build
         run: |

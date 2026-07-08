@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { mergeDashboardNotes, pruneDashboardNotes } from "./persist-notes.mjs";
 import { restoreDashboardNotes } from "./restore-notes.mjs";
 import {
@@ -181,6 +183,58 @@ test("restoreDashboardNotes replaces local notes with the persisted gh-pages not
     assert.deepEqual(readdirSync(localNotesDir).sort(), ["pr47.json", "pr48.json"]);
     assert.equal(readNoteShortSha(join(localNotesDir, "pr47.json")), "pr47");
     assert.equal(readNoteShortSha(join(localNotesDir, "pr48.json")), "pr48");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("persist-notes runs git in GITHUB_WORKSPACE when the action path is external", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-external-action-test-"));
+  const workspaceDir = join(tempDir, "workspace");
+  const actionDir = join(tempDir, "action-package");
+  const remoteDir = join(tempDir, "remote.git");
+  const notesDir = join(workspaceDir, ".agentnote-dashboard-notes");
+  const persistedNotePath = "gh-pages:dashboard/notes/pr81.json";
+  const persistScript = fileURLToPath(new URL("./persist-notes.mjs", import.meta.url));
+
+  try {
+    mkdirSync(workspaceDir, { recursive: true });
+    mkdirSync(actionDir, { recursive: true });
+    mkdirSync(notesDir, { recursive: true });
+    execFileSync("git", ["init", "--bare", remoteDir]);
+    execFileSync("git", ["init"], { cwd: workspaceDir });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: workspaceDir });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: workspaceDir });
+    execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: workspaceDir });
+    execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: workspaceDir });
+
+    const runPersist = () => {
+      execFileSync(process.execPath, [persistScript], {
+        cwd: actionDir,
+        env: {
+          ...process.env,
+          EVENT_NAME: "pull_request",
+          GITHUB_WORKSPACE: workspaceDir,
+          NOTES_DIR: notesDir,
+          PR_NUMBER: "81",
+        },
+        stdio: "pipe",
+      });
+    };
+    const readPersistedShortSha = () => {
+      const note = execFileSync("git", ["--git-dir", remoteDir, "show", persistedNotePath], {
+        encoding: "utf-8",
+      });
+      return JSON.parse(note).commit.short_sha;
+    };
+
+    writeNote(join(notesDir, "pr81.json"), 81, "first");
+    runPersist();
+    assert.equal(readPersistedShortSha(), "first");
+
+    writeNote(join(notesDir, "pr81.json"), 81, "updated");
+    runPersist();
+    assert.equal(readPersistedShortSha(), "updated");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
