@@ -1,0 +1,74 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T15:48:33.384Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "レビューして",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "ｙ",
+      "response": null,
+      "files_touched": [
+        "packages/dashboard/workflow/resolve-pages-target.mjs",
+        "packages/pr-report/src/index.ts",
+        "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+        "README.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 30,
+      "total_added": 30,
+      "deleted": 9
+    }
+  }
+}
