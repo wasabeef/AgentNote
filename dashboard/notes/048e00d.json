@@ -1,0 +1,244 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-08T15:48:33.384Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "レビューして",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "ｙ",
+      "response": null,
+      "files_touched": [
+        "packages/dashboard/workflow/resolve-pages-target.mjs",
+        "packages/pr-report/src/index.ts",
+        "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+        "README.md"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 30,
+      "total_added": 30,
+      "deleted": 9
+    }
+  },
+  "commit": {
+    "sha": "048e00d6ad9a7b8daf76102cb393ad2f80ed7d5a",
+    "short_sha": "048e00d",
+    "message": "fix(action): normalize resolved Pages URLs before writing step outputs",
+    "date": "2026-07-09T00:48:33+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "README.md",
+        "lines": [
+          "index 54301af..9265423 100644",
+          "--- a/README.md",
+          "+++ b/README.md",
+          "@@ -297,6 +297,15 @@ Dashboard Mode uses the same action with `dashboard: true`:",
+          "     prompt_detail: compact",
+          " ```",
+          " ",
+          "+The action resolves the published GitHub Pages URL automatically, including private and Enterprise Pages sites served from `*.pages.github.io` domains. Set `pages_base_url` only when the resolved URL needs an explicit override, for example behind a custom proxy:",
+          "+",
+          "+```yaml",
+          "+- uses: wasabeef/AgentNote@v1",
+          "+  with:",
+          "+    dashboard: true",
+          "+    pages_base_url: https://pages.example.com/apps/",
+          "+```",
+          "+",
+          " ### Dashboard Data",
+          " ",
+          " For most repositories, you do not need to hand-write the workflow. Generate it with `init`:"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/resolve-pages-target.mjs",
+        "lines": [
+          "index d0e7fd3..4c492a4 100644",
+          "--- a/packages/dashboard/workflow/resolve-pages-target.mjs",
+          "+++ b/packages/dashboard/workflow/resolve-pages-target.mjs",
+          "@@ -75,10 +75,11 @@ export async function resolvePagesBaseUrl({",
+          "   apiUrl = process.env[ENV_GITHUB_API_URL] || DEFAULT_GITHUB_API_URL,",
+          "   fetcher = fetch,",
+          " } = {}) {",
+          "-  if (override) {",
+          "-    if (parseUrlOrNull(override)) return override;",
+          "-    console.log(`Ignoring invalid pages_base_url override: ${override}`);",
+          "-  }",
+          "+  // Re-serializing through URL both validates the value and strips characters",
+          "+  // that would corrupt the GITHUB_OUTPUT file, such as newlines.",
+          "+  const parsedOverride = override ? parseUrlOrNull(override) : null;",
+          "+  if (parsedOverride) return parsedOverride.toString();",
+          "+  if (override) console.log(`Ignoring invalid pages_base_url override: ${override}`);",
+          " ",
+          "   if (!repository || !token) return null;",
+          " ",
+          "@@ -93,7 +94,7 @@ export async function resolvePagesBaseUrl({",
+          "     if (!response.ok) return null;",
+          "     const pages = await response.json();",
+          "     const htmlUrl = typeof pages?.html_url === \"string\" ? pages.html_url : \"\";",
+          "-    return htmlUrl && parseUrlOrNull(htmlUrl) ? htmlUrl : null;",
+          "+    return htmlUrl ? (parseUrlOrNull(htmlUrl)?.toString() ?? null) : null;",
+          "   } catch {",
+          "     // Pages metadata is an enhancement; resolution failures fall back to the heuristic.",
+          "     return null;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/dashboard/workflow/resolve-pages-target.test.mjs",
+        "lines": [
+          "index 2355ddb..93644a1 100644",
+          "--- a/packages/dashboard/workflow/resolve-pages-target.test.mjs",
+          "+++ b/packages/dashboard/workflow/resolve-pages-target.test.mjs",
+          "@@ -348,6 +348,18 @@ test(\"resolvePagesBaseUrl prefers a valid explicit override\", async () => {",
+          "   assert.equal(result, \"https://pages.example.com/site/\");",
+          " });",
+          " ",
+          "+test(\"resolvePagesBaseUrl re-serializes overrides so GITHUB_OUTPUT stays single-line\", async () => {",
+          "+  const result = await resolvePagesBaseUrl({",
+          "+    override: \"https://pages.example.com/site/\\ninjected_output=oops\",",
+          "+    repository: \"acme/apps\",",
+          "+    token: \"token\",",
+          "+    fetcher: () => {",
+          "+      throw new Error(\"fetch must not run when the override is valid\");",
+          "+    },",
+          "+  });",
+          "+  assert.equal(result, \"https://pages.example.com/site/injected_output=oops\");",
+          "+});",
+          "+",
+          " test(\"resolvePagesBaseUrl resolves html_url from the Pages API\", async () => {",
+          "   const requests = [];",
+          "   const result = await resolvePagesBaseUrl({"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/dist/index.js",
+        "lines": [
+          "index e82f1c8..6310f8f 100644",
+          "--- a/packages/pr-report/dist/index.js",
+          "+++ b/packages/pr-report/dist/index.js",
+          "@@ -38064,9 +38064,9 @@ async function postPrReport(outputMode, markdown) {",
+          " async function resolvePagesBaseUrl(token) {",
+          "     const override = getInput(PAGES_BASE_URL_INPUT);",
+          "     if (override) {",
+          "+        // Re-serializing through URL both validates and normalizes the value.",
+          "         try {",
+          "-            new URL(override);",
+          "-            return override;",
+          "+            return new URL(override).toString();",
+          "         }",
+          "         catch {",
+          "             warning(`Ignoring invalid pages_base_url input: ${override}`);",
+          "@@ -38083,8 +38083,7 @@ async function resolvePagesBaseUrl(token) {",
+          "         });",
+          "         const htmlUrl = data.html_url;",
+          "         if (typeof htmlUrl === \"string\" && htmlUrl) {",
+          "-            new URL(htmlUrl);",
+          "-            return htmlUrl;",
+          "+            return new URL(htmlUrl).toString();",
+          "         }",
+          "     }",
+          "     catch {"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.ts",
+        "lines": [
+          "index 7b35e3f..bcbc73d 100644",
+          "--- a/packages/pr-report/src/index.ts",
+          "+++ b/packages/pr-report/src/index.ts",
+          "@@ -137,9 +137,9 @@ async function postPrReport(",
+          " async function resolvePagesBaseUrl(token: string): Promise<string | null> {",
+          " \tconst override = core.getInput(PAGES_BASE_URL_INPUT);",
+          " \tif (override) {",
+          "+\t\t// Re-serializing through URL both validates and normalizes the value.",
+          " \t\ttry {",
+          "-\t\t\tnew URL(override);",
+          "-\t\t\treturn override;",
+          "+\t\t\treturn new URL(override).toString();",
+          " \t\t} catch {",
+          " \t\t\tcore.warning(`Ignoring invalid pages_base_url input: ${override}`);",
+          " \t\t}",
+          "@@ -156,8 +156,7 @@ async function resolvePagesBaseUrl(token: string): Promise<string | null> {",
+          " \t\t});",
+          " \t\tconst htmlUrl = (data as { html_url?: string | null }).html_url;",
+          " \t\tif (typeof htmlUrl === \"string\" && htmlUrl) {",
+          "-\t\t\tnew URL(htmlUrl);",
+          "-\t\t\treturn htmlUrl;",
+          "+\t\t\treturn new URL(htmlUrl).toString();",
+          " \t\t}",
+          " \t} catch {",
+          " \t\t// Reading Pages metadata needs pages:read; without it the report keeps"
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 87,
+    "title": "fix: load Dashboard correctly on private and Enterprise GitHub Pages",
+    "state": "open"
+  }
+}
