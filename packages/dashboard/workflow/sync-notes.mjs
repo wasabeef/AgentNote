@@ -15,6 +15,7 @@ const ENV_DEFAULT_BRANCH = "DEFAULT_BRANCH";
 const ENV_EVENT_NAME = "EVENT_NAME";
 const ENV_GITHUB_OUTPUT = "GITHUB_OUTPUT";
 const ENV_GITHUB_REPOSITORY = "GITHUB_REPOSITORY";
+const ENV_GITHUB_WORKSPACE = "GITHUB_WORKSPACE";
 const ENV_HEAD_SHA = "HEAD_SHA";
 const ENV_NOTES_DIR = "NOTES_DIR";
 const ENV_PR_HEAD_REPO = "PR_HEAD_REPO";
@@ -29,6 +30,7 @@ const PR_STATE_OPEN = "open";
 const TEXT_ENCODING = "utf-8";
 const UNKNOWN_DIFF_PATH = "(unknown)";
 const ZERO_SHA_PATTERN = /^0+$/;
+const workspace = process.env[ENV_GITHUB_WORKSPACE] || process.cwd();
 const notesDir = process.env[ENV_NOTES_DIR] || DEFAULT_DASHBOARD_NOTES_DIR;
 const eventName = process.env[ENV_EVENT_NAME] || "";
 const before = process.env[ENV_BEFORE_SHA] || "";
@@ -46,6 +48,7 @@ export const MAX_DIFF_TOTAL_LINES = 3000;
 
 function run(command, args) {
   return execFileSync(command, args, {
+    cwd: workspace,
     encoding: TEXT_ENCODING,
     stdio: ["pipe", "pipe", "pipe"],
     env: process.env,
@@ -364,10 +367,7 @@ function main() {
   mkdirSync(notesDir, { recursive: true });
 
   try {
-    execFileSync("git", ["fetch", "origin", `${AGENTNOTE_NOTES_REF}:${AGENTNOTE_NOTES_REF}`], {
-      stdio: "pipe",
-      encoding: TEXT_ENCODING,
-    });
+    run("git", ["fetch", "origin", `${AGENTNOTE_NOTES_REF}:${AGENTNOTE_NOTES_REF}`]);
   } catch {
     // A repository may not have Agent Note git notes before the first recorded commit.
   }
