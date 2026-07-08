@@ -115,6 +115,6 @@
   "pull_request": {
     "number": 85,
     "title": "fix: record Codex edits made through the unified exec tool",
-    "state": "open"
+    "state": "merged"
   }
 }
