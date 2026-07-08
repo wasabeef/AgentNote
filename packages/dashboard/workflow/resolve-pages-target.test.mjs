@@ -348,6 +348,18 @@ test("resolvePagesBaseUrl prefers a valid explicit override", async () => {
   assert.equal(result, "https://pages.example.com/site/");
 });
 
+test("resolvePagesBaseUrl re-serializes overrides so GITHUB_OUTPUT stays single-line", async () => {
+  const result = await resolvePagesBaseUrl({
+    override: "https://pages.example.com/site/\ninjected_output=oops",
+    repository: "acme/apps",
+    token: "token",
+    fetcher: () => {
+      throw new Error("fetch must not run when the override is valid");
+    },
+  });
+  assert.equal(result, "https://pages.example.com/site/injected_output=oops");
+});
+
 test("resolvePagesBaseUrl resolves html_url from the Pages API", async () => {
   const requests = [];
   const result = await resolvePagesBaseUrl({

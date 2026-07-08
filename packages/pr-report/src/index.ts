@@ -137,9 +137,9 @@ async function postPrReport(
 async function resolvePagesBaseUrl(token: string): Promise<string | null> {
 	const override = core.getInput(PAGES_BASE_URL_INPUT);
 	if (override) {
+		// Re-serializing through URL both validates and normalizes the value.
 		try {
-			new URL(override);
-			return override;
+			return new URL(override).toString();
 		} catch {
 			core.warning(`Ignoring invalid pages_base_url input: ${override}`);
 		}
@@ -156,8 +156,7 @@ async function resolvePagesBaseUrl(token: string): Promise<string | null> {
 		});
 		const htmlUrl = (data as { html_url?: string | null }).html_url;
 		if (typeof htmlUrl === "string" && htmlUrl) {
-			new URL(htmlUrl);
-			return htmlUrl;
+			return new URL(htmlUrl).toString();
 		}
 	} catch {
 		// Reading Pages metadata needs pages:read; without it the report keeps

@@ -38064,9 +38064,9 @@ async function postPrReport(outputMode, markdown) {
 async function resolvePagesBaseUrl(token) {
     const override = getInput(PAGES_BASE_URL_INPUT);
     if (override) {
+        // Re-serializing through URL both validates and normalizes the value.
         try {
-            new URL(override);
-            return override;
+            return new URL(override).toString();
         }
         catch {
             warning(`Ignoring invalid pages_base_url input: ${override}`);
@@ -38083,8 +38083,7 @@ async function resolvePagesBaseUrl(token) {
         });
         const htmlUrl = data.html_url;
         if (typeof htmlUrl === "string" && htmlUrl) {
-            new URL(htmlUrl);
-            return htmlUrl;
+            return new URL(htmlUrl).toString();
         }
     }
     catch {

@@ -297,6 +297,15 @@ Dashboard Mode uses the same action with `dashboard: true`:
     prompt_detail: compact
 ```
 
+The action resolves the published GitHub Pages URL automatically, including private and Enterprise Pages sites served from `*.pages.github.io` domains. Set `pages_base_url` only when the resolved URL needs an explicit override, for example behind a custom proxy:
+
+```yaml
+- uses: wasabeef/AgentNote@v1
+  with:
+    dashboard: true
+    pages_base_url: https://pages.example.com/apps/
+```
+
 ### Dashboard Data
 
 For most repositories, you do not need to hand-write the workflow. Generate it with `init`:

@@ -75,10 +75,11 @@ export async function resolvePagesBaseUrl({
   apiUrl = process.env[ENV_GITHUB_API_URL] || DEFAULT_GITHUB_API_URL,
   fetcher = fetch,
 } = {}) {
-  if (override) {
-    if (parseUrlOrNull(override)) return override;
-    console.log(`Ignoring invalid pages_base_url override: ${override}`);
-  }
+  // Re-serializing through URL both validates the value and strips characters
+  // that would corrupt the GITHUB_OUTPUT file, such as newlines.
+  const parsedOverride = override ? parseUrlOrNull(override) : null;
+  if (parsedOverride) return parsedOverride.toString();
+  if (override) console.log(`Ignoring invalid pages_base_url override: ${override}`);
 
   if (!repository || !token) return null;
 
@@ -93,7 +94,7 @@ export async function resolvePagesBaseUrl({
     if (!response.ok) return null;
     const pages = await response.json();
     const htmlUrl = typeof pages?.html_url === "string" ? pages.html_url : "";
-    return htmlUrl && parseUrlOrNull(htmlUrl) ? htmlUrl : null;
+    return htmlUrl ? (parseUrlOrNull(htmlUrl)?.toString() ?? null) : null;
   } catch {
     // Pages metadata is an enhancement; resolution failures fall back to the heuristic.
     return null;
