@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -9,8 +11,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { mergeDashboardNotes, pruneDashboardNotes } from "./persist-notes.mjs";
 import { restoreDashboardNotes } from "./restore-notes.mjs";
 import {
@@ -181,6 +184,106 @@ test("restoreDashboardNotes replaces local notes with the persisted gh-pages not
     assert.deepEqual(readdirSync(localNotesDir).sort(), ["pr47.json", "pr48.json"]);
     assert.equal(readNoteShortSha(join(localNotesDir, "pr47.json")), "pr47");
     assert.equal(readNoteShortSha(join(localNotesDir, "pr48.json")), "pr48");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("Dashboard note workflows run git in GITHUB_WORKSPACE from an external action path", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "agentnote-dashboard-external-action-test-"));
+  const workspaceDir = join(tempDir, "workspace");
+  const actionDir = join(tempDir, "action-package");
+  const binDir = join(tempDir, "bin");
+  const remoteDir = join(tempDir, "remote.git");
+  const notesDir = join(workspaceDir, ".agentnote-dashboard-notes");
+  const fakeGhPath = join(binDir, "gh");
+  const persistScript = fileURLToPath(new URL("./persist-notes.mjs", import.meta.url));
+  const restoreScript = fileURLToPath(new URL("./restore-notes.mjs", import.meta.url));
+  const syncScript = fileURLToPath(new URL("./sync-notes.mjs", import.meta.url));
+
+  try {
+    mkdirSync(workspaceDir, { recursive: true });
+    mkdirSync(actionDir, { recursive: true });
+    mkdirSync(binDir, { recursive: true });
+    mkdirSync(notesDir, { recursive: true });
+    writeFileSync(fakeGhPath, "#!/bin/sh\nprintf '[]\\n'\n");
+    chmodSync(fakeGhPath, 0o755);
+    execFileSync("git", ["init", "--bare", remoteDir]);
+    execFileSync("git", ["init"], { cwd: workspaceDir });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: workspaceDir });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: workspaceDir });
+    execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: workspaceDir });
+    execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: workspaceDir });
+
+    const sha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspaceDir,
+      encoding: "utf-8",
+    }).trim();
+    const shortSha = sha.slice(0, 7);
+    const dashboardNotePath = join(notesDir, `${shortSha}.json`);
+    const persistedNotePath = `gh-pages:dashboard/notes/${shortSha}.json`;
+    const baseEnv = {
+      ...process.env,
+      GITHUB_WORKSPACE: workspaceDir,
+      NOTES_DIR: notesDir,
+      PATH: `${binDir}${delimiter}${process.env.PATH || ""}`,
+    };
+    const runWorkflow = (script, env = {}) => {
+      execFileSync(process.execPath, [script], {
+        cwd: actionDir,
+        env: { ...baseEnv, ...env },
+        stdio: "pipe",
+      });
+    };
+    const writeAgentNote = (model) => {
+      const note = JSON.stringify({
+        v: 1,
+        commit: { sha, short_sha: shortSha },
+        attribution: { ai_ratio: 100, method: "file" },
+        files: [],
+        interactions: [],
+        model,
+      });
+      execFileSync("git", ["notes", "--ref=agentnote", "add", "-f", "-m", note, "HEAD"], {
+        cwd: workspaceDir,
+        stdio: "pipe",
+      });
+      execFileSync("git", ["push", "--force", "--no-verify", "origin", "refs/notes/agentnote"], {
+        cwd: workspaceDir,
+        stdio: "pipe",
+      });
+    };
+    const runSync = () => {
+      runWorkflow(syncScript, {
+        BEFORE_SHA: "0".repeat(40),
+        DEFAULT_BRANCH: "main",
+        EVENT_NAME: "push",
+        GITHUB_REPOSITORY: "example/repository",
+        HEAD_SHA: sha,
+        REF_NAME: "main",
+      });
+    };
+    const readPersistedModel = () => {
+      const note = execFileSync("git", ["--git-dir", remoteDir, "show", persistedNotePath], {
+        encoding: "utf-8",
+      });
+      return JSON.parse(note).model;
+    };
+
+    writeAgentNote("first");
+    runSync();
+    assert.equal(JSON.parse(readFileSync(dashboardNotePath, "utf-8")).model, "first");
+    runWorkflow(persistScript, { EVENT_NAME: "push" });
+    assert.equal(readPersistedModel(), "first");
+
+    rmSync(notesDir, { recursive: true, force: true });
+    runWorkflow(restoreScript);
+    assert.equal(JSON.parse(readFileSync(dashboardNotePath, "utf-8")).model, "first");
+
+    writeAgentNote("updated");
+    runSync();
+    runWorkflow(persistScript, { EVENT_NAME: "push" });
+    assert.equal(readPersistedModel(), "updated");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }

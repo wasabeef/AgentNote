@@ -6,12 +6,14 @@ import { pathToFileURL } from "node:url";
 
 const DASHBOARD_DIR_NAME = "dashboard";
 const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
+const ENV_GITHUB_WORKSPACE = "GITHUB_WORKSPACE";
 const ENV_NOTES_DIR = "NOTES_DIR";
 const FETCH_HEAD_REF = "FETCH_HEAD";
 const GITHUB_PAGES_BRANCH = "gh-pages";
 const NOTES_DIR_NAME = "notes";
 const RESTORE_TEMP_DIR_PREFIX = "agentnote-dashboard-restore-";
 const TEXT_ENCODING = "utf-8";
+const workspace = process.env[ENV_GITHUB_WORKSPACE] || process.cwd();
 const notesDir = process.env[ENV_NOTES_DIR] || DEFAULT_DASHBOARD_NOTES_DIR;
 
 function copyDirectoryContents(sourceDir, targetDir) {
@@ -41,7 +43,7 @@ export function restoreDashboardNotes(sourceNotesDir, targetNotesDir) {
 
 function git(args, options = {}) {
   return execFileSync("git", args, {
-    cwd: options.cwd,
+    cwd: options.cwd ?? workspace,
     stdio: options.stdio || "pipe",
     encoding: TEXT_ENCODING,
   });
