@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-09T04:38:13.012Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "マージした。",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "v1.0.7のタグ機ってリリースして",
+      "response": null,
+      "files_touched": [
+        "packages/cli/package.json"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "package-lock.json",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/package.json",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 50,
+    "method": "line",
+    "lines": {
+      "ai_added": 1,
+      "total_added": 2,
+      "deleted": 2
+    }
+  }
+}
