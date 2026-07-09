@@ -8,15 +8,22 @@ export const PUBLISH_MODE_STANDALONE = "standalone";
 
 const ACTIONS_FALSE = "false";
 const ACTIONS_TRUE = "true";
+const DASHBOARD_SUBDIRECTORY = "dashboard";
 const DEFAULT_DASHBOARD_NOTES_DIR = ".agentnote-dashboard-notes";
+const DEFAULT_GITHUB_API_URL = "https://api.github.com";
 const DEFAULT_PAGES_ARTIFACT_PATH = "_site";
 const DEFAULT_STANDALONE_PAGES_DIR = ".agentnote-pages";
+const ENV_GH_TOKEN = "GH_TOKEN";
+const ENV_GITHUB_API_URL = "GITHUB_API_URL";
 const ENV_GITHUB_JOB = "GITHUB_JOB";
 const ENV_GITHUB_OUTPUT = "GITHUB_OUTPUT";
 const ENV_GITHUB_REPOSITORY = "GITHUB_REPOSITORY";
 const ENV_GITHUB_WORKFLOW_REF = "GITHUB_WORKFLOW_REF";
 const ENV_GITHUB_WORKSPACE = "GITHUB_WORKSPACE";
+const ENV_PAGES_BASE_URL = "PAGES_BASE_URL";
+const GITHUB_PAGES_HOST_SUFFIX = ".github.io";
 const GITHUB_WORKFLOWS_DIR = ".github/workflows/";
+const PAGES_API_TIMEOUT_MS = 10_000;
 const REASON_DYNAMIC_PATH = "dynamic-path";
 const REASON_OTHER_JOB = "other-job";
 const REASON_OTHER_WORKFLOW = "other-workflow";
@@ -43,6 +50,78 @@ function cleanScalar(value) {
 
 function leadingSpaces(line) {
   return line.match(/^\s*/)?.[0].length ?? 0;
+}
+
+function parseUrlOrNull(value) {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the real GitHub Pages base URL for the current repository.
+ *
+ * Private and Enterprise Pages sites are served from obfuscated domains at the
+ * root path, so the URL cannot be derived from the repository name alone. The
+ * explicit override wins, then the Pages API, and callers fall back to the
+ * repository-name heuristic when neither is available.
+ */
+export async function resolvePagesBaseUrl({
+  override = process.env[ENV_PAGES_BASE_URL] || "",
+  repository = process.env[ENV_GITHUB_REPOSITORY] || "",
+  token = process.env[ENV_GH_TOKEN] || "",
+  apiUrl = process.env[ENV_GITHUB_API_URL] || DEFAULT_GITHUB_API_URL,
+  fetcher = fetch,
+} = {}) {
+  // Re-serializing through URL both validates the value and strips characters
+  // that would corrupt the GITHUB_OUTPUT file, such as newlines.
+  const parsedOverride = override ? parseUrlOrNull(override) : null;
+  if (parsedOverride) return parsedOverride.toString();
+  if (override) console.log(`Ignoring invalid pages_base_url override: ${override}`);
+
+  if (!repository || !token) return null;
+
+  try {
+    const response = await fetcher(`${apiUrl}/repos/${repository}/pages`, {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+      },
+      signal: AbortSignal.timeout(PAGES_API_TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+    const pages = await response.json();
+    const htmlUrl = typeof pages?.html_url === "string" ? pages.html_url : "";
+    return htmlUrl ? (parseUrlOrNull(htmlUrl)?.toString() ?? null) : null;
+  } catch {
+    // Pages metadata is an enhancement; resolution failures fall back to the heuristic.
+    return null;
+  }
+}
+
+/**
+ * Derive the Astro site origin and dashboard base path.
+ *
+ * A resolved Pages URL takes precedence; otherwise the canonical
+ * `https://<owner>.github.io/<repo>/` layout is assumed.
+ */
+export function derivePagesPaths({ pagesBaseUrl = "", repository = "" } = {}) {
+  const parsed = pagesBaseUrl ? parseUrlOrNull(pagesBaseUrl) : null;
+  if (parsed) {
+    const basePath = parsed.pathname.replace(/\/+$/, "");
+    return { site: parsed.origin, base: `${basePath}/${DASHBOARD_SUBDIRECTORY}` };
+  }
+
+  const [owner = "", name = ""] = repository.split("/");
+  return {
+    site: `https://${owner}${GITHUB_PAGES_HOST_SUFFIX}`,
+    base:
+      name === `${owner}${GITHUB_PAGES_HOST_SUFFIX}`
+        ? `/${DASHBOARD_SUBDIRECTORY}`
+        : `/${name}/${DASHBOARD_SUBDIRECTORY}`,
+  };
 }
 
 /**
@@ -301,7 +380,7 @@ function readOtherWorkflowTexts(currentWorkflowPath) {
     .filter(Boolean);
 }
 
-function main() {
+async function main() {
   const workflowPath = resolveWorkflowPath();
   const workflowText = workflowPath && existsSync(workflowPath)
     ? readFileSync(workflowPath, TEXT_ENCODING)
@@ -311,6 +390,14 @@ function main() {
     otherWorkflowTexts: readOtherWorkflowTexts(workflowPath),
     workspaceDir: workspace,
   });
+  const pagesBaseUrl = await resolvePagesBaseUrl();
+  if (pagesBaseUrl) {
+    console.log(`Resolved GitHub Pages base URL: ${pagesBaseUrl}`);
+  } else {
+    console.log(
+      "GitHub Pages base URL is not resolvable; falling back to the repository-name layout.",
+    );
+  }
 
   if (target.publishMode === PUBLISH_MODE_INTEGRATED) {
     console.log(`Detected existing Pages artifact path: ${target.pagesDir}`);
@@ -330,8 +417,9 @@ function main() {
   setOutput("internal_upload", target.internalUpload);
   setOutput("can_build", target.canBuild);
   setOutput("skip_reason", target.reason);
+  setOutput("pages_base_url", pagesBaseUrl ?? "");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  await main();
 }

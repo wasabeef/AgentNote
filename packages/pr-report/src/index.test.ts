@@ -172,6 +172,31 @@ describe("inferDashboardUrl", () => {
 	it("returns null for non-GitHub remotes", () => {
 		assert.equal(inferDashboardUrl("https://gitlab.com/example/project"), null);
 	});
+
+	it("prefers a resolved Pages base URL served at the domain root", () => {
+		assert.equal(
+			inferDashboardUrl(
+				"https://github.com/acme/apps",
+				48,
+				"https://improved-guacamole-abc123.pages.github.io/",
+			),
+			"https://improved-guacamole-abc123.pages.github.io/dashboard/?pr=48",
+		);
+	});
+
+	it("prefers a resolved Pages base URL with a project path", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/acme/apps", null, "https://acme.github.io/apps/"),
+			"https://acme.github.io/apps/dashboard/",
+		);
+	});
+
+	it("falls back to the repository heuristic for an invalid Pages base URL", () => {
+		assert.equal(
+			inferDashboardUrl("https://github.com/wasabeef/AgentNote", null, "not a url"),
+			"https://wasabeef.github.io/AgentNote/dashboard/",
+		);
+	});
 });
 
 describe("hasDeploymentBranchProtection", () => {

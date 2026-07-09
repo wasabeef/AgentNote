@@ -85,16 +85,34 @@ export function shouldRetryNotesFetch(report: {
 	return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
 
+function parseUrlOrNull(value: string): URL | null {
+	try {
+		return new URL(value);
+	} catch {
+		return null;
+	}
+}
+
 /**
  * Infer the public Dashboard URL from a GitHub remote URL.
  *
- * The PR number is appended only for PR reports so the general dashboard route
- * can remain a team-level entry point without forced `?pr=` redirects.
+ * A resolved Pages base URL takes precedence because private and Enterprise
+ * Pages sites are served from obfuscated domains that cannot be derived from
+ * the repository name. The PR number is appended only for PR reports so the
+ * general dashboard route can remain a team-level entry point without forced
+ * `?pr=` redirects.
  */
 export function inferDashboardUrl(
 	repoUrl: string | null,
 	prNumber?: number | string | null,
+	pagesBaseUrl?: string | null,
 ): string | null {
+	const parsedBase = pagesBaseUrl ? parseUrlOrNull(pagesBaseUrl) : null;
+	if (parsedBase) {
+		const basePath = parsedBase.pathname.replace(/\/+$/, "");
+		return appendPrNumber(`${parsedBase.origin}${basePath}/dashboard/`, prNumber);
+	}
+
 	if (!repoUrl) return null;
 
 	const normalized = repoUrl.replace(/\.git$/, "");

@@ -36324,13 +36324,29 @@ function upsertDescription(existingBody, markdown) {
 function shouldRetryNotesFetch(report) {
     return (report.total_commits ?? 0) > 0 && (report.tracked_commits ?? 0) === 0;
 }
+function parseUrlOrNull(value) {
+    try {
+        return new URL(value);
+    }
+    catch {
+        return null;
+    }
+}
 /**
  * Infer the public Dashboard URL from a GitHub remote URL.
  *
- * The PR number is appended only for PR reports so the general dashboard route
- * can remain a team-level entry point without forced `?pr=` redirects.
+ * A resolved Pages base URL takes precedence because private and Enterprise
+ * Pages sites are served from obfuscated domains that cannot be derived from
+ * the repository name. The PR number is appended only for PR reports so the
+ * general dashboard route can remain a team-level entry point without forced
+ * `?pr=` redirects.
  */
-function inferDashboardUrl(repoUrl, prNumber) {
+function inferDashboardUrl(repoUrl, prNumber, pagesBaseUrl) {
+    const parsedBase = pagesBaseUrl ? parseUrlOrNull(pagesBaseUrl) : null;
+    if (parsedBase) {
+        const basePath = parsedBase.pathname.replace(/\/+$/, "");
+        return appendPrNumber(`${parsedBase.origin}${basePath}/dashboard/`, prNumber);
+    }
     if (!repoUrl)
         return null;
     const normalized = repoUrl.replace(/\.git$/, "");
@@ -36439,8 +36455,10 @@ const CLI_JS_HOOK_COMMAND = "cli.js hook";
 const constants_NOTES_REF = "agentnote";
 /** Fully qualified git-notes ref name used for push/fetch operations. */
 const NOTES_REF_FULL = `refs/notes/${constants_NOTES_REF}`;
-/** Fetch refspec that syncs Agent Note notes into the local notes ref. */
-const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}:${NOTES_REF_FULL}`));
+/** Legacy exact refspec that fails while the remote notes ref does not exist. */
+const LEGACY_NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}:${NOTES_REF_FULL}`));
+/** Pattern refspec that tolerates a missing remote notes ref. */
+const NOTES_FETCH_REFSPEC = (/* unused pure expression or super */ null && (`+${NOTES_REF_FULL}*:${NOTES_REF_FULL}*`));
 // ─── Directory names ───
 /** Directory under `.git/` where local Agent Note session state is stored. */
 const AGENTNOTE_DIR = "agentnote";
@@ -37522,7 +37540,7 @@ async function collectReport(base, headRef = "HEAD", opts = {}) {
     const repoRoot = await git(["rev-parse", "--show-toplevel"]);
     const hasDashboardWorkflow = (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(repoRoot, ".github", "workflows", "agentnote-dashboard.yml"));
     const dashboardUrl = hasDashboardWorkflow
-        ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber)
+        ? inferDashboardUrl(repoUrl, opts.dashboardPrNumber, opts.pagesBaseUrl)
         : null;
     return {
         base,
@@ -37951,6 +37969,8 @@ const DEFAULT_BASE_BRANCH = "main";
 const EVENT_PULL_REQUEST = "pull_request";
 const GITHUB_PAGES_ENVIRONMENT = "github-pages";
 const GITHUB_TOKEN_ENV = "GITHUB_TOKEN";
+const PAGES_API_TIMEOUT_MS = 10_000;
+const PAGES_BASE_URL_INPUT = "pages_base_url";
 const JSON_INDENT_SPACES = 2;
 const MAX_NOTES_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 1000;
@@ -38036,6 +38056,47 @@ async function postPrReport(outputMode, markdown) {
     info("Agent Note report posted as PR comment.");
 }
 /**
+ * Resolve the real GitHub Pages base URL for Dashboard links.
+ *
+ * Private and Enterprise Pages sites are served from obfuscated domains at the
+ * root path. The explicit input wins, then the Pages API, and callers fall
+ * back to the repository-name heuristic when neither is available.
+ */
+async function resolvePagesBaseUrl(token) {
+    const override = getInput(PAGES_BASE_URL_INPUT);
+    if (override) {
+        // Re-serializing through URL both validates and normalizes the value.
+        try {
+            return new URL(override).toString();
+        }
+        catch {
+            warning(`Ignoring invalid pages_base_url input: ${override}`);
+        }
+    }
+    if (!token)
+        return null;
+    try {
+        const octokit = getOctokit(token);
+        const { owner, repo } = github_context.repo;
+        const { data } = await octokit.request("GET /repos/{owner}/{repo}/pages", {
+            owner,
+            repo,
+            request: {
+                signal: AbortSignal.timeout(PAGES_API_TIMEOUT_MS),
+            },
+        });
+        const htmlUrl = data.html_url;
+        if (typeof htmlUrl === "string" && htmlUrl) {
+            return new URL(htmlUrl).toString();
+        }
+    }
+    catch {
+        // Reading Pages metadata needs pages:read; without it the report keeps
+        // the repository-name heuristic instead of failing.
+    }
+    return null;
+}
+/**
  * Explain delayed Dashboard previews caused by Pages environment protection.
  *
  * The PR report only shows this explanation when the Dashboard URL exists and
@@ -38082,12 +38143,14 @@ async function run() {
         const prOutputMode = resolvePrOutputMode(getInput("pr_output"));
         const promptDetail = parsePromptDetail(getInput("prompt_detail"));
         const token = process.env[GITHUB_TOKEN_ENV] || "";
+        const pagesBaseUrl = await resolvePagesBaseUrl(token);
         let report = null;
         for (let attempt = 1; attempt <= MAX_NOTES_FETCH_ATTEMPTS; attempt++) {
             // Fetch/retry covers the race between code push and refs/notes/agentnote push.
             fetchAgentnoteNotes();
             report = await collectReport(base, headSha, {
                 dashboardPrNumber: prNumber,
+                pagesBaseUrl,
             });
             if (!report) {
                 info("No agent-note data found for this PR.");

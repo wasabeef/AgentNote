@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import test from "node:test";
 import {
+  derivePagesPaths,
   extractJobBlock,
   hasPagesPublishStep,
   parseUploadPagesArtifactPath,
+  resolvePagesBaseUrl,
   resolvePagesTarget,
   resolveWorkflowPath,
 } from "./resolve-pages-target.mjs";
@@ -289,6 +291,142 @@ test("resolveWorkflowPath resolves only workflow files in the caller repository"
       workflowReference: "wasabeef/AgentNote/scripts/docs.yml@refs/heads/main",
       workspaceDir: "/repo",
     }),
+    null,
+  );
+});
+
+test("derivePagesPaths uses a Pages URL served at the domain root", () => {
+  assert.deepEqual(
+    derivePagesPaths({
+      pagesBaseUrl: "https://improved-guacamole-abc123.pages.github.io/",
+      repository: "acme/apps",
+    }),
+    {
+      site: "https://improved-guacamole-abc123.pages.github.io",
+      base: "/dashboard",
+    },
+  );
+});
+
+test("derivePagesPaths uses a Pages URL with a project path", () => {
+  assert.deepEqual(
+    derivePagesPaths({
+      pagesBaseUrl: "https://acme.github.io/apps/",
+      repository: "acme/apps",
+    }),
+    { site: "https://acme.github.io", base: "/apps/dashboard" },
+  );
+});
+
+test("derivePagesPaths falls back to the repository layout without a Pages URL", () => {
+  assert.deepEqual(derivePagesPaths({ repository: "wasabeef/AgentNote" }), {
+    site: "https://wasabeef.github.io",
+    base: "/AgentNote/dashboard",
+  });
+  assert.deepEqual(derivePagesPaths({ repository: "wasabeef/wasabeef.github.io" }), {
+    site: "https://wasabeef.github.io",
+    base: "/dashboard",
+  });
+});
+
+test("derivePagesPaths falls back when the Pages URL is invalid", () => {
+  assert.deepEqual(
+    derivePagesPaths({ pagesBaseUrl: "not a url", repository: "acme/apps" }),
+    { site: "https://acme.github.io", base: "/apps/dashboard" },
+  );
+});
+
+test("resolvePagesBaseUrl prefers a valid explicit override", async () => {
+  const result = await resolvePagesBaseUrl({
+    override: "https://pages.example.com/site/",
+    repository: "acme/apps",
+    token: "token",
+    fetcher: () => {
+      throw new Error("fetch must not run when the override is valid");
+    },
+  });
+  assert.equal(result, "https://pages.example.com/site/");
+});
+
+test("resolvePagesBaseUrl re-serializes overrides so GITHUB_OUTPUT stays single-line", async () => {
+  const result = await resolvePagesBaseUrl({
+    override: "https://pages.example.com/site/\ninjected_output=oops",
+    repository: "acme/apps",
+    token: "token",
+    fetcher: () => {
+      throw new Error("fetch must not run when the override is valid");
+    },
+  });
+  assert.equal(result, "https://pages.example.com/site/injected_output=oops");
+});
+
+test("resolvePagesBaseUrl resolves html_url from the Pages API", async () => {
+  const requests = [];
+  const result = await resolvePagesBaseUrl({
+    override: "",
+    repository: "acme/apps",
+    token: "token",
+    apiUrl: "https://api.example.com",
+    fetcher: async (url, options) => {
+      requests.push({ url, authorization: options.headers.authorization });
+      return {
+        ok: true,
+        json: async () => ({ html_url: "https://improved-guacamole-abc123.pages.github.io/" }),
+      };
+    },
+  });
+  assert.equal(result, "https://improved-guacamole-abc123.pages.github.io/");
+  assert.deepEqual(requests, [
+    { url: "https://api.example.com/repos/acme/apps/pages", authorization: "Bearer token" },
+  ]);
+});
+
+test("resolvePagesBaseUrl ignores an invalid override and falls back to the API", async () => {
+  const result = await resolvePagesBaseUrl({
+    override: "not a url",
+    repository: "acme/apps",
+    token: "token",
+    fetcher: async () => ({
+      ok: true,
+      json: async () => ({ html_url: "https://acme.github.io/apps/" }),
+    }),
+  });
+  assert.equal(result, "https://acme.github.io/apps/");
+});
+
+test("resolvePagesBaseUrl returns null when the API is unavailable", async () => {
+  assert.equal(
+    await resolvePagesBaseUrl({
+      override: "",
+      repository: "acme/apps",
+      token: "token",
+      fetcher: async () => ({ ok: false, json: async () => ({}) }),
+    }),
+    null,
+  );
+  assert.equal(
+    await resolvePagesBaseUrl({
+      override: "",
+      repository: "acme/apps",
+      token: "token",
+      fetcher: async () => {
+        throw new Error("network unreachable");
+      },
+    }),
+    null,
+  );
+});
+
+test("resolvePagesBaseUrl returns null without a repository or token", async () => {
+  const fetcher = () => {
+    throw new Error("fetch must not run without credentials");
+  };
+  assert.equal(
+    await resolvePagesBaseUrl({ override: "", repository: "", token: "token", fetcher }),
+    null,
+  );
+  assert.equal(
+    await resolvePagesBaseUrl({ override: "", repository: "acme/apps", token: "", fetcher }),
     null,
   );
 });
