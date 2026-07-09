@@ -1,0 +1,140 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-09T04:38:13.012Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "マージした。",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "v1.0.7のタグ機ってリリースして",
+      "response": null,
+      "files_touched": [
+        "packages/cli/package.json"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "package-lock.json",
+      "by_ai": false
+    },
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/package.json",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 50,
+    "method": "line",
+    "lines": {
+      "ai_added": 1,
+      "total_added": 2,
+      "deleted": 2
+    }
+  },
+  "commit": {
+    "sha": "d6c7537c8f1e01984967741443a0984ae88dfe01",
+    "short_sha": "d6c7537",
+    "message": "chore: bump version to 1.0.7",
+    "date": "2026-07-09T13:38:12+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "package-lock.json",
+        "lines": [
+          "index 7dffd19..ffa2fee 100644",
+          "--- a/package-lock.json",
+          "+++ b/package-lock.json",
+          "@@ -2066,7 +2066,7 @@",
+          "     },",
+          "     \"packages/cli\": {",
+          "       \"name\": \"agent-note\",",
+          "-      \"version\": \"1.0.6\",",
+          "+      \"version\": \"1.0.7\",",
+          "       \"license\": \"MIT\",",
+          "       \"bin\": {",
+          "         \"agent-note\": \"dist/cli.js\""
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 86b1ec3..a857a47 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -7201,7 +7201,7 @@ function truncateLines(text, maxLen) {",
+          " import { existsSync as existsSync15 } from \"node:fs\";",
+          " import { readFile as readFile13 } from \"node:fs/promises\";",
+          " import { join as join16 } from \"node:path\";",
+          "-var VERSION = \"1.0.6\";",
+          "+var VERSION = \"1.0.7\";",
+          " var CAPABILITY_LABELS = {",
+          "   edits: \"edits\",",
+          "   prompt: \"prompt\",",
+          "@@ -7721,7 +7721,7 @@ function printUsageAndExit() {",
+          " }",
+          " ",
+          " // src/cli.ts",
+          "-var VERSION2 = \"1.0.6\";",
+          "+var VERSION2 = \"1.0.7\";",
+          " var HELP = `",
+          " agent-note v${VERSION2} \\u2014 remember why your code changed",
+          " "
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/package.json",
+        "lines": [
+          "index 613329d..58bb1fe 100644",
+          "--- a/packages/cli/package.json",
+          "+++ b/packages/cli/package.json",
+          "@@ -1,6 +1,6 @@",
+          " {",
+          "   \"name\": \"agent-note\",",
+          "-  \"version\": \"1.0.6\",",
+          "+  \"version\": \"1.0.7\",",
+          "   \"description\": \"Remember why your code changed. Link AI agent sessions to git commits.\",",
+          "   \"author\": \"Daichi Furiya (wasabeef)\",",
+          "   \"type\": \"module\","
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  }
+}
