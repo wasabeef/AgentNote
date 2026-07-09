@@ -115,6 +115,6 @@
   "pull_request": {
     "number": 87,
     "title": "fix: load Dashboard correctly on private and Enterprise GitHub Pages",
-    "state": "open"
+    "state": "merged"
   }
 }
