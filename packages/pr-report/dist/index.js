@@ -29018,7 +29018,7 @@ function utils_toCommandValue(input) {
  * @returns The command properties to send with the actual annotation command
  * See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
  */
-function utils_toCommandProperties(annotationProperties) {
+function toCommandProperties(annotationProperties) {
     if (!Object.keys(annotationProperties).length) {
         return {};
     }
@@ -31829,7 +31829,7 @@ function core_debug(message) {
  * @param properties optional properties to add to the annotation.
  */
 function error(message, properties = {}) {
-    command_issueCommand('error', utils_toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    command_issueCommand('error', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
  * Adds a warning issue
@@ -31837,7 +31837,7 @@ function error(message, properties = {}) {
  * @param properties optional properties to add to the annotation.
  */
 function warning(message, properties = {}) {
-    command_issueCommand('warning', utils_toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    command_issueCommand('warning', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
  * Adds a notice issue
@@ -31845,7 +31845,7 @@ function warning(message, properties = {}) {
  * @param properties optional properties to add to the annotation.
  */
 function notice(message, properties = {}) {
-    issueCommand('notice', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    command_issueCommand('notice', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
  * Writes info to log with console.log.
@@ -36377,6 +36377,20 @@ function appendPrNumber(dashboardUrl, prNumber) {
     return url.toString();
 }
 /**
+ * Build the workflow notice for a PR whose commits have no Agent Note data.
+ *
+ * This is the detection line for silently broken git hooks. It stays at
+ * notice level and returns null for tracked or empty PRs because human-only
+ * pull requests legitimately have no tracked data.
+ */
+function buildMissingNotesNotice(report) {
+    if (!shouldRetryNotesFetch(report))
+        return null;
+    return ("Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, " +
+        "the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' " +
+        "to repair the git hooks.");
+}
+/**
  * Detect whether the GitHub Pages environment restricts deploy branches.
  *
  * When protection is enabled, PR previews may wait for approval or merge, so
@@ -38165,6 +38179,10 @@ async function run() {
         if (!report) {
             info("No agent-note data found for this PR.");
             return;
+        }
+        const missingNotesNotice = buildMissingNotesNotice(report);
+        if (missingNotesNotice) {
+            notice(missingNotesNotice);
         }
         report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);
         const json = JSON.stringify(report, null, JSON_INDENT_SPACES);

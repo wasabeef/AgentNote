@@ -98,6 +98,7 @@ Gemini-specific event handling:
 - **`pre-push`**: Auto-pushes `refs/notes/agentnote` to remote. Uses `AGENTNOTE_PUSHING` recursion guard.
 
 Existing hooks are backed up and chained. Compatible with husky/lefthook.
+The repo-local CLI shim resolves the repository's current install at runtime (`node_modules/.bin` → PATH → init-time paths as last resort), and hook scripts treat a non-zero shim exit as "CLI could not start" — they fall through to the next resolver and emit a one-line stderr warning when nothing can run the CLI, while always exiting zero so commits and pushes are never blocked.
 Git worktrees are supported by keeping session buffers in each worktree's own git dir while sharing the repo-local CLI shim from the common git dir. This must work for bare and non-bare repositories, arbitrary worktree directory layouts, and agent-managed worktree commits after init from either the main checkout or a linked worktree. Claude Agent View is one example, but the worktree behavior must stay agent-agnostic for Codex, Cursor, Gemini, and future adapters.
 
 ### Core modules

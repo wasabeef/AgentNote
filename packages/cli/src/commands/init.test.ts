@@ -412,8 +412,22 @@ describe("agentnote init", () => {
 
     const shim = readFileSync(shimPath, "utf-8");
     assert.ok(shim.startsWith("#!/bin/sh"), "shim should be executable shell script");
-    assert.ok(shim.includes(process.execPath), "shim should pin the current node binary");
-    assert.ok(shim.includes("dist/cli.js"), "shim should pin the current CLI path");
+    assert.ok(
+      shim.includes('"$REPO_ROOT/node_modules/.bin/agent-note"'),
+      "shim should prefer the repository's current CLI install",
+    );
+    assert.ok(
+      shim.includes("command -v agent-note"),
+      "shim should fall back to a PATH-installed CLI",
+    );
+    assert.ok(
+      shim.includes(process.execPath),
+      "shim should keep the init-time node binary as the last resort",
+    );
+    assert.ok(
+      shim.includes("dist/cli.js"),
+      "shim should keep the init-time CLI path as the last resort",
+    );
 
     const postCommitHook = readFileSync(join(testDir, ".git", "hooks", "post-commit"), "utf-8");
     assert.ok(
@@ -436,6 +450,220 @@ describe("agentnote init", () => {
       !postCommitHook.includes("ENV_CODEX_THREAD_ID"),
       "post-commit should not leave TypeScript constant names in shell output",
     );
+  });
+
+  it("records commits through the fallback chain when the shim is broken", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-broken-shim-record-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+      // Reproduce the incident: the shim file survives but its baked init-time
+      // paths are gone, so it is executable yet always fails.
+      const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
+      writeFileSync(shimPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+
+      const localBinDir = join(dir, "node_modules", ".bin");
+      mkdirSync(localBinDir, { recursive: true });
+      writeFileSync(
+        join(localBinDir, "agent-note"),
+        `#!/bin/sh\nexec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"\n`,
+        { mode: 0o755 },
+      );
+
+      const sessionId = "aaaaaaaa-bbbb-4ccc-8ddd-ffffffffffff";
+      const runClaudeHook = (payload: Record<string, unknown>) => {
+        execFileSync(process.execPath, [cliPath, "hook", "--agent", "claude"], {
+          cwd: dir,
+          input: JSON.stringify(payload),
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+        });
+      };
+
+      runClaudeHook({ hook_event_name: "SessionStart", session_id: sessionId });
+      runClaudeHook({
+        hook_event_name: "UserPromptSubmit",
+        session_id: sessionId,
+        prompt: "Survive a broken shim.",
+      });
+      const filePath = join(dir, "broken-shim.txt");
+      runClaudeHook({
+        hook_event_name: "PreToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-broken-shim",
+        tool_input: { file_path: filePath },
+      });
+      writeFileSync(filePath, "self-healing hooks\n");
+      runClaudeHook({
+        hook_event_name: "PostToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-broken-shim",
+        tool_input: { file_path: filePath },
+      });
+
+      execSync("git add broken-shim.txt", { cwd: dir });
+      execSync("git commit -m 'feat: broken shim fallback'", {
+        cwd: dir,
+        encoding: "utf-8",
+        env: withoutCodexThreadEnv(),
+      });
+
+      const note = JSON.parse(
+        execSync("git notes --ref=agentnote show HEAD", { cwd: dir, encoding: "utf-8" }),
+      );
+      assert.equal(note.session_id, sessionId);
+      assert.deepEqual(note.interactions[0].files_touched, ["broken-shim.txt"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("pushes notes through the fallback chain when the shim is broken", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-broken-shim-push-"));
+    const remoteDir = mkdtempSync(join(tmpdir(), "agentnote-broken-shim-remote-"));
+    try {
+      execSync("git init --bare", { cwd: remoteDir });
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync(`git remote add origin ${remoteDir}`, { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+      const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
+      writeFileSync(shimPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+
+      const localBinDir = join(dir, "node_modules", ".bin");
+      mkdirSync(localBinDir, { recursive: true });
+      writeFileSync(
+        join(localBinDir, "agent-note"),
+        `#!/bin/sh\nexec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"\n`,
+        { mode: 0o755 },
+      );
+
+      execSync("git notes --ref=agentnote add -m '{\"v\":1}' HEAD", { cwd: dir });
+      execSync("git push -u origin HEAD", { cwd: dir, encoding: "utf-8" });
+
+      const remoteNotesRef = execSync("git rev-parse --verify refs/notes/agentnote", {
+        cwd: remoteDir,
+        encoding: "utf-8",
+      }).trim();
+      assert.ok(remoteNotesRef.length > 0, "notes should push through the fallback chain");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(remoteDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on push when no resolver can run the CLI and notes exist", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-broken-shim-warn-push-"));
+    const remoteDir = mkdtempSync(join(tmpdir(), "agentnote-warn-push-remote-"));
+    try {
+      execSync("git init --bare", { cwd: remoteDir });
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync(`git remote add origin ${remoteDir}`, { cwd: dir });
+      execSync("git commit --allow-empty -m 'init'", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+      const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
+      writeFileSync(shimPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+      execSync("git notes --ref=agentnote add -m '{\"v\":1}' HEAD", { cwd: dir });
+
+      // A PATH without node_modules/.bin or a global CLI leaves no working resolver.
+      const stderrFile = join(dir, "push-stderr.txt");
+      execSync(`git push -u origin HEAD 2>${shellSingleQuote(stderrFile)}`, {
+        cwd: dir,
+        encoding: "utf-8",
+        env: { ...withoutCodexThreadEnv(), PATH: "/usr/bin:/bin" },
+      });
+
+      const stderr = readFileSync(stderrFile, "utf-8");
+      assert.match(stderr, /agent-note: could not push git notes/);
+      const remoteHead = execSync("git rev-parse --verify HEAD", {
+        cwd: remoteDir,
+        encoding: "utf-8",
+      }).trim();
+      assert.ok(remoteHead.length > 0, "the main push must still succeed");
+      assert.throws(() => {
+        execSync("git rev-parse --verify refs/notes/agentnote", {
+          cwd: remoteDir,
+          stdio: "pipe",
+        });
+      }, "the warning must reflect notes that really were not pushed");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(remoteDir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on commit when no resolver can run the CLI for a tracked session", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agentnote-broken-shim-warn-commit-"));
+    try {
+      execSync("git init", { cwd: dir });
+      execSync("git config user.email test@test.com", { cwd: dir });
+      execSync("git config user.name Test", { cwd: dir });
+      execSync(`node ${cliPath} init --agent claude --no-action`, { cwd: dir });
+
+      const shimPath = join(dir, ".git", AGENTNOTE_DIR, "bin", "agent-note");
+      writeFileSync(shimPath, "#!/bin/sh\nexit 127\n", { mode: 0o755 });
+
+      const sessionId = "aaaaaaaa-bbbb-4ccc-8ddd-abcdefabcdef";
+      const runClaudeHook = (payload: Record<string, unknown>) => {
+        execFileSync(process.execPath, [cliPath, "hook", "--agent", "claude"], {
+          cwd: dir,
+          input: JSON.stringify(payload),
+          encoding: "utf-8",
+          env: withoutCodexThreadEnv(),
+        });
+      };
+      runClaudeHook({ hook_event_name: "SessionStart", session_id: sessionId });
+      runClaudeHook({
+        hook_event_name: "UserPromptSubmit",
+        session_id: sessionId,
+        prompt: "Warn when the CLI is unreachable.",
+      });
+      const filePath = join(dir, "warn-commit.txt");
+      runClaudeHook({
+        hook_event_name: "PreToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-warn-commit",
+        tool_input: { file_path: filePath },
+      });
+      writeFileSync(filePath, "visible degradation\n");
+      runClaudeHook({
+        hook_event_name: "PostToolUse",
+        session_id: sessionId,
+        tool_name: "Write",
+        tool_use_id: "tool-warn-commit",
+        tool_input: { file_path: filePath },
+      });
+
+      execSync("git add warn-commit.txt", { cwd: dir });
+      const stderrFile = join(dir, "commit-stderr.txt");
+      execSync(`git commit -m 'feat: warn commit' 2>${shellSingleQuote(stderrFile)}`, {
+        cwd: dir,
+        encoding: "utf-8",
+        env: { ...withoutCodexThreadEnv(), PATH: "/usr/bin:/bin" },
+      });
+
+      const stderr = readFileSync(stderrFile, "utf-8");
+      assert.match(stderr, /agent-note: could not record the commit note/);
+      const warningCount = stderr.split("could not record the commit note").length - 1;
+      assert.equal(warningCount, 1, "the warning should be emitted once per commit");
+      assert.throws(() => {
+        execSync("git notes --ref=agentnote show HEAD", { cwd: dir, stdio: "pipe" });
+      }, "no note should exist because no resolver could run the CLI");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("records plain commits made from a git worktree using the common shim", () => {

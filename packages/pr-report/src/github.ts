@@ -148,6 +148,25 @@ function appendPrNumber(
 }
 
 /**
+ * Build the workflow notice for a PR whose commits have no Agent Note data.
+ *
+ * This is the detection line for silently broken git hooks. It stays at
+ * notice level and returns null for tracked or empty PRs because human-only
+ * pull requests legitimately have no tracked data.
+ */
+export function buildMissingNotesNotice(report: {
+	total_commits?: number;
+	tracked_commits?: number;
+}): string | null {
+	if (!shouldRetryNotesFetch(report)) return null;
+	return (
+		"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, " +
+		"the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' " +
+		"to repair the git hooks."
+	);
+}
+
+/**
  * Detect whether the GitHub Pages environment restricts deploy branches.
  *
  * When protection is enabled, PR previews may wait for approval or merge, so

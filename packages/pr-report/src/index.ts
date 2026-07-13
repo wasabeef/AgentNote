@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { execSync } from "child_process";
 import {
+	buildMissingNotesNotice,
 	COMMENT_MARKER,
 	hasDeploymentBranchProtection,
 	PR_OUTPUT_MODES,
@@ -256,6 +257,11 @@ async function run(): Promise<void> {
 		if (!report) {
 			core.info("No agent-note data found for this PR.");
 			return;
+		}
+
+		const missingNotesNotice = buildMissingNotesNotice(report);
+		if (missingNotesNotice) {
+			core.notice(missingNotesNotice);
 		}
 
 		report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(
