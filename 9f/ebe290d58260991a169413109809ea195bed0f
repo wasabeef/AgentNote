@@ -1,0 +1,86 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-13T04:49:42.398Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "自己レビューして",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/89#discussion_r3568052888\n\nも確認",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/init.ts",
+        "packages/cli/src/commands/init.test.ts",
+        "packages/pr-report/src/github.ts",
+        "packages/pr-report/src/index.ts",
+        "packages/pr-report/src/index.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/github.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 52,
+      "total_added": 52,
+      "deleted": 8
+    }
+  }
+}
