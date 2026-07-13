@@ -329,6 +329,6 @@
   "pull_request": {
     "number": 89,
     "title": "fix: git hooks self-heal when the init-time CLI shim breaks",
-    "state": "open"
+    "state": "merged"
   }
 }
