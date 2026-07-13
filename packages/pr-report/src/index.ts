@@ -258,6 +258,14 @@ async function run(): Promise<void> {
 			return;
 		}
 
+		if (shouldRetryNotesFetch(report)) {
+			// Detection line for silently broken git hooks; notice-level because
+			// human-only PRs legitimately have no tracked data.
+			core.notice(
+				"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' to repair the git hooks.",
+			);
+		}
+
 		report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(
 			token,
 			report.dashboard_url,

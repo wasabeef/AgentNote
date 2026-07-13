@@ -185,24 +185,30 @@ fi
 record_agentnote() {
   RECORD_SESSION_ID="$1"
   if [ -z "$RECORD_SESSION_ID" ]; then return; fi
-  # Prefer the repo-local shim created at init time so post-commit uses the
-  # exact CLI version that generated these hooks.
-  if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
-    "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+  # Prefer the repo-local shim so worktrees share one CLI resolution. The CLI
+  # exits zero even when recording is a no-op, so a non-zero exit means the
+  # CLI could not start (stale shim paths); fall through to the next resolver
+  # instead of consuming the attempt.
+  if [ -x "$GIT_DIR/agentnote/bin/agent-note" ] && "$GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null; then
     return
   fi
   # Git worktrees use their own $GIT_DIR but share hooks through the common git
   # dir. Fall back to the common shim when init ran from another worktree.
-  if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
-    "$COMMON_GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
+  if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ] && "$COMMON_GIT_DIR/agentnote/bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null; then
     return
   fi
   # Fall back to stable local/global binaries only.
   REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-  if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
-    "$REPO_ROOT/node_modules/.bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null || true
-  elif command -v agent-note >/dev/null 2>&1; then
-    agent-note record "$RECORD_SESSION_ID" 2>/dev/null || true
+  if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ] && "$REPO_ROOT/node_modules/.bin/agent-note" record "$RECORD_SESSION_ID" 2>/dev/null; then
+    return
+  fi
+  if command -v agent-note >/dev/null 2>&1 && agent-note record "$RECORD_SESSION_ID" 2>/dev/null; then
+    return
+  fi
+  # Reaching here means session evidence exists but no resolver could start the CLI.
+  if [ -z "$AGENTNOTE_RECORD_WARNED" ]; then
+    AGENTNOTE_RECORD_WARNED=1
+    echo "agent-note: could not record the commit note; run 'npx agent-note init' to repair the hooks" >&2
   fi
 }
 
@@ -217,23 +223,30 @@ ${AGENTNOTE_HOOK_MARKER}
 # Push agentnote notes alongside code via the repo-local shim so hook behavior
 # tracks the current CLI implementation after upgrades. Wait for completion so
 # PR workflows can fetch the latest notes ref, but never block the main push on failure.
+# The CLI exits zero even when the notes push itself fails, so a non-zero exit
+# means the CLI could not start (stale shim paths); fall through to the next
+# resolver instead of consuming the attempt.
 if [ -n "$AGENTNOTE_PUSHING" ]; then exit 0; fi
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
 COMMON_GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
-if [ -x "$GIT_DIR/agentnote/bin/agent-note" ]; then
-  "$GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
+if [ -x "$GIT_DIR/agentnote/bin/agent-note" ] && "$GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null; then
   exit 0
 fi
-if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ]; then
-  "$COMMON_GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null || true
+if [ -n "$COMMON_GIT_DIR" ] && [ "$COMMON_GIT_DIR" != "$GIT_DIR" ] && [ -x "$COMMON_GIT_DIR/agentnote/bin/agent-note" ] && "$COMMON_GIT_DIR/agentnote/bin/agent-note" push-notes "$1" 2>/dev/null; then
   exit 0
 fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ]; then
-  "$REPO_ROOT/node_modules/.bin/agent-note" push-notes "$1" 2>/dev/null || true
-elif command -v agent-note >/dev/null 2>&1; then
-  agent-note push-notes "$1" 2>/dev/null || true
+if [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ] && "$REPO_ROOT/node_modules/.bin/agent-note" push-notes "$1" 2>/dev/null; then
+  exit 0
 fi
+if command -v agent-note >/dev/null 2>&1 && agent-note push-notes "$1" 2>/dev/null; then
+  exit 0
+fi
+# Warn only when local notes exist, so checkouts that never use Agent Note stay quiet.
+if git rev-parse --verify --quiet refs/notes/${NOTES_REF} >/dev/null 2>&1; then
+  echo "agent-note: could not push git notes; run 'npx agent-note init' to repair the hooks" >&2
+fi
+exit 0
 `;
 
 /** Install Agent Note git hooks, agent hooks, and optional GitHub workflows. */
@@ -466,7 +479,19 @@ async function installLocalCliShim(agentnoteDirPath: string): Promise<void> {
   const shimDir = join(agentnoteDirPath, "bin");
   const shimPath = join(shimDir, "agent-note");
   const cliPath = resolve(process.argv[1]);
+  // The repository's current install is resolved first so hook behavior tracks
+  // CLI upgrades and survives deletion of the checkout that ran init. The
+  // init-time absolute paths stay as the last resort for restricted hook
+  // environments (e.g. GUI git clients without the user's PATH) and for
+  // checkouts without a local node_modules install.
   const shim = `#!/bin/sh
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ] && command -v node >/dev/null 2>&1; then
+  exec "$REPO_ROOT/node_modules/.bin/agent-note" "$@"
+fi
+if command -v agent-note >/dev/null 2>&1; then
+  exec agent-note "$@"
+fi
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;
 

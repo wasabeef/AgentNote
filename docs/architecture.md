@@ -438,6 +438,18 @@ common git-dir shim shared by all worktrees. This lets `agent-note init` run
 from either the main checkout or a linked worktree while still supporting
 commits made from any related worktree.
 
+The shim resolves the repository's current CLI install at runtime — the
+repository `node_modules/.bin/agent-note` first, then a PATH-installed CLI,
+and finally the node binary and CLI path captured at init time. The captured
+paths remain as the last resort for restricted hook environments such as GUI
+git clients that run hooks without the user's PATH. Because the CLI exits
+zero even when its work is a no-op or fails internally, a non-zero exit from
+a shim means the CLI could not start at all (for example, the checkout that
+ran `init` was deleted). Hook scripts treat that as "try the next resolver"
+instead of stopping, and when no resolver can start the CLI they emit a
+one-line stderr warning while still exiting zero, so commits and pushes are
+never blocked and the degradation is visible instead of silent.
+
 When an existing hook file is found, agent-note chains to it — the original hook runs first, then agent-note's logic runs. This avoids overwriting user or tool-managed hooks.
 
 ## CLI commands
