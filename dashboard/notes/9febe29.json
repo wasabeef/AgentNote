@@ -1,0 +1,334 @@
+{
+  "v": 1,
+  "agent": "claude",
+  "session_id": "4a6d322d-5afe-45e3-a11b-cf15d0e740a9",
+  "timestamp": "2026-07-13T04:49:42.398Z",
+  "model": "claude-fable-5",
+  "interactions": [
+    {
+      "prompt": "自己レビューして",
+      "response": null,
+      "selection": {
+        "schema": 1,
+        "source": "window",
+        "signals": [
+          "between_non_excluded_prompts"
+        ]
+      }
+    },
+    {
+      "prompt": "https://github.com/wasabeef/AgentNote/pull/89#discussion_r3568052888\n\nも確認",
+      "response": null,
+      "files_touched": [
+        "packages/cli/src/commands/init.ts",
+        "packages/cli/src/commands/init.test.ts",
+        "packages/pr-report/src/github.ts",
+        "packages/pr-report/src/index.ts",
+        "packages/pr-report/src/index.test.ts"
+      ],
+      "selection": {
+        "schema": 1,
+        "source": "primary",
+        "signals": [
+          "primary_edit_turn",
+          "multi_line_instruction",
+          "substantive_prompt_shape",
+          "before_commit_boundary",
+          "between_non_excluded_prompts"
+        ]
+      },
+      "tools": [
+        "Edit"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/cli/dist/cli.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/cli/src/commands/init.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/dist/index.js",
+      "by_ai": false,
+      "ai_ratio_excluded": true
+    },
+    {
+      "path": "packages/pr-report/src/github.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.test.ts",
+      "by_ai": true
+    },
+    {
+      "path": "packages/pr-report/src/index.ts",
+      "by_ai": true
+    }
+  ],
+  "attribution": {
+    "ai_ratio": 100,
+    "method": "line",
+    "lines": {
+      "ai_added": 52,
+      "total_added": 52,
+      "deleted": 8
+    }
+  },
+  "commit": {
+    "sha": "9febe290d58260991a169413109809ea195bed0f",
+    "short_sha": "9febe29",
+    "message": "fix(init): let the shim fall through to init-time paths on runtime failures",
+    "date": "2026-07-13T13:49:41+09:00",
+    "author": "wasabeef"
+  },
+  "diff": {
+    "files": [
+      {
+        "path": "packages/cli/dist/cli.js",
+        "lines": [
+          "index 407a000..c5272ad 100755",
+          "--- a/packages/cli/dist/cli.js",
+          "+++ b/packages/cli/dist/cli.js",
+          "@@ -5700,10 +5700,10 @@ async function installLocalCliShim(agentnoteDirPath) {",
+          "   const shim = `#!/bin/sh",
+          " REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null)\"",
+          " if [ -n \"$REPO_ROOT\" ] && [ -f \"$REPO_ROOT/node_modules/.bin/agent-note\" ] && command -v node >/dev/null 2>&1; then",
+          "-  exec \"$REPO_ROOT/node_modules/.bin/agent-note\" \"$@\"",
+          "+  \"$REPO_ROOT/node_modules/.bin/agent-note\" \"$@\" && exit 0",
+          " fi",
+          " if command -v agent-note >/dev/null 2>&1; then",
+          "-  exec agent-note \"$@\"",
+          "+  agent-note \"$@\" && exit 0",
+          " fi",
+          " exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} \"$@\"",
+          " `;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/init.test.ts",
+        "lines": [
+          "index 3fc34bf..cd82256 100644",
+          "--- a/packages/cli/src/commands/init.test.ts",
+          "+++ b/packages/cli/src/commands/init.test.ts",
+          "@@ -591,6 +591,12 @@ describe(\"agentnote init\", () => {",
+          "         encoding: \"utf-8\",",
+          "       }).trim();",
+          "       assert.ok(remoteHead.length > 0, \"the main push must still succeed\");",
+          "+      assert.throws(() => {",
+          "+        execSync(\"git rev-parse --verify refs/notes/agentnote\", {",
+          "+          cwd: remoteDir,",
+          "+          stdio: \"pipe\",",
+          "+        });",
+          "+      }, \"the warning must reflect notes that really were not pushed\");",
+          "     } finally {",
+          "       rmSync(dir, { recursive: true, force: true });",
+          "       rmSync(remoteDir, { recursive: true, force: true });"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/cli/src/commands/init.ts",
+        "lines": [
+          "index 6884846..6205bd5 100644",
+          "--- a/packages/cli/src/commands/init.ts",
+          "+++ b/packages/cli/src/commands/init.ts",
+          "@@ -484,13 +484,16 @@ async function installLocalCliShim(agentnoteDirPath: string): Promise<void> {",
+          "   // init-time absolute paths stay as the last resort for restricted hook",
+          "   // environments (e.g. GUI git clients without the user's PATH) and for",
+          "   // checkouts without a local node_modules install.",
+          "+  // Resolvers run without exec so a launch that later fails at runtime (for",
+          "+  // example an incompatible node found on a restricted PATH) still falls",
+          "+  // through to the init-time paths instead of consuming the attempt.",
+          "   const shim = `#!/bin/sh",
+          " REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null)\"",
+          " if [ -n \"$REPO_ROOT\" ] && [ -f \"$REPO_ROOT/node_modules/.bin/agent-note\" ] && command -v node >/dev/null 2>&1; then",
+          "-  exec \"$REPO_ROOT/node_modules/.bin/agent-note\" \"$@\"",
+          "+  \"$REPO_ROOT/node_modules/.bin/agent-note\" \"$@\" && exit 0",
+          " fi",
+          " if command -v agent-note >/dev/null 2>&1; then",
+          "-  exec agent-note \"$@\"",
+          "+  agent-note \"$@\" && exit 0",
+          " fi",
+          " exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} \"$@\"",
+          " `;"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/dist/index.js",
+        "lines": [
+          "index 317344b..fe921a4 100644",
+          "--- a/packages/pr-report/dist/index.js",
+          "+++ b/packages/pr-report/dist/index.js",
+          "@@ -36376,6 +36376,20 @@ function appendPrNumber(dashboardUrl, prNumber) {",
+          "     url.searchParams.set(PR_QUERY_PARAM, String(normalized));",
+          "     return url.toString();",
+          " }",
+          "+/**",
+          "+ * Build the workflow notice for a PR whose commits have no Agent Note data.",
+          "+ *",
+          "+ * This is the detection line for silently broken git hooks. It stays at",
+          "+ * notice level and returns null for tracked or empty PRs because human-only",
+          "+ * pull requests legitimately have no tracked data.",
+          "+ */",
+          "+function buildMissingNotesNotice(report) {",
+          "+    if (!shouldRetryNotesFetch(report))",
+          "+        return null;",
+          "+    return (\"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, \" +",
+          "+        \"the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' \" +",
+          "+        \"to repair the git hooks.\");",
+          "+}",
+          " /**",
+          "  * Detect whether the GitHub Pages environment restricts deploy branches.",
+          "  *",
+          "@@ -38166,10 +38180,9 @@ async function run() {",
+          "             info(\"No agent-note data found for this PR.\");",
+          "             return;",
+          "         }",
+          "-        if (shouldRetryNotesFetch(report)) {",
+          "-            // Detection line for silently broken git hooks; notice-level because",
+          "-            // human-only PRs legitimately have no tracked data.",
+          "-            notice(\"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' to repair the git hooks.\");",
+          "+        const missingNotesNotice = buildMissingNotesNotice(report);",
+          "+        if (missingNotesNotice) {",
+          "+            notice(missingNotesNotice);",
+          "         }",
+          "         report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);",
+          "         const json = JSON.stringify(report, null, JSON_INDENT_SPACES);"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/github.ts",
+        "lines": [
+          "index 2f14d40..7586b53 100644",
+          "--- a/packages/pr-report/src/github.ts",
+          "+++ b/packages/pr-report/src/github.ts",
+          "@@ -147,6 +147,25 @@ function appendPrNumber(",
+          " \treturn url.toString();",
+          " }",
+          " ",
+          "+/**",
+          "+ * Build the workflow notice for a PR whose commits have no Agent Note data.",
+          "+ *",
+          "+ * This is the detection line for silently broken git hooks. It stays at",
+          "+ * notice level and returns null for tracked or empty PRs because human-only",
+          "+ * pull requests legitimately have no tracked data.",
+          "+ */",
+          "+export function buildMissingNotesNotice(report: {",
+          "+\ttotal_commits?: number;",
+          "+\ttracked_commits?: number;",
+          "+}): string | null {",
+          "+\tif (!shouldRetryNotesFetch(report)) return null;",
+          "+\treturn (",
+          "+\t\t\"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, \" +",
+          "+\t\t\"the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' \" +",
+          "+\t\t\"to repair the git hooks.\"",
+          "+\t);",
+          "+}",
+          "+",
+          " /**",
+          "  * Detect whether the GitHub Pages environment restricts deploy branches.",
+          "  *"
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.test.ts",
+        "lines": [
+          "index 90c8cae..6935ce7 100644",
+          "--- a/packages/pr-report/src/index.test.ts",
+          "+++ b/packages/pr-report/src/index.test.ts",
+          "@@ -1,6 +1,7 @@",
+          " import { describe, it } from \"node:test\";",
+          " import assert from \"node:assert/strict\";",
+          " import {",
+          "+\tbuildMissingNotesNotice,",
+          " \tCOMMENT_MARKER,",
+          " \tDESCRIPTION_BEGIN,",
+          " \tDESCRIPTION_END,",
+          "@@ -133,6 +134,23 @@ describe(\"shouldRetryNotesFetch\", () => {",
+          " \t});",
+          " });",
+          " ",
+          "+describe(\"buildMissingNotesNotice\", () => {",
+          "+\tit(\"builds the repair notice when commits exist but none are tracked\", () => {",
+          "+\t\tconst notice = buildMissingNotesNotice({ total_commits: 3, tracked_commits: 0 });",
+          "+\t\tassert.ok(notice, \"a PR with untracked commits should produce a notice\");",
+          "+\t\tassert.match(notice, /refs\\/notes\\/agentnote/);",
+          "+\t\tassert.match(notice, /npx agent-note init/);",
+          "+\t});",
+          "+",
+          "+\tit(\"returns null when at least one commit is tracked\", () => {",
+          "+\t\tassert.equal(buildMissingNotesNotice({ total_commits: 3, tracked_commits: 1 }), null);",
+          "+\t});",
+          "+",
+          "+\tit(\"returns null for pull requests with no commits in scope\", () => {",
+          "+\t\tassert.equal(buildMissingNotesNotice({ total_commits: 0, tracked_commits: 0 }), null);",
+          "+\t});",
+          "+});",
+          "+",
+          " describe(\"inferDashboardUrl\", () => {",
+          " \tit(\"infers the standard project Pages dashboard URL\", () => {",
+          " \t\tassert.equal("
+        ],
+        "truncated": false,
+        "binary": false
+      },
+      {
+        "path": "packages/pr-report/src/index.ts",
+        "lines": [
+          "index 92748f3..2f8ee71 100644",
+          "--- a/packages/pr-report/src/index.ts",
+          "+++ b/packages/pr-report/src/index.ts",
+          "@@ -2,6 +2,7 @@ import * as core from \"@actions/core\";",
+          " import * as github from \"@actions/github\";",
+          " import { execSync } from \"child_process\";",
+          " import {",
+          "+\tbuildMissingNotesNotice,",
+          " \tCOMMENT_MARKER,",
+          " \thasDeploymentBranchProtection,",
+          " \tPR_OUTPUT_MODES,",
+          "@@ -258,12 +259,9 @@ async function run(): Promise<void> {",
+          " \t\t\treturn;",
+          " \t\t}",
+          " ",
+          "-\t\tif (shouldRetryNotesFetch(report)) {",
+          "-\t\t\t// Detection line for silently broken git hooks; notice-level because",
+          "-\t\t\t// human-only PRs legitimately have no tracked data.",
+          "-\t\t\tcore.notice(",
+          "-\t\t\t\t\"Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' to repair the git hooks.\",",
+          "-\t\t\t);",
+          "+\t\tconst missingNotesNotice = buildMissingNotesNotice(report);",
+          "+\t\tif (missingNotesNotice) {",
+          "+\t\t\tcore.notice(missingNotesNotice);",
+          " \t\t}",
+          " ",
+          " \t\treport.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl("
+        ],
+        "truncated": false,
+        "binary": false
+      }
+    ]
+  },
+  "pull_request": {
+    "number": 89,
+    "title": "fix: git hooks self-heal when the init-time CLI shim breaks",
+    "state": "open"
+  }
+}
