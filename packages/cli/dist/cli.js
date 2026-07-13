@@ -5700,10 +5700,10 @@ async function installLocalCliShim(agentnoteDirPath) {
   const shim = `#!/bin/sh
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ] && command -v node >/dev/null 2>&1; then
-  exec "$REPO_ROOT/node_modules/.bin/agent-note" "$@"
+  "$REPO_ROOT/node_modules/.bin/agent-note" "$@" && exit 0
 fi
 if command -v agent-note >/dev/null 2>&1; then
-  exec agent-note "$@"
+  agent-note "$@" && exit 0
 fi
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;

@@ -484,13 +484,16 @@ async function installLocalCliShim(agentnoteDirPath: string): Promise<void> {
   // init-time absolute paths stay as the last resort for restricted hook
   // environments (e.g. GUI git clients without the user's PATH) and for
   // checkouts without a local node_modules install.
+  // Resolvers run without exec so a launch that later fails at runtime (for
+  // example an incompatible node found on a restricted PATH) still falls
+  // through to the init-time paths instead of consuming the attempt.
   const shim = `#!/bin/sh
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/node_modules/.bin/agent-note" ] && command -v node >/dev/null 2>&1; then
-  exec "$REPO_ROOT/node_modules/.bin/agent-note" "$@"
+  "$REPO_ROOT/node_modules/.bin/agent-note" "$@" && exit 0
 fi
 if command -v agent-note >/dev/null 2>&1; then
-  exec agent-note "$@"
+  agent-note "$@" && exit 0
 fi
 exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(cliPath)} "$@"
 `;

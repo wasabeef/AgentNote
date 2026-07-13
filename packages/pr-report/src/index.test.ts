@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+	buildMissingNotesNotice,
 	COMMENT_MARKER,
 	DESCRIPTION_BEGIN,
 	DESCRIPTION_END,
@@ -130,6 +131,23 @@ describe("shouldRetryNotesFetch", () => {
 			shouldRetryNotesFetch({ total_commits: 0, tracked_commits: 0 }),
 			false,
 		);
+	});
+});
+
+describe("buildMissingNotesNotice", () => {
+	it("builds the repair notice when commits exist but none are tracked", () => {
+		const notice = buildMissingNotesNotice({ total_commits: 3, tracked_commits: 0 });
+		assert.ok(notice, "a PR with untracked commits should produce a notice");
+		assert.match(notice, /refs\/notes\/agentnote/);
+		assert.match(notice, /npx agent-note init/);
+	});
+
+	it("returns null when at least one commit is tracked", () => {
+		assert.equal(buildMissingNotesNotice({ total_commits: 3, tracked_commits: 1 }), null);
+	});
+
+	it("returns null for pull requests with no commits in scope", () => {
+		assert.equal(buildMissingNotesNotice({ total_commits: 0, tracked_commits: 0 }), null);
 	});
 });
 

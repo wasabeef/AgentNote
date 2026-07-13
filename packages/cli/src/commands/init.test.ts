@@ -591,6 +591,12 @@ describe("agentnote init", () => {
         encoding: "utf-8",
       }).trim();
       assert.ok(remoteHead.length > 0, "the main push must still succeed");
+      assert.throws(() => {
+        execSync("git rev-parse --verify refs/notes/agentnote", {
+          cwd: remoteDir,
+          stdio: "pipe",
+        });
+      }, "the warning must reflect notes that really were not pushed");
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(remoteDir, { recursive: true, force: true });

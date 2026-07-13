@@ -36377,6 +36377,20 @@ function appendPrNumber(dashboardUrl, prNumber) {
     return url.toString();
 }
 /**
+ * Build the workflow notice for a PR whose commits have no Agent Note data.
+ *
+ * This is the detection line for silently broken git hooks. It stays at
+ * notice level and returns null for tracked or empty PRs because human-only
+ * pull requests legitimately have no tracked data.
+ */
+function buildMissingNotesNotice(report) {
+    if (!shouldRetryNotesFetch(report))
+        return null;
+    return ("Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, " +
+        "the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' " +
+        "to repair the git hooks.");
+}
+/**
  * Detect whether the GitHub Pages environment restricts deploy branches.
  *
  * When protection is enabled, PR previews may wait for approval or merge, so
@@ -38166,10 +38180,9 @@ async function run() {
             info("No agent-note data found for this PR.");
             return;
         }
-        if (shouldRetryNotesFetch(report)) {
-            // Detection line for silently broken git hooks; notice-level because
-            // human-only PRs legitimately have no tracked data.
-            notice("Agent Note found no tracked commits in this PR. If AI-assisted commits are expected, the refs/notes/agentnote ref may not have been pushed; re-run 'npx agent-note init' to repair the git hooks.");
+        const missingNotesNotice = buildMissingNotesNotice(report);
+        if (missingNotesNotice) {
+            notice(missingNotesNotice);
         }
         report.dashboard_preview_help_url = await inferDashboardPreviewHelpUrl(token, report.dashboard_url);
         const json = JSON.stringify(report, null, JSON_INDENT_SPACES);
